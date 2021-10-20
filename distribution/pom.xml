@@ -427,6 +427,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-momentsketch</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:gce-extensions</argument>
