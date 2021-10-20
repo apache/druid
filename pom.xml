@@ -83,8 +83,8 @@
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>2.0.0</datasketches.version>
-        <datasketches.memory.version>1.3.0</datasketches.memory.version>
+        <datasketches.version>3.0.0</datasketches.version>
+        <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <errorprone.version>2.8.0</errorprone.version>
