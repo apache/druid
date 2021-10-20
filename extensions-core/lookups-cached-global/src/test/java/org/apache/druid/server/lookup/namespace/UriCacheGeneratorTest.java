@@ -268,7 +268,7 @@ public class UriCacheGeneratorTest
   public void setUp() throws Exception
   {
     lifecycle.start();
-    tmpFileParent = new File(temporaryFolder.newFolder(), "child");
+    tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
     Assert.assertTrue(tmpFileParent.mkdir());
     Assert.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
