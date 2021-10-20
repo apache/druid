@@ -54,6 +54,22 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     Preconditions.checkArgument(this.procDir.isDirectory(), "Not a directory: [%s]", procDir);
   }
 
+  /**
+   * Gets the path in the virtual FS for the given cgroup (cpu, mem, etc.).
+   *
+   * The method first retrieves 2 paths:
+   *  - The cgroup virtual FS mount point by calling /proc/mounts. This is usually like '/sys/fs/cgroup/cpu'.
+   *  - The heirarchy path by calling /proc/[pid]/cgroup. In Docker this can look like '/docker/4b053f1267369a19dcdcb293e1b4d6b71fd0f26bf7711d589f19d48af92e6278'
+   *
+   * The method then tries to find the final virtual FS path by contenating the 2 paths first, and then falling back
+   * to the root virtual FS path. In this example, the method tries
+   * '/sys/fs/cgroup/cpu/docker/4b053f1267369a19dcdcb293e1b4d6b71fd0f26bf7711d589f19d48af92e6278' and then falls back
+   * to '/sys/fs/cgroup/cpu'.
+   *
+   * An exception is thrown if neither path exists.
+   * @param cgroup The cgroup.
+   * @return the virtual FS path.
+   */
   @Override
   public Path discover(final String cgroup)
   {
