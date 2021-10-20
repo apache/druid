@@ -31,6 +31,9 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -83,6 +86,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                              indexBaseDataSourcePair.rhs
                          ).withSubQueryId(generateSubqueryId(
                              queryPlus.getQuery().getSubQueryId(),
+                             findNestingLevel(analysis.getDataSource(), analysis.getBaseDataSource()),
                              indexBaseDataSourcePair.lhs
                          ))))).collect(
                              Collectors.toList())
@@ -100,14 +104,46 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
    *  Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
    *
    * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
+   * @param nesting The level under which the base datasource is present inside the original datasource
    * @param orderNumber Position of the generated subquery at the same level
    * @return Subquery Id which needs to be populated
    */
-  private String generateSubqueryId(String parentSubqueryId, int orderNumber)
+  private String generateSubqueryId(String parentSubqueryId, int nesting, int orderNumber)
   {
-    if (StringUtils.isEmpty(parentSubqueryId)) {
-      return Integer.toString(orderNumber);
+    List<String> arr = new ArrayList<>();
+    if (!StringUtils.isEmpty(parentSubqueryId)) {
+      arr.add(parentSubqueryId);
     }
-    return parentSubqueryId + "-" + orderNumber;
+    arr.addAll(Collections.nCopies(nesting, "1"));
+    arr.add(Integer.toString(orderNumber));
+
+    return String.join("-", arr);
+  }
+
+  /**
+   * Finds the nesting level of the base datasource inside the datasource object. This method walks the datasource
+   * in a fashion which is similar to {@link DataSourceAnalysis#forDataSource(DataSource)}
+   * @param dataSource The datasource object present in the query
+   * @param baseUnionDataSource The base union datasource found from the datasource analysis
+   * @return Nesting level of the base datasource
+   */
+  private int findNestingLevel(DataSource dataSource, DataSource baseUnionDataSource) {
+    int nesting = 0;
+    while (dataSource instanceof QueryDataSource) {
+      ++nesting;
+      dataSource = ((QueryDataSource) dataSource).getQuery().getDataSource();
+    }
+    while (dataSource instanceof JoinDataSource) {
+      ++nesting;
+      dataSource = ((JoinDataSource) dataSource).getLeft();
+    }
+
+    //noinspection ObjectEquality
+    if(dataSource != baseUnionDataSource) {
+      // We donot expect to reach here since the datasource analysis uses the same traversal to fetch the base union datasource
+      return 0;
+    }
+    ++nesting;
+    return nesting;
   }
 }
