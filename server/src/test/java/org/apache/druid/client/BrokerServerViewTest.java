@@ -444,6 +444,68 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2));
   }
 
+  @Test
+  public void testIgnoredTiers() throws Exception
+  {
+    segmentViewInitLatch = new CountDownLatch(1);
+    segmentAddedLatch = new CountDownLatch(4);
+    segmentRemovedLatch = new CountDownLatch(0);
+
+    // Setup a Broker that does not watch Tier 1
+    final String tier1 = "tier1";
+    final String tier2 = "tier2";
+    setupViews(null, Sets.newHashSet(tier1), false);
+
+    // Historical Tier 1 has segments 1 and 2, Tier 2 has segments 2 and 3
+    final DruidServer server11 = setupHistoricalServer(tier1, "localhost:1", 1);
+    final DruidServer server21 = setupHistoricalServer(tier2, "localhost:2", 1);
+
+    final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
+    announceSegmentForServer(server11, segment1, zkPathsConfig, jsonMapper);
+
+    final DataSegment segment2 = dataSegmentWithIntervalAndVersion("2020-01-02/P1D", "v1");
+    announceSegmentForServer(server11, segment2, zkPathsConfig, jsonMapper);
+    announceSegmentForServer(server21, segment2, zkPathsConfig, jsonMapper);
+
+    final DataSegment segment3 = dataSegmentWithIntervalAndVersion("2020-01-03/P1D", "v1");
+    announceSegmentForServer(server21, segment3, zkPathsConfig, jsonMapper);
+
+    // Wait for the segments to be added
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+
+    // Get the timeline for the datasource
+    TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
+        DataSourceAnalysis.forDataSource(new TableDataSource(segment1.getDataSource()))
+    ).get();
+
+    // Verify that the timeline has no entry for the interval of segment 1
+    Assert.assertTrue(timeline.lookup(segment1.getInterval()).isEmpty());
+
+    // Verify that there is one entry for the interval of segment 2
+    List<TimelineObjectHolder<String, ServerSelector>> timelineHolders =
+        timeline.lookup(segment2.getInterval());
+    Assert.assertEquals(1, timelineHolders.size());
+
+    TimelineObjectHolder<String, ServerSelector> timelineHolder = timelineHolders.get(0);
+    Assert.assertEquals(segment2.getInterval(), timelineHolder.getInterval());
+    Assert.assertEquals(segment2.getVersion(), timelineHolder.getVersion());
+
+    PartitionHolder<ServerSelector> partitionHolder = timelineHolder.getObject();
+    Assert.assertTrue(partitionHolder.isComplete());
+    Assert.assertEquals(1, Iterables.size(partitionHolder));
+
+    ServerSelector selector = (partitionHolder.iterator().next()).getObject();
+    Assert.assertFalse(selector.isEmpty());
+    Assert.assertEquals(segment2, selector.getSegment());
+
+    // Verify that the ServerSelector always picks Tier 1
+    for (int i = 0; i < 5; ++i) {
+      Assert.assertEquals(server21, selector.pick(null).getServer());
+    }
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
+  }
+
   @Test(expected = ISE.class)
   public void testInvalidWatchedTiersConfig() throws Exception
   {
