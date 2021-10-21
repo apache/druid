@@ -133,8 +133,8 @@ public class BrokerServerView implements TimelineServerView
       }
 
       // Include realtime nodes only if they are watched
-      return segmentWatcherConfig.isWatchRealtimeNodes()
-          || metadataAndSegment.lhs.getType() != ServerType.REALTIME;
+      return segmentWatcherConfig.isWatchRealtimeTasks()
+          || metadataAndSegment.lhs.getType() != ServerType.INDEXER_EXECUTOR;
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(

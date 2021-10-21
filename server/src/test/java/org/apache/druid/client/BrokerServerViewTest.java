@@ -575,7 +575,7 @@ public class BrokerServerViewTest extends CuratorTestBase
           }
 
           @Override
-          public boolean isWatchRealtimeNodes()
+          public boolean isWatchRealtimeTasks()
           {
             return watchRealtimeNodes;
           }

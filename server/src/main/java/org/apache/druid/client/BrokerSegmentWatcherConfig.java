@@ -34,7 +34,7 @@ public class BrokerSegmentWatcherConfig
   private Set<String> watchedDataSources = null;
 
   @JsonProperty
-  private boolean watchRealtimeNodes = true;
+  private boolean watchRealtimeTasks = true;
 
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
@@ -49,9 +49,9 @@ public class BrokerSegmentWatcherConfig
     return watchedDataSources;
   }
 
-  public boolean isWatchRealtimeNodes()
+  public boolean isWatchRealtimeTasks()
   {
-    return watchRealtimeNodes;
+    return watchRealtimeTasks;
   }
 
   public boolean isAwaitInitializationOnStart()
