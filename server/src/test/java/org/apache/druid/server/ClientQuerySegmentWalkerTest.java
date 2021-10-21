@@ -203,6 +203,8 @@ public class ClientQuerySegmentWalkerTest
                   .build()
   );
 
+  private static final String DUMMY_QUERY_ID = "dummyQueryId";
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -249,7 +251,7 @@ public class ClientQuerySegmentWalkerTest
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
                                 .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -274,7 +276,7 @@ public class ClientQuerySegmentWalkerTest
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
                                 .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
                                 .build()
-                                .withId("queryId");
+                                .withId(DUMMY_QUERY_ID);
 
     // expect global/joinable datasource to be automatically translated into a GlobalTableDataSource
     final TimeseriesQuery expectedClusterQuery =
@@ -285,7 +287,7 @@ public class ClientQuerySegmentWalkerTest
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
                                 .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
                                 .build()
-                                .withId("queryId");
+                                .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -309,7 +311,7 @@ public class ClientQuerySegmentWalkerTest
                                 .intervals(Collections.singletonList(INTERVAL))
                                 .aggregators(new LongSumAggregatorFactory("sum", "n"))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -341,12 +343,12 @@ public class ClientQuerySegmentWalkerTest
                                 .intervals(Intervals.ONLY_ETERNITY)
                                 .aggregators(new CountAggregatorFactory("cnt"))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -386,7 +388,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Intervals.ONLY_ETERNITY)
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -419,7 +421,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"))
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -458,7 +460,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"))
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -508,12 +510,12 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
             ExpectedQuery.cluster(
                 query.withDataSource(
                     query.getDataSource().withChildren(
@@ -576,7 +578,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
@@ -584,12 +586,12 @@ public class ClientQuerySegmentWalkerTest
             ExpectedQuery.cluster(
                 subquery.withDataSource(
                     subquery.getDataSource().getChildren().get(0)
-                )
+                ).withId(DUMMY_QUERY_ID)
             ),
             ExpectedQuery.cluster(
                 subquery.withDataSource(
                     subquery.getDataSource().getChildren().get(1)
-                )
+                ).withId(DUMMY_QUERY_ID)
             ),
             ExpectedQuery.cluster(
                 query.withDataSource(
@@ -650,13 +652,13 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"))
                                    .setAggregatorSpecs(new LongSumAggregatorFactory("sum_n", "n"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
         // GroupBy handles its own subqueries; only the inner one will go to the cluster.
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -706,13 +708,13 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(100)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
     testQuery(
         query,
         // GroupBy handles its own subqueries; only the inner one will go to the cluster.
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -761,7 +763,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
                                    .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
                                    .build()
-                                   .withId(UUID.randomUUID().toString());
+                                   .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Cannot handle subquery structure for dataSource");
@@ -789,7 +791,7 @@ public class ClientQuerySegmentWalkerTest
                                 .intervals(Intervals.ONLY_ETERNITY)
                                 .aggregators(new CountAggregatorFactory("cnt"))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
     expectedException.expectMessage("Subquery generated results beyond maximum[2]");
@@ -807,7 +809,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("ad"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
@@ -831,7 +833,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("ad"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -865,7 +867,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("al"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
@@ -888,7 +890,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("al"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -922,7 +924,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("as"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
@@ -946,7 +948,7 @@ public class ClientQuerySegmentWalkerTest
                                    .setInterval(Collections.singletonList(INTERVAL))
                                    .setDimensions(DefaultDimensionSpec.of("as"))
                                    .build()
-                                   .withId("queryId");
+                                   .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -983,7 +985,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
@@ -1009,7 +1011,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -1045,7 +1047,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
@@ -1070,7 +1072,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -1106,7 +1108,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
@@ -1132,7 +1134,7 @@ public class ClientQuerySegmentWalkerTest
                                           .threshold(1000)
                                           .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
                                           .build()
-                                          .withId(UUID.randomUUID().toString());
+                                          .withId(DUMMY_QUERY_ID);
 
 
     // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
@@ -1167,7 +1169,7 @@ public class ClientQuerySegmentWalkerTest
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
                                 .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     // sum doesn't know what to do with an array, so gets 0
     testQuery(
@@ -1193,7 +1195,7 @@ public class ClientQuerySegmentWalkerTest
                                 .aggregators(new LongSumAggregatorFactory("sum", "al"))
                                 .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
                                 .build()
-                                .withId(UUID.randomUUID().toString());
+                                .withId(DUMMY_QUERY_ID);
 
     // sum doesn't know what to do with an array also if type is null, so gets 0
     testQuery(
