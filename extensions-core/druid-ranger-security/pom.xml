@@ -184,7 +184,7 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-client</artifactId>
                     <version>${hadoop.compile.version}</version>
-                    <scope>provided</scope>
+                    <scope>runtime</scope>
                     <exclusions>
                         <exclusion>
                             <groupId>org.apache.avro</groupId>
@@ -292,7 +292,7 @@
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
-                    <scope>provided</scope>
+                    <scope>compile</scope>
                     <exclusions>
                         <exclusion>
                             <groupId>commons-cli</groupId>
