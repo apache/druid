@@ -125,7 +125,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   public String getColumnTypeName(String column)
   {
     final ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    return columnCapabilities != null ? columnCapabilities.getType().toString() : null;
+    return columnCapabilities != null ? columnCapabilities.asTypeString() : null;
   }
 
   @Override

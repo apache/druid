@@ -3600,7 +3600,7 @@ name: Apache Hive
 license_category: binary
 module: extensions/druid-bloom-filter
 license_name: Apache License version 2.0
-version: 2.7.1
+version: 2.8.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -3614,7 +3614,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.0
+version: 3.0.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3624,7 +3624,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.0
+version: 2.0.0
 libraries:
   - org.apache.datasketches: datasketches-memory
 
@@ -3654,7 +3654,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.8.0
+version: 3.0.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4431,7 +4431,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.6.9
+version: 1.7.0
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4467,7 +4467,7 @@ name: aircompressor
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: "0.19"
+version: "0.21"
 libraries:
   - io.airlift: aircompressor
 
@@ -4477,7 +4477,7 @@ name: Hive storage API
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 2.7.1
+version: 2.8.1
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
@@ -4564,7 +4564,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 3.0.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:

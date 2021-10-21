@@ -63,7 +63,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryStackTests;
@@ -400,7 +400,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static ExpressionVirtualColumn expressionVirtualColumn(
       final String name,
       final String expression,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());

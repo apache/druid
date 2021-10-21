@@ -36,8 +36,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
@@ -63,7 +63,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{2L}),
-                          RowSignature.builder().add("EXPR$0", ValueType.LONG).build()
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -88,7 +88,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "2", ValueType.LONG))
+                .virtualColumns(expressionVirtualColumn("v0", "2", ColumnType.LONG))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -238,7 +238,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
-                    expressionVirtualColumn("v0", "substring(\"dim2\", 0, 1)", ValueType.STRING)
+                    expressionVirtualColumn("v0", "substring(\"dim2\", 0, 1)", ColumnType.STRING)
                 )
                 .columns("v0")
                 .limit(2)
@@ -271,7 +271,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(expressionFilter("((\"m1\" - 1) == CAST(\"dim1\", 'DOUBLE'))"))
                         .setDimensions(dimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
-                            new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+                            new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
                         ))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -634,7 +634,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       InlineDataSource.fromIterable(
                           ImmutableList.of(),
-                          RowSignature.builder().add("f1", ValueType.FLOAT).add("l1", ValueType.LONG).build()
+                          RowSignature.builder().add("f1", ColumnType.FLOAT).add("l1", ColumnType.LONG).build()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -666,10 +666,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
-                                ValueType.STRING
+                                ColumnType.STRING
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -701,10 +701,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
-                                ValueType.STRING
+                                ColumnType.STRING
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()

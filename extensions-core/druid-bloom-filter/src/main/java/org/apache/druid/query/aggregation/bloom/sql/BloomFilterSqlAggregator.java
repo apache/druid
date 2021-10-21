@@ -38,8 +38,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -145,7 +145,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
     // No existing match found. Create a new one.
 
-    ValueType valueType = Calcites.getValueTypeForRelDataType(inputOperand.getType());
+    ColumnType valueType = Calcites.getColumnTypeForRelDataType(inputOperand.getType());
     final DimensionSpec spec;
     if (input.isDirectColumnAccess()) {
       spec = new DefaultDimensionSpec(

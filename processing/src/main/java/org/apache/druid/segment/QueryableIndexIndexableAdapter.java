@@ -32,7 +32,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
@@ -355,8 +354,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   {
     final ColumnHolder columnHolder = input.getColumnHolder(metric);
 
-    final ValueType type = columnHolder.getCapabilities().getType();
-    switch (type) {
+    switch (columnHolder.getCapabilities().getType()) {
       case FLOAT:
         return "float";
       case LONG:
@@ -369,7 +367,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         }
       }
       default:
-        throw new ISE("Unknown type[%s]", type);
+        throw new ISE("Unknown type[%s]", columnHolder.getCapabilities().asTypeString());
     }
   }
 

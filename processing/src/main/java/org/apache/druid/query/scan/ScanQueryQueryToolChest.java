@@ -37,8 +37,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
@@ -168,11 +168,11 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       for (String columnName : query.getColumns()) {
         // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
-        final ValueType columnType;
+        final ColumnType columnType;
 
         final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
         if (virtualColumn != null) {
-          columnType = virtualColumn.capabilities(columnName).getType();
+          columnType = virtualColumn.capabilities(columnName).toColumnType();
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = null;

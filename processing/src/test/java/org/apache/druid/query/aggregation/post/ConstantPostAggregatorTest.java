@@ -25,8 +25,8 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -93,10 +93,10 @@ public class ConstantPostAggregatorTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("a", ValueType.LONG)
-                    .add("b", ValueType.DOUBLE)
-                    .add("c", ValueType.DOUBLE)
+                    .add("count", ColumnType.LONG)
+                    .add("a", ColumnType.LONG)
+                    .add("b", ColumnType.DOUBLE)
+                    .add("c", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

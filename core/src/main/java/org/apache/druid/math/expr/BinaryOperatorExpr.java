@@ -82,9 +82,9 @@ abstract class BinaryOpExprBase implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    return ExprTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
+    return ExpressionTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
   }
 
   @Override
@@ -133,8 +133,8 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    switch (type) {
+    ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+    switch (type.getType()) {
       case STRING:
         return evalString(leftVal.asString(), rightVal.asString());
       case LONG:

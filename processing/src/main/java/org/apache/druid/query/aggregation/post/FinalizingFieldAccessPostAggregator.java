@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -42,7 +42,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
   // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
   @Nullable
-  private final ValueType finalizedType;
+  private final ColumnType finalizedType;
   @Nullable
   private final Comparator<Object> comparator;
   @Nullable
@@ -60,7 +60,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   private FinalizingFieldAccessPostAggregator(
       final String name,
       final String fieldName,
-      @Nullable final ValueType finalizedType,
+      @Nullable final ColumnType finalizedType,
       @Nullable final Comparator<Object> comparator,
       @Nullable final Function<Object, Object> finalizer
   )
@@ -106,7 +106,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     return finalizedType;
   }
@@ -116,7 +116,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   {
     final Comparator<Object> theComparator;
     final Function<Object, Object> theFinalizer;
-    final ValueType finalizedType;
+    final ColumnType finalizedType;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       //noinspection unchecked

@@ -132,6 +132,7 @@ public class SketchAggregationTest
                                    + "   Theta (long) hex        : 7fffffffffffffff\n"
                                    + "   EstMode?                : false\n"
                                    + "   Empty?                  : false\n"
+                                   + "   Ordered?                : true\n"
                                    + "   Retained Entries        : 50\n"
                                    + "   Seed Hash               : 93cc | 37836\n"
                                    + "### END SKETCH SUMMARY\n";

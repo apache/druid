@@ -46,6 +46,7 @@ public class BrokerSegmentWatcherConfigTest
 
     Assert.assertNull(config.getWatchedTiers());
     Assert.assertTrue(config.isWatchRealtimeTasks());
+    Assert.assertNull(config.getIgnoredTiers());
 
     //non-defaults
     json = "{ \"watchedTiers\": [\"t1\", \"t2\"], \"watchedDataSources\": [\"ds1\", \"ds2\"], \"watchRealtimeTasks\": false }";
@@ -58,8 +59,23 @@ public class BrokerSegmentWatcherConfigTest
     );
 
     Assert.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
+    Assert.assertNull(config.getIgnoredTiers());
     Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
     Assert.assertFalse(config.isWatchRealtimeTasks());
 
+    // json with ignoredTiers
+    json = "{ \"ignoredTiers\": [\"t3\", \"t4\"], \"watchedDataSources\": [\"ds1\", \"ds2\"] }";
+
+    config = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(json, BrokerSegmentWatcherConfig.class)
+        ),
+        BrokerSegmentWatcherConfig.class
+    );
+
+    Assert.assertNull(config.getWatchedTiers());
+    Assert.assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
+    Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    Assert.assertTrue(config.isWatchRealtimeTasks());
   }
 }

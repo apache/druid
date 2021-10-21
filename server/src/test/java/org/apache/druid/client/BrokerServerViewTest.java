@@ -33,6 +33,7 @@ import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -331,7 +332,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     // Setup a Broker that watches only Tier 2
     final String tier1 = "tier1";
     final String tier2 = "tier2";
-    setupViews(Sets.newHashSet(tier2));
+    setupViews(Sets.newHashSet(tier2), null, true);
 
     // Historical Tier 1 has segments 1 and 2, Tier 2 has segments 2 and 3
     final DruidServer server11 = setupHistoricalServer(tier1, "localhost:1", 1);
@@ -384,17 +385,17 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   @Test
-  public void testRealtimeNodesNotWatched() throws Exception
+  public void testRealtimeTasksNotWatched() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(4);
     segmentRemovedLatch = new CountDownLatch(0);
 
     // Setup a Broker that watches only Historicals
-    setupViews(null, false);
+    setupViews(null, null, false);
 
     // Historical has segments 2 and 3, Realtime has segments 1 and 2
-    final DruidServer realtimeServer = setupDruidServer(ServerType.REALTIME, null, "realtime:1", 1);
+    final DruidServer realtimeServer = setupDruidServer(ServerType.INDEXER_EXECUTOR, null, "realtime:1", 1);
     final DruidServer historicalServer = setupHistoricalServer("tier1", "historical:2", 1);
 
     final DataSegment segment1 = dataSegmentWithIntervalAndVersion("2020-01-01/P1D", "v1");
@@ -441,6 +442,27 @@ public class BrokerServerViewTest extends CuratorTestBase
       Assert.assertEquals(historicalServer, selector.pick(null).getServer());
     }
     Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2));
+  }
+
+  @Test(expected = ISE.class)
+  public void testInvalidWatchedTiersConfig() throws Exception
+  {
+    // Verify that specifying both ignoredTiers and watchedTiers fails startup
+    final String tier1 = "tier1";
+    final String tier2 = "tier2";
+    setupViews(Sets.newHashSet(tier2), Sets.newHashSet(tier1), true);
+  }
+
+  @Test(expected = ISE.class)
+  public void testEmptyWatchedTiersConfig() throws Exception
+  {
+    setupViews(Collections.emptySet(), null, true);
+  }
+
+  @Test(expected = ISE.class)
+  public void testEmptyIgnoredTiersConfig() throws Exception
+  {
+    setupViews(null, Collections.emptySet(), true);
   }
 
   /**
@@ -506,15 +528,10 @@ public class BrokerServerViewTest extends CuratorTestBase
 
   private void setupViews() throws Exception
   {
-    setupViews(null);
+    setupViews(null, null, true);
   }
 
-  private void setupViews(Set<String> watchedTiers) throws Exception
-  {
-    setupViews(watchedTiers, true);
-  }
-
-  private void setupViews(Set<String> watchedTiers, boolean watchRealtimeNodes) throws Exception
+  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws Exception
   {
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
@@ -577,7 +594,13 @@ public class BrokerServerViewTest extends CuratorTestBase
           @Override
           public boolean isWatchRealtimeTasks()
           {
-            return watchRealtimeNodes;
+            return watchRealtimeTasks;
+          }
+
+          @Override
+          public Set<String> getIgnoredTiers()
+          {
+            return ignoredTiers;
           }
         }
     );

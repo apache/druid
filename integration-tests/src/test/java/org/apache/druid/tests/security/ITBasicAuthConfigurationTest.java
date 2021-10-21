@@ -36,6 +36,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Properties;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -69,43 +70,55 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceReadOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceOnlyUser",
+        "datasourceReadOnlyUser",
         "helloworld",
-        "datasourceOnlyRole",
-        DATASOURCE_ONLY_PERMISSIONS
+        "datasourceReadOnlyRole",
+        DATASOURCE_READ_ONLY_PERMISSIONS
     );
   }
 
   @Override
-  void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceReadAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceAndSysUser",
+        "datasourceReadAndSysUser",
         "helloworld",
-        "datasourceAndSysRole",
-        DATASOURCE_SYS_PERMISSIONS
+        "datasourceReadAndSysRole",
+        DATASOURCE_READ_SYS_PERMISSIONS
     );
   }
 
   @Override
-  void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceWriteAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
-        "datasourceWithStateUser",
+        "datasourceWriteAndSysUser",
         "helloworld",
-        "datasourceWithStateRole",
-        DATASOURCE_SYS_STATE_PERMISSIONS
+        "datasourceWriteAndSysRole",
+        DATASOURCE_WRITE_SYS_PERMISSIONS
     );
   }
 
   @Override
-  void setupSysTableAndStateOnlyUser() throws Exception
+  protected void setupDatasourceReadAndSysAndStateUser() throws Exception
+  {
+    createUserAndRoleWithPermissions(
+        adminClient,
+        "datasourceReadWithStateUser",
+        "helloworld",
+        "datasourceReadWithStateRole",
+        DATASOURCE_READ_SYS_STATE_PERMISSIONS
+    );
+  }
+
+  @Override
+  protected void setupSysTableAndStateOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
         adminClient,
@@ -117,7 +130,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  void setupTestSpecificHttpClients() throws Exception
+  protected void setupTestSpecificHttpClients() throws Exception
   {
     // create a new user+role that can read /status
     createUserAndRoleWithPermissions(
@@ -166,6 +179,42 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
         new BasicCredentials("druid99", "helloworld"),
         httpClient
     );
+  }
+
+  @Override
+  protected String getAuthenticatorName()
+  {
+    return BASIC_AUTHENTICATOR;
+  }
+
+  @Override
+  protected String getAuthorizerName()
+  {
+    return BASIC_AUTHORIZER;
+  }
+
+  @Override
+  protected String getExpectedAvaticaAuthError()
+  {
+    return EXPECTED_AVATICA_AUTH_ERROR;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionProperties()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "priest");
+    return connectionProperties;
+  }
+
+  @Override
+  protected Properties getAvaticaConnectionPropertiesFailure()
+  {
+    Properties connectionProperties = new Properties();
+    connectionProperties.setProperty("user", "admin");
+    connectionProperties.setProperty("password", "wrongpassword");
+    return connectionProperties;
   }
 
   private void createUserAndRoleWithPermissions(
@@ -238,23 +287,5 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
         ),
         permissionsBytes
     );
-  }
-
-  @Override
-  String getAuthenticatorName()
-  {
-    return BASIC_AUTHENTICATOR;
-  }
-
-  @Override
-  String getAuthorizerName()
-  {
-    return BASIC_AUTHORIZER;
-  }
-
-  @Override
-  String getExpectedAvaticaAuthError()
-  {
-    return EXPECTED_AVATICA_AUTH_ERROR;
   }
 }

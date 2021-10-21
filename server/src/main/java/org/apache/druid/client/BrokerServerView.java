@@ -106,23 +106,25 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.segmentWatcherConfig = segmentWatcherConfig;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
 
+    // Validate and set the segment watcher config
+    validateSegmentWatcherConfig(segmentWatcherConfig);
+    this.segmentWatcherConfig = segmentWatcherConfig;
+
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
-      log.info(
-          "Kashif: Filtering segment [%s] for Server [%s:%s:%s]",
-          metadataAndSegment.rhs.getId(),
-          metadataAndSegment.lhs.getType(),
-          metadataAndSegment.lhs.getTier(),
-          metadataAndSegment.lhs.getHostAndPort()
-      );
 
       // Include only watched tiers if specified
       if (segmentWatcherConfig.getWatchedTiers() != null
           && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
+        return false;
+      }
+
+      // Exclude ignored tiers if specified
+      if (segmentWatcherConfig.getIgnoredTiers() != null
+          && segmentWatcherConfig.getIgnoredTiers().contains(metadataAndSegment.lhs.getTier())) {
         return false;
       }
 
@@ -132,7 +134,7 @@ public class BrokerServerView implements TimelineServerView
         return false;
       }
 
-      // Include realtime nodes only if they are watched
+      // Include realtime tasks only if they are watched
       return segmentWatcherConfig.isWatchRealtimeTasks()
           || metadataAndSegment.lhs.getType() != ServerType.INDEXER_EXECUTOR;
     };
@@ -194,6 +196,35 @@ public class BrokerServerView implements TimelineServerView
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
+  }
+
+  /**
+   * Validates the given BrokerSegmentWatcherConfig.
+   * <ul>
+   *   <li>At most one of watchedTiers or ignoredTiers can be set</li>
+   *   <li>If set, watchedTiers must be non-empty</li>
+   *   <li>If set, ignoredTiers must be non-empty</li>
+   * </ul>
+   */
+  private void validateSegmentWatcherConfig(BrokerSegmentWatcherConfig watcherConfig)
+  {
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getIgnoredTiers() != null) {
+      throw new ISE(
+          "At most one of 'druid.broker.segment.watchedTiers' "
+          + "and 'druid.broker.segment.ignoredTiers' can be configured."
+      );
+    }
+
+    if (watcherConfig.getWatchedTiers() != null
+        && watcherConfig.getWatchedTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.watchedTiers' must be non-empty");
+    }
+
+    if (watcherConfig.getIgnoredTiers() != null
+        && watcherConfig.getIgnoredTiers().isEmpty()) {
+      throw new ISE("If configured, 'druid.broker.segment.ignoredTiers' must be non-empty");
+    }
   }
 
   private QueryableDruidServer addServer(DruidServer server)

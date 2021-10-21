@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggrega
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -118,7 +119,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
@@ -128,7 +129,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       );
     } else {
       final RelDataType dataType = columnRexNode.getType();
-      final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
+      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
         throw new ISE(
             "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
