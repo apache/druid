@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -166,14 +166,14 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         switch (unit) {
           case CENTURY:
           case MILLENNIUM:
-            return ExprType.DOUBLE;
+            return ExpressionType.DOUBLE;
           default:
-            return ExprType.LONG;
+            return ExpressionType.LONG;
         }
       }
 

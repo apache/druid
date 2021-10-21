@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
@@ -57,7 +58,8 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
           new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
           PLANNER_CONFIG_DEFAULT,
-          new NoopEscalator()
+          new NoopEscalator(),
+          new BrokerInternalQueryConfig()
       );
 
       druidSchema.start();

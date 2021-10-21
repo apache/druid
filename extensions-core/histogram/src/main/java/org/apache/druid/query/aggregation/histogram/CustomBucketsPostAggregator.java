@@ -24,10 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -66,9 +67,9 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
    * actual type is {@link Histogram}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return HistogramAggregatorFactory.TYPE;
   }
 
   @Override

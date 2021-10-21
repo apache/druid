@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -89,7 +89,7 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
       {
         ExprEval eval = arg.eval(bindings);
         boolean match;
-        switch (eval.type()) {
+        switch (eval.type().getType()) {
           case STRING:
             match = isStringMatch(eval.asString());
             break;
@@ -121,9 +121,9 @@ public class IPv4AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        return ExprType.LONG;
+        return ExpressionType.LONG;
       }
 
       @Override

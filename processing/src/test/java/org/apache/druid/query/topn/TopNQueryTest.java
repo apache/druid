@@ -39,7 +39,7 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -255,7 +255,7 @@ public class TopNQueryTest
     final TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .virtualColumns(new ExpressionVirtualColumn("v", "\"other\"", ValueType.STRING, ExprMacroTable.nil()))
+        .virtualColumns(new ExpressionVirtualColumn("v", "\"other\"", ColumnType.STRING, ExprMacroTable.nil()))
         .dimension(DefaultDimensionSpec.of("v"))
         .aggregators(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .granularity(QueryRunnerTestHelper.DAY_GRAN)

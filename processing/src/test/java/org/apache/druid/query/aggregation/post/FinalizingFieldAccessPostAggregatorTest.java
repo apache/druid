@@ -40,8 +40,8 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -85,7 +85,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
     EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ValueType.LONG).once();
+    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
@@ -109,7 +109,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
     EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ValueType.LONG).once();
+    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
@@ -149,7 +149,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
             .andReturn(Ordering.natural().<Long>nullsLast())
             .times(1);
 
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ValueType.LONG).once();
+    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
@@ -298,10 +298,10 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("stringo", null)
-                    .add("a", ValueType.COMPLEX)
-                    .add("b", ValueType.STRING)
+                    .add("a", StringFirstAggregatorFactory.TYPE)
+                    .add("b", ColumnType.STRING)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

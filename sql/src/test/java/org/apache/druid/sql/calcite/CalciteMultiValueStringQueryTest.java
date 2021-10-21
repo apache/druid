@@ -36,7 +36,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -82,10 +82,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -117,10 +117,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setDimFilter(selector("v0", "bfoo", null))
@@ -154,7 +154,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Druids.ScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -182,7 +182,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Druids.ScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'-lol-',\"dim3\")", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'-lol-',\"dim3\")", ColumnType.STRING))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -209,7 +209,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Druids.ScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
                 .filters(selector("v0", "bfoo", null))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -352,7 +352,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Druids.ScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array_slice(\"dim3\",1)", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "array_slice(\"dim3\",1)", ColumnType.STRING))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -383,11 +383,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"dim3\")", ColumnType.LONG))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim1", "_d0", ValueType.STRING),
-                                new DefaultDimensionSpec("v0", "_d1", ValueType.LONG)
+                                new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v0", "_d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -450,11 +450,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_append(\"dim3\",'foo')",
-                            ValueType.STRING
+                            ColumnType.STRING
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -510,11 +510,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_prepend('foo',\"dim3\")",
-                            ValueType.STRING
+                            ColumnType.STRING
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -567,18 +567,18 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "array_to_string(array_prepend('foo',\"dim3\"),',')",
-                                ValueType.STRING
+                                ColumnType.STRING
                             ),
                             expressionVirtualColumn(
                                 "v1",
                                 "array_to_string(array_append(\"dim3\",'foo'),',')",
-                                ValueType.STRING
+                                ColumnType.STRING
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING),
-                                new DefaultDimensionSpec("v1", "_d1", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v1", "_d1", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -632,11 +632,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_concat(\"dim3\",\"dim3\")",
-                            ValueType.STRING
+                            ColumnType.STRING
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -668,10 +668,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset(\"dim3\",1)", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_offset(\"dim3\",1)", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -707,10 +707,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -749,11 +749,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_offset_of(\"dim3\",'b')",
-                            ValueType.LONG
+                            ColumnType.LONG
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -792,11 +792,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_ordinal_of(\"dim3\",'b')",
-                            ValueType.LONG
+                            ColumnType.LONG
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -852,11 +852,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array_to_string(\"dim3\",',')",
-                            ValueType.STRING
+                            ColumnType.STRING
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -908,17 +908,17 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            expressionVirtualColumn("v0", "array_length(\"dim3\")", ValueType.LONG),
+                            expressionVirtualColumn("v0", "array_length(\"dim3\")", ColumnType.LONG),
                             expressionVirtualColumn(
                                 "v1",
                                 "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
-                                ValueType.STRING
+                                ColumnType.STRING
                             )
                         )
                         .setDimFilter(bound("v0", "0", null, true, false, null, StringComparators.NUMERIC))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v1", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v1", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -961,7 +961,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1006,7 +1006,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1055,12 +1055,12 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "array_length(filter((x) -> array_contains(array('b'), x), \"dim3\"))",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1099,12 +1099,12 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "array_length(filter((x) -> !array_contains(array('b'), x), \"dim3\"))",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1147,7 +1147,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(selector("v0", "a", null))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim3", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1190,7 +1190,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(selector("v0", "b", null))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim3", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1237,7 +1237,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(new LikeDimFilter("v0", "b%", null, null))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim3", "_d0", ValueType.STRING)
+                                new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))

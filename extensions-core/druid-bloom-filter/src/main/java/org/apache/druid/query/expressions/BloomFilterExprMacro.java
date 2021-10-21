@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.BloomKFilter;
 
 import javax.annotation.Nonnull;
@@ -82,7 +82,7 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
         ExprEval evaluated = arg.eval(bindings);
 
         boolean matches = false;
-        switch (evaluated.type()) {
+        switch (evaluated.type().getType()) {
           case STRING:
             String stringVal = (String) evaluated.value();
             if (stringVal == null) {
@@ -127,9 +127,9 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        return ExprType.LONG;
+        return ExpressionType.LONG;
       }
     }
 

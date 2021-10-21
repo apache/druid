@@ -28,8 +28,8 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -69,7 +69,7 @@ public class InlineDataSource implements DataSource
   @JsonCreator
   private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
-      @JsonProperty("columnTypes") List<ValueType> columnTypes,
+      @JsonProperty("columnTypes") List<ColumnType> columnTypes,
       @JsonProperty("rows") List<Object[]> rows
   )
   {
@@ -83,7 +83,7 @@ public class InlineDataSource implements DataSource
 
     for (int i = 0; i < columnNames.size(); i++) {
       final String name = columnNames.get(i);
-      final ValueType type = columnTypes != null ? columnTypes.get(i) : null;
+      final ColumnType type = columnTypes != null ? columnTypes.get(i) : null;
       builder.add(name, type);
     }
 
@@ -120,7 +120,7 @@ public class InlineDataSource implements DataSource
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<ValueType> getColumnTypes()
+  public List<ColumnType> getColumnTypes()
   {
     if (IntStream.range(0, signature.size()).noneMatch(i -> signature.getColumnType(i).isPresent())) {
       // All types are null; return null for columnTypes so it doesn't show up in serialized JSON.

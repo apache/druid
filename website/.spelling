@@ -781,6 +781,7 @@ PT30M
 PT30S
 PT5S
 PT80S
+SASL
 SegmentWriteOutMediumFactory
 UNABLE_TO_CONNECT_TO_STREAM
 UNHEALTHY_SUPERVISOR
@@ -973,10 +974,21 @@ column_1
 column_n
 com.opencsv
 ctrl
+headerFormat
+headerLabelPrefix
 jsonLowercase
+kafka
+KafkaStringHeaderFormat
+kafka.header.
+kafka.key
+kafka.timestamp
+keyColumnName
+keyFormat
 listDelimiter
+timestampColumnName
 timestampSpec
 urls
+valueFormat
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1702,6 +1714,7 @@ LoggingEmitter
 Los_Angeles
 MDC
 NoopServiceEmitter
+NUMA
 ONLY_EVENTS
 P1D
 P1W

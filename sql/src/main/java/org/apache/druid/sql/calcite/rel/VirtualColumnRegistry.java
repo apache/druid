@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -83,7 +84,7 @@ public class VirtualColumnRegistry
   public VirtualColumn getOrCreateVirtualColumnForExpression(
       PlannerContext plannerContext,
       DruidExpression expression,
-      ValueType valueType
+      ColumnType valueType
   )
   {
     ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression.getExpression(), valueType);
@@ -119,7 +120,7 @@ public class VirtualColumnRegistry
     return getOrCreateVirtualColumnForExpression(
         plannerContext,
         expression,
-        Calcites.getValueTypeForRelDataType(dataType)
+        Calcites.getColumnTypeForRelDataType(dataType)
     );
   }
 
@@ -135,7 +136,7 @@ public class VirtualColumnRegistry
   @Nullable
   public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
   {
-    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression, Calcites.getValueTypeForRelDataType(type));
+    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression, Calcites.getColumnTypeForRelDataType(type));
     return virtualColumnsByExpression.get(expressionWrapper);
   }
 
@@ -151,7 +152,7 @@ public class VirtualColumnRegistry
 
     for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
       final String columnName = virtualColumn.getOutputName();
-      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).getType());
+      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).toColumnType());
     }
 
     return builder.build();
@@ -171,9 +172,9 @@ public class VirtualColumnRegistry
   private static class ExpressionWrapper
   {
     private final String expression;
-    private final ValueType valueType;
+    private final ColumnType valueType;
 
-    public ExpressionWrapper(String expression, ValueType valueType)
+    public ExpressionWrapper(String expression, ColumnType valueType)
     {
       this.expression = expression;
       this.valueType = valueType;
@@ -189,7 +190,7 @@ public class VirtualColumnRegistry
         return false;
       }
       ExpressionWrapper expressionWrapper = (ExpressionWrapper) o;
-      return Objects.equals(expression, expressionWrapper.expression) && valueType == expressionWrapper.valueType;
+      return Objects.equals(expression, expressionWrapper.expression) && Objects.equals(valueType, expressionWrapper.valueType);
     }
 
     @Override

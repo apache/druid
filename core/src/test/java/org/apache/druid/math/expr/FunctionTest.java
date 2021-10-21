@@ -441,9 +441,9 @@ public class FunctionTest extends InitializedNullHandlingTest
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("null", "STRING"),
         Pair.of("x", "STRING"),
-        Pair.of("b", "LONG_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY"),
-        Pair.of("a", "STRING_ARRAY")
+        Pair.of("b", "ARRAY<LONG>"),
+        Pair.of("c", "ARRAY<DOUBLE>"),
+        Pair.of("a", "ARRAY<STRING>")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       if (NullHandling.sqlCompatible()) {
@@ -472,8 +472,8 @@ public class FunctionTest extends InitializedNullHandlingTest
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("1.2", "DOUBLE"),
         Pair.of("x", "STRING"),
-        Pair.of("a", "STRING_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY")
+        Pair.of("a", "ARRAY<STRING>"),
+        Pair.of("c", "ARRAY<DOUBLE>")
 
     );
     for (Pair<String, String> argAndType : invalidArguments) {
@@ -512,7 +512,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[greatest] does not accept STRING_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[greatest] does not accept ARRAY<STRING> types", e.getMessage());
     }
 
     // Null handling
@@ -540,7 +540,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[least] does not accept LONG_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[least] does not accept ARRAY<LONG> types", e.getMessage());
     }
 
     // Null handling

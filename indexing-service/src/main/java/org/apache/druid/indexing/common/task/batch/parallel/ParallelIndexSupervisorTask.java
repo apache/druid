@@ -53,7 +53,6 @@ import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -75,8 +74,6 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlers;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -1176,7 +1173,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @Context final HttpServletRequest req
   )
   {
-    ChatHandlers.authorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
 
     if (toolbox == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1255,12 +1252,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @Context final HttpServletRequest req
   )
   {
-    ChatHandlers.authorizationCheck(
-        req,
-        Action.WRITE,
-        getDataSource(),
-        authorizerMapper
-    );
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     if (currentSubTaskHolder == null || currentSubTaskHolder.getTask() == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
     } else {
@@ -1278,7 +1270,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getMode(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     return Response.ok(isParallelMode() ? "parallel" : "sequential").build();
   }
 
@@ -1287,7 +1279,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getPhaseName(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     if (isParallelMode()) {
       final ParallelIndexTaskRunner runner = getCurrentRunner();
       if (runner == null) {
@@ -1305,7 +1297,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getProgress(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1319,7 +1311,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1333,7 +1325,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSubTaskSpecs(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1347,7 +1339,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1361,7 +1353,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1375,7 +1367,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSubTaskSpec(@PathParam("id") String id, @Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
 
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
@@ -1395,7 +1387,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSubTaskState(@PathParam("id") String id, @Context final HttpServletRequest req)
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1417,7 +1409,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @Context final HttpServletRequest req
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     final ParallelIndexTaskRunner currentRunner = getCurrentRunner();
     if (currentRunner == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
@@ -1569,7 +1561,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     return Response.ok(doGetRowStatsAndUnparseableEvents(full, false).lhs).build();
   }
 
@@ -1614,8 +1606,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-
+    authorizeRequestForDatasourceWrite(req, authorizerMapper);
     return Response.ok(doGetLiveReports(full)).build();
   }
+
 }
