@@ -81,9 +81,12 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -196,14 +199,7 @@ public class SystemSchemaTest extends CalciteTestBase
                               .addMockedMethod("getStatus")
                               .createMock();
     request = EasyMock.createMock(Request.class);
-    authMapper = new AuthorizerMapper(null)
-    {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return (authenticationResult, resource, action) -> new Access(true);
-      }
-    };
+    authMapper = createAuthMapper();
 
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
@@ -554,33 +550,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
-    DataContext dataContext = new DataContext()
-    {
-      @Override
-      public SchemaPlus getRootSchema()
-      {
-        return null;
-      }
-
-      @Override
-      public JavaTypeFactory getTypeFactory()
-      {
-        return null;
-      }
-
-      @Override
-      public QueryProvider getQueryProvider()
-      {
-        return null;
-      }
-
-      @Override
-      public Object get(String name)
-      {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
-      }
-    };
-
+    DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
@@ -831,33 +801,7 @@ public class SystemSchemaTest extends CalciteTestBase
         indexerNodeDiscovery
     );
 
-    DataContext dataContext = new DataContext()
-    {
-      @Override
-      public SchemaPlus getRootSchema()
-      {
-        return null;
-      }
-
-      @Override
-      public JavaTypeFactory getTypeFactory()
-      {
-        return null;
-      }
-
-      @Override
-      public QueryProvider getQueryProvider()
-      {
-        return null;
-      }
-
-      @Override
-      public Object get(String name)
-      {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
-      }
-    };
-
+    DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
@@ -1112,32 +1056,7 @@ public class SystemSchemaTest extends CalciteTestBase
             .andReturn(immutableDruidServers)
             .once();
     EasyMock.replay(serverView);
-    DataContext dataContext = new DataContext()
-    {
-      @Override
-      public SchemaPlus getRootSchema()
-      {
-        return null;
-      }
-
-      @Override
-      public JavaTypeFactory getTypeFactory()
-      {
-        return null;
-      }
-
-      @Override
-      public QueryProvider getQueryProvider()
-      {
-        return null;
-      }
-
-      @Override
-      public Object get(String name)
-      {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
-      }
-    };
+    DataContext dataContext = createDataContext(Users.SUPER);
 
     //server_segments table is the join of servers and segments table
     // it will have 5 rows as follows
@@ -1230,32 +1149,7 @@ public class SystemSchemaTest extends CalciteTestBase
     responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
-    DataContext dataContext = new DataContext()
-    {
-      @Override
-      public SchemaPlus getRootSchema()
-      {
-        return null;
-      }
-
-      @Override
-      public JavaTypeFactory getTypeFactory()
-      {
-        return null;
-      }
-
-      @Override
-      public QueryProvider getQueryProvider()
-      {
-        return null;
-      }
-
-      @Override
-      public Object get(String name)
-      {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
-      }
-    };
+    DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = tasksTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
@@ -1292,6 +1186,81 @@ public class SystemSchemaTest extends CalciteTestBase
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);
+  }
+
+  @Test
+  public void testTasksTableAuth() throws Exception
+  {
+    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(client, mapper, authMapper);
+
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks"))
+            .andReturn(request)
+            .anyTimes();
+
+    String json = "[{\n"
+                  + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
+                  + "\t\"groupId\": \"group_index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
+                  + "\t\"type\": \"index\",\n"
+                  + "\t\"createdTime\": \"2018-09-20T22:33:44.922Z\",\n"
+                  + "\t\"queueInsertionTime\": \"1970-01-01T00:00:00.000Z\",\n"
+                  + "\t\"statusCode\": \"FAILED\",\n"
+                  + "\t\"runnerStatusCode\": \"NONE\",\n"
+                  + "\t\"duration\": -1,\n"
+                  + "\t\"location\": {\n"
+                  + "\t\t\"host\": \"testHost\",\n"
+                  + "\t\t\"port\": 1234,\n"
+                  + "\t\t\"tlsPort\": -1\n"
+                  + "\t},\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
+                  + "\t\"errorMsg\": null\n"
+                  + "}, {\n"
+                  + "\t\"id\": \"index_wikipedia_2018-09-21T18:38:47.773Z\",\n"
+                  + "\t\"groupId\": \"group_index_wikipedia_2018-09-21T18:38:47.773Z\",\n"
+                  + "\t\"type\": \"index\",\n"
+                  + "\t\"createdTime\": \"2018-09-21T18:38:47.873Z\",\n"
+                  + "\t\"queueInsertionTime\": \"2018-09-21T18:38:47.910Z\",\n"
+                  + "\t\"statusCode\": \"RUNNING\",\n"
+                  + "\t\"runnerStatusCode\": \"RUNNING\",\n"
+                  + "\t\"duration\": null,\n"
+                  + "\t\"location\": {\n"
+                  + "\t\t\"host\": \"192.168.1.6\",\n"
+                  + "\t\t\"port\": 8100,\n"
+                  + "\t\t\"tlsPort\": -1\n"
+                  + "\t},\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
+                  + "\t\"errorMsg\": null\n"
+                  + "}]";
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject()))
+            .andReturn(createFullResponseHolder(httpResp, json))
+            .andReturn(createFullResponseHolder(httpResp, json))
+            .andReturn(createFullResponseHolder(httpResp, json));
+
+    EasyMock.expect(request.getUrl())
+            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks"))
+            .anyTimes();
+
+    EasyMock.replay(client, request, responseHandler);
+
+    // Verify that no row is returned for Datasource Write user
+    List<Object[]> rows = tasksTable
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+
+    // Verify that 2 rows are returned for Datasource Read user
+    rows = tasksTable
+        .scan(createDataContext(Users.DATASOURCE_READ))
+        .toList();
+    Assert.assertEquals(2, rows.size());
+
+    // Verify that 2 rows are returned for Super user
+    rows = tasksTable
+        .scan(createDataContext(Users.SUPER))
+        .toList();
+    Assert.assertEquals(2, rows.size());
   }
 
   @Test
@@ -1337,7 +1306,111 @@ public class SystemSchemaTest extends CalciteTestBase
     responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
-    DataContext dataContext = new DataContext()
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
+
+    Object[] row0 = rows.get(0);
+    Assert.assertEquals("wikipedia", row0[0].toString());
+    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[1].toString());
+    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[2].toString());
+    Assert.assertEquals(0L, row0[3]);
+    Assert.assertEquals("kafka", row0[4].toString());
+    Assert.assertEquals("wikipedia", row0[5].toString());
+    Assert.assertEquals(0L, row0[6]);
+    Assert.assertEquals(
+        "{\"type\":\"kafka\",\"dataSchema\":{\"dataSource\":\"wikipedia\"},\"context\":null,\"suspended\":false}",
+        row0[7].toString()
+    );
+
+    // Verify value types.
+    verifyTypes(rows, SystemSchema.SUPERVISOR_SIGNATURE);
+  }
+
+  @Test
+  public void testSupervisorTableAuth() throws Exception
+  {
+    SystemSchema.SupervisorsTable supervisorTable =
+        new SystemSchema.SupervisorsTable(client, mapper, createAuthMapper());
+
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system"))
+            .andReturn(request)
+            .anyTimes();
+
+    final String json = "[{\n"
+                  + "\t\"id\": \"wikipedia\",\n"
+                  + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
+                  + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
+                  + "\t\"healthy\": false,\n"
+                  + "\t\"specString\": \"{\\\"type\\\":\\\"kafka\\\",\\\"dataSchema\\\":{\\\"dataSource\\\":\\\"wikipedia\\\"}"
+                  + ",\\\"context\\\":null,\\\"suspended\\\":false}\",\n"
+                  + "\t\"type\": \"kafka\",\n"
+                  + "\t\"source\": \"wikipedia\",\n"
+                  + "\t\"suspended\": false\n"
+                  + "}]";
+
+    HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject()))
+            .andReturn(createFullResponseHolder(httpResponse, json))
+            .andReturn(createFullResponseHolder(httpResponse, json))
+            .andReturn(createFullResponseHolder(httpResponse, json));
+
+    EasyMock.expect(responseHandler.getStatus())
+            .andReturn(httpResponse.getStatus().getCode())
+            .anyTimes();
+    EasyMock.expect(request.getUrl())
+            .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
+            .anyTimes();
+
+    EasyMock.replay(client, request, responseHandler);
+
+    // Verify that no row is returned for Datasource Write user
+    List<Object[]> rows = supervisorTable
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .toList();
+    Assert.assertTrue(rows.isEmpty());
+
+    // Verify that 1 row is returned for Datasource Write user
+    rows = supervisorTable
+        .scan(createDataContext(Users.DATASOURCE_READ))
+        .toList();
+    Assert.assertEquals(1, rows.size());
+
+    // Verify that 1 row is returned for Super user
+    rows = supervisorTable
+        .scan(createDataContext(Users.SUPER))
+        .toList();
+    Assert.assertEquals(1, rows.size());
+
+    // TODO: If needed, verify the first row here
+
+    // TODO: Verify value types.
+    // verifyTypes(rows, SystemSchema.SUPERVISOR_SIGNATURE);
+  }
+
+  /**
+   * Creates a response holder that contains the given json.
+   */
+  private InputStreamFullResponseHolder createFullResponseHolder(
+      HttpResponse httpResponse,
+      String json
+  )
+  {
+    InputStreamFullResponseHolder responseHolder =
+        new InputStreamFullResponseHolder(httpResponse.getStatus(), httpResponse);
+
+    byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
+
+    return responseHolder;
+  }
+
+  /**
+   * Creates a DataContext for the given username.
+   */
+  private DataContext createDataContext(String username)
+  {
+    return new DataContext()
     {
       @Override
       public SchemaPlus getRootSchema()
@@ -1358,28 +1431,40 @@ public class SystemSchemaTest extends CalciteTestBase
       }
 
       @Override
-      public Object get(String name)
+      public Object get(String authorizerName)
       {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
+        return CalciteTests.TEST_SUPERUSER_NAME.equals(username)
+               ? CalciteTests.SUPER_USER_AUTH_RESULT
+               : new AuthenticationResult(username, authorizerName, null, null);
       }
     };
-    final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
+  }
 
-    Object[] row0 = rows.get(0);
-    Assert.assertEquals("wikipedia", row0[0].toString());
-    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[1].toString());
-    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[2].toString());
-    Assert.assertEquals(0L, row0[3]);
-    Assert.assertEquals("kafka", row0[4].toString());
-    Assert.assertEquals("wikipedia", row0[5].toString());
-    Assert.assertEquals(0L, row0[6]);
-    Assert.assertEquals(
-        "{\"type\":\"kafka\",\"dataSchema\":{\"dataSource\":\"wikipedia\"},\"context\":null,\"suspended\":false}",
-        row0[7].toString()
-    );
+  private AuthorizerMapper createAuthMapper()
+  {
+    return new AuthorizerMapper(null)
+    {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        return (authenticationResult, resource, action) -> {
+          final String username = authenticationResult.getIdentity();
 
-    // Verify value types.
-    verifyTypes(rows, SystemSchema.SUPERVISOR_SIGNATURE);
+          // Allow access to a Datasource if
+          // - Super User or Datasource Write User requests Write access
+          // - Super User or Datasource Read User requests Read access
+          if (resource.getType().equals(ResourceType.DATASOURCE)) {
+            return new Access(
+                username.equals(Users.SUPER)
+                || (action == Action.READ && username.equals(Users.DATASOURCE_READ))
+                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
+            );
+          }
+
+          return new Access(true);
+        };
+      }
+    };
   }
 
   private static void verifyTypes(final List<Object[]> rows, final RowSignature signature)
@@ -1442,5 +1527,15 @@ public class SystemSchemaTest extends CalciteTestBase
         }
       }
     }
+  }
+
+  /**
+   * Usernames to be used in tests.
+   */
+  private static class Users
+  {
+    private static final String SUPER = CalciteTests.TEST_SUPERUSER_NAME;
+    private static final String DATASOURCE_READ = "datasourceRead";
+    private static final String DATASOURCE_WRITE = "datasourceWrite";
   }
 }
