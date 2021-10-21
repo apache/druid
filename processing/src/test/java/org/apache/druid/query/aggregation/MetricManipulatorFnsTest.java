@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -72,7 +73,7 @@ public class MetricManipulatorFnsTest
 
     HyperUniquesAggregatorFactory hyperUniquesAggregatorFactory = new HyperUniquesAggregatorFactory(NAME, FIELD);
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-    collector.add((short) 1, (byte) 5);
+    collector.add(Hashing.murmur3_128().hashLong(123).asBytes());
 
     constructorArrays.add(
         new Object[]{

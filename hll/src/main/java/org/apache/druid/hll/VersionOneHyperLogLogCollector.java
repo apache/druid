@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class VersionOneHyperLogLogCollector extends HyperLogLogCollector
+public class VersionOneHyperLogLogCollector extends AbstractHyperLogLogCollector
 {
   /**
    * Header:

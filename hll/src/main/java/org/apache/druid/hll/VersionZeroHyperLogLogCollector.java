@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 /**
  */
 @Deprecated
-public class VersionZeroHyperLogLogCollector extends HyperLogLogCollector
+public class VersionZeroHyperLogLogCollector extends AbstractHyperLogLogCollector
 {
   /**
    * Header:

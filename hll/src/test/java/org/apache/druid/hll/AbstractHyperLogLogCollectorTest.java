@@ -43,13 +43,14 @@ import java.util.function.Predicate;
 /**
  *
  */
-public class HyperLogLogCollectorTest
+@SuppressWarnings("UnstableApiUsage")
+public class AbstractHyperLogLogCollectorTest
 {
-  private static final Logger log = new Logger(HyperLogLogCollectorTest.class);
+  private static final Logger log = new Logger(AbstractHyperLogLogCollectorTest.class);
 
   private final HashFunction fn = Hashing.murmur3_128();
 
-  private static void fillBuckets(HyperLogLogCollector collector, byte startOffset, byte endOffset)
+  private static void fillBuckets(AbstractHyperLogLogCollector collector, byte startOffset, byte endOffset)
   {
     byte offset = startOffset;
     while (offset <= endOffset) {
@@ -67,9 +68,9 @@ public class HyperLogLogCollectorTest
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
-      HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector oneHalf = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector otherHalf = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector allCombined = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector oneHalf = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector otherHalf = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (int i = 0; i < numThings; ++i) {
         byte[] hashedVal = fn.hashLong(random.nextLong()).asBytes();
@@ -82,7 +83,7 @@ public class HyperLogLogCollectorTest
         }
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeLatestCollector();
 
       folded.fold(oneHalf);
       Assert.assertEquals(oneHalf, folded);
@@ -109,11 +110,11 @@ public class HyperLogLogCollectorTest
   @Test
   public void testHighCardinalityRollingFold() throws Exception
   {
-    final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
-    final HyperLogLogCollector simple = HyperLogLogCollector.makeLatestCollector();
+    final AbstractHyperLogLogCollector rolling = AbstractHyperLogLogCollector.makeLatestCollector();
+    final AbstractHyperLogLogCollector simple = AbstractHyperLogLogCollector.makeLatestCollector();
 
     MessageDigest md = MessageDigest.getInstance("SHA-1");
-    HyperLogLogCollector tmp = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector tmp = AbstractHyperLogLogCollector.makeLatestCollector();
 
     int count;
     for (count = 0; count < 100_000_000; ++count) {
@@ -126,7 +127,7 @@ public class HyperLogLogCollectorTest
 
       if (count % 100 == 0) {
         rolling.fold(tmp);
-        tmp = HyperLogLogCollector.makeLatestCollector();
+        tmp = AbstractHyperLogLogCollector.makeLatestCollector();
       }
     }
 
@@ -145,12 +146,12 @@ public class HyperLogLogCollectorTest
   @Test
   public void testHighCardinalityRollingFold2()
   {
-    final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
+    final AbstractHyperLogLogCollector rolling = AbstractHyperLogLogCollector.makeLatestCollector();
     int count;
     long start = System.currentTimeMillis();
 
     for (count = 0; count < 50_000_000; ++count) {
-      HyperLogLogCollector theCollector = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector theCollector = AbstractHyperLogLogCollector.makeLatestCollector();
       theCollector.add(fn.hashLong(count).asBytes());
       rolling.fold(theCollector);
     }
@@ -171,9 +172,9 @@ public class HyperLogLogCollectorTest
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
-      HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector oneHalf = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector otherHalf = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector allCombined = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector oneHalf = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector otherHalf = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (int i = 0; i < numThings; ++i) {
         byte[] hashedVal = fn.hashLong(random.nextLong()).asBytes();
@@ -186,7 +187,7 @@ public class HyperLogLogCollectorTest
         }
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeLatestCollector();
 
       folded.fold(oneHalf.toByteBuffer());
       Assert.assertEquals(oneHalf, folded);
@@ -204,9 +205,9 @@ public class HyperLogLogCollectorTest
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
-      HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector oneHalf = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector otherHalf = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector allCombined = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector oneHalf = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector otherHalf = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (int i = 0; i < numThings; ++i) {
         byte[] hashedVal = fn.hashLong(random.nextLong()).asBytes();
@@ -219,7 +220,7 @@ public class HyperLogLogCollectorTest
         }
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeCollector(
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeCollector(
           ByteBuffer.wrap(HyperLogLogCollector.makeEmptyVersionedByteArray())
                     .asReadOnlyBuffer()
       );
@@ -240,9 +241,9 @@ public class HyperLogLogCollectorTest
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
     for (int numThings : numValsToCheck) {
-      HyperLogLogCollector allCombined = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector oneHalf = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector otherHalf = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector allCombined = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector oneHalf = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector otherHalf = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (int i = 0; i < numThings; ++i) {
         byte[] hashedVal = fn.hashLong(random.nextLong()).asBytes();
@@ -255,7 +256,7 @@ public class HyperLogLogCollectorTest
         }
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeCollector(
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeCollector(
           shiftedBuffer(
               ByteBuffer.wrap(HyperLogLogCollector.makeEmptyVersionedByteArray())
                         .asReadOnlyBuffer(),
@@ -279,7 +280,7 @@ public class HyperLogLogCollectorTest
     ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x00, 0x11);
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
 
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(biggerOffset);
     collector.fold(smallerOffset);
 
@@ -295,7 +296,7 @@ public class HyperLogLogCollectorTest
       Assert.assertEquals(outBuffer.get(), 0x11);
     }
 
-    collector = HyperLogLogCollector.makeLatestCollector();
+    collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(smallerOffset);
     collector.fold(biggerOffset);
 
@@ -319,15 +320,15 @@ public class HyperLogLogCollectorTest
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
 
     ByteBuffer buffer = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-    HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buffer.duplicate());
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeCollector(buffer.duplicate());
 
     // make sure the original buffer gets modified
     collector.fold(biggerOffset);
-    Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
+    Assert.assertEquals(collector, AbstractHyperLogLogCollector.makeCollector(buffer.duplicate()));
 
     // make sure the original buffer gets modified
     collector.fold(smallerOffset);
-    Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
+    Assert.assertEquals(collector, AbstractHyperLogLogCollector.makeCollector(buffer.duplicate()));
   }
 
   @Test
@@ -336,7 +337,7 @@ public class HyperLogLogCollectorTest
     ByteBuffer biggerOffset = shiftedBuffer(makeCollectorBuffer(1, (byte) 0x00, 0x11), 10);
     ByteBuffer smallerOffset = shiftedBuffer(makeCollectorBuffer(0, (byte) 0x20, 0x00), 15);
 
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(biggerOffset);
     collector.fold(smallerOffset);
 
@@ -352,7 +353,7 @@ public class HyperLogLogCollectorTest
       Assert.assertEquals(outBuffer.get(), 0x11);
     }
 
-    collector = HyperLogLogCollector.makeLatestCollector();
+    collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(smallerOffset);
     collector.fold(biggerOffset);
 
@@ -384,7 +385,7 @@ public class HyperLogLogCollectorTest
     ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x01, 0x11);
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
 
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(biggerOffset);
     collector.fold(smallerOffset);
 
@@ -397,7 +398,7 @@ public class HyperLogLogCollectorTest
     outBuffer.getShort();
     Assert.assertFalse(outBuffer.hasRemaining());
 
-    collector = HyperLogLogCollector.makeLatestCollector();
+    collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(smallerOffset);
     collector.fold(biggerOffset);
 
@@ -429,7 +430,7 @@ public class HyperLogLogCollectorTest
     buffer2.put(1, (byte) 0);
     buffer2.putShort(2, (short) (2048));
 
-    HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buffer1);
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeCollector(buffer1);
     collector.fold(buffer2);
 
     ByteBuffer outBuffer = collector.toByteBuffer();
@@ -446,10 +447,10 @@ public class HyperLogLogCollectorTest
   public void testSparseFoldWithDifferentOffsets1()
   {
     ByteBuffer biggerOffset = makeCollectorBuffer(1, new byte[]{0x11, 0x10}, 0x11);
-    ByteBuffer sparse = HyperLogLogCollector.makeCollector(makeCollectorBuffer(0, new byte[]{0x00, 0x02}, 0x00))
+    ByteBuffer sparse = AbstractHyperLogLogCollector.makeCollector(makeCollectorBuffer(0, new byte[]{0x00, 0x02}, 0x00))
                                             .toByteBuffer();
 
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(biggerOffset);
     collector.fold(sparse);
 
@@ -462,7 +463,7 @@ public class HyperLogLogCollectorTest
     Assert.assertEquals(outBuffer.getShort(), 0);
     Assert.assertFalse(outBuffer.hasRemaining());
 
-    collector = HyperLogLogCollector.makeLatestCollector();
+    collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.fold(sparse);
     collector.fold(biggerOffset);
 
@@ -489,7 +490,7 @@ public class HyperLogLogCollectorTest
     }
 
     final short numNonZeroInRemaining = computeNumNonZero((byte) remainingBytes);
-    numNonZero += (short) ((HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
+    numNonZero += (short) ((AbstractHyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
 
     ByteBuffer biggerOffset = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
     biggerOffset.put(VersionOneHyperLogLogCollector.VERSION);
@@ -524,9 +525,9 @@ public class HyperLogLogCollectorTest
     // final Random random = new Random(37); // this seed will cause this test to fail because of slightly larger errors
     final Random random = new Random(0);
     for (int j = 0; j < 10; j++) {
-      HyperLogLogCollector smallVals = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector bigVals = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector all = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector smallVals = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector bigVals = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector all = AbstractHyperLogLogCollector.makeLatestCollector();
 
       int numThings = 500000;
       for (int i = 0; i < numThings; i++) {
@@ -540,7 +541,7 @@ public class HyperLogLogCollectorTest
         all.add(hashedVal);
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeLatestCollector();
       folded.fold(smallVals);
       folded.fold(bigVals);
       final double expected = all.estimateCardinality();
@@ -557,9 +558,9 @@ public class HyperLogLogCollectorTest
     MessageDigest md = MessageDigest.getInstance("SHA-1");
 
     for (int j = 0; j < 1; j++) {
-      HyperLogLogCollector evenVals = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector oddVals = HyperLogLogCollector.makeLatestCollector();
-      HyperLogLogCollector all = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector evenVals = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector oddVals = AbstractHyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector all = AbstractHyperLogLogCollector.makeLatestCollector();
 
       int numThings = 500000;
       for (int i = 0; i < numThings; i++) {
@@ -574,7 +575,7 @@ public class HyperLogLogCollectorTest
         all.add(hashedVal);
       }
 
-      HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector folded = AbstractHyperLogLogCollector.makeLatestCollector();
       folded.fold(evenVals);
       folded.fold(oddVals);
       final double expected = all.estimateCardinality();
@@ -597,7 +598,7 @@ public class HyperLogLogCollectorTest
     };
 
     int valsToCheckIndex = 0;
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     for (int i = 0; i < valsToCheck[valsToCheck.length - 1]; ++i) {
       collector.add(fn.hashLong(random.nextLong()).asBytes());
       if (i == valsToCheck[valsToCheckIndex]) {
@@ -623,7 +624,7 @@ public class HyperLogLogCollectorTest
     };
 
     int valsToCheckIndex = 0;
-    HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeCollector(
         ByteBuffer.allocateDirect(
             HyperLogLogCollector.getLatestNumBytesForDenseStorage()
         )
@@ -653,7 +654,7 @@ public class HyperLogLogCollectorTest
     };
 
     int valsToCheckIndex = 0;
-    HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeCollector(
         (ByteBuffer) ByteBuffer.allocate(10000)
                                .position(0)
                                .limit(HyperLogLogCollector.getLatestNumBytesForDenseStorage())
@@ -673,7 +674,7 @@ public class HyperLogLogCollectorTest
   public void testSparseEstimation()
   {
     final Random random = new Random(0);
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
 
     for (int i = 0; i < 100; ++i) {
       collector.add(fn.hashLong(random.nextLong()).asBytes());
@@ -687,7 +688,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testHighBits()
   {
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
 
     // fill up all the buckets so we reach a registerOffset of 49
     fillBuckets(collector, (byte) 0, (byte) 49);
@@ -706,7 +707,7 @@ public class HyperLogLogCollectorTest
   @Test
   public void testMaxOverflow()
   {
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.add((short) 23, (byte) 16);
     Assert.assertEquals(23, collector.getMaxOverflowRegister());
     Assert.assertEquals(16, collector.getMaxOverflowValue());
@@ -727,16 +728,16 @@ public class HyperLogLogCollectorTest
   @Test
   public void testRegisterSwapWithSparse()
   {
-    final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    final AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     // Skip the first bucket
-    for (int i = 1; i < HyperLogLogCollector.NUM_BUCKETS; i++) {
+    for (int i = 1; i < AbstractHyperLogLogCollector.NUM_BUCKETS; i++) {
       collector.add((short) i, (byte) 1);
       Assert.assertEquals(i, collector.getNumNonZeroRegisters());
       Assert.assertEquals(0, collector.getRegisterOffset());
     }
     Assert.assertEquals(
         15615.219683654448D,
-        HyperLogLogCollector.makeCollector(collector.toByteBuffer().asReadOnlyBuffer())
+        AbstractHyperLogLogCollector.makeCollector(collector.toByteBuffer().asReadOnlyBuffer())
                             .estimateCardinality(),
         1e-5D
     );
@@ -757,13 +758,13 @@ public class HyperLogLogCollectorTest
     final ByteBuffer buffer = collector.toByteBuffer();
     Assert.assertEquals(collector.getNumHeaderBytes(), buffer.remaining());
 
-    final HyperLogLogCollector denseCollector = HyperLogLogCollector.makeLatestCollector();
-    for (int i = 0; i < HyperLogLogCollector.NUM_BUCKETS - 1; i++) {
+    final AbstractHyperLogLogCollector denseCollector = AbstractHyperLogLogCollector.makeLatestCollector();
+    for (int i = 0; i < AbstractHyperLogLogCollector.NUM_BUCKETS - 1; i++) {
       denseCollector.add((short) i, (byte) 1);
     }
 
-    Assert.assertEquals(HyperLogLogCollector.NUM_BUCKETS - 1, denseCollector.getNumNonZeroRegisters());
-    final HyperLogLogCollector folded = denseCollector.fold(HyperLogLogCollector.makeCollector(buffer));
+    Assert.assertEquals(AbstractHyperLogLogCollector.NUM_BUCKETS - 1, denseCollector.getNumNonZeroRegisters());
+    final AbstractHyperLogLogCollector folded = denseCollector.fold(HyperLogLogCollector.makeCollector(buffer));
     Assert.assertNotNull(folded.toByteBuffer());
     Assert.assertEquals(folded.getStorageBuffer().remaining(), denseCollector.getNumBytesForDenseStorage());
   }
@@ -773,7 +774,7 @@ public class HyperLogLogCollectorTest
   public void testCanFillUpOnMod()
   {
     final HashFunction fn = Hashing.murmur3_128();
-    final HyperLogLogCollector hyperLogLogCollector = HyperLogLogCollector.makeLatestCollector();
+    final AbstractHyperLogLogCollector hyperLogLogCollector = AbstractHyperLogLogCollector.makeLatestCollector();
     final byte[] b = new byte[10];
     b[0] = 1;
     hyperLogLogCollector.add(b);
@@ -803,10 +804,10 @@ public class HyperLogLogCollectorTest
   public void testMergeMaxOverflow()
   {
     // no offset
-    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.add((short) 23, (byte) 16);
 
-    HyperLogLogCollector other = HyperLogLogCollector.makeLatestCollector();
+    AbstractHyperLogLogCollector other = AbstractHyperLogLogCollector.makeLatestCollector();
     collector.add((short) 56, (byte) 17);
 
     collector.fold(other);
@@ -815,11 +816,11 @@ public class HyperLogLogCollectorTest
 
     // different offsets
     // fill up all the buckets so we reach a registerOffset of 49
-    collector = HyperLogLogCollector.makeLatestCollector();
+    collector = AbstractHyperLogLogCollector.makeLatestCollector();
     fillBuckets(collector, (byte) 0, (byte) 49);
     collector.add((short) 23, (byte) 65);
 
-    other = HyperLogLogCollector.makeLatestCollector();
+    other = AbstractHyperLogLogCollector.makeLatestCollector();
     fillBuckets(other, (byte) 0, (byte) 43);
     other.add((short) 47, (byte) 67);
 
@@ -846,7 +847,7 @@ public class HyperLogLogCollectorTest
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);
 
     for (List<HyperLogLogCollector> permutation : permutations) {
-      HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (HyperLogLogCollector foldee : permutation) {
         collector.fold(foldee);
@@ -874,7 +875,7 @@ public class HyperLogLogCollectorTest
 
     for (int numThings : valsToCheck) {
       long startTime = System.currentTimeMillis();
-      HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+      AbstractHyperLogLogCollector collector = AbstractHyperLogLogCollector.makeLatestCollector();
 
       for (int i = 0; i < numThings; ++i) {
         if (i != 0 && i % 100000000 == 0) {
@@ -889,7 +890,7 @@ public class HyperLogLogCollectorTest
     }
   }
 
-  private double computeError(double error, int count, int numThings, long startTime, HyperLogLogCollector collector)
+  private double computeError(double error, int count, int numThings, long startTime, AbstractHyperLogLogCollector collector)
   {
     final double estimatedValue = collector.estimateCardinality();
     final double errorThisTime = Math.abs((double) numThings - estimatedValue) / numThings;

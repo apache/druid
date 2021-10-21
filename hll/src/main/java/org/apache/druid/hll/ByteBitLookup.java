@@ -20,10 +20,15 @@
 package org.apache.druid.hll;
 
 /**
+ *
  */
 public class ByteBitLookup
 {
   public static final byte[] LOOKUP;
+
+  private ByteBitLookup()
+  {
+  }
 
   static {
     LOOKUP = new byte[256];
