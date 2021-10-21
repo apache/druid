@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -87,5 +88,34 @@ public class ProcCgroupDiscovererTest
   {
     expectedException.expect(NullPointerException.class);
     Assert.assertNull(new ProcCgroupDiscoverer(procDir.toPath()).discover(null));
+  }
+
+  @Test
+  public void testFallBack() throws Exception
+  {
+    TemporaryFolder temporaryFolder = new TemporaryFolder();
+    temporaryFolder.create();
+    File cgroupDir = temporaryFolder.newFolder();
+    File procDir = temporaryFolder.newFolder();
+    TestUtils.setUpCgroups(procDir, cgroupDir);
+
+    // Swap out the cgroup path with a default path
+    FileUtils.deleteDirectory(new File(
+        cgroupDir,
+        "cpu,cpuacct/"
+    ));
+
+    Assert.assertTrue(new File(
+        cgroupDir,
+        "cpu,cpuacct/"
+    ).mkdir());
+
+    Assert.assertEquals(
+        new File(
+            cgroupDir,
+            "cpu,cpuacct"
+        ).toPath(),
+        new ProcCgroupDiscoverer(procDir.toPath()).discover("cpu")
+    );
   }
 }
