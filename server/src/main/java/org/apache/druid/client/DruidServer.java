@@ -50,7 +50,6 @@ public class DruidServer implements Comparable<DruidServer>
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_NUM_REPLICANTS = 2;
   public static final String DEFAULT_TIER = "_default_tier";
-  public static final String REALTIME_TIER = "_realtime_tier";
 
   private static final Logger log = new Logger(DruidServer.class);
 
