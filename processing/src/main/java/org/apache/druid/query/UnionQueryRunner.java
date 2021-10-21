@@ -85,7 +85,7 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                              query,
                              indexBaseDataSourcePair.rhs
                          ).withSubQueryId(generateSubqueryId(
-                             queryPlus.getQuery().getSubQueryId(),
+                             query.getSubQueryId(),
                              findNestingLevel(analysis.getDataSource(), analysis.getBaseDataSource()),
                              indexBaseDataSourcePair.lhs
                          ))))).collect(
