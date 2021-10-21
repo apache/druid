@@ -329,8 +329,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
 
         assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
-        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, generateSubqueryId(
-            subQueryIdPrefix, nesting, 1), parentQueryId, parentSqlQueryId);
+        current = inlineIfNecessary(
+            current,
+            null,
+            subqueryRowLimitAccumulator,
+            maxSubqueryRows,
+            dryRun,
+            generateSubqueryId(subQueryIdPrefix, nesting, 1),
+            parentQueryId,
+            parentSqlQueryId
+        );
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
@@ -343,14 +351,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         } else {
           // Something happened during inlining that means the toolchest is no longer able to handle this subquery.
           // We need to consider inlining it.
-          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun, generateSubqueryId(subQueryIdPrefix, 0, 2), parentQueryId, parentSqlQueryId);
+          return inlineIfNecessary(
+              current,
+              toolChestIfOutermost,
+              subqueryRowLimitAccumulator,
+              maxSubqueryRows,
+              dryRun,
+              generateSubqueryId(subQueryIdPrefix, 0, 2),
+              parentQueryId,
+              parentSqlQueryId
+          );
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
         // This subquery id needs to be generated on the bases of outer query's id
-         Query subQueryWithId = subQuery.withSubQueryId(subQueryIdPrefix);
+        Query subQueryWithId = subQuery.withSubQueryId(subQueryIdPrefix);
 
-        if(StringUtils.isNotEmpty(parentQueryId)) {
+        if (StringUtils.isNotEmpty(parentQueryId)) {
           subQueryWithId = subQueryWithId.withId(parentQueryId);
         }
 
@@ -391,7 +408,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         generateSubqueryId(subQueryIdPrefix, 0, 1),
                         parentQueryId,
                         parentSqlQueryId
-                        )
+                    )
                 )
             ),
             toolChestIfOutermost,
@@ -473,16 +490,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   /**
    * Creates a child subquery Id from the parent (sub)query as follows
-   *  If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
-   *  Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
+   * If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
+   * Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
    *
    * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
-   * @param nesting The level under which the base datasource is present inside the original datasource
-   * @param orderNumber Position of the generated subquery at the same level
+   * @param nesting          The level under which the base datasource is present inside the original datasource
+   * @param orderNumber      Position of the generated subquery at the same level
    * @return Subquery Id which needs to be populated
    */
   private String generateSubqueryId(String parentSubqueryId, int nesting, int orderNumber)
   {
+    final String DELIMITER = ".";
     List<String> arr = new ArrayList<>();
     if (!StringUtils.isEmpty(parentSubqueryId)) {
       arr.add(parentSubqueryId);
@@ -490,7 +508,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     arr.addAll(Collections.nCopies(nesting, "1"));
     arr.add(Integer.toString(orderNumber));
 
-    return String.join("-", arr);
+    return String.join(DELIMITER, arr);
   }
 
   /**

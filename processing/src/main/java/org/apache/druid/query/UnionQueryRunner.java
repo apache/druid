@@ -19,9 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -79,17 +77,22 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
         return new MergeSequence<>(
             query.getResultOrdering(),
             Sequences.simple(
-               IntStream.range(0, unionDataSource.getDataSources().size())
+                IntStream.range(0, unionDataSource.getDataSources().size())
                          .mapToObj(i -> new Pair<Integer, DataSource>(i + 1, unionDataSource.getDataSources().get(i)))
-                         .map(indexBaseDataSourcePair -> baseRunner.run(queryPlus.withQuery(Queries.withBaseDataSource(
-                             query,
-                             indexBaseDataSourcePair.rhs
-                         ).withSubQueryId(generateSubqueryId(
-                             query.getSubQueryId(),
-                             findNestingLevel(analysis.getDataSource(), analysis.getBaseDataSource()),
-                             indexBaseDataSourcePair.lhs
-                         ))))).collect(
-                             Collectors.toList())
+                         .map(indexBaseDataSourcePair ->
+                                  baseRunner.run(
+                                      queryPlus.withQuery(Queries.withBaseDataSource(
+                                          query,
+                                          indexBaseDataSourcePair.rhs
+                                      ).withSubQueryId(
+                                          generateSubqueryId(
+                                              query.getSubQueryId(),
+                                              findNestingLevel(analysis.getDataSource(), analysis.getBaseDataSource()),
+                                              indexBaseDataSourcePair.lhs
+                                          )
+                                      ))
+                                  )
+                         ).collect(Collectors.toList())
             )
         );
       }
@@ -98,18 +101,20 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
       return baseRunner.run(queryPlus, responseContext);
     }
   }
+
   /**
    * Creates a child subquery Id from the parent (sub)query as follows
-   *  If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
-   *  Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
+   * If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
+   * Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
    *
    * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
-   * @param nesting The level under which the base datasource is present inside the original datasource
-   * @param orderNumber Position of the generated subquery at the same level
+   * @param nesting          The level under which the base datasource is present inside the original datasource
+   * @param orderNumber      Position of the generated subquery at the same level
    * @return Subquery Id which needs to be populated
    */
   private String generateSubqueryId(String parentSubqueryId, int nesting, int orderNumber)
   {
+    final String DELIMITER = ".";
     List<String> arr = new ArrayList<>();
     if (!StringUtils.isEmpty(parentSubqueryId)) {
       arr.add(parentSubqueryId);
@@ -117,17 +122,19 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
     arr.addAll(Collections.nCopies(nesting, "1"));
     arr.add(Integer.toString(orderNumber));
 
-    return String.join("-", arr);
+    return String.join(DELIMITER, arr);
   }
 
   /**
    * Finds the nesting level of the base datasource inside the datasource object. This method walks the datasource
    * in a fashion which is similar to {@link DataSourceAnalysis#forDataSource(DataSource)}
-   * @param dataSource The datasource object present in the query
+   *
+   * @param dataSource          The datasource object present in the query
    * @param baseUnionDataSource The base union datasource found from the datasource analysis
    * @return Nesting level of the base datasource
    */
-  private int findNestingLevel(DataSource dataSource, DataSource baseUnionDataSource) {
+  private int findNestingLevel(DataSource dataSource, DataSource baseUnionDataSource)
+  {
     int nesting = 0;
     while (dataSource instanceof QueryDataSource) {
       ++nesting;
@@ -139,11 +146,11 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
     }
 
     //noinspection ObjectEquality
-    if(dataSource != baseUnionDataSource) {
+    if (dataSource != baseUnionDataSource) {
       // We donot expect to reach here since the datasource analysis uses the same traversal to fetch the base union datasource
       return 0;
     }
-    ++nesting;
+    ++nesting; // Increase the nesting for the UnionDataSource
     return nesting;
   }
 }
