@@ -137,7 +137,7 @@ def generate_license(apache_license_v2, license_yaml):
     # Print Apache license first.
     print_outfile(apache_license_v2)
     with open(license_yaml, encoding='utf-8') as registry_file:
-        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
+        licenses_list = list(yaml.load_all(registry_file))
 
     # Group licenses by license_name, license_category, and then module.
     licenses_map = {}
