@@ -99,7 +99,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   @Nullable
   @Override
-  protected ExtendedIndexesMerger getExtendedIndexWriter()
+  protected ExtendedIndexesMerger getExtendedIndexesMerger()
   {
     return new SpatialIndexesMerger();
   }

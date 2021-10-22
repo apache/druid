@@ -346,7 +346,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
     BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
 
-    ExtendedIndexesMerger extendedIndexesMerger = getExtendedIndexWriter();
+    ExtendedIndexesMerger extendedIndexesMerger = getExtendedIndexesMerger();
 
     if (extendedIndexesMerger != null) {
       extendedIndexesMerger.initialize();
@@ -387,7 +387,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
 
   @Nullable
-  protected ExtendedIndexesMerger getExtendedIndexWriter()
+  protected ExtendedIndexesMerger getExtendedIndexesMerger()
   {
     return null;
   }
