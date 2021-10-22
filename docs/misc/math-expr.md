@@ -50,7 +50,9 @@ Expressions can contain variables. Variable names may contain letters, digits, '
 
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values, as follows:  
+* When treated as a scalar type, the expression is automatically transformed so that the scalar operation is applied across all values of the multi-valued type, mimicking Druid's native behavior. 
+* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to the `UNNEST` operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
 
 
 The following built-in functions are available.
@@ -72,7 +74,7 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.md#format-java.lang.String-java.lang.Object...-).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
@@ -177,14 +179,17 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
-| array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
+| array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_set_add(arr,expr) | adds expr to arr and converts the array to a new array composed of the unique set of elements. The resulting array type determined by the type of the array |
+| array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
 ## Apply functions
+Apply functions allow for special 'lambda' expressions to be defined and applied to array inputs to enable free-form transformations.
 
 | function | description |
 | --- | --- |
@@ -196,6 +201,26 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
+
+### Lambda expressions syntax
+Lambda expressions are a sort of function definition, where new identifiers can be defined and passed as input to the expression body
+```
+(identifier1 ...) -> expr
+```
+e.g.
+```
+(x, y) -> x + y 
+```
+The identifier arguments of a lambda expression correspond to the elements of the array it is being applied to. For example:
+```
+map((x) -> x + 1, some_multi_value_column)
+```
+will map each element of `some_multi_value_column` to the identifier `x` so that the lambda expression body can be evaluated for each `x`. The scoping rules are that lambda arguments will override identifiers which are defined externally from the lambda expression body. Using the same example:
+
+```
+map((x) -> x + 1, x)
+```
+in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
 
 ## Reduction functions
 
@@ -235,3 +260,12 @@ supported features:
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
 * other: `parse_long` is supported for numeric and string types
+
+
+## Other functions
+
+| function | description |
+| --- | --- |
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |

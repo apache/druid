@@ -96,7 +96,7 @@ services:
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
     env_file:
       - ./environment-configs/common
-      - ./environment-configs/historical-for-query-retry-test
+      - ./environment-configs/historical-for-query-error-test
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:

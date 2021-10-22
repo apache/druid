@@ -53,6 +53,8 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
+import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -60,7 +62,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -104,6 +106,7 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -125,6 +128,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -136,8 +141,6 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -200,6 +203,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       return "application/json".getBytes(StandardCharsets.UTF_8);
     }
   });
+  private static final InputFormat KAFKA_INPUT_FORMAT = new KafkaInputFormat(
+      new KafkaStringHeaderFormat(null),
+      INPUT_FORMAT,
+      INPUT_FORMAT,
+      "kafka.testheader.", "kafka.key", "kafka.timestamp"
+  );
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
@@ -1232,6 +1241,85 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       Assert.assertEquals(topic, event.get("kafka.topic"));
       Assert.assertEquals("application/json", event.get("kafka.header.encoding"));
     }
+    // insert remaining data
+    insertData(Iterables.skip(records, 3));
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testKafkaInputFormat() throws Exception
+  {
+    // Insert data
+    insertData(Iterables.limit(records, 3));
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new DataSchema(
+            "test_ds",
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(
+                Arrays.asList(
+                    new StringDimensionSchema("dim1"),
+                    new StringDimensionSchema("dim1t"),
+                    new StringDimensionSchema("dim2"),
+                    new LongDimensionSchema("dimLong"),
+                    new FloatDimensionSchema("dimFloat"),
+                    new StringDimensionSchema("kafka.testheader.encoding")
+                ),
+                null,
+                null
+            ),
+            new AggregatorFactory[]{
+                new DoubleSumAggregatorFactory("met1sum", "met1"),
+                new CountAggregatorFactory("rows")
+            },
+            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+            null
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            KAFKA_INPUT_FORMAT
+        )
+    );
+    Assert.assertTrue(task.supportsQueries());
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    while (countEvents(task) != 3) {
+      Thread.sleep(25);
+    }
+
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+
+    final QuerySegmentSpec interval = OBJECT_MAPPER.readValue(
+        "\"2008/2012\"", QuerySegmentSpec.class
+    );
+    List<ScanResultValue> scanResultValues = scanData(task, interval);
+    //verify that there are no records indexed in the rollbacked time period
+    Assert.assertEquals(3, Iterables.size(scanResultValues));
+
+    int i = 0;
+    for (ScanResultValue result : scanResultValues) {
+      final Map<String, Object> event = ((List<Map<String, Object>>) result.getEvents()).get(0);
+      Assert.assertEquals("application/json", event.get("kafka.testheader.encoding"));
+      Assert.assertEquals("y", event.get("dim2"));
+    }
+
     // insert remaining data
     insertData(Iterables.skip(records, 3));
 
@@ -2685,7 +2773,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -2781,7 +2868,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         true,
         null,
         null,
-        null
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -2882,10 +2972,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         this::makeTimeseriesAndScanConglomerate,
-        Execs.directExecutor(), // queryExecutorService
+        DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
+        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),

@@ -34,6 +34,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * @deprecated only used by {@link org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory}
+ */
+@Deprecated
 public class ReingestionTimelineUtils
 {
   /**

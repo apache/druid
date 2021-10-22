@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,7 +51,7 @@ import java.util.stream.Collectors;
  * Responsible for submitting tasks, monitoring task statuses, resubmitting failed tasks, and returning the final task
  * status.
  */
-public class TaskMonitor<T extends Task>
+public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport>
 {
   private static final Logger log = new Logger(TaskMonitor.class);
 
@@ -71,6 +72,9 @@ public class TaskMonitor<T extends Task>
    * read by outside of this class.
    */
   private final ConcurrentMap<String, TaskHistory<T>> taskHistories = new ConcurrentHashMap<>();
+
+  // subTaskId -> report
+  private final ConcurrentHashMap<String, SubTaskReportType> reportsMap = new ConcurrentHashMap<>();
 
   // lock for updating numRunningTasks, numSucceededTasks, and numFailedTasks
   private final Object taskCountLock = new Object();
@@ -130,6 +134,10 @@ public class TaskMonitor<T extends Task>
                 if (taskStatus != null) {
                   switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
                     case SUCCESS:
+                      // Succeeded tasks must have sent a report
+                      if (!reportsMap.containsKey(taskId)) {
+                        throw new ISE("Missing reports from task[%s]!", taskId);
+                      }
                       incrementNumSucceededTasks();
 
                       // Remote the current entry after updating taskHistories to make sure that task history
@@ -138,6 +146,8 @@ public class TaskMonitor<T extends Task>
                       iterator.remove();
                       break;
                     case FAILED:
+                      // We don't need reports from failed tasks
+                      reportsMap.remove(taskId);
                       incrementNumFailedTasks();
 
                       log.warn("task[%s] failed!", taskId);
@@ -246,6 +256,29 @@ public class TaskMonitor<T extends Task>
 
       return taskFuture;
     }
+  }
+
+  public void collectReport(SubTaskReportType report)
+  {
+    // subTasks might send their reports multiple times because of the HTTP retry.
+    // Here, we simply make sure the current report is exactly the same as the previous one.
+    reportsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
+      if (prevReport != null) {
+        Preconditions.checkState(
+            prevReport.equals(report),
+            "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
+            taskId,
+            prevReport,
+            report
+        );
+      }
+      return report;
+    });
+  }
+
+  public Map<String, SubTaskReportType> getReports()
+  {
+    return reportsMap;
   }
 
   /**

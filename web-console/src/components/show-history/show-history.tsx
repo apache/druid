@@ -67,19 +67,13 @@ export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryPro
           endpoint={endpoint}
         />
       }
-      panelClassName={'panel'}
+      panelClassName="panel"
     />
   ));
 
   return (
     <div className="show-history">
-      <Tabs
-        animate
-        renderActiveTabPanelOnly
-        vertical
-        className={'tab-area'}
-        defaultSelectedTabId={0}
-      >
+      <Tabs animate renderActiveTabPanelOnly vertical className="tab-area" defaultSelectedTabId={0}>
         {versions}
         <Tabs.Expander />
       </Tabs>

@@ -200,8 +200,16 @@ public class RemoteTaskRunnerTestUtils
 
   void mockWorkerCompleteFailedTask(final String workerId, final Task task) throws Exception
   {
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.failure(task.getId()), DUMMY_LOCATION);
-    cf.setData().forPath(JOINER.join(STATUS_PATH, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(
+        task,
+        TaskStatus.failure(
+            task.getId(),
+            "Dummy task status failure for testing"
+        ),
+        DUMMY_LOCATION
+    );
+    cf.setData()
+      .forPath(JOINER.join(STATUS_PATH, workerId, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 
   boolean workerRunningTask(final String workerId, final String taskId)

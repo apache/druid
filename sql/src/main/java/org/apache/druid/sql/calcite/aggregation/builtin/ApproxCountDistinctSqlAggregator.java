@@ -41,6 +41,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -52,7 +53,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -94,16 +94,15 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final List<VirtualColumn> myvirtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (arg.isDirectColumnAccess()
-        && rowSignature.getColumnType(arg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
       final RelDataType dataType = rexNode.getType();
-      final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
+      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
         throw new ISE(
             "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
@@ -120,7 +119,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         VirtualColumn virtualColumn =
             virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-        myvirtualColumns.add(virtualColumn);
       }
 
       aggregatorFactory = new CardinalityAggregatorFactory(
@@ -133,7 +131,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        myvirtualColumns,
         Collections.singletonList(aggregatorFactory),
         finalizeAggregations ? new HyperUniqueFinalizingPostAggregator(name, aggregatorFactory.getName()) : null
     );

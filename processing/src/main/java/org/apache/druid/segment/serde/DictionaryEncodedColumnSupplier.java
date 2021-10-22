@@ -28,24 +28,28 @@ import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.GenericIndexed;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
  */
 public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
   private final GenericIndexed<String> dictionary;
+  private final GenericIndexed<ByteBuffer> dictionaryUtf8;
   private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
   private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
   private final int lookupCacheSize;
 
   public DictionaryEncodedColumnSupplier(
       GenericIndexed<String> dictionary,
+      GenericIndexed<ByteBuffer> dictionaryUtf8,
       @Nullable Supplier<ColumnarInts> singleValuedColumn,
       @Nullable Supplier<ColumnarMultiInts> multiValuedColumn,
       int lookupCacheSize
   )
   {
     this.dictionary = dictionary;
+    this.dictionaryUtf8 = dictionaryUtf8;
     this.singleValuedColumn = singleValuedColumn;
     this.multiValuedColumn = multiValuedColumn;
     this.lookupCacheSize = lookupCacheSize;
@@ -57,7 +61,8 @@ public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncod
     return new StringDictionaryEncodedColumn(
         singleValuedColumn != null ? singleValuedColumn.get() : null,
         multiValuedColumn != null ? multiValuedColumn.get() : null,
-        new CachingIndexed<>(dictionary, lookupCacheSize)
+        new CachingIndexed<>(dictionary, lookupCacheSize),
+        dictionaryUtf8.singleThreaded()
     );
   }
 }

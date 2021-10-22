@@ -23,7 +23,6 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
@@ -33,6 +32,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -60,6 +61,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   protected final boolean storeDoubleAsFloat;
   protected final Supplier<Expr> fieldExpression;
 
+
   public SimpleDoubleAggregatorFactory(
       ExprMacroTable macroTable,
       String name,
@@ -72,7 +74,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
     this.fieldName = fieldName;
     this.expression = expression;
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
-    this.fieldExpression = Suppliers.memoize(() -> expression == null ? null : Parser.parse(expression, macroTable));
+    this.fieldExpression = Parser.lazyParse(expression, macroTable);
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,
@@ -132,7 +134,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   {
     if (fieldName != null) {
       ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-      return capabilities != null && capabilities.getType() == ValueType.STRING;
+      return Types.is(capabilities, ValueType.STRING);
     }
     return false;
   }
@@ -148,12 +150,12 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     if (storeDoubleAsFloat) {
-      return ValueType.FLOAT;
+      return ColumnType.FLOAT;
     }
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @Override

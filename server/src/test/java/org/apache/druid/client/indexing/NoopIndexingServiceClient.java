@@ -51,6 +51,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
   {
@@ -104,6 +105,19 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public TaskPayloadResponse getTaskPayload(String taskId)
   {
     return null;
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    return null;
+  }
+
+  @Override
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    return Collections.emptyMap();
   }
 
   @Override

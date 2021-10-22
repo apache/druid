@@ -35,9 +35,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LoadSpec;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -87,9 +89,10 @@ public class SegmentLoadDropHandlerCacheTest
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestLoadSpec.class);
     objectMapper.registerSubtypes(TestSegmentizerFactory.class);
-    SegmentManager segmentManager = new SegmentManager(new SegmentLoaderLocalCacheManager(
+    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, objectMapper);
+    SegmentManager segmentManager = new SegmentManager(new SegmentLocalCacheLoader(
+        cacheManager,
         TestIndex.INDEX_IO,
-        config,
         objectMapper
     ));
     segmentAnnouncer = Mockito.mock(DataSegmentAnnouncer.class);
@@ -99,6 +102,7 @@ public class SegmentLoadDropHandlerCacheTest
         segmentAnnouncer,
         Mockito.mock(DataSegmentServerAnnouncer.class),
         segmentManager,
+        cacheManager,
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

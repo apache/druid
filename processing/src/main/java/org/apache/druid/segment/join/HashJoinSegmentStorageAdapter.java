@@ -37,16 +37,19 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,6 +59,8 @@ import java.util.Set;
 public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
+
+  @Nullable
   private final Filter baseFilter;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
@@ -84,7 +89,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    */
   HashJoinSegmentStorageAdapter(
       final StorageAdapter baseAdapter,
-      final Filter baseFilter,
+      @Nullable final Filter baseFilter,
       final List<JoinableClause> clauses,
       final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
@@ -192,7 +197,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     if (maybeClause.isPresent()) {
       final JoinableClause clause = maybeClause.get();
       final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.getType().toString() : null;
+      return capabilities != null ? capabilities.asTypeString() : null;
     } else {
       return baseAdapter.getColumnTypeName(column);
     }
@@ -222,6 +227,50 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public boolean hasBuiltInFilters()
+  {
+    return clauses.stream()
+                  .anyMatch(clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue());
+  }
+
+  @Override
+  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
+  {
+    // HashJoinEngine isn't vectorized yet.
+    // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
+    // a base filter. That's easy enough!
+    return clauses.isEmpty() && baseAdapter.canVectorize(baseFilterAnd(filter), virtualColumns, descending);
+  }
+
+  @Nullable
+  @Override
+  public VectorCursor makeVectorCursor(
+      @Nullable Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      boolean descending,
+      int vectorSize,
+      @Nullable QueryMetrics<?> queryMetrics
+  )
+  {
+    if (!canVectorize(filter, virtualColumns, descending)) {
+      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
+    }
+
+    // Should have been checked by canVectorize.
+    assert clauses.isEmpty();
+
+    return baseAdapter.makeVectorCursor(
+        baseFilterAnd(filter),
+        interval,
+        virtualColumns,
+        descending,
+        vectorSize,
+        queryMetrics
+    );
+  }
+
+  @Override
   public Sequence<Cursor> makeCursors(
       @Nullable final Filter filter,
       @Nonnull final Interval interval,
@@ -231,6 +280,19 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
+    final Filter combinedFilter = baseFilterAnd(filter);
+
+    if (clauses.isEmpty()) {
+      return baseAdapter.makeCursors(
+          combinedFilter,
+          interval,
+          virtualColumns,
+          gran,
+          descending,
+          queryMetrics
+      );
+    }
+
     // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
     // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
     // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
@@ -240,7 +302,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             joinFilterPreAnalysis.getKey().getRewriteConfig(),
             clauses,
             virtualColumns,
-            filter
+            combinedFilter
         );
 
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
@@ -288,7 +350,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
+              joinFilterSplit.getJoinTableFilter().orElse(null)
           );
         }
     ).withBaggage(joinablesCloser);
@@ -362,5 +424,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                 .stream()
                 .filter(clause -> clause.includesColumn(column))
                 .findFirst();
+  }
+
+  @Nullable
+  private Filter baseFilterAnd(@Nullable final Filter other)
+  {
+    return Filters.maybeAnd(Arrays.asList(baseFilter, other)).orElse(null);
   }
 }

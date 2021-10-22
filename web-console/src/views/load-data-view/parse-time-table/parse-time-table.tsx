@@ -47,7 +47,7 @@ export function parseTimeTableSelectedColumnName(
 export interface ParseTimeTableProps {
   sampleBundle: {
     headerAndRows: HeaderAndRows;
-    spec: IngestionSpec;
+    spec: Partial<IngestionSpec>;
   };
   columnFilter: string;
   possibleTimestampColumnsOnly: boolean;
@@ -115,7 +115,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => {
+            Cell: function ParseTimeTableCell(row) {
               if (columnName === '__error__') {
                 return <TableCell value={row.original.error} />;
               }

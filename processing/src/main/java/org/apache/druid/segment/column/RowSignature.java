@@ -51,19 +51,19 @@ public class RowSignature implements ColumnInspector
 {
   private static final RowSignature EMPTY = new RowSignature(Collections.emptyList());
 
-  private final Map<String, ValueType> columnTypes = new HashMap<>();
+  private final Map<String, ColumnType> columnTypes = new HashMap<>();
   private final Object2IntMap<String> columnPositions = new Object2IntOpenHashMap<>();
   private final List<String> columnNames;
 
-  private RowSignature(final List<Pair<String, ValueType>> columnTypeList)
+  private RowSignature(final List<Pair<String, ColumnType>> columnTypeList)
   {
     this.columnPositions.defaultReturnValue(-1);
 
     final ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
 
     for (int i = 0; i < columnTypeList.size(); i++) {
-      final Pair<String, ValueType> pair = columnTypeList.get(i);
-      final ValueType existingType = columnTypes.get(pair.lhs);
+      final Pair<String, ColumnType> pair = columnTypeList.get(i);
+      final ColumnType existingType = columnTypes.get(pair.lhs);
 
       if (columnTypes.containsKey(pair.lhs) && existingType != pair.rhs) {
         // It's ok to add the same column twice as long as the type is consistent.
@@ -103,7 +103,7 @@ public class RowSignature implements ColumnInspector
    * Returns the type of the column named {@code columnName}, or empty if the type is unknown or the column does
    * not exist.
    */
-  public Optional<ValueType> getColumnType(final String columnName)
+  public Optional<ColumnType> getColumnType(final String columnName)
   {
     return Optional.ofNullable(columnTypes.get(columnName));
   }
@@ -113,7 +113,7 @@ public class RowSignature implements ColumnInspector
    *
    * @throws IndexOutOfBoundsException if columnNumber is not within our row length
    */
-  public Optional<ValueType> getColumnType(final int columnNumber)
+  public Optional<ColumnType> getColumnType(final int columnNumber)
   {
     return Optional.ofNullable(columnTypes.get(getColumnName(columnNumber)));
   }
@@ -206,7 +206,7 @@ public class RowSignature implements ColumnInspector
 
   public static class Builder
   {
-    private final List<Pair<String, ValueType>> columnTypeList;
+    private final List<Pair<String, ColumnType>> columnTypeList;
 
     private Builder()
     {
@@ -215,11 +215,10 @@ public class RowSignature implements ColumnInspector
 
     /**
      * Add a column to this signature.
-     *
-     * @param columnName name, must be nonnull
+     *  @param columnName name, must be nonnull
      * @param columnType type, may be null if unknown
      */
-    public Builder add(final String columnName, @Nullable final ValueType columnType)
+    public Builder add(final String columnName, @Nullable final ColumnType columnType)
     {
       // Name must be nonnull, but type can be null (if the type is unknown)
       Preconditions.checkNotNull(columnName, "'columnName' must be non-null");
@@ -238,7 +237,7 @@ public class RowSignature implements ColumnInspector
 
     public Builder addTimeColumn()
     {
-      return add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG);
+      return add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
     }
 
     public Builder addDimensions(final List<DimensionSpec> dimensions)
@@ -253,7 +252,7 @@ public class RowSignature implements ColumnInspector
     public Builder addAggregators(final List<AggregatorFactory> aggregators)
     {
       for (final AggregatorFactory aggregator : aggregators) {
-        final ValueType type = aggregator.getType();
+        final ColumnType type = aggregator.getType();
         
         if (type.equals(aggregator.getFinalizedType())) {
           add(aggregator.getName(), type);

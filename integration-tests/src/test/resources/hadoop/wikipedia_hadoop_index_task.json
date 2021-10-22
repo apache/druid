@@ -80,6 +80,7 @@
     "tuningConfig": {
       "type": "hadoop",
       "partitionsSpec": %%PARTITIONS_SPEC%%,
+      "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%,
       "jobProperties": {
         "fs.permissions.umask-mode": "022",
         "fs.default.name" : "hdfs://druid-it-hadoop:9000",

@@ -132,6 +132,7 @@ public class SketchAggregationTest
                                    + "   Theta (long) hex        : 7fffffffffffffff\n"
                                    + "   EstMode?                : false\n"
                                    + "   Empty?                  : false\n"
+                                   + "   Ordered?                : true\n"
                                    + "   Retained Entries        : 50\n"
                                    + "   Seed Hash               : 93cc | 37836\n"
                                    + "### END SKETCH SUMMARY\n";
@@ -527,6 +528,21 @@ public class SketchAggregationTest
     Assert.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
     Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
     Assert.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+  }
+
+  @Test
+  public void testUpdateUnionWithDouble()
+  {
+    Double[] columnValues = new Double[]{2.0};
+    final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
+    final Aggregator agg = new SketchAggregator(selector, 4096);
+    agg.aggregate();
+    Assert.assertFalse(agg.isNull());
+    Assert.assertNotNull(agg.get());
+    Assert.assertTrue(agg.get() instanceof SketchHolder);
+    Assert.assertEquals(1, ((SketchHolder) agg.get()).getEstimate(), 0);
+    Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
+    Assert.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

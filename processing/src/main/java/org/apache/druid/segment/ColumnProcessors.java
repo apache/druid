@@ -28,6 +28,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -51,7 +53,7 @@ public class ColumnProcessors
    * Capabilites that are used when we return a nil selector for a nonexistent column.
    */
   public static final ColumnCapabilities NIL_COLUMN_CAPABILITIES =
-      new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+      new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                   .setDictionaryEncoded(true)
                                   .setDictionaryValuesUnique(true)
                                   .setDictionaryValuesSorted(true)
@@ -120,7 +122,7 @@ public class ColumnProcessors
    */
   public static <T> T makeProcessor(
       final Expr expr,
-      final ValueType exprTypeHint,
+      final ColumnType exprTypeHint,
       final ColumnProcessorFactory<T> processorFactory,
       final ColumnSelectorFactory selectorFactory
   )
@@ -215,17 +217,31 @@ public class ColumnProcessors
   {
     if (dimensionSpec.mustDecorate()) {
       // Decorating DimensionSpecs could do anything. We can't pass along any useful info other than the type.
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
     } else if (dimensionSpec.getExtractionFn() != null) {
       // DimensionSpec is applying an extractionFn but *not* decorating. We have some insight into how the
       // extractionFn will behave, so let's use it.
+      final boolean dictionaryEncoded;
+      final boolean unique;
+      final boolean sorted;
+      if (columnCapabilities != null) {
+        dictionaryEncoded = columnCapabilities.isDictionaryEncoded().isTrue();
+        unique = columnCapabilities.areDictionaryValuesUnique().isTrue();
+        sorted = columnCapabilities.areDictionaryValuesSorted().isTrue();
+      } else {
+        dictionaryEncoded = false;
+        unique = false;
+        sorted = false;
+      }
 
       return new ColumnCapabilitiesImpl()
-          .setType(ValueType.STRING)
-          .setDictionaryValuesSorted(dimensionSpec.getExtractionFn().preservesOrdering())
-          .setDictionaryValuesUnique(dimensionSpec.getExtractionFn().getExtractionType()
-                                     == ExtractionFn.ExtractionType.ONE_TO_ONE)
-          .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(columnCapabilities));
+          .setType(ColumnType.STRING)
+          .setDictionaryEncoded(dictionaryEncoded)
+          .setDictionaryValuesSorted(sorted && dimensionSpec.getExtractionFn().preservesOrdering())
+          .setDictionaryValuesUnique(
+              unique && dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
+          )
+          .setHasMultipleValues(mayBeMultiValue(columnCapabilities));
     } else {
       // No transformation. Pass through underlying types.
       return columnCapabilities;
@@ -256,9 +272,9 @@ public class ColumnProcessors
   )
   {
     final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
-    final ValueType effectiveType = capabilities != null ? capabilities.getType() : processorFactory.defaultType();
+    final TypeSignature<ValueType> effectiveType = capabilities != null ? capabilities : processorFactory.defaultType();
 
-    switch (effectiveType) {
+    switch (effectiveType.getType()) {
       case STRING:
         return processorFactory.makeDimensionProcessor(
             dimensionSelectorFn.apply(selectorFactory),
@@ -273,7 +289,7 @@ public class ColumnProcessors
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:
-        throw new ISE("Unsupported type[%s]", effectiveType);
+        throw new ISE("Unsupported type[%s]", effectiveType.asTypeString());
     }
   }
 
@@ -318,6 +334,14 @@ public class ColumnProcessors
 
     switch (capabilities.getType()) {
       case STRING:
+        // let the processor factory decide if it prefers to use an object selector or dictionary encoded selector
+        if (!processorFactory.useDictionaryEncodedSelector(capabilities)) {
+          return processorFactory.makeObjectProcessor(
+              capabilities,
+              objectSelectorFn.apply(selectorFactory)
+          );
+        }
+
         if (mayBeMultiValue(capabilities)) {
           return processorFactory.makeMultiValueDimensionProcessor(
               capabilities,

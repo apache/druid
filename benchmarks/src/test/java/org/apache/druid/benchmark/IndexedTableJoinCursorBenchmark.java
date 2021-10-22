@@ -186,6 +186,7 @@ public class IndexedTableJoinCursorBenchmark
                     enableFilterPushdown,
                     enableFilterRewrite,
                     enableFilterRewriteValueFilters,
+                    QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER,
                     QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
                 ),
                 clauses,

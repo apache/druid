@@ -50,7 +50,22 @@ It runs the query in two main phases:
 
 
 ## Operations
-To use this extension, make sure to [load](../../development/extensions.md#loading-extensions) `druid-moving-average-query` only to the Broker.
+
+### Installation
+Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../development/extensions.md#community-extensions) on all Druid broker and router nodes.
+
+```bash
+java -classpath "<your_druid_dir>/lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions.contrib:druid-moving-average-query:{VERSION}
+```
+
+### Enabling
+After installation, to enable this extension, just add `druid-moving-average-query` to `druid.extensions.loadList` in broker and routers' `runtime.properties` file and then restart broker and router nodes.
+
+For example:
+
+```bash
+druid.extensions.loadList=["druid-moving-average-query"]
+```
 
 ## Configuration
 There are currently no configuration properties specific to Moving Average.
@@ -60,7 +75,7 @@ There are currently no configuration properties specific to Moving Average.
 * movingAverage is missing support for the following timeseries properties: `descending`.
 * movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error).
 
-##Query spec:
+## Query spec
 * Most properties in the query spec derived from  [groupBy query](../../querying/groupbyquery.md) / [timeseries](../../querying/timeseriesquery.md), see documentation for these query types.
 
 |property|description|required?|

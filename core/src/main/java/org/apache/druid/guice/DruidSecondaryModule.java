@@ -30,6 +30,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
 import org.skife.config.ConfigurationObjectFactory;
 
@@ -41,6 +42,7 @@ public class DruidSecondaryModule implements Module
   private final Properties properties;
   private final ConfigurationObjectFactory factory;
   private final ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapperOnlyNonNullValueSerialization;
   private final ObjectMapper smileMapper;
   private final Validator validator;
 
@@ -49,6 +51,7 @@ public class DruidSecondaryModule implements Module
       Properties properties,
       ConfigurationObjectFactory factory,
       @Json ObjectMapper jsonMapper,
+      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValueSerialization,
       @Smile ObjectMapper smileMapper,
       Validator validator
   )
@@ -56,6 +59,7 @@ public class DruidSecondaryModule implements Module
     this.properties = properties;
     this.factory = factory;
     this.jsonMapper = jsonMapper;
+    this.jsonMapperOnlyNonNullValueSerialization = jsonMapperOnlyNonNullValueSerialization;
     this.smileMapper = smileMapper;
     this.validator = validator;
   }
@@ -76,6 +80,13 @@ public class DruidSecondaryModule implements Module
   {
     setupJackson(injector, jsonMapper);
     return jsonMapper;
+  }
+
+  @Provides @LazySingleton @JsonNonNull
+  public ObjectMapper getJsonMapperOnlyNonNullValueSerialization(final Injector injector)
+  {
+    setupJackson(injector, jsonMapperOnlyNonNullValueSerialization);
+    return jsonMapperOnlyNonNullValueSerialization;
   }
 
   @Provides @LazySingleton @Smile

@@ -29,7 +29,7 @@ import './filter-table.scss';
 
 export function filterTableSelectedColumnName(
   sampleData: HeaderAndRows,
-  selectedFilter: DruidFilter | undefined,
+  selectedFilter: Partial<DruidFilter> | undefined,
 ): string | undefined {
   if (!selectedFilter) return;
   const selectedFilterName = selectedFilter.dimension;
@@ -87,7 +87,9 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+          Cell: function FilterTableCell(row) {
+            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+          },
         };
       })}
       defaultPageSize={50}

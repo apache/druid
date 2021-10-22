@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -32,7 +34,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.joda.time.Interval;
 
@@ -111,7 +113,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher();
+    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher(columnInspector);
   }
 
   @Override
@@ -166,7 +168,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return delegate.requiredFields();
+    return ImmutableList.copyOf(
+        // use a set to get rid of dupes
+        ImmutableSet.<String>builder().addAll(delegate.requiredFields()).addAll(filter.getRequiredColumns()).build()
+    );
   }
 
   @Override
@@ -182,19 +187,13 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getComplexTypeName()
-  {
-    return delegate.getComplexTypeName();
-  }
-
-  @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     return delegate.getType();
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
     return delegate.getFinalizedType();
   }

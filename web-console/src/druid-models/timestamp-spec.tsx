@@ -32,9 +32,16 @@ import { Transform } from './transform-spec';
 
 const NO_SUCH_COLUMN = '!!!_no_such_column_!!!';
 
+export const TIME_COLUMN = '__time';
+
 export const PLACEHOLDER_TIMESTAMP_SPEC: TimestampSpec = {
   column: NO_SUCH_COLUMN,
   missingValue: '1970-01-01T00:00:00Z',
+};
+
+export const REINDEX_TIMESTAMP_SPEC: TimestampSpec = {
+  column: TIME_COLUMN,
+  format: 'millis',
 };
 
 export const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
@@ -44,11 +51,11 @@ export const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
 
 export type TimestampSchema = 'none' | 'column' | 'expression';
 
-export function getTimestampSchema(spec: IngestionSpec): TimestampSchema {
+export function getTimestampSchema(spec: Partial<IngestionSpec>): TimestampSchema {
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-  const timeTransform = transforms.find(transform => transform.name === '__time');
+  const timeTransform = transforms.find(transform => transform.name === TIME_COLUMN);
   if (timeTransform) return 'expression';
 
   const timestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec') || EMPTY_OBJECT;
@@ -56,30 +63,32 @@ export function getTimestampSchema(spec: IngestionSpec): TimestampSchema {
 }
 
 export interface TimestampSpec {
-  column?: string;
-  format?: string;
-  missingValue?: string;
+  readonly column?: string;
+  readonly format?: string;
+  readonly missingValue?: string;
 }
 
-export function getTimestampSpecColumnFromSpec(spec: IngestionSpec): string {
+export function getTimestampSpecColumnFromSpec(spec: Partial<IngestionSpec>): string {
   // For the default https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
   return deepGet(spec, 'spec.dataSchema.timestampSpec.column') || 'timestamp';
 }
 
-export function getTimestampSpecConstantFromSpec(spec: IngestionSpec): string | undefined {
+export function getTimestampSpecConstantFromSpec(spec: Partial<IngestionSpec>): string | undefined {
   return deepGet(spec, 'spec.dataSchema.timestampSpec.missingValue');
 }
 
-export function getTimestampSpecExpressionFromSpec(spec: IngestionSpec): string | undefined {
+export function getTimestampSpecExpressionFromSpec(
+  spec: Partial<IngestionSpec>,
+): string | undefined {
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-  const timeTransform = transforms.find(transform => transform.name === '__time');
+  const timeTransform = transforms.find(transform => transform.name === TIME_COLUMN);
   if (!timeTransform) return;
   return timeTransform.expression;
 }
 
-export function getTimestampDetailFromSpec(spec: IngestionSpec): string {
+export function getTimestampDetailFromSpec(spec: Partial<IngestionSpec>): string {
   const timestampSchema = getTimestampSchema(spec);
   switch (timestampSchema) {
     case 'none':
@@ -100,7 +109,6 @@ export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [
     name: 'column',
     type: 'string',
     defaultValue: 'timestamp',
-    required: true,
   },
   {
     name: 'format',

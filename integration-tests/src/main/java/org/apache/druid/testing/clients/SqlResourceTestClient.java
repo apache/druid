@@ -21,11 +21,12 @@ package org.apache.druid.testing.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+
+import javax.ws.rs.core.MediaType;
 
 public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQuery>
 {
@@ -37,16 +38,8 @@ public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQu
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    // currently smile encoding is not supported on SQL endpoint
+    // so no need to pass smile ObjectMapper
+    super(jsonMapper, null, httpClient, config.getRouterUrl(), MediaType.APPLICATION_JSON, null);
   }
-
-  @Override
-  public String getBrokerURL()
-  {
-    return StringUtils.format(
-        "%s/druid/v2/sql/",
-        routerUrl
-    );
-  }
-
 }

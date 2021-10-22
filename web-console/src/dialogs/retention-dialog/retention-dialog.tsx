@@ -20,13 +20,13 @@ import { Button, Divider, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { SnitchDialog } from '..';
 import { ExternalLink, RuleEditor } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api } from '../../singletons';
 import { swapElements } from '../../utils';
 import { Rule, RuleUtil } from '../../utils/load-rule';
+import { SnitchDialog } from '..';
 
 import './retention-dialog.scss';
 
@@ -131,9 +131,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
           <p className="no-rules-message">
             This datasource currently has no rules, it will use the cluster defaults.
           </p>
-        ) : (
-          undefined
-        )}
+        ) : undefined}
         <div>
           <Button icon={IconNames.PLUS} onClick={addRule}>
             New rule

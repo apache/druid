@@ -26,11 +26,16 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -218,5 +223,74 @@ public class Queries
     }
 
     return retVal;
+  }
+
+  /**
+   * Helper for implementations of {@link Query#getRequiredColumns()}. Returns the list of columns that will be read
+   * out of a datasource by a query that uses the provided objects in the usual way.
+   *
+   * The returned set always contains {@code __time}, no matter what.
+   *
+   * If the virtual columns, filter, dimensions, aggregators, or additional columns refer to a virtual column, then the
+   * inputs of the virtual column will be returned instead of the name of the virtual column itself. Therefore, the
+   * returned list will never contain the names of any virtual columns.
+   *
+   * @param virtualColumns    virtual columns whose inputs should be included.
+   * @param filter            optional filter whose inputs should be included.
+   * @param dimensions        dimension specs whose inputs should be included.
+   * @param aggregators       aggregators whose inputs should be included.
+   * @param additionalColumns additional columns to include. Each of these will be added to the returned set, unless it
+   *                          refers to a virtual column, in which case the virtual column inputs will be added instead.
+   */
+  public static Set<String> computeRequiredColumns(
+      final VirtualColumns virtualColumns,
+      @Nullable final DimFilter filter,
+      final List<DimensionSpec> dimensions,
+      final List<AggregatorFactory> aggregators,
+      final List<String> additionalColumns
+  )
+  {
+    final Set<String> requiredColumns = new HashSet<>();
+
+    // Everyone needs __time (it's used by intervals filters).
+    requiredColumns.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
+      for (String column : virtualColumn.requiredColumns()) {
+        if (!virtualColumns.exists(column)) {
+          requiredColumns.addAll(virtualColumn.requiredColumns());
+        }
+      }
+    }
+
+    if (filter != null) {
+      for (String column : filter.getRequiredColumns()) {
+        if (!virtualColumns.exists(column)) {
+          requiredColumns.add(column);
+        }
+      }
+    }
+
+    for (DimensionSpec dimensionSpec : dimensions) {
+      if (!virtualColumns.exists(dimensionSpec.getDimension())) {
+        requiredColumns.add(dimensionSpec.getDimension());
+      }
+    }
+
+    for (AggregatorFactory aggregator : aggregators) {
+      for (String column : aggregator.requiredFields()) {
+        if (!virtualColumns.exists(column)) {
+          requiredColumns.add(column);
+        }
+      }
+    }
+
+    for (String column : additionalColumns) {
+      if (!virtualColumns.exists(column)) {
+        requiredColumns.add(column);
+      }
+    }
+
+    return requiredColumns;
   }
 }

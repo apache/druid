@@ -43,6 +43,8 @@ public class TestNGGroup
 
   public static final String COMPACTION = "compaction";
 
+  public static final String UPGRADE = "upgrade";
+
   public static final String APPEND_INGESTION = "append-ingestion";
 
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
@@ -53,6 +55,8 @@ public class TestNGGroup
   public static final String QUERY = "query";
 
   public static final String QUERY_RETRY = "query-retry";
+
+  public static final String QUERY_ERROR = "query-error";
 
   public static final String CLI_INDEXER = "cli-indexer";
 
@@ -151,4 +155,8 @@ public class TestNGGroup
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 
   public static final String HIGH_AVAILABILTY = "high-availability";
+
+  public static final String SHUFFLE_DEEP_STORE = "shuffle-deep-store";
+
+  public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
 }

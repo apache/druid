@@ -32,18 +32,19 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -71,7 +72,6 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -89,7 +89,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -101,7 +101,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       ObjectMapper objectMapper,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
@@ -113,7 +113,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
-    this.queryExecutorService = Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
+    this.queryProcessingPool = Preconditions.checkNotNull(queryProcessingPool, "queryProcessingPool");
     this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
@@ -152,9 +152,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
-    analysis.getBaseTableDataSource()
-            .filter(ds -> dataSource.equals(ds.getName()))
-            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+    if (!analysis.getBaseTableDataSource().filter(ds -> dataSource.equals(ds.getName())).isPresent()) {
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
+    }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
@@ -271,7 +271,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       sinkSegmentId,
                       descriptor.getInterval().getStart(),
                       factory.mergeRunners(
-                          Execs.directExecutor(),
+                          DirectQueryProcessingPool.INSTANCE,
                           perHydrantRunners
                       )
                   ),
@@ -286,7 +286,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final QueryRunner<T> mergedRunner =
         toolChest.mergeResults(
             factory.mergeRunners(
-                queryExecutorService,
+                queryProcessingPool,
                 perSegmentRunners
             )
         );

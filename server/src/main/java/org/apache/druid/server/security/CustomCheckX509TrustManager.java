@@ -95,6 +95,15 @@ public class CustomCheckX509TrustManager extends X509ExtendedTrustManager implem
       SSLParameters params = engine.getSSLParameters();
       params.setEndpointIdentificationAlgorithm(null);
       engine.setSSLParameters(params);
+
+      // In Java version 8u275 and later, setting EndpointIdentificationAlgorithm to null will be ignored
+      // and the current value will remains. As a workaround, we can set EndpointIdentificationAlgorithm to an
+      // empty String instead. This will still cause the hostname validation to be skipped.
+      if (engine.getSSLParameters().getEndpointIdentificationAlgorithm() != null) {
+        params = engine.getSSLParameters();
+        params.setEndpointIdentificationAlgorithm("");
+        engine.setSSLParameters(params);
+      }
     }
 
     certificateChecker.checkServer(chain, authType, engine, delegate);

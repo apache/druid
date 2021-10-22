@@ -34,18 +34,19 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -62,7 +63,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 public class TaskToolboxTest
 {
@@ -81,10 +81,10 @@ public class TaskToolboxTest
   private QueryRunnerFactoryConglomerate mockQueryRunnerFactoryConglomerate
       = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
-  private ExecutorService mockQueryExecutorService = EasyMock.createMock(ExecutorService.class);
+  private QueryProcessingPool mockQueryProcessingPool = EasyMock.createMock(QueryProcessingPool.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
-  private SegmentLoaderFactory mockSegmentLoaderFactory = EasyMock.createMock(SegmentLoaderFactory.class);
-  private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
+  private SegmentCacheManagerFactory mockSegmentCacheManagerFactory = EasyMock.createMock(SegmentCacheManagerFactory.class);
+  private SegmentLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
   private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
@@ -102,7 +102,20 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory);
 
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, false, null, null, null),
+        new TaskConfig(
+            temporaryFolder.newFile().toString(),
+            null,
+            null,
+            50000,
+            null,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
@@ -114,10 +127,10 @@ public class TaskToolboxTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         mockHandoffNotifierFactory,
         () -> mockQueryRunnerFactoryConglomerate,
-        mockQueryExecutorService,
+        mockQueryProcessingPool,
         NoopJoinableFactory.INSTANCE,
         () -> mockMonitorScheduler,
-        mockSegmentLoaderFactory,
+        mockSegmentCacheManagerFactory,
         ObjectMapper,
         mockIndexIO,
         mockCache,
@@ -160,9 +173,9 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testGetQueryExecutorService()
+  public void testGetQueryProcessingPool()
   {
-    Assert.assertEquals(mockQueryExecutorService, taskToolbox.build(task).getQueryExecutorService());
+    Assert.assertEquals(mockQueryProcessingPool, taskToolbox.build(task).getQueryProcessingPool());
   }
 
   @Test
@@ -182,12 +195,12 @@ public class TaskToolboxTest
   {
     File expectedFile = temporaryFolder.newFile();
     EasyMock
-        .expect(mockSegmentLoaderFactory.manufacturate(EasyMock.anyObject()))
+        .expect(mockSegmentCacheManagerFactory.manufacturate(EasyMock.anyObject()))
         .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
     EasyMock
         .expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles(EasyMock.anyObject()))
         .andReturn(expectedFile).anyTimes();
-    EasyMock.replay(mockSegmentLoaderFactory, mockSegmentLoaderLocalCacheManager);
+    EasyMock.replay(mockSegmentCacheManagerFactory, mockSegmentLoaderLocalCacheManager);
     DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(Intervals.of("2012-01-01/P1D")).version("1").size(1).build();
     List<DataSegment> segments = ImmutableList.of
         (

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -117,6 +118,16 @@ public class StorageLocation
     return reserve(segmentDir, segment.getId().toString(), segment.getSize());
   }
 
+  public synchronized boolean isReserved(String segmentDir)
+  {
+    return files.contains(segmentDirectoryAsFile(segmentDir));
+  }
+
+  public File segmentDirectoryAsFile(String segmentDir)
+  {
+    return new File(path, segmentDir);  //lgtm [java/path-injection]
+  }
+
   /**
    * Reserves space to store the given segment, only if it has not been done already. This can be used
    * when segment is already downloaded on the disk. Unlike {@link #reserve(String, DataSegment)}, this function
@@ -165,6 +176,16 @@ public class StorageLocation
     }
   }
 
+  public synchronized boolean release(String segmentFilePath, long segmentSize)
+  {
+    final File segmentFile = new File(path, segmentFilePath);
+    if (files.remove(segmentFile)) {
+      currSizeBytes -= segmentSize;
+      return true;
+    }
+    return false;
+  }
+
   /**
    * This method is only package-private to use it in unit tests. Production code must not call this method directly.
    * Use {@link #reserve} instead.
@@ -211,5 +232,12 @@ public class StorageLocation
   public synchronized long currSizeBytes()
   {
     return currSizeBytes;
+  }
+
+  @VisibleForTesting
+  synchronized boolean contains(String relativePath)
+  {
+    final File segmentFileToAdd = new File(path, relativePath);
+    return files.contains(segmentFileToAdd);
   }
 }

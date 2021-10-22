@@ -156,8 +156,20 @@ describe('ingestion-spec', () => {
       expect(guessInputFormat(['A,B,X,Y']).type).toEqual('csv');
     });
 
+    it('works for TSV with ;', () => {
+      const inputFormat = guessInputFormat(['A;B;X;Y']);
+      expect(inputFormat.type).toEqual('tsv');
+      expect(inputFormat.delimiter).toEqual(';');
+    });
+
+    it('works for TSV with |', () => {
+      const inputFormat = guessInputFormat(['A|B|X|Y']);
+      expect(inputFormat.type).toEqual('tsv');
+      expect(inputFormat.delimiter).toEqual('|');
+    });
+
     it('works for regex', () => {
-      expect(guessInputFormat(['A|B|X|Y']).type).toEqual('regex');
+      expect(guessInputFormat(['A/B/X/Y']).type).toEqual('regex');
     });
   });
 });

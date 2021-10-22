@@ -58,7 +58,7 @@ The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
 - [`gs`](#google-cloud-storage-input-source) reads data from Google Cloud Storage.
-- [`azure`](#azure-input-source) reads data from Azure Blob Storage.
+- [`azure`](#azure-input-source) reads data from Azure Blob Storage and Azure Data Lake.
 - [`hdfs`](#hdfs-input-source) reads data from HDFS storage.
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
@@ -74,7 +74,7 @@ The supported compression formats for native batch ingestion are `bz2`, `gz`, `x
 
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
-You may want to consider the below things:
+### Implementation considerations
 
 - You may want to control the amount of input data each worker task processes. This can be
   controlled using different configurations depending on the phase in parallel ingestion (see [`partitionsSpec`](#partitionsspec) for more details).
@@ -89,7 +89,34 @@ You may want to consider the below things:
   data in segments where it actively adds data: if there are segments in your `granularitySpec`'s intervals that have
   no data written by this task, they will be left alone. If any existing segments partially overlap with the
   `granularitySpec`'s intervals, the portion of those segments outside the new segments' intervals will still be visible.
-
+- You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to drop all existing segments that 
+  start and end within your `granularitySpec`'s intervals. This applies whether or not the new data covers all existing segments. 
+  `dropExisting` only applies when `appendToExisting` is false and the  `granularitySpec` contains an `interval`. WARNING: this 
+  functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`
+  
+  The following examples demonstrate when to set the `dropExisting` property to true in the `ioConfig`:
+  
+  - Example 1: Consider an existing segment with an interval of 2020-01-01 to 2021-01-01 and YEAR segmentGranularity. You want to
+  overwrite the whole interval of 2020-01-01 to 2021-01-01 with new data using the finer segmentGranularity of MONTH. 
+  If the replacement data does not have a record within every months from 2020-01-01 to 2021-01-01
+  Druid cannot drop the original YEAR segment even if it does include all the replacement. Set `dropExisting` to true in this case to drop 
+  the original segment at year `segmentGranularity` since you no longer need it.
+  - Example 2: Consider the case where you want to re-ingest or overwrite a datasource and the new data does not contains some time intervals that exist
+  in the datasource. For example, a datasource contains the following data at MONTH segmentGranularity:  
+    January: 1 record  
+    February: 10 records  
+    March: 10 records  
+  You want to re-ingest and overwrite with new data as follows:  
+    January: 0 records  
+    February: 10 records  
+    March: 9 records  
+  Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same MONTH segmentGranularity would be:  
+    January: 1 record  
+    February: 10 records  
+    March: 9 records  
+  This is incorrect since the new data has 0 records for January. Setting `dropExisting` to true to drop the original 
+  segment for January that is not needed since the newly ingested data has no records for January.
+   
 ### Task syntax
 
 A sample task is shown below:
@@ -176,7 +203,7 @@ A sample task is shown below:
 
 This field is required.
 
-See [Ingestion Spec DataSchema](../ingestion/index.md#dataschema)
+See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.md#dataschema)
 
 If you specify `intervals` explicitly in your dataSchema's `granularitySpec`, batch ingestion will lock the full intervals
 specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
@@ -193,6 +220,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
 
 ### `tuningConfig`
 
@@ -209,10 +237,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create when using a `hashed` `partitionsSpec`. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |splitHintSpec|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [Split hint spec](#split-hint-spec) for more details.|size-based split hint spec|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` or `single_dim` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](ingestion-spec.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `intervals` in `granularitySpec` must be set and `hashed` or `single_dim` must be used for `partitionsSpec`. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, `intervals` in `granularitySpec` must be set and `hashed` or `single_dim` must be used for `partitionsSpec`. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -223,6 +251,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |taskStatusCheckPeriodMs|Polling period in milliseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
 |chatHandlerNumRetries|Retries for reporting the pushed segments in worker tasks.|5|no|
+|awaitSegmentAvailabilityTimeoutMillis|Long|Milliseconds to wait for the newly indexed segments to become available for query after ingestion completes. If `<= 0`, no wait will occur. If `> 0`, the task will wait for the Coordinator to indicate that the new segments are available for querying. If the timeout expires, the task will exit as successful, but the segments were not confirmed to have become available for query.|no (default = 0)| 
 
 ### Split Hint Spec
 
@@ -252,7 +281,7 @@ The segments split hint spec is used only for [`DruidInputSource`](#druid-input-
 ### `partitionsSpec`
 
 PartitionsSpec is used to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](rollup.md) you want.
 For perfect rollup, you should use either `hashed` (partitioning based on the hash of dimensions in each row) or
 `single_dim` (based on ranges of a single dimension). For best-effort rollup, you should use `dynamic`.
 
@@ -260,14 +289,15 @@ The three `partitionsSpec` types have different characteristics.
 
 | PartitionsSpec | Ingestion speed | Partitioning method | Supported rollup mode | Secondary partition pruning at query time |
 |----------------|-----------------|---------------------|-----------------------|-------------------------------|
-| `dynamic` | Fastest  | Partitioning based on number of rows in segment. | Best-effort rollup | N/A |
-| `hashed`  | Moderate | Partitioning based on the hash value of partition dimensions. This partitioning may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
-| `single_dim` | Slowest | Range partitioning based on the value of the partition dimension. Segment sizes may be skewed depending on the partition key distribution. This may reduce your datasource size and query latency by improving data locality. See [Partitioning](./index.md#partitioning) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+| `dynamic` | Fastest  | [Dynamic partitioning](#dynamic-partitioning) based on the number of rows in a segment. | Best-effort rollup | N/A |
+| `hashed`  | Moderate | Multiple dimension [hash-based partitioning](#hash-based-partitioning) may reduce both your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows how to hash `partitionDimensions` values to locate a segment, given a query including a filter on all the `partitionDimensions`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimensions` for query processing.<br/><br/>Note that `partitionDimensions` must be set at ingestion time to enable secondary partition pruning at query time.|
+| `single_dim` | Slowest | Single dimension [range partitioning](#single-dimension-range-partitioning) may reduce your datasource size and query latency by improving data locality. See [Partitioning](./partitioning.md) for more details. | Perfect rollup | The broker can use the partition information to prune segments early to speed up queries. Since the broker knows the range of `partitionDimension` values in each segment, given a query including a filter on the `partitionDimension`, the broker can pick up only the segments holding the rows satisfying the filter on `partitionDimension` for query processing. |
+
 
 The recommended use case for each partitionsSpec is:
 - If your data has a uniformly distributed column which is frequently used in your queries,
 consider using `single_dim` partitionsSpec to maximize the performance of most of your queries.
-- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
+- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./rollup.md#maximizing-rollup-ratio)
 when you roll up with some dimensions, consider using `hashed` partitionsSpec.
 It could reduce the size of datasource and query latency by improving data locality.
 - If the above two scenarios are not the case or you don't need to roll up your datasource,
@@ -336,7 +366,17 @@ Druid currently supports only one partition function.
 #### Single-dimension range partitioning
 
 > Single dimension range partitioning is currently not supported in the sequential mode of the Parallel task.
+
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
+
+When you use this technique to partition your data, segment sizes may be unequally distributed if the data
+in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, 
+ review the distribution of values in your source data before deciding on a partitioning strategy.
+
+For segment pruning to be effective and translate into better query performance, you must use
+the `partitionDimension` at query time.  You can concatenate values from multiple
+dimensions into a new dimension to use as the `partitionDimension`. In this case, you
+must use that new dimension in your native filter `WHERE` clause.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -538,7 +578,8 @@ An example of the result is
             "l_comment"
           ]
         },
-        "appendToExisting": false
+        "appendToExisting": false,
+        "dropExisting": false
       },
       "tuningConfig": {
         "type": "index_parallel",
@@ -574,8 +615,7 @@ An example of the result is
         "logParseExceptions": false,
         "maxParseExceptions": 2147483647,
         "maxSavedParseExceptions": 0,
-        "forceGuaranteedRollup": false,
-        "buildV9Directly": true
+        "forceGuaranteedRollup": false
       }
     }
   },
@@ -704,7 +744,7 @@ A sample task is shown below:
 
 This field is required.
 
-See the [`dataSchema`](../ingestion/index.md#dataschema) section of the ingestion docs for details.
+See the [`dataSchema`](./ingestion-spec.md#dataschema) section of the ingestion docs for details.
 
 If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
 pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
@@ -719,6 +759,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
+|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
 
 ### `tuningConfig`
 
@@ -734,10 +775,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numShards|Deprecated. Use `partitionsSpec` instead. Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|Deprecated. Use `partitionsSpec` instead. The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |partitionsSpec|Defines how to partition data in each timeChunk, see [PartitionsSpec](#partitionsspec)|`dynamic` if `forceGuaranteedRollup` = false, `hashed` if `forceGuaranteedRollup` = true|no|
-|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](index.md#indexspec)|null|no|
-|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. this can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. however, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](index.md#indexspec) for possible values.|same as indexSpec|no|
+|indexSpec|Defines segment storage format options to be used at indexing time, see [IndexSpec](ingestion-spec.md#indexspec)|null|no|
+|indexSpecForIntermediatePersists|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](ingestion-spec.md#indexspec) for possible values.|same as indexSpec|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.md#rollup). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](rollup.md). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentwriteoutmediumfactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -748,7 +789,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 ### `partitionsSpec`
 
 PartitionsSpec is to describe the secondary partitioning method.
-You should use different partitionsSpec depending on the [rollup mode](../ingestion/index.md#rollup) you want.
+You should use different partitionsSpec depending on the [rollup mode](rollup.md) you want.
 For perfect rollup, you should use `hashed`.
 
 |property|description|default|required?|
@@ -777,7 +818,7 @@ For best-effort rollup, you should use `dynamic`.
 
 While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
 the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](../ingestion/index.md#rollup), respectively.
+[perfect rollup and best-effort rollup](rollup.md), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
 are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
@@ -832,7 +873,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "prefixes": ["s3://foo/bar", "s3://bar/foo"]
+        "prefixes": ["s3://foo/bar/", "s3://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -853,6 +894,47 @@ Sample specs:
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
         ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd",
+          "assumeRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
+        }
       },
       "inputFormat": {
         "type": "json"
@@ -885,6 +967,8 @@ Properties Object:
 |--------|-----------|-------|---------|
 |accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
 |secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
+|assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
+|assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 **Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 
@@ -922,7 +1006,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "prefixes": ["gs://foo/bar", "gs://bar/foo"]
+        "prefixes": ["gs://foo/bar/", "gs://bar/foo/"]
       },
       "inputFormat": {
         "type": "json"
@@ -972,10 +1056,8 @@ Google Cloud Storage object:
 
 > You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 
-The Azure input source is to support reading objects directly from Azure Blob store. Objects can be
-specified as list of Azure Blob store URI strings. The Azure input source is splittable and can be used
-by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read
-a single object.
+The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](#parallel-task) indexing and each worker task reads one chunk of the split data.
 
 Sample specs:
 
@@ -1001,7 +1083,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "prefixes": ["azure://container/prefix1", "azure://container/prefix2"]
+        "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
       },
       "inputFormat": {
         "type": "json"
@@ -1034,17 +1116,17 @@ Sample specs:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `azure`.|None|yes|
-|uris|JSON array of URIs where Azure Blob objects to be ingested are located. Should be in form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure Blob objects to be ingested. Should be in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
-|objects|JSON array of Azure Blob objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 
-Note that the Azure input source will skip all empty objects only when `prefixes` is specified.
+Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
-Azure Blob object:
+The `objects` property is:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|bucket|Name of the Azure Blob Storage container|None|yes|
+|bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
 ### HDFS Input Source
@@ -1292,60 +1374,82 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 |type|This should be "druid".|yes|
 |dataSource|A String defining the Druid datasource to fetch rows from|yes|
 |interval|A String representing an ISO-8601 interval, which defines the time range to fetch the data over.|yes|
-|dimensions|A list of Strings containing the names of dimension columns to select from the Druid datasource. If the list is empty, no dimensions are returned. If null, all dimensions are returned. |no|
-|metrics|The list of Strings containing the names of metric columns to select. If the list is empty, no metrics are returned. If null, all metrics are returned.|no|
 |filter| See [Filters](../querying/filters.md). Only rows that match the filter, if specified, will be returned.|no|
 
-A minimal example DruidInputSource spec is shown below:
+The Druid input source can be used for a variety of purposes, including:
+
+- Creating new datasources that are rolled-up copies of existing datasources.
+- Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
+- Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
+
+When using the Druid input source, the timestamp column shows up as a numeric field named `__time` set to the number
+of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to use this in the timestampSpec, if you
+want the output timestamp to be equivalent to the input timestamp. In this case, set the timestamp column to `__time`
+and the format to `auto` or `millis`.
+
+It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
+previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
+good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
+Alternatively, if your goals can be satisfied by [compaction](compaction.md), consider that instead as a simpler
+approach.
+
+An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new
+rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and "page".
 
 ```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "druid",
-        "dataSource": "wikipedia",
-        "interval": "2013-01-01/2013-01-02"
-      }
-      ...
-    },
-...
-```
-
-The spec above will read all existing dimension and metric columns from
-the `wikipedia` datasource, including all rows with a timestamp (the `__time` column)
-within the interval `2013-01-01/2013-01-02`.
-
-A spec that applies a filter and reads a subset of the original datasource's columns is shown below.
-
-```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "druid",
-        "dataSource": "wikipedia",
-        "interval": "2013-01-01/2013-01-02",
+{
+  "type": "index_parallel",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "wikipedia_rollup",
+      "timestampSpec": {
+        "column": "__time",
+        "format": "millis"
+      },
+      "dimensionsSpec": {
         "dimensions": [
-          "page",
-          "user"
-        ],
-        "metrics": [
-          "added"
-        ],
-        "filter": {
-          "type": "selector",
-          "dimension": "page",
-          "value": "Druid"
+          "countryName",
+          "page"
+        ]
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "cnt"
         }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "HOUR",
+        "segmentGranularity": "DAY",
+        "intervals": ["2016-06-27/P1D"],
+        "rollup": true
       }
-      ...
     },
-...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "druid",
+        "dataSource": "wikipedia_raw",
+        "interval": "2016-06-27/P1D"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "hashed"
+      },
+      "forceGuaranteedRollup": true,
+      "maxNumConcurrentSubTasks": 1
+    }
+  }
+}
 ```
 
-This spec above will only return the `page`, `user` dimensions and `added` metric.
-Only rows where `page` = `Druid` will be returned.
+> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+> have ingestion specs that rely on this and cannot rewrite them, set
+> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+> to `true` to enable a compatibility mode where the timestampSpec is ignored.
 
 ### SQL Input Source
 
@@ -1358,7 +1462,7 @@ Please refer to the Recommended practices section below before using this input 
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "sql".|Yes|
-|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support and this extension must be loaded into Druid. For database types `mysql` and `postgresql`, the `connectorConfig` support is provided by [mysql-metadata-storage](../development/extensions-core/mysql.md) and [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extensions respectively.|Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
@@ -1712,7 +1816,7 @@ Requires one of the following extensions:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be "sql".||Yes|
-|database|Specifies the database connection details.||Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.||Yes|
 |maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|No|
 |maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|No|
 |prefetchTriggerBytes|Threshold to trigger prefetching SQL result objects.|maxFetchCapacityBytes / 2|No|

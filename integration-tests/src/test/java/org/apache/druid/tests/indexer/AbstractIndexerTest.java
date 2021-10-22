@@ -64,7 +64,7 @@ public abstract class AbstractIndexerTest
   protected TestQueryHelper queryHelper;
 
   @Inject
-  private IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
 
   protected Closeable unloader(final String dataSource)
   {
@@ -99,6 +99,32 @@ public abstract class AbstractIndexerTest
     String first = intervals.get(0).split("/")[0];
     String last = intervals.get(intervals.size() - 1).split("/")[1];
     unloadAndKillData(dataSource, first, last);
+  }
+
+  protected String submitIndexTask(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    String taskSpec = getResourceAsString(indexTask);
+    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+        jsonMapper.writeValueAsString("0")
+    );
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for loading index task %s", taskID);
+
+    return taskID;
+  }
+
+  protected void loadData(String indexTask, final String fullDatasourceName) throws Exception
+  {
+    final String taskID = submitIndexTask(indexTask, fullDatasourceName);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Load"
+    );
   }
 
   private void unloadAndKillData(final String dataSource, String start, String end)

@@ -39,7 +39,7 @@ public class TimestampToMillisOperatorConversion implements SqlOperatorConversio
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("TIMESTAMP_TO_MILLIS")
       .operandTypes(SqlTypeFamily.TIMESTAMP)
-      .returnTypeNonNull(SqlTypeName.BIGINT)
+      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
