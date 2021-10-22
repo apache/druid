@@ -420,7 +420,7 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-client-api</artifactId>
                     <version>${hadoop.compile.version}</version>
-                    <scope>provided</scope>
+                    <scope>compile</scope>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
