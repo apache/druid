@@ -346,10 +346,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
     BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
 
-    ExtendedIndexesWriter extendedIndexesWriter = getExtendedIndexWriter();
+    ExtendedIndexesMerger extendedIndexesMerger = getExtendedIndexWriter();
 
-    if (extendedIndexesWriter != null) {
-      extendedIndexesWriter.initialize();
+    if (extendedIndexesMerger != null) {
+      extendedIndexesMerger.initialize();
     }
 
     IndexSeeker[] dictIdSeeker = toIndexSeekers(adapters, dimConversions, dimensionName);
@@ -363,13 +363,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
           dictIdSeeker,
           dictId
       );
-      if (extendedIndexesWriter != null) {
-        extendedIndexesWriter.mergeIndexes(dictId, mergedIndexes);
+      if (extendedIndexesMerger != null) {
+        extendedIndexesMerger.mergeIndexes(dictId, mergedIndexes);
       }
     }
 
-    if (extendedIndexesWriter != null) {
-      extendedIndexesWriter.write();
+    if (extendedIndexesMerger != null) {
+      extendedIndexesMerger.write();
     }
 
     log.debug(
@@ -387,7 +387,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
 
   @Nullable
-  protected ExtendedIndexesWriter getExtendedIndexWriter()
+  protected ExtendedIndexesMerger getExtendedIndexWriter()
   {
     return null;
   }
@@ -679,7 +679,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
    * {@link DictionaryEncodedColumnMerger#writeIndexes(List)} is called, on top of the standard bitmap index created
    * with {@link DictionaryEncodedColumnMerger#mergeBitmaps}
    */
-  interface ExtendedIndexesWriter
+  interface ExtendedIndexesMerger
   {
     void initialize() throws IOException;
 

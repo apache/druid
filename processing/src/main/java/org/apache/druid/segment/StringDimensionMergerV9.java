@@ -99,9 +99,9 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   @Nullable
   @Override
-  protected ExtendedIndexesWriter getExtendedIndexWriter()
+  protected ExtendedIndexesMerger getExtendedIndexWriter()
   {
-    return new SpatialIndexesWriter();
+    return new SpatialIndexesMerger();
   }
 
   @Override
@@ -136,7 +136,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   /**
    * Write spatial indexes for string columns that have them
    */
-  public class SpatialIndexesWriter implements ExtendedIndexesWriter
+  public class SpatialIndexesMerger implements ExtendedIndexesMerger
   {
     private RTree tree;
     private final boolean hasSpatial = capabilities.hasSpatialIndexes();
