@@ -674,9 +674,20 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
   }
 
+  /**
+   * Specifies any additional per value indexes which should be constructed when
+   * {@link DictionaryEncodedColumnMerger#writeIndexes(List)} is called, on top of the standard bitmap index created
+   * with {@link DictionaryEncodedColumnMerger#mergeBitmaps}
+   */
   interface ExtendedIndexesWriter
   {
     void initialize() throws IOException;
+
+    /**
+     * Merge extended indexes for the given dictionaryId value. The merged bitmap index from
+     * {@link DictionaryEncodedColumnMerger#mergeBitmaps} is supplied should it be useful for the construction of
+     * the extended indexes.
+     */
     void mergeIndexes(int dictId, MutableBitmap mergedIndexes) throws IOException;
     void write() throws IOException;
   }

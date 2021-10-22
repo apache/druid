@@ -133,6 +133,9 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         .build();
   }
 
+  /**
+   * Write spatial indexes for string columns that have them
+   */
   public class SpatialIndexesWriter implements ExtendedIndexesWriter
   {
     private RTree tree;
