@@ -53,6 +53,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -899,6 +900,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
           )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -988,6 +990,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {

@@ -61,6 +61,7 @@ public class DruidStatement implements Closeable
   @GuardedBy("lock")
   private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
+  private final ErrorHandler errorHandler;
   private final Object lock = new Object();
   /**
    * Query metrics can only be used within a single thread. Because results can be paginated into multiple
@@ -92,7 +93,8 @@ public class DruidStatement implements Closeable
       final int statementId,
       final Map<String, Object> queryContext,
       final SqlLifecycle sqlLifecycle,
-      final Runnable onClose
+      final Runnable onClose,
+      final ErrorHandler errorHandler
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
@@ -100,6 +102,7 @@ public class DruidStatement implements Closeable
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
     this.sqlLifecycle = Preconditions.checkNotNull(sqlLifecycle, "sqlLifecycle");
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
+    this.errorHandler = Preconditions.checkNotNull(errorHandler, "errorHandler");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
         StringUtils.format(
             "JDBCYielderOpenCloseExecutor-connection-%s-statement-%d",
@@ -361,7 +364,7 @@ public class DruidStatement implements Closeable
             sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
           }
         } else {
-          DruidMeta.logFailure(this.throwable);
+          errorHandler.logFailureAndSanitize(this.throwable);
         }
         onClose.run();
       }
@@ -390,7 +393,7 @@ public class DruidStatement implements Closeable
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
-    DruidMeta.logFailure(t);
+    t = errorHandler.logFailureAndSanitize(t);
     try {
       close();
     }

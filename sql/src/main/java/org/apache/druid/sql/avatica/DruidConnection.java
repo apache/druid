@@ -51,6 +51,7 @@ public class DruidConnection
   private final String connectionId;
   private final int maxStatements;
   private final ImmutableMap<String, Object> context;
+  private final ErrorHandler errorHandler;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
 
@@ -63,11 +64,17 @@ public class DruidConnection
   @GuardedBy("connectionLock")
   private boolean open = true;
 
-  public DruidConnection(final String connectionId, final int maxStatements, final Map<String, Object> context)
+  public DruidConnection(
+      final String connectionId,
+      final int maxStatements,
+      final Map<String, Object> context,
+      ErrorHandler errorHandler
+  )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;
     this.context = ImmutableMap.copyOf(context);
+    this.errorHandler = errorHandler;
     this.statements = new ConcurrentHashMap<>();
   }
 
@@ -84,11 +91,11 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+        throw errorHandler.logFailureAndSanitize(new ISE("Uh oh, too many statements"));
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is[%,d]", maxStatements));
+        throw errorHandler.logFailureAndSanitize(new ISE("Too many open statements, limit is[%,d]", maxStatements));
       }
 
       // remove sensitive fields from the context, only the connection's context needs to have authentication
@@ -109,7 +116,8 @@ public class DruidConnection
             LOG.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
             // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
-          }
+          },
+          errorHandler
       );
 
       statements.put(statementId, statement);
