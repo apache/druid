@@ -248,7 +248,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
     }
   }
 
-  protected int getEncodedValue(ActualType fullValue, boolean idSorted)
+  protected int getEncodedValue(@Nullable ActualType fullValue, boolean idSorted)
   {
     int unsortedId = dimLookup.getId(fullValue);
 

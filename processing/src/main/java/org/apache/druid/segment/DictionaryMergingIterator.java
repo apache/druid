@@ -60,7 +60,6 @@ public class DictionaryMergingIterator<T extends Comparable<T>> implements Close
     };
   }
 
-  protected final Comparator<Pair<Integer, PeekingIterator<T>>> comparator;
   protected final IntBuffer[] conversions;
   protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = new ArrayList<>();
   protected final PriorityQueue<Pair<Integer, PeekingIterator<T>>> pQueue;
@@ -73,7 +72,6 @@ public class DictionaryMergingIterator<T extends Comparable<T>> implements Close
       boolean useDirect
   )
   {
-    this.comparator = comparator;
     pQueue = new PriorityQueue<>(dimValueLookups.length, comparator);
     conversions = new IntBuffer[dimValueLookups.length];
 
