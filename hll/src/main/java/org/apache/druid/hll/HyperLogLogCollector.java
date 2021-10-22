@@ -22,26 +22,60 @@ package org.apache.druid.hll;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * HyperLogLog cardinality estimator
+ */
 public interface HyperLogLogCollector extends Comparable<HyperLogLogCollector>
 {
 
+  /**
+   * Get the estimated cardinality rounded to the nearest long.
+   */
   long estimateCardinalityRound();
 
+  /**
+   * Get the estimated cardinality.
+   */
   double estimateCardinality();
 
+  /**
+   * Add hash value to the underlying HyperLogLog structure.
+   * @param hashedValue hashed value, using {@link com.google.common.hash.HashFunction}.
+   */
   void add(byte[] hashedValue);
 
+  /**
+   * Merge with another collector
+   * @param other another collector
+   * @return this collector
+   */
   HyperLogLogCollector fold(@Nullable HyperLogLogCollector other);
 
+  /**
+   * Merge with another collector represented by byte buffer
+   * @param buffer another collector
+   * @return this collector
+   */
   HyperLogLogCollector fold(ByteBuffer buffer);
 
+  /**
+   * Copy and return the underlying byte buffer
+   * @return the underlying byte buffer
+   */
   ByteBuffer toByteBuffer();
 
+  /**
+   * Copy and return the underlying byte buffer in array form
+   * @return the underlying byte buffer in array form
+   */
   byte[] toByteArray();
 
+  /**
+   * Get the number of buckets
+   */
   int getNumBuckets();
 
-  // Methods to build the latest HLLC
+  /** Methods to build the latest HLLC */
   static HyperLogLogCollector makeLatestCollector()
   {
     return AbstractHyperLogLogCollector.makeLatestCollector();
@@ -60,11 +94,6 @@ public interface HyperLogLogCollector extends Comparable<HyperLogLogCollector>
   static HyperLogLogCollector makeCollector(ByteBuffer buffer)
   {
     return AbstractHyperLogLogCollector.makeCollector(buffer);
-  }
-
-  static double estimateByteBuffer(ByteBuffer buf)
-  {
-    return makeCollector(buf.duplicate()).estimateCardinality();
   }
 
   /**

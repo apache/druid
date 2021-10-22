@@ -681,7 +681,7 @@ public class AbstractHyperLogLogCollectorTest
     }
 
     Assert.assertEquals(
-        collector.estimateCardinality(), HyperLogLogCollector.estimateByteBuffer(collector.toByteBuffer()), 0.0d
+        collector.estimateCardinality(), AbstractHyperLogLogCollector.estimateByteBuffer(collector.toByteBuffer()), 0.0d
     );
   }
 

@@ -316,6 +316,10 @@ abstract class AbstractHyperLogLogCollector implements HyperLogLogCollector
     }
   }
 
+  static double estimateByteBuffer(ByteBuffer buf)
+  {
+    return makeCollector(buf.duplicate()).estimateCardinality();
+  }
   static AbstractHyperLogLogCollector makeLatestCollector()
   {
     return new VersionOneHyperLogLogCollector();
