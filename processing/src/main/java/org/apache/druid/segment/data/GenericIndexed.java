@@ -199,7 +199,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return fromIterable(Arrays.asList(objects), strategy);
   }
 
-  static GenericIndexed<ResourceHolder<ByteBuffer>> ofCompressedByteBuffers(
+  public static GenericIndexed<ResourceHolder<ByteBuffer>> ofCompressedByteBuffers(
       Iterable<ByteBuffer> buffers,
       CompressionStrategy compression,
       int bufferSize,
