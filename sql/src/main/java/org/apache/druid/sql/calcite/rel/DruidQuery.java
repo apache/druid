@@ -735,15 +735,14 @@ public class DruidQuery
   private Query computeQuery()
   {
     if (dataSource instanceof QueryDataSource) {
-      // If there is a subquery then the outer query must be a groupBy.
+      // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
+      // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
+      // requiring the Broker to inline results.)
       final GroupByQuery outerQuery = toGroupByQuery();
 
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      if (outerQuery != null) {
+        return outerQuery;
       }
-
-      return outerQuery;
     }
 
     final TimeseriesQuery tsQuery = toTimeseriesQuery();

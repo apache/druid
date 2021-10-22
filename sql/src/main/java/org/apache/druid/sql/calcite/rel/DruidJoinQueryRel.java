@@ -316,7 +316,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     double cost;
 
     if (computeLeftRequiresSubquery(getSomeDruidChild(left))) {
-      cost = CostEstimates.COST_JOIN_SUBQUERY;
+      cost = CostEstimates.COST_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();
       if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
@@ -325,7 +325,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
 
     if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
-      cost += CostEstimates.COST_JOIN_SUBQUERY;
+      cost += CostEstimates.COST_SUBQUERY;
     }
 
     if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
