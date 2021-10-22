@@ -137,10 +137,6 @@
       <id>hadoop2</id>
       <activation>
         <activeByDefault>true</activeByDefault>
-        <property>
-          <name>hadoop3.enabled</name>
-          <value>!true</value>
-        </property>
       </activation>
       <dependencies>
         <dependency>

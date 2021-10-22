@@ -227,10 +227,6 @@
             <id>hadoop2</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
-                <property>
-                    <name>hadoop3.enabled</name>
-                    <value>!true</value>
-                </property>
             </activation>
             <dependencies>
                 <dependency>
@@ -496,6 +492,7 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-client-api</artifactId>
                     <version>${hadoop.compile.version}</version>
+                    <scope>compile</scope>
                 </dependency>
                 <dependency>
                     <groupId>com.google.protobuf</groupId>
