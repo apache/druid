@@ -45,7 +45,6 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -72,7 +71,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -218,10 +216,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final int numQueryServers
   )
   {
-    responseContext.add(
-        Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-        new NonnullPair<>(query.getMostSpecificId(), numQueryServers)
-    );
+    responseContext.addRemainingResponse(query.getMostSpecificId(), numQueryServers);
   }
 
   @Override
@@ -361,7 +356,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable
         final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, queryCacheKey);
         if (null != currentEtag) {
-          responseContext.put(Key.ETAG, currentEtag);
+          responseContext.putEntityTag(currentEtag);
         }
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return new ClusterQueryResult<>(Sequences.empty(), 0);
@@ -499,8 +494,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         // Which is not necessarily an indication that the data doesn't exist or is
         // incomplete. The data could exist and just not be loaded yet.  In either
         // case, though, this query will not include any data from the identified intervals.
-        responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS, uncoveredIntervals);
-        responseContext.add(ResponseContext.Key.UNCOVERED_INTERVALS_OVERFLOWED, uncoveredIntervalsOverflowed);
+        responseContext.putUncoveredIntervals(uncoveredIntervals, uncoveredIntervalsOverflowed);
       }
     }
 
