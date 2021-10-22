@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -47,9 +48,10 @@ public interface PostAggregator extends Cacheable
   /**
    * Return the output type of a row processed with this post aggregator. Refer to the {@link ColumnType} javadocs
    * for details on the implications of choosing a type.
+   * @param signature
    */
   @Nullable
-  ColumnType getType();
+  ColumnType getType(ColumnInspector signature);
 
   /**
    * Allows returning an enriched post aggregator, built from contextual information available from the given map of

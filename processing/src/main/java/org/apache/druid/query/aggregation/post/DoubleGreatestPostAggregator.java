@@ -27,6 +27,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
@@ -101,7 +102,7 @@ public class DoubleGreatestPostAggregator implements PostAggregator
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
     return ColumnType.DOUBLE;
   }

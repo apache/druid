@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
@@ -63,7 +64,7 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
     return ColumnType.DOUBLE_ARRAY;
   }

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Arrays;
@@ -69,7 +70,7 @@ public class ArrayOfDoublesSketchToMeansPostAggregator extends ArrayOfDoublesSke
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
     return ColumnType.DOUBLE_ARRAY;
   }

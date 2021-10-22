@@ -23,11 +23,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.SettableObjectBinding;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.TestHelper;
@@ -37,65 +38,72 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
+public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    FieldAccessPostAggregator postAgg = new FieldAccessPostAggregator("name", "column");
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "2 + 3",
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
     Assert.assertEquals(
         postAgg,
-        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), FieldAccessPostAggregator.class)
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), ExpressionPostAggregator.class)
     );
   }
 
   @Test
   public void testEqualsAndHashcode()
   {
-    // type is computed by decorate
-    EqualsVerifier.forClass(FieldAccessPostAggregator.class).usingGetClass().withIgnoredFields("type").verify();
+    EqualsVerifier.forClass(ExpressionPostAggregator.class)
+                  .usingGetClass()
+                  .withIgnoredFields("macroTable", "finalizers", "parsed", "dependentFields", "cacheKey")
+                  .verify();
   }
 
   @Test
-  public void testGetTypeBeforeDecorate()
+  public void testOutputTypeAndCompute()
   {
-    FieldAccessPostAggregator postAgg = new FieldAccessPostAggregator("name", "column");
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "x + y",
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
     RowSignature signature = RowSignature.builder()
-                                         .add("column", ColumnType.LONG)
+                                         .add("x", ColumnType.LONG)
+                                         .add("y", ColumnType.DOUBLE)
                                          .build();
-    Assert.assertEquals(ColumnType.LONG, postAgg.getType(signature));
+
+    SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", 2L)
+                                                               .withBinding("y", 3.0);
+
+    Assert.assertEquals(ColumnType.DOUBLE, postAgg.getType(signature));
+
+    Assert.assertEquals(5.0, postAgg.compute(binding.asMap()));
   }
 
   @Test
-  public void testGetTypeBeforeDecorateNil()
+  public void testNilOutputType()
   {
-    FieldAccessPostAggregator postAgg = new FieldAccessPostAggregator("name", "column");
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "x + y",
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
     RowSignature signature = RowSignature.builder().build();
+
+    // columns not existing in the output signature means they don't exist, so the output is also null
     Assert.assertNull(postAgg.getType(signature));
-  }
-
-  @Test
-  public void testCompute()
-  {
-    final String aggName = "rows";
-    FieldAccessPostAggregator fieldAccessPostAggregator;
-
-    fieldAccessPostAggregator = new FieldAccessPostAggregator("To be, or not to be, that is the question:", "rows");
-    CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
-    metricValues.put(aggName, agg.get());
-    Assert.assertEquals(new Long(0L), fieldAccessPostAggregator.compute(metricValues));
-
-    agg.aggregate();
-    agg.aggregate();
-    agg.aggregate();
-    metricValues.put(aggName, agg.get());
-    Assert.assertEquals(new Long(3L), fieldAccessPostAggregator.compute(metricValues));
   }
 
   @Test
@@ -112,9 +120,10 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
                   new FloatSumAggregatorFactory("float", "col2")
               )
               .postAggregators(
-                  new FieldAccessPostAggregator("a", "count"),
-                  new FieldAccessPostAggregator("b", "double"),
-                  new FieldAccessPostAggregator("c", "float")
+                  new ExpressionPostAggregator("a", "double + float", null, TestExprMacroTable.INSTANCE),
+                  new ExpressionPostAggregator("b", "count + count", null, TestExprMacroTable.INSTANCE),
+                  new ExpressionPostAggregator("c", "count + double", null, TestExprMacroTable.INSTANCE),
+                  new ExpressionPostAggregator("d", "float + float", null, TestExprMacroTable.INSTANCE)
               )
               .build();
 
@@ -124,9 +133,10 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
                     .add("count", ColumnType.LONG)
                     .add("double", ColumnType.DOUBLE)
                     .add("float", ColumnType.FLOAT)
-                    .add("a", ColumnType.LONG)
-                    .add("b", ColumnType.DOUBLE)
-                    .add("c", ColumnType.FLOAT)
+                    .add("a", ColumnType.DOUBLE)
+                    .add("b", ColumnType.LONG)
+                    .add("c", ColumnType.DOUBLE)
+                    .add("d", ColumnType.DOUBLE) // floats don't exist in expressions
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
