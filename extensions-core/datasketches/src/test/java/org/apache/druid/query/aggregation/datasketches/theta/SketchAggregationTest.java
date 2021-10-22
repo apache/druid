@@ -30,6 +30,7 @@ import org.apache.datasketches.theta.Sketch;
 import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.theta.UpdateSketch;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -517,6 +518,7 @@ public class SketchAggregationTest
     List<String> value = new ArrayList<>();
     value.add("foo");
     value.add(null);
+    value.add("");
     value.add("bar");
     List[] columnValues = new List[]{value};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
@@ -525,9 +527,11 @@ public class SketchAggregationTest
     Assert.assertFalse(agg.isNull());
     Assert.assertNotNull(agg.get());
     Assert.assertTrue(agg.get() instanceof SketchHolder);
-    Assert.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
+
+    final long expectedEstimate = NullHandling.replaceWithDefault() ? 2 : 3;
+    Assert.assertEquals(expectedEstimate, ((SketchHolder) agg.get()).getEstimate(), 0);
     Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
-    Assert.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+    Assert.assertEquals(expectedEstimate, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
   @Test
