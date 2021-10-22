@@ -48,7 +48,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -121,7 +121,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                 new ExpressionVirtualColumn(
                     "v0",
                     StringUtils.format("timestamp_floor(__time, '%s')", granularity.getPeriod()),
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             );
@@ -140,7 +140,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
               .setDimensions(
                   timeDimension == null
                   ? ImmutableList.of()
-                  : ImmutableList.of(new DefaultDimensionSpec("v0", timeDimension, ValueType.LONG))
+                  : ImmutableList.of(new DefaultDimensionSpec("v0", timeDimension, ColumnType.LONG))
               )
               .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
               .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())

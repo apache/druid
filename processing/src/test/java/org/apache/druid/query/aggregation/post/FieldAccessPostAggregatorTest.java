@@ -27,8 +27,8 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -81,12 +81,12 @@ public class FieldAccessPostAggregatorTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
-                    .add("double", ValueType.DOUBLE)
-                    .add("float", ValueType.FLOAT)
-                    .add("a", ValueType.LONG)
-                    .add("b", ValueType.DOUBLE)
-                    .add("c", ValueType.FLOAT)
+                    .add("count", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("float", ColumnType.FLOAT)
+                    .add("a", ColumnType.LONG)
+                    .add("b", ColumnType.DOUBLE)
+                    .add("c", ColumnType.FLOAT)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

@@ -68,6 +68,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -127,7 +128,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final boolean isComplexMetric = ValueType.COMPLEX.equals(agg.getType());
+        final boolean isComplexMetric = agg.getType().is(ValueType.COMPLEX);
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -137,7 +138,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-          final String complexTypeName = agg.getComplexTypeName();
+          final String complexTypeName = agg.getType().getComplexTypeName();
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", complexTypeName);
@@ -287,13 +288,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      ValueType type = dimSchema.getValueType();
+      ColumnType type = dimSchema.getColumnType();
       String dimName = dimSchema.getName();
 
       // Note: Things might be simpler if DimensionSchema had a method "getColumnCapabilities()" which could return
       // type specific capabilities by itself. However, for various reasons, DimensionSchema currently lives in druid-core
       // while ColumnCapabilities lives in druid-processing which makes that approach difficult.
-      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type, dimSchema.getTypeName());
+      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
 
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
@@ -311,7 +312,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     //__time capabilities
     timeAndMetricsColumnCapabilities.put(
         ColumnHolder.TIME_COLUMN_NAME,
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG)
     );
 
     // This should really be more generic
@@ -533,7 +534,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   dimension,
                   // for schemaless type discovery, everything is a String. this should probably try to autodetect
                   // based on the value to use a better handler
-                  makeDefaultCapabilitiesFromValueType(ValueType.STRING, null),
+                  makeDefaultCapabilitiesFromValueType(ColumnType.STRING),
                   null
               )
           );
@@ -784,9 +785,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type, @Nullable String typeName)
+  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ColumnType type)
   {
-    switch (type) {
+    switch (type.getType()) {
       case STRING:
         // we start out as not having multiple values, but this might change as we encounter them
         return new ColumnCapabilitiesImpl().setType(type)
@@ -795,7 +796,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                                            .setDictionaryValuesUnique(true)
                                            .setDictionaryValuesSorted(false);
       case COMPLEX:
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true).setComplexTypeName(typeName);
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
       default:
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
@@ -993,20 +994,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.index = index;
       this.name = factory.getName();
 
-      ValueType valueType = factory.getType();
+      ColumnType valueType = factory.getType();
 
       if (valueType.isNumeric()) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         this.type = valueType.toString();
-      } else if (ValueType.COMPLEX.equals(valueType)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
+      } else if (valueType.is(ValueType.COMPLEX)) {
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
-        String complexTypeName = factory.getComplexTypeName();
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(valueType.getComplexTypeName());
         if (serde != null) {
           this.type = serde.getTypeName();
         } else {
-          throw new ISE("Unable to handle complex type[%s] of type[%s]", complexTypeName, valueType);
+          throw new ISE("Unable to handle complex type[%s]", valueType);
         }
       } else {
         // if we need to handle non-numeric and non-complex types (e.g. strings, arrays) it should be done here

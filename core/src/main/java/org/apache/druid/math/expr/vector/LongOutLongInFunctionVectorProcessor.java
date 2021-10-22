@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 /**
  * specialized {@link UnivariateFunctionVectorProcessor} for processing (long[]) -> long[]
@@ -28,15 +28,15 @@ public abstract class LongOutLongInFunctionVectorProcessor extends UnivariateFun
 {
   public LongOutLongInFunctionVectorProcessor(ExprVectorProcessor<long[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExprType.LONG), maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG), maxVectorSize, new long[maxVectorSize]);
   }
 
   public abstract long apply(long input);
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.LONG;
+    return ExpressionType.LONG;
   }
 
   @Override

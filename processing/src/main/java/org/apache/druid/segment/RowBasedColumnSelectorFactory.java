@@ -30,8 +30,8 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 
@@ -96,9 +96,9 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     } else {
-      final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
+      final ColumnType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
 
       if (valueType != null) {

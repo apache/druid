@@ -42,7 +42,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -480,7 +480,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public ColumnCapabilities getColumnCapabilities()
   {
-    ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
                                                                      .setHasSpatialIndexes(hasSpatialIndexes)
                                                                      .setDictionaryValuesUnique(true)

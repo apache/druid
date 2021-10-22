@@ -118,7 +118,7 @@ public interface Function
    * @see Expr#getOutputType
    */
   @Nullable
-  ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
+  ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args);
 
   /**
    * Check if a function can be 'vectorized', for a given set of {@link Expr} inputs. If this method returns true,
@@ -204,9 +204,9 @@ public interface Function
       if (NullHandling.sqlCompatible() && param.isNumericNull()) {
         return ExprEval.of(null);
       }
-      if (param.type() == ExprType.LONG) {
+      if (param.type().is(ExprType.LONG)) {
         return eval(param.asLong());
-      } else if (param.type() == ExprType.DOUBLE) {
+      } else if (param.type().is(ExprType.DOUBLE)) {
         return eval(param.asDouble());
       }
       return ExprEval.of(null);
@@ -227,7 +227,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return args.get(0).getOutputType(inspector);
     }
@@ -246,9 +246,9 @@ public interface Function
   {
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
   }
 
@@ -266,8 +266,8 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      ExprType type = ExprTypeConversion.autoDetect(x, y);
-      switch (type) {
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      switch (type.getType()) {
         case STRING:
           return ExprEval.of(null);
         case LONG:
@@ -290,9 +290,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.function(
+      return ExpressionTypeConversion.function(
           args.get(0).getOutputType(inspector),
           args.get(1).getOutputType(inspector)
       );
@@ -312,9 +312,9 @@ public interface Function
   {
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
   }
 
@@ -329,8 +329,8 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      ExprType type = ExprTypeConversion.autoDetect(x, y);
-      if (type == ExprType.STRING) {
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      if (type.is(ExprType.STRING)) {
         return ExprEval.of(null);
       }
       return eval(x.asLong(), y.asLong());
@@ -340,9 +340,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -361,7 +361,7 @@ public interface Function
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+      if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
         throw new IAE(
             "Function[%s] needs a string as first argument and an integer as second argument",
             name()
@@ -492,21 +492,19 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType arrayType = getArrayArgument(args).getOutputType(inspector);
-      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+      ExpressionType arrayType = getArrayArgument(args).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
-      switch (arrayExpr.type()) {
+      switch (arrayExpr.elementType().getType()) {
         case STRING:
-        case STRING_ARRAY:
           return ExprEval.ofStringArray(add(arrayExpr.asStringArray(), scalarExpr.asString()).toArray(String[]::new));
         case LONG:
-        case LONG_ARRAY:
           return ExprEval.ofLongArray(
               add(
                   arrayExpr.asLongArray(),
@@ -514,7 +512,6 @@ public interface Function
               ).toArray(Long[]::new)
           );
         case DOUBLE:
-        case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(
               add(
                   arrayExpr.asDoubleArray(),
@@ -548,10 +545,10 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType arrayType = args.get(0).getOutputType(inspector);
-      return Optional.ofNullable(ExprType.asArrayType(arrayType)).orElse(arrayType);
+      ExpressionType arrayType = args.get(0).getOutputType(inspector);
+      return Optional.ofNullable(ExpressionType.asArrayType(arrayType)).orElse(arrayType);
     }
 
     @Override
@@ -567,19 +564,16 @@ public interface Function
         return lhsExpr;
       }
 
-      switch (lhsExpr.type()) {
+      switch (lhsExpr.elementType().getType()) {
         case STRING:
-        case STRING_ARRAY:
           return ExprEval.ofStringArray(
               merge(lhsExpr.asStringArray(), rhsExpr.asStringArray()).toArray(String[]::new)
           );
         case LONG:
-        case LONG_ARRAY:
           return ExprEval.ofLongArray(
               merge(lhsExpr.asLongArray(), rhsExpr.asLongArray()).toArray(Long[]::new)
           );
         case DOUBLE:
-        case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(
               merge(lhsExpr.asDoubleArray(), rhsExpr.asDoubleArray()).toArray(Double[]::new)
           );
@@ -615,11 +609,11 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType outputType = ExprType.LONG;
+      ExpressionType outputType = ExpressionType.LONG;
       for (Expr expr : args) {
-        outputType = ExprTypeConversion.function(outputType, expr.getOutputType(inspector));
+        outputType = ExpressionTypeConversion.function(outputType, expr.getOutputType(inspector));
       }
       return outputType;
     }
@@ -633,14 +627,14 @@ public interface Function
 
       // evaluate arguments and collect output type
       List<ExprEval<?>> evals = new ArrayList<>();
-      ExprType outputType = ExprType.LONG;
+      ExpressionType outputType = ExpressionType.LONG;
 
       for (Expr expr : args) {
         ExprEval<?> exprEval = expr.eval(bindings);
-        ExprType exprType = exprEval.type();
+        ExpressionType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
-          outputType = ExprTypeConversion.function(outputType, exprType);
+          outputType = ExpressionTypeConversion.function(outputType, exprType);
         }
 
         if (exprEval.value() != null) {
@@ -658,7 +652,7 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      switch (outputType) {
+      switch (outputType.getType()) {
         case DOUBLE:
           //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
           return ExprEval.of(evals.stream().mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
@@ -671,9 +665,9 @@ public interface Function
       }
     }
 
-    private boolean isValidType(ExprType exprType)
+    private boolean isValidType(ExpressionType exprType)
     {
-      switch (exprType) {
+      switch (exprType.getType()) {
         case DOUBLE:
         case LONG:
         case STRING:
@@ -704,9 +698,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -781,9 +775,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
 
     @Override
@@ -899,9 +893,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -927,13 +921,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType type = args.get(0).getOutputType(inspector);
+      ExpressionType type = args.get(0).getOutputType(inspector);
       if (type == null) {
         return null;
       }
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
 
     @Override
@@ -959,13 +953,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType type = args.get(0).getOutputType(inspector);
+      ExpressionType type = args.get(0).getOutputType(inspector);
       if (type == null) {
         return null;
       }
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -1213,9 +1207,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.integerMathFunction(
+      return ExpressionTypeConversion.integerMathFunction(
           args.get(0).getOutputType(inspector),
           args.get(1).getOutputType(inspector)
       );
@@ -1307,9 +1301,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -1446,7 +1440,7 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+      if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
         throw new IAE(
             "The first argument to the function[%s] should be integer or double type but got the type: %s",
             name(),
@@ -1458,7 +1452,7 @@ public interface Function
         return eval(value1);
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
-        if (value2.type() != ExprType.LONG) {
+        if (!value2.type().is(ExprType.LONG)) {
           throw new IAE(
               "The second argument to the function[%s] should be integer type but got the type: %s",
               name(),
@@ -1479,7 +1473,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return args.get(0).getOutputType(inspector);
     }
@@ -1491,9 +1485,9 @@ public interface Function
 
     private ExprEval eval(ExprEval param, int scale)
     {
-      if (param.type() == ExprType.LONG) {
+      if (param.type().is(ExprType.LONG)) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
-      } else if (param.type() == ExprType.DOUBLE) {
+      } else if (param.type().is(ExprType.DOUBLE)) {
         BigDecimal decimal = safeGetFromDouble(param.asDouble());
         return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
@@ -1896,9 +1890,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
 
     @Override
@@ -1908,8 +1902,8 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      ExprType type = ExprTypeConversion.autoDetect(x, y);
-      switch (type) {
+      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
+      switch (type.getType()) {
         case STRING:
           return ExprEval.of(null);
         default:
@@ -1944,9 +1938,9 @@ public interface Function
       if (NullHandling.sqlCompatible() && x.value() == null) {
         return ExprEval.of(null);
       }
-      ExprType castTo;
+      ExpressionType castTo;
       try {
-        castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
+        castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
         throw new IAE("invalid type '%s'", y.asString());
@@ -1958,11 +1952,9 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
-        switch (castTo) {
-          case LONG_ARRAY:
-          case DOUBLE_ARRAY:
-          case STRING_ARRAY:
+        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo.getType()) {
+          case ARRAY:
             return Collections.emptySet();
           default:
             return ImmutableSet.of(args.get(0));
@@ -1976,8 +1968,8 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
-        switch (castTo) {
+        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        switch (castTo.getType()) {
           case LONG:
           case DOUBLE:
           case STRING:
@@ -1992,11 +1984,11 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       // can only know cast output type if cast to argument is constant
       if (args.get(1).isLiteral()) {
-        return ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        return ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
       }
       return null;
     }
@@ -2012,7 +2004,7 @@ public interface Function
     {
       return CastToTypeVectorProcessor.cast(
           args.get(0).buildVectorized(inspector),
-          ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
+          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
       );
     }
   }
@@ -2082,9 +2074,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.conditional(inspector, args.subList(1, 3));
+      return ExpressionTypeConversion.conditional(inspector, args.subList(1, 3));
     }
   }
 
@@ -2125,7 +2117,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       List<Expr> results = new ArrayList<>();
       for (int i = 1; i < args.size(); i += 2) {
@@ -2133,7 +2125,7 @@ public interface Function
       }
       // add else
       results.add(args.get(args.size() - 1));
-      return ExprTypeConversion.conditional(inspector, results);
+      return ExpressionTypeConversion.conditional(inspector, results);
     }
   }
 
@@ -2174,7 +2166,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       List<Expr> results = new ArrayList<>();
       for (int i = 2; i < args.size(); i += 2) {
@@ -2182,7 +2174,7 @@ public interface Function
       }
       // add else
       results.add(args.get(args.size() - 1));
-      return ExprTypeConversion.conditional(inspector, results);
+      return ExpressionTypeConversion.conditional(inspector, results);
     }
   }
 
@@ -2211,9 +2203,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprTypeConversion.conditional(inspector, args);
+      return ExpressionTypeConversion.conditional(inspector, args);
     }
   }
 
@@ -2242,9 +2234,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -2273,9 +2265,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -2323,9 +2315,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -2369,9 +2361,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -2410,9 +2402,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2455,9 +2447,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -2505,9 +2497,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2521,9 +2513,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -2553,9 +2545,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -2604,9 +2596,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2638,9 +2630,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2672,9 +2664,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2688,15 +2680,15 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
     protected ExprEval eval(ExprEval param)
     {
-      if (param.type() != ExprType.STRING) {
+      if (!param.type().is(ExprType.STRING)) {
         throw new IAE(
             "Function[%s] needs a string argument",
             name()
@@ -2717,9 +2709,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -2765,9 +2757,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2804,9 +2796,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 
@@ -2822,14 +2814,14 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value = args.get(0).eval(bindings);
-      if (value.type() != ExprType.STRING) {
+      if (!value.type().is(ExprType.STRING)) {
         throw new IAE("first argument should be string type but got %s type", value.type());
       }
 
       DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
-        if (format.type() != ExprType.STRING) {
+        if (!format.type().is(ExprType.STRING)) {
           throw new IAE("second argument should be string type but got %s type", format.type());
         }
         formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
@@ -2854,9 +2846,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     protected ExprEval toValue(DateTime date)
@@ -2913,9 +2905,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -2937,12 +2929,12 @@ public interface Function
       Long[] longsOut = null;
       Double[] doublesOut = null;
 
-      ExprType elementType = null;
+      ExpressionType elementType = null;
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
         if (elementType == null) {
           elementType = evaluated.type();
-          switch (elementType) {
+          switch (elementType.getType()) {
             case STRING:
               stringsOut = new String[length];
               break;
@@ -2963,7 +2955,7 @@ public interface Function
       // There should be always at least one argument and thus elementType is never null.
       // See validateArguments().
       //noinspection ConstantConditions
-      switch (elementType) {
+      switch (elementType.getType()) {
         case STRING:
           return ExprEval.ofStringArray(stringsOut);
         case LONG:
@@ -2979,12 +2971,12 @@ public interface Function
         String[] stringsOut,
         Long[] longsOut,
         Double[] doublesOut,
-        ExprType elementType,
+        ExpressionType elementType,
         int i,
         ExprEval evaluated
     )
     {
-      switch (elementType) {
+      switch (elementType.getType()) {
         case STRING:
           stringsOut[i] = evaluated.asString();
           break;
@@ -3026,13 +3018,13 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExprType type = ExprType.LONG;
+      ExpressionType type = ExpressionType.LONG;
       for (Expr arg : args) {
-        type = ExprTypeConversion.function(type, arg.getOutputType(inspector));
+        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
       }
-      return ExprType.asArrayType(type);
+      return ExpressionType.asArrayType(type);
     }
   }
 
@@ -3082,9 +3074,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -3112,9 +3104,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING_ARRAY;
+      return ExpressionType.STRING_ARRAY;
     }
 
     @Override
@@ -3153,9 +3145,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -3182,9 +3174,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.elementType(args.get(0).getOutputType(inspector));
+      return ExpressionType.elementType(args.get(0).getOutputType(inspector));
     }
 
     @Override
@@ -3210,9 +3202,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.elementType(args.get(0).getOutputType(inspector));
+      return ExpressionType.elementType(args.get(0).getOutputType(inspector));
     }
 
     @Override
@@ -3238,9 +3230,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -3248,7 +3240,7 @@ public interface Function
     {
       final Object[] array = arrayExpr.asArray();
 
-      switch (scalarExpr.type()) {
+      switch (scalarExpr.type().getType()) {
         case STRING:
         case LONG:
         case DOUBLE:
@@ -3276,16 +3268,16 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
       final Object[] array = arrayExpr.asArray();
-      switch (scalarExpr.type()) {
+      switch (scalarExpr.type().getType()) {
         case STRING:
         case LONG:
         case DOUBLE:
@@ -3416,9 +3408,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -3440,9 +3432,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -3476,7 +3468,7 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return args.get(0).getOutputType(inspector);
     }
@@ -3529,15 +3521,12 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      switch (expr.type()) {
+      switch (expr.elementType().getType()) {
         case STRING:
-        case STRING_ARRAY:
           return ExprEval.ofStringArray(Arrays.copyOfRange(expr.asStringArray(), start, end));
         case LONG:
-        case LONG_ARRAY:
           return ExprEval.ofLongArray(Arrays.copyOfRange(expr.asLongArray(), start, end));
         case DOUBLE:
-        case DOUBLE_ARRAY:
           return ExprEval.ofDoubleArray(Arrays.copyOfRange(expr.asDoubleArray(), start, end));
       }
       throw new RE("Unable to slice to unknown type %s", expr.type());
@@ -3560,7 +3549,7 @@ public interface Function
        * only LONG and DOUBLE are allowed
        * For a DOUBLE, it will be cast to LONG before format
        */
-      if (valueParam.value() != null && valueParam.type() != ExprType.LONG && valueParam.type() != ExprType.DOUBLE) {
+      if (valueParam.value() != null && !valueParam.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
         throw new IAE("Function[%s] needs a number as its first argument", name());
       }
 
@@ -3570,7 +3559,7 @@ public interface Function
       long precision = 2;
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
-        if (precisionParam.type() != ExprType.LONG) {
+        if (!precisionParam.type().is(ExprType.LONG)) {
           throw new IAE("Function[%s] needs an integer as its second argument", name());
         }
         precision = precisionParam.asLong();
@@ -3592,9 +3581,9 @@ public interface Function
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
   }
 

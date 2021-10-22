@@ -67,6 +67,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -193,7 +194,7 @@ public class RowBasedGrouperHelper
     // See method-level javadoc; we go into combining mode if there is no subquery.
     final boolean combining = subquery == null;
 
-    final List<ValueType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
+    final List<ColumnType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final boolean includeTimestamp = query.getResultRowHasTimestamp();
@@ -466,7 +467,7 @@ public class RowBasedGrouperHelper
       final boolean combining,
       final boolean includeTimestamp,
       final ColumnSelectorFactory columnSelectorFactory,
-      final List<ValueType> valueTypes
+      final List<ColumnType> valueTypes
   )
   {
     final TimestampExtractFunction timestampExtractFn = includeTimestamp ?
@@ -705,8 +706,7 @@ public class RowBasedGrouperHelper
         ColumnValueSelector selector
     )
     {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      switch (capabilities.getType()) {
         case STRING:
           return new StringInputRawSupplierColumnSelectorStrategy();
         case LONG:
@@ -719,7 +719,7 @@ public class RowBasedGrouperHelper
           return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> () -> columnSelector.isNull() ? null : columnSelector.getDouble();
         default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
     }
   }
@@ -748,14 +748,14 @@ public class RowBasedGrouperHelper
 
   @SuppressWarnings("unchecked")
   private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
-      final List<ValueType> valueTypes
+      final List<ColumnType> valueTypes
   )
   {
     final Function<Comparable, Comparable>[] functions = new Function[valueTypes.size()];
     for (int i = 0; i < functions.length; i++) {
       // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
       // their types aren't known, so default to String handling.
-      final ValueType type = valueTypes.get(i) == null ? ValueType.STRING : valueTypes.get(i);
+      final ColumnType type = valueTypes.get(i) == null ? ColumnType.STRING : valueTypes.get(i);
       functions[i] = input -> DimensionHandlerUtils.convertObjectToType(input, type);
     }
     return functions;
@@ -769,14 +769,14 @@ public class RowBasedGrouperHelper
     private final DefaultLimitSpec limitSpec;
     private final List<DimensionSpec> dimensions;
     final AggregatorFactory[] aggregatorFactories;
-    private final List<ValueType> valueTypes;
+    private final List<ColumnType> valueTypes;
 
     RowBasedKeySerdeFactory(
         boolean includeTimestamp,
         boolean sortByDimsFirst,
         List<DimensionSpec> dimensions,
         long maxDictionarySize,
-        List<ValueType> valueTypes,
+        List<ColumnType> valueTypes,
         final AggregatorFactory[] aggregatorFactories,
         DefaultLimitSpec limitSpec
     )
@@ -868,7 +868,7 @@ public class RowBasedGrouperHelper
       final List<Boolean> aggFlags = new ArrayList<>();
       final List<StringComparator> comparators = new ArrayList<>();
       final List<Integer> fieldIndices = new ArrayList<>();
-      final List<ValueType> fieldValueTypes = new ArrayList<>();
+      final List<ColumnType> fieldValueTypes = new ArrayList<>();
       final Set<Integer> orderByIndices = new HashSet<>();
 
       for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
@@ -879,7 +879,7 @@ public class RowBasedGrouperHelper
           orderByIndices.add(dimIndex);
           needsReverses.add(needsReverse);
           aggFlags.add(false);
-          final ValueType type = dimensions.get(dimIndex).getOutputType();
+          final ColumnType type = dimensions.get(dimIndex).getOutputType();
           fieldValueTypes.add(type);
           comparators.add(orderSpec.getDimensionComparator());
         } else {
@@ -899,7 +899,7 @@ public class RowBasedGrouperHelper
           fieldIndices.add(i);
           aggFlags.add(false);
           needsReverses.add(false);
-          ValueType type = dimensions.get(i).getOutputType();
+          ColumnType type = dimensions.get(i).getOutputType();
           fieldValueTypes.add(type);
           if (type.isNumeric()) {
             comparators.add(StringComparators.NUMERIC);
@@ -965,7 +965,7 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, final List<ValueType> fieldTypes, int dimStart)
+    private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, final List<ColumnType> fieldTypes, int dimStart)
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
         final int cmp;
@@ -973,7 +973,7 @@ public class RowBasedGrouperHelper
         // to double
         // timestamp is not present in fieldTypes since it only includes the dimensions. sort of hacky, but if timestamp
         // is included, dimstart will be 1, so subtract from 'i' to get correct index
-        if (ValueType.DOUBLE == fieldTypes.get(i - dimStart)) {
+        if (fieldTypes.get(i - dimStart).is(ValueType.DOUBLE)) {
           Object lhs = key1.getKey()[i];
           Object rhs = key2.getKey()[i];
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1001,7 +1001,7 @@ public class RowBasedGrouperHelper
         final List<Boolean> needsReverses,
         final List<Boolean> aggFlags,
         final List<Integer> fieldIndices,
-        final List<ValueType> fieldTypes,
+        final List<ColumnType> fieldTypes,
         final List<StringComparator> comparators
     )
     {
@@ -1032,10 +1032,10 @@ public class RowBasedGrouperHelper
 
         final StringComparator comparator = comparators.get(i);
 
-        final ValueType fieldType = fieldTypes.get(i);
+        final ColumnType fieldType = fieldTypes.get(i);
         if (fieldType.isNumeric() && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
-          if (ValueType.DOUBLE == fieldType) {
+          if (fieldType.is(ValueType.DOUBLE)) {
             // sometimes doubles can become floats making the round trip from serde, make sure to coerce them both
             // to double
             cmp = Comparators.<Comparable>naturalNullsFirst().compare(
@@ -1080,7 +1080,7 @@ public class RowBasedGrouperHelper
     private final RowBasedKeySerdeHelper[] serdeHelpers;
     private final BufferComparator[] serdeHelperComparators;
     private final DefaultLimitSpec limitSpec;
-    private final List<ValueType> valueTypes;
+    private final List<ColumnType> valueTypes;
 
     private final boolean enableRuntimeDictionaryGeneration;
 
@@ -1104,7 +1104,7 @@ public class RowBasedGrouperHelper
         final List<DimensionSpec> dimensions,
         final long maxDictionarySize,
         final DefaultLimitSpec limitSpec,
-        final List<ValueType> valueTypes,
+        final List<ColumnType> valueTypes,
         @Nullable final List<String> dictionary
     )
     {
@@ -1312,14 +1312,14 @@ public class RowBasedGrouperHelper
     }
 
     private RowBasedKeySerdeHelper makeSerdeHelper(
-        ValueType valueType,
+        ColumnType valueType,
         int keyBufferPosition,
         boolean pushLimitDown,
         @Nullable StringComparator stringComparator,
         boolean enableRuntimeDictionaryGeneration
     )
     {
-      switch (valueType) {
+      switch (valueType.getType()) {
         case STRING:
           if (enableRuntimeDictionaryGeneration) {
             return new DynamicDictionaryStringRowBasedKeySerdeHelper(
@@ -1337,7 +1337,7 @@ public class RowBasedGrouperHelper
         case LONG:
         case FLOAT:
         case DOUBLE:
-          return makeNullHandlingNumericserdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
+          return makeNullHandlingNumericserdeHelper(valueType.getType(), keyBufferPosition, pushLimitDown, stringComparator);
         default:
           throw new IAE("invalid type: %s", valueType);
       }

@@ -61,7 +61,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -409,7 +409,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "map(x -> concat(x, 'foo'), tags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -456,7 +456,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "cartesian_map((x,y) -> concat(x, y), tags, othertags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -501,7 +501,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "map((x) -> concat(x, othertags), tags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -546,7 +546,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "concat(tags, othertags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -587,7 +587,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "concat(tags, tags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -639,7 +639,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "concat(tags, othertags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -683,7 +683,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "tt",
                 "concat(tags, 'foo')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -725,12 +725,12 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(new DefaultDimensionSpec("tt", "tt", ValueType.LONG))
+        .setDimensions(new DefaultDimensionSpec("tt", "tt", ColumnType.LONG))
         .setVirtualColumns(
             new ExpressionVirtualColumn(
                 "tt",
                 "array_offset_of(tags, 't2')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -771,7 +771,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "tt",
                 "array_to_string(map(tags -> concat('foo', tags), tags), ', ')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -814,7 +814,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "tt",
                 "array_to_string(concat('foo', tags), ', ')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -857,7 +857,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "tt",
                 "fold((tag, acc) -> concat(acc, tag), tags, '')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -908,7 +908,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "tt",
                 "fold((tag, acc) -> concat(concat(acc, case_searched(acc == '', '', ', '), concat('foo', tag)))), tags, '')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -952,7 +952,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "concat(map((x) -> concat(x, othertags), tags), tags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -987,7 +987,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "array_concat(tags, (array_append(othertags, tags)))",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -1063,7 +1063,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "map(x -> concat(x, 'foo'), tags)",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -1120,7 +1120,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "texpr",
                 "concat(tags, 'foo')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )

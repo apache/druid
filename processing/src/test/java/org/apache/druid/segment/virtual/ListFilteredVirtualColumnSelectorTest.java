@@ -37,6 +37,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -64,7 +65,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
-        new DefaultDimensionSpec(NON_EXISTENT_COLUMN_NAME, NON_EXISTENT_COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(NON_EXISTENT_COLUMN_NAME, NON_EXISTENT_COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         true
     );
@@ -79,7 +80,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
-        new DefaultDimensionSpec(NON_EXISTENT_COLUMN_NAME, NON_EXISTENT_COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(NON_EXISTENT_COLUMN_NAME, NON_EXISTENT_COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         true
     );
@@ -95,7 +96,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         true
     );
@@ -111,7 +112,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         true
     );
@@ -127,7 +128,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         DENY_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         false
     );
@@ -143,7 +144,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         DENY_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         false
     );
@@ -159,7 +160,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         ALLOW_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("b", "c"),
         true
     );
@@ -213,7 +214,7 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         DENY_VIRTUAL_NAME,
-        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ValueType.STRING),
+        new DefaultDimensionSpec(COLUMN_NAME, COLUMN_NAME, ColumnType.STRING),
         ImmutableSet.of("a", "b"),
         false
     );

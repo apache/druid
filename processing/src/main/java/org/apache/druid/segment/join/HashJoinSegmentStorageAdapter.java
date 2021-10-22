@@ -197,7 +197,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     if (maybeClause.isPresent()) {
       final JoinableClause clause = maybeClause.get();
       final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.getType().toString() : null;
+      return capabilities != null ? capabilities.asTypeString() : null;
     } else {
       return baseAdapter.getColumnTypeName(column);
     }
