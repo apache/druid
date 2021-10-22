@@ -276,8 +276,8 @@ public class RowSignature implements ColumnInspector
             "postAggregators must have nonnull names"
         );
 
-        // unlike aggregators, the type we see here is what we get, no further finalization will occur
-        // feed it the existing RowSignature for PostAggregator implementations whose output is dependent on input types
+        // It's OK to call getType in the order that post-aggregators appear, because post-aggregators are only
+        // allowed to refer to *earlier* post-aggregators (not later ones; the order is meaningful).
         add(name, postAggregator.getType(build()));
       }
 

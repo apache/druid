@@ -63,7 +63,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(ExpressionPostAggregator.class)
                   .usingGetClass()
-                  .withIgnoredFields("macroTable", "finalizers", "parsed", "outputType", "dependentFields", "cacheKey")
+                  .withIgnoredFields("macroTable", "finalizers", "parsed", "dependentFields", "cacheKey")
                   .verify();
   }
 

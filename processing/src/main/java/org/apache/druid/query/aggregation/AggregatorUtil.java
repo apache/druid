@@ -386,24 +386,4 @@ public class AggregatorUtil
                        .array();
     });
   }
-
-  public static ColumnInspector inspectorForAggregatorFactoryMap(Map<String, AggregatorFactory> aggregators)
-  {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        if (aggregators.containsKey(column)) {
-          final AggregatorFactory agg = aggregators.get(column);
-          if (agg.getType().isNumeric()) {
-            return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(agg.getType());
-          }
-          return new ColumnCapabilitiesImpl().setType(aggregators.get(column).getType());
-        }
-        return null;
-      }
-    };
-  }
 }
