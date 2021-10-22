@@ -360,6 +360,7 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
+                                        <argument>-Dhadoop3.enabled=true</argument>
                                         <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
