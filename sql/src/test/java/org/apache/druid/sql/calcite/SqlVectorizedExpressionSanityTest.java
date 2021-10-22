@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
@@ -45,6 +44,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -85,6 +85,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT (long1 * long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT string1 + string2, COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT CONCAT(string1, '-', 'foo'), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT CONCAT(string1, '-', string2), string3, COUNT(*) FROM foo GROUP BY 1,2 ORDER BY 3",
       "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1"
   );
@@ -127,7 +128,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     CLOSER.register(WALKER);
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema =
+    final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,

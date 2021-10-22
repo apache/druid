@@ -104,7 +104,7 @@ Returns the number of segments left to load until segments that should be loaded
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
-* `/druid/coordinator/v1/loadstatus?full?computeUsingClusterView`
+* `/druid/coordinator/v1/loadstatus?full&computeUsingClusterView`
 
 Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
 The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
@@ -167,6 +167,9 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 #### Metadata store information
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`sys.segments`](../querying/sql.md#segments-table) table.
+
 ##### GET
 
 * `/druid/coordinator/v1/metadata/segments`
@@ -187,7 +190,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of datasources with at least one used segment in the cluster.
+Returns a list of the names of datasources with at least one used segment in the cluster, retrieved from the metadata database. Users should call this API to get the eventual state that the system will be in.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
@@ -239,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster.
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
@@ -468,7 +471,7 @@ This is only valid for dataSource which has compaction enabled.
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+Returns the status and statistics from the auto compaction run of all dataSources which have auto compaction enabled in the latest run.
 The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
@@ -867,6 +870,11 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 ##### GET
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
+
 * `/druid/v2/datasources`
 
 Returns a list of queryable datasources.
@@ -926,6 +934,11 @@ Returns segment information lists including server locations for the given query
 ### Router
 
 #### GET
+
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

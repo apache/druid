@@ -40,7 +40,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -125,32 +127,52 @@ public class Calcites
 
   }
 
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
+   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
+   *
+   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
+   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   */
   @Nullable
-  public static ValueType getValueTypeForRelDataType(final RelDataType type)
+  public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
+  {
+    ColumnType valueType = getValueTypeForRelDataTypeFull(type);
+    if (valueType != null && valueType.isArray()) {
+      return ColumnType.STRING;
+    }
+    return valueType;
+  }
+
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   */
+  @Nullable
+  public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
-      return ValueType.FLOAT;
+      return ColumnType.FLOAT;
     } else if (isDoubleType(sqlTypeName)) {
-      return ValueType.DOUBLE;
+      return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
-      return ValueType.LONG;
+      return ColumnType.LONG;
     } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
-      return ValueType.STRING;
+      return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
-      return ValueType.COMPLEX;
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        return ColumnType.ofComplex(((RowSignatures.ComplexSqlType) type).getComplexTypeName());
+      }
+      return ColumnType.UNKNOWN_COMPLEX;
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       SqlTypeName componentType = type.getComponentType().getSqlTypeName();
       if (isDoubleType(componentType)) {
-        // in the future return ValueType.DOUBLE_ARRAY;
-        return ValueType.STRING;
+        return ColumnType.DOUBLE_ARRAY;
       }
       if (isLongType(componentType)) {
-        // in the future we will return ValueType.LONG_ARRAY;
-        return ValueType.STRING;
+        return ColumnType.LONG_ARRAY;
       }
-      // in the future we will return ValueType.STRING_ARRAY;
-      return ValueType.STRING;
+      return ColumnType.STRING_ARRAY;
     } else {
       return null;
     }
@@ -170,15 +192,15 @@ public class Calcites
 
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
-    final ValueType valueType = getValueTypeForRelDataType(dataType);
+    final ColumnType valueType = getColumnTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
-  public static StringComparator getStringComparatorForValueType(ValueType valueType)
+  public static StringComparator getStringComparatorForValueType(ColumnType valueType)
   {
-    if (ValueType.isNumeric(valueType)) {
+    if (valueType.isNumeric()) {
       return StringComparators.NUMERIC;
-    } else if (ValueType.STRING == valueType) {
+    } else if (valueType.is(ValueType.STRING)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);
@@ -221,7 +243,6 @@ public class Calcites
       default:
         dataType = typeFactory.createSqlType(typeName);
     }
-
     return typeFactory.createTypeWithNullability(dataType, nullable);
   }
 

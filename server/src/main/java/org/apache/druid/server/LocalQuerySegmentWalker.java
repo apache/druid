@@ -22,9 +22,9 @@ package org.apache.druid.server;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -104,7 +104,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
-        Execs.directExecutor(),
+        DirectQueryProcessingPool.INSTANCE,
         () -> StreamSupport.stream(segments.spliterator(), false)
                            .map(segmentMapFn)
                            .map(queryRunnerFactory::createRunner).iterator()

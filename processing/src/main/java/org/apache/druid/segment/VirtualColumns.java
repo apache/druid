@@ -43,6 +43,7 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -414,12 +415,29 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toArray(new VirtualColumn[0]);
   }
 
+  /**
+   * Creates a {@link VirtualizedColumnSelectorFactory} which can create column selectors for {@link #virtualColumns}
+   * in addition to selectors for all physical columns in the underlying factory.
+   */
   public ColumnSelectorFactory wrap(final ColumnSelectorFactory baseFactory)
   {
     if (virtualColumns.isEmpty()) {
       return baseFactory;
     } else {
       return new VirtualizedColumnSelectorFactory(baseFactory, this);
+    }
+  }
+
+  /**
+   * Creates a {@link VirtualizedColumnInspector} that provides {@link ColumnCapabilities} information for all
+   * {@link #virtualColumns} in addition to the capabilities of all physical columns in the underlying inspector.
+   */
+  public ColumnInspector wrapInspector(ColumnInspector inspector)
+  {
+    if (virtualColumns.isEmpty()) {
+      return inspector;
+    } else {
+      return new VirtualizedColumnInspector(inspector, this);
     }
   }
 

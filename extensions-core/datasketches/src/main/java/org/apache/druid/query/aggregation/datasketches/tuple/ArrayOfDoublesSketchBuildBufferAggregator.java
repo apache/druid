@@ -65,7 +65,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
                                               .setNumberOfValues(valueSelectors.length)
@@ -86,7 +86,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     // Wrapping memory and ArrayOfDoublesSketch is inexpensive compared to sketch operations.
     // Maintaining a cache of wrapped objects per buffer position like in Theta sketch aggregator
     // might might be considered, but it would increase complexity including relocate() support.
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
     for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
@@ -103,7 +103,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
         .wrapSketch(region);

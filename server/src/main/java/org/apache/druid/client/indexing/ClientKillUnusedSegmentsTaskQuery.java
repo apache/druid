@@ -38,17 +38,20 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String id;
   private final String dataSource;
   private final Interval interval;
+  private final Boolean markAsUnused;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("markAsUnused") Boolean markAsUnused
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.interval = interval;
+    this.markAsUnused = markAsUnused;
   }
 
   @JsonProperty
@@ -78,6 +81,12 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return interval;
   }
 
+  @JsonProperty
+  public Boolean getMarkAsUnused()
+  {
+    return markAsUnused;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -88,14 +97,15 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       return false;
     }
     ClientKillUnusedSegmentsTaskQuery that = (ClientKillUnusedSegmentsTaskQuery) o;
-    return Objects.equals(id, that.id) &&
-           Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(interval, that.interval);
+    return Objects.equals(id, that.id)
+           && Objects.equals(dataSource, that.dataSource)
+           && Objects.equals(interval, that.interval)
+           && Objects.equals(markAsUnused, that.markAsUnused);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval);
+    return Objects.hash(id, dataSource, interval, markAsUnused);
   }
 }

@@ -73,9 +73,9 @@ FROM sys.segments`,
   return (
     <HomeViewCard
       className="segments-card"
-      href={'#segments'}
+      href="#segments"
       icon={IconNames.STACKED_CHART}
-      title={'Segments'}
+      title="Segments"
       loading={segmentCountState.loading}
       error={segmentCountState.error}
     >

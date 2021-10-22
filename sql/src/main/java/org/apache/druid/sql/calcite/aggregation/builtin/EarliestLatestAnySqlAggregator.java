@@ -51,8 +51,8 @@ import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -64,9 +64,7 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
@@ -78,9 +76,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     EARLIEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ValueType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
       {
-        switch (type) {
+        switch (type.getType()) {
           case LONG:
             return new LongFirstAggregatorFactory(name, fieldName);
           case FLOAT:
@@ -98,9 +96,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     LATEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ValueType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
       {
-        switch (type) {
+        switch (type.getType()) {
           case LONG:
             return new LongLastAggregatorFactory(name, fieldName);
           case FLOAT:
@@ -118,9 +116,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     ANY_VALUE {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ValueType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
       {
-        switch (type) {
+        switch (type.getType()) {
           case LONG:
             return new LongAnyAggregatorFactory(name, fieldName);
           case FLOAT:
@@ -138,7 +136,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     abstract AggregatorFactory createAggregatorFactory(
         String name,
         String fieldName,
-        ValueType outputType,
+        ColumnType outputType,
         int maxStringBytes
     );
   }
@@ -199,7 +197,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     // Second arg must be a literal, if it exists (the type signature below requires it).
     final int maxBytes = rexNodes.size() > 1 ? RexLiteral.intValue(rexNodes.get(1)) : -1;
 
-    final ValueType outputType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
+    final ColumnType outputType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
       throw new ISE(
           "Cannot translate output sqlTypeName[%s] to Druid type for aggregator[%s]",
@@ -209,9 +207,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        Stream.of(virtualColumnRegistry.getVirtualColumn(fieldName))
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList()),
         Collections.singletonList(
             aggregatorType.createAggregatorFactory(
                 aggregatorName,

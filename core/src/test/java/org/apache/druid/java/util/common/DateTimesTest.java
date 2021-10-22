@@ -24,6 +24,8 @@ import org.joda.time.DateTimeZone;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.TimeZone;
+
 public class DateTimesTest
 {
   @Test
@@ -33,9 +35,51 @@ public class DateTimesTest
     DateTime dt2 = new DateTime(System.currentTimeMillis(), DateTimes.inferTzFromString("IST"));
     DateTime dt3 = new DateTime(System.currentTimeMillis(), DateTimeZone.forOffsetHoursMinutes(1, 30));
 
-    for (DateTime dt : new DateTime[] {dt1, dt2, dt3}) {
+    for (DateTime dt : new DateTime[]{dt1, dt2, dt3}) {
       Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
     }
+  }
+
+  @Test
+  public void testinferTzFromStringWithKnownTzId()
+  {
+    Assert.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("UTC"));
+  }
+
+  @Test
+  public void testinferTzFromStringWithOffset()
+  {
+    Assert.assertEquals(DateTimeZone.forOffsetHoursMinutes(10, 30), DateTimes.inferTzFromString("+1030"));
+  }
+
+  @Test
+  public void testinferTzFromStringWithJavaTimeZone()
+  {
+    Assert.assertEquals(
+        DateTimeZone.forTimeZone(TimeZone.getTimeZone("ACT")),
+        DateTimes.inferTzFromString("ACT")
+    );
+  }
+
+  @Test
+  public void testinferTzFromStringWithJavaTimeZoneAndNoFallback()
+  {
+    Assert.assertEquals(
+        DateTimeZone.forTimeZone(TimeZone.getTimeZone("ACT")),
+        DateTimes.inferTzFromString("ACT", false)
+    );
+  }
+
+  @Test
+  public void testinferTzFromStringWithUnknownTimeZoneShouldReturnUTC()
+  {
+    Assert.assertEquals(DateTimeZone.UTC, DateTimes.inferTzFromString("America/Unknown"));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testinferTzFromStringWithUnknownTimeZoneAndNoFallbackShouldThrowException()
+  {
+    Assert.assertEquals(DateTimeZone.getDefault(), DateTimes.inferTzFromString("America/Unknown", false));
   }
 
   @Test

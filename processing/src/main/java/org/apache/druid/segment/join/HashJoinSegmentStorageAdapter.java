@@ -197,7 +197,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     if (maybeClause.isPresent()) {
       final JoinableClause clause = maybeClause.get();
       final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.getType().toString() : null;
+      return capabilities != null ? capabilities.asTypeString() : null;
     } else {
       return baseAdapter.getColumnTypeName(column);
     }
@@ -224,6 +224,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     // Cannot get meaningful Metadata for this segment, since it isn't real. At the time of this writing, this method
     // is only used by the 'segmentMetadata' query, which isn't meant to support join segments anyway.
     throw new UnsupportedOperationException("Cannot retrieve metadata from join segment");
+  }
+
+  @Override
+  public boolean hasBuiltInFilters()
+  {
+    return clauses.stream()
+                  .anyMatch(clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue());
   }
 
   @Override
@@ -343,7 +350,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
           return PostJoinCursor.wrap(
               retVal,
               VirtualColumns.create(postJoinVirtualColumns),
-              joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
+              joinFilterSplit.getJoinTableFilter().orElse(null)
           );
         }
     ).withBaggage(joinablesCloser);

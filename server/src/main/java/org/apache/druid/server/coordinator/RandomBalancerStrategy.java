@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -51,20 +50,6 @@ public class RandomBalancerStrategy implements BalancerStrategy
   public ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(
-      List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources,
-      double percentOfSegmentsToConsider
-  )
-  {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
-        serverHolders,
-        broadcastDatasources,
-        percentOfSegmentsToConsider
-    );
   }
 
   @Override

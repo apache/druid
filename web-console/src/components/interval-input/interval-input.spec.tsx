@@ -22,12 +22,12 @@ import React from 'react';
 
 import { IntervalInput } from './interval-input';
 
-describe('interval calendar component', () => {
+describe('IntervalInput', () => {
   it('matches snapshot', () => {
     const intervalInput = (
       <IntervalInput
-        interval={'2010-01-01/2020-01-01'}
-        placeholder={'2010-01-01/2020-01-01'}
+        interval="2010-01-01/2020-01-01"
+        placeholder="2010-01-01/2020-01-01"
         onValueChange={() => {}}
         intent={Intent.PRIMARY}
       />

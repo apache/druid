@@ -47,6 +47,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
+import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -67,6 +68,8 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.LogUsedSegments;
@@ -150,6 +153,8 @@ public class DruidCoordinator
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
+  private final Set<CoordinatorDuty> metadataStoreManagementDuties;
+  private final CoordinatorCustomDutyGroups customDutyGroups;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
@@ -164,6 +169,7 @@ public class DruidCoordinator
   private ListeningExecutorService balancerExec;
 
   private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
 
@@ -182,7 +188,9 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       @Self DruidNode self,
+      @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
+      CoordinatorCustomDutyGroups customDutyGroups,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
@@ -206,6 +214,8 @@ public class DruidCoordinator
         self,
         new ConcurrentHashMap<>(),
         indexingServiceDuties,
+        metadataStoreManagementDuties,
+        customDutyGroups,
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
@@ -230,6 +240,8 @@ public class DruidCoordinator
       DruidNode self,
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<CoordinatorDuty> indexingServiceDuties,
+      Set<CoordinatorDuty> metadataStoreManagementDuties,
+      CoordinatorCustomDutyGroups customDutyGroups,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
@@ -255,6 +267,8 @@ public class DruidCoordinator
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
     this.indexingServiceDuties = indexingServiceDuties;
+    this.metadataStoreManagementDuties = metadataStoreManagementDuties;
+    this.customDutyGroups = customDutyGroups;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -665,6 +679,26 @@ public class DruidCoordinator
             )
         );
       }
+      dutiesRunnables.add(
+          Pair.of(
+              new DutiesRunnable(makeMetadataStoreManagementDuties(), startingLeaderCounter, METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP),
+              config.getCoordinatorMetadataStoreManagementPeriod()
+          )
+      );
+
+      for (CoordinatorCustomDutyGroup customDutyGroup : customDutyGroups.getCoordinatorCustomDutyGroups()) {
+        dutiesRunnables.add(
+            Pair.of(
+                new DutiesRunnable(customDutyGroup.getCustomDutyList(), startingLeaderCounter, customDutyGroup.getName()),
+                customDutyGroup.getPeriod()
+            )
+        );
+        log.info(
+            "Done making custom coordinator duties %s for group %s",
+            customDutyGroup.getCustomDutyList().stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
+            customDutyGroup.getName()
+        );
+      }
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
         // CompactSegmentsDuty can takes a non trival amount of time to complete.
@@ -750,6 +784,19 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
+  private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
+  {
+    List<CoordinatorDuty> duties = ImmutableList.<CoordinatorDuty>builder()
+                                                .addAll(metadataStoreManagementDuties)
+                                                .build();
+
+    log.debug(
+        "Done making metadata store management duties %s",
+        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
+    );
+    return ImmutableList.copyOf(duties);
+  }
+
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
@@ -759,11 +806,11 @@ public class DruidCoordinator
   protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
-    private final List<CoordinatorDuty> duties;
+    private final List<? extends CoordinatorDuty> duties;
     private final int startingLeaderCounter;
     private final String dutiesRunnableAlias;
 
-    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
+    protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;

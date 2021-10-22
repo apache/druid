@@ -281,16 +281,28 @@ public class TaskLockHelper
         atomicUpdateGroupSize++;
       } else {
         if (curSegment.getEndRootPartitionId() != nextSegment.getStartRootPartitionId()) {
-          throw new ISE("Can't compact segments of non-consecutive rootPartition range");
+          throw new ISE(
+              "Can't compact segments of non-consecutive rootPartition range. Missing partitionIds between [%s] and [%s]",
+              curSegment.getEndRootPartitionId(),
+              nextSegment.getStartRootPartitionId()
+          );
         }
         if (atomicUpdateGroupSize != curSegment.getAtomicUpdateGroupSize()) {
-          throw new ISE("All atomicUpdateGroup must be compacted together");
+          throw new ISE(
+              "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+              curSegment.getAtomicUpdateGroupSize(),
+              atomicUpdateGroupSize
+          );
         }
         atomicUpdateGroupSize = 1;
       }
     }
     if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
-      throw new ISE("All atomicUpdateGroup must be compacted together");
+      throw new ISE(
+          "All atomicUpdateGroup must be compacted together. Expected size[%s] but current size[%s]",
+          sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize(),
+          atomicUpdateGroupSize
+      );
     }
   }
 }

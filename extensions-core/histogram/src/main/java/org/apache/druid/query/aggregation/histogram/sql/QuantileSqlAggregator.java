@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.histogram.ApproximateHistogramAggregat
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -51,7 +52,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class QuantileSqlAggregator implements SqlAggregator
@@ -137,15 +137,11 @@ public class QuantileSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput = existing.getVirtualColumns()
-                                                     .stream()
-                                                     .filter(
-                                                         virtualColumn ->
-                                                             virtualColumn.getOutputName()
-                                                                          .equals(theFactory.getFieldName())
-                                                     )
-                                                     .findFirst()
-                                                     .orElse(null);
+          final VirtualColumn virtualInput =
+              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+                                   .stream()
+                                   .findFirst()
+                                   .orElse(null);
 
           if (virtualInput == null) {
             inputMatches = input.isDirectColumnAccess()
@@ -173,10 +169,8 @@ public class QuantileSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+      if (rowSignature.getColumnType(input.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
         aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
             histogramName,
             input.getDirectColumn(),
@@ -199,8 +193,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       }
     } else {
       final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, ValueType.FLOAT);
-      virtualColumns.add(virtualColumn);
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, ColumnType.FLOAT);
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
@@ -213,7 +206,6 @@ public class QuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new QuantilePostAggregator(name, histogramName, probability)
     );

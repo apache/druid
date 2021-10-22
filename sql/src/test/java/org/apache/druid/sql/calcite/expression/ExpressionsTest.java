@@ -37,11 +37,12 @@ import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.HumanReadableFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
@@ -73,31 +74,33 @@ public class ExpressionsTest extends ExpressionTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
-      .add("t", ValueType.LONG)
-      .add("a", ValueType.LONG)
-      .add("b", ValueType.LONG)
-      .add("x", ValueType.FLOAT)
-      .add("y", ValueType.LONG)
-      .add("z", ValueType.FLOAT)
-      .add("s", ValueType.STRING)
-      .add("nan", ValueType.DOUBLE)
-      .add("inf", ValueType.DOUBLE)
-      .add("-inf", ValueType.DOUBLE)
-      .add("fnan", ValueType.FLOAT)
-      .add("finf", ValueType.FLOAT)
-      .add("-finf", ValueType.FLOAT)
-      .add("hexstr", ValueType.STRING)
-      .add("intstr", ValueType.STRING)
-      .add("spacey", ValueType.STRING)
-      .add("newliney", ValueType.STRING)
-      .add("tstr", ValueType.STRING)
-      .add("dstr", ValueType.STRING)
+      .add("t", ColumnType.LONG)
+      .add("a", ColumnType.LONG)
+      .add("b", ColumnType.LONG)
+      .add("p", ColumnType.LONG)
+      .add("x", ColumnType.FLOAT)
+      .add("y", ColumnType.LONG)
+      .add("z", ColumnType.FLOAT)
+      .add("s", ColumnType.STRING)
+      .add("nan", ColumnType.DOUBLE)
+      .add("inf", ColumnType.DOUBLE)
+      .add("-inf", ColumnType.DOUBLE)
+      .add("fnan", ColumnType.FLOAT)
+      .add("finf", ColumnType.FLOAT)
+      .add("-finf", ColumnType.FLOAT)
+      .add("hexstr", ColumnType.STRING)
+      .add("intstr", ColumnType.STRING)
+      .add("spacey", ColumnType.STRING)
+      .add("newliney", ColumnType.STRING)
+      .add("tstr", ColumnType.STRING)
+      .add("dstr", ColumnType.STRING)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
       .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
       .put("a", 10)
       .put("b", 25)
+      .put("p", 3)
       .put("x", 2.25)
       .put("y", 3.0)
       .put("z", -2.25)
@@ -518,7 +521,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('Z',\"s\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1239,7 +1242,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1261,7 +1264,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1283,7 +1286,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -2078,6 +2081,193 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.fromExpression("bitwiseAnd(\"s\",\"s\")"),
         null
+    );
+  }
+
+  @Test
+  public void testHumanReadableBinaryByteFormat()
+  {
+    /*
+     * Basic Test
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1000)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(1000)"),
+        "1000 B"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1024)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(1024)"),
+        "1.00 KiB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MAX_VALUE)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(9223372036854775807)"),
+        "8.00 EiB"
+    );
+
+    /*
+     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
+     * This cases has also been verified in the tests of underlying implementation
+     */
+
+    /*
+     * test input with variable reference
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeInputRef("p")
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(\"b\",\"p\")"),
+        "25 B"
+    );
+
+    /*
+     * test different precision
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 0
+            testHelper.makeLiteral(0)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,0)"),
+        "44 KiB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 1
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,1)"),
+        "43.9 KiB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 2
+            testHelper.makeLiteral(2)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,2)"),
+        "43.95 KiB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45000),
+            //precision 3
+            testHelper.makeLiteral(3)
+        ),
+        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,3)"),
+        "43.945 KiB"
+    );
+  }
+
+  @Test
+  public void testHumanReadableDecimalByteFormat()
+  {
+    /*
+     * Basic Test
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(999)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(999)"),
+        "999 B"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(1024)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(1024)"),
+        "1.02 KB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MAX_VALUE)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(9223372036854775807)"),
+        "9.22 EB"
+    );
+
+    /*
+     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
+     */
+
+    /*
+     * test input with variable reference
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeInputRef("p")
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(\"b\",\"p\")"),
+        "25 B"
+    );
+
+    /*
+     * test different precision
+     */
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 0
+            testHelper.makeLiteral(0)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,0)"),
+        "46 KB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 1
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,1)"),
+        "45.7 KB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 2
+            testHelper.makeLiteral(2)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,2)"),
+        "45.68 KB"
+    );
+    testHelper.testExpression(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(45678),
+            //precision 3
+            testHelper.makeLiteral(3)
+        ),
+        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,3)"),
+        "45.678 KB"
     );
   }
 }

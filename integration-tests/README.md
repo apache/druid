@@ -36,7 +36,7 @@ Integration Testing Using Docker
 
 Before starting, if you don't already have docker on your machine, install it as described on 
 [Docker installation instructions](https://docs.docker.com/install/). Ensure that you 
-have at least 4GB of memory allocated to the docker engine. (You can verify it 
+have at least 4GiB of memory allocated to the docker engine. (You can verify it 
 under Preferences > Resources > Advanced.)
 
 Also set the `DOCKER_IP`
@@ -186,7 +186,7 @@ machine.
 
 > NOTE: Quickstart does not run with ssl, so to trick the integration tests we specify the `*_tls_url` in the config to be the same as the http url.
 
-Make sure you have at least 6GB of memory available before you run the tests.
+Make sure you have at least 6GiB of memory available before you run the tests.
 
 The tests rely on files in the test/resources folder to exist under the path /resources,
 so create a symlink to make them available:
@@ -216,7 +216,7 @@ Then run the tests using a command similar to:
 Running Tests Using A Configuration File for Any Cluster
 -------------------
 
-Make sure that you have at least 6GB of memory available before you run the tests.
+Make sure that you have at least 6GiB of memory available before you run the tests.
 
 To run tests on any druid cluster that is already running, create a configuration file:
 

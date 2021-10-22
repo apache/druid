@@ -29,7 +29,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -206,9 +206,14 @@ public class BaseHashJoinSegmentStorageAdapterTest
    */
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
+    return makeFactToCountrySegment(JoinType.LEFT);
+  }
+
+  protected HashJoinSegmentStorageAdapter makeFactToCountrySegment(JoinType joinType)
+  {
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
+        ImmutableList.of(factToCountryOnIsoCode(joinType)),
         null
     );
   }
@@ -262,7 +267,7 @@ public class BaseHashJoinSegmentStorageAdapterTest
     return new ExpressionVirtualColumn(
         columnName,
         expression,
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
   }

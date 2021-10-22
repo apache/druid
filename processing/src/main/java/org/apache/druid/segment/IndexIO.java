@@ -52,6 +52,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -239,9 +240,9 @@ public class IndexIO
 
       ColumnCapabilities capabilities1 = adapter1.getCapabilities(dim1Name);
       ColumnCapabilities capabilities2 = adapter2.getCapabilities(dim2Name);
-      ValueType dim1Type = capabilities1.getType();
-      ValueType dim2Type = capabilities2.getType();
-      if (dim1Type != dim2Type) {
+      ColumnType dim1Type = capabilities1.toColumnType();
+      ColumnType dim2Type = capabilities2.toColumnType();
+      if (!Objects.equals(dim1Type, dim2Type)) {
         throw new SegmentValidationException(
             "Dim [%s] types not equal. Expected %d found %d",
             dim1Name,
@@ -356,6 +357,7 @@ public class IndexIO
       }
 
       Map<String, GenericIndexed<String>> dimValueLookups = new HashMap<>();
+      Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups = new HashMap<>();
       Map<String, VSizeColumnarMultiInts> dimColumns = new HashMap<>();
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = new HashMap<>();
 
@@ -369,7 +371,9 @@ public class IndexIO
             fileDimensionName
         );
 
-        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.STRING_STRATEGY));
+        // Duplicate the first buffer since we are reading the dictionary twice.
+        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer.duplicate(), GenericIndexed.STRING_STRATEGY));
+        dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY));
         dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
 
@@ -399,6 +403,7 @@ public class IndexIO
           timestamps,
           metrics,
           dimValueLookups,
+          dimValueUtf8Lookups,
           dimColumns,
           bitmaps,
           spatialIndexed,
@@ -441,6 +446,7 @@ public class IndexIO
             .setDictionaryEncodedColumnSupplier(
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
+                    index.getDimValueUtf8Lookup(dimension),
                     null,
                     Suppliers.ofInstance(index.getDimColumn(dimension)),
                     columnConfig.columnCacheSizeBytes()

@@ -23,7 +23,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
@@ -72,7 +72,7 @@ public class LongMinAggregationTest
 
     vectorColumnSelectorFactory = EasyMock.createMock(VectorColumnSelectorFactory.class);
     EasyMock.expect(vectorColumnSelectorFactory.getColumnCapabilities("lngFld"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.LONG).setDictionaryEncoded(true)).anyTimes();
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.LONG).setDictionaryEncoded(true)).anyTimes();
     EasyMock.expect(vectorColumnSelectorFactory.makeValueSelector("lngFld")).andReturn(vectorValueSelector).anyTimes();
     EasyMock.replay(vectorColumnSelectorFactory);
   }

@@ -60,7 +60,8 @@ public class CloudObjectLocation
   @JsonCreator
   public CloudObjectLocation(@JsonProperty("bucket") String bucket, @JsonProperty("path") String path)
   {
-    this.bucket = Preconditions.checkNotNull(StringUtils.maybeRemoveTrailingSlash(bucket));
+    this.bucket = Preconditions.checkNotNull(StringUtils.maybeRemoveTrailingSlash(bucket),
+                 "bucket name cannot be null. Please verify if bucket name adheres to naming rules");
     this.path = Preconditions.checkNotNull(StringUtils.maybeRemoveLeadingSlash(path));
     Preconditions.checkArgument(
         this.bucket.equals(StringUtils.urlEncode(this.bucket)),

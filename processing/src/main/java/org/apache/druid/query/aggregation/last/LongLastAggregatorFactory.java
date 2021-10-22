@@ -37,7 +37,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -267,16 +267,16 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override

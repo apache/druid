@@ -31,9 +31,12 @@ import org.junit.Test;
 import java.util.Set;
 
 /**
+ *
  */
 public class CoordinatorDynamicConfigTest
 {
+  private static final int EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
+
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
@@ -54,7 +57,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
                      + "  \"decommissioningMaxPercentOfMaxSegmentsToMove\": 9,\n"
                      + "  \"pauseCoordination\": false,\n"
-                     + "  \"replicateAfterLoadTimeout\": false\n"
+                     + "  \"replicateAfterLoadTimeout\": false,\n"
+                     + "  \"maxNonPrimaryReplicantsToLoad\": 2147483647\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -68,22 +72,158 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        decommissioning,
+        9,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        9,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withPauseCoordination(true).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withPercentOfSegmentsToConsiderPerMove(10).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 10, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        10,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withReplicateAfterLoadTimeout(true).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 10, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, true);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        10,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        Integer.MAX_VALUE
+    );
+
+    actual = CoordinatorDynamicConfig.builder().withMaxNonPrimaryReplicantsToLoad(10).build(actual);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        10,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10
+    );
 
   }
 
@@ -114,13 +254,70 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        100,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        decommissioning,
+        0,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        100,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        0,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
-    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        100,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        ImmutableSet.of("host1"),
+        5,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
   }
 
   @Test
@@ -166,7 +363,8 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of(),
         0,
         false,
-        false
+        false,
+        Integer.MAX_VALUE
     );
   }
 
@@ -266,7 +464,26 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 100, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        100,
+        1,
+        1,
+        2,
+        true,
+        whitelist,
+        false,
+        1,
+        decommissioning,
+        9,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
   }
 
   @Test
@@ -296,7 +513,26 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 1, ImmutableSet.of(), 0, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        ImmutableSet.of(),
+        true,
+        1,
+        ImmutableSet.of(),
+        0,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
 
     //ensure whitelist is empty when killAllDataSources is true
     try {
@@ -343,7 +579,26 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of(), true, 0, ImmutableSet.of(), 0, false, false);
+    assertConfig(
+        actual,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        true,
+        ImmutableSet.of(),
+        true,
+        EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
+        ImmutableSet.of(),
+        0,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
   }
 
   @Test
@@ -364,11 +619,12 @@ public class CoordinatorDynamicConfigTest
         false,
         emptyList,
         false,
-        0,
+        EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
         70,
         false,
-        false
+        false,
+        Integer.MAX_VALUE
     );
   }
 
@@ -382,10 +638,53 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig
-            .Builder(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
-            .build(current)
+        new CoordinatorDynamicConfig.Builder(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ).build(current)
     );
+  }
+
+  @Test
+  public void testSerdeHandleInvalidMaxNonPrimaryReplicantsToLoad() throws Exception
+  {
+    try {
+      String jsonStr = "{\n"
+                       + "  \"maxNonPrimaryReplicantsToLoad\": -1\n"
+                       + "}\n";
+
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  CoordinatorDynamicConfig.class
+              )
+          ),
+          CoordinatorDynamicConfig.class
+      );
+
+      Assert.fail("deserialization should fail.");
+    }
+    catch (JsonMappingException e) {
+      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    }
   }
 
   @Test
@@ -414,7 +713,8 @@ public class CoordinatorDynamicConfigTest
       Set<String> decommissioningNodes,
       int decommissioningMaxPercentOfMaxSegmentsToMove,
       boolean pauseCoordination,
-      boolean replicateAfterLoadTimeout
+      boolean replicateAfterLoadTimeout,
+      int maxNonPrimaryReplicantsToLoad
   )
   {
     Assert.assertEquals(
@@ -442,5 +742,6 @@ public class CoordinatorDynamicConfigTest
     );
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
+    Assert.assertEquals(maxNonPrimaryReplicantsToLoad, config.getMaxNonPrimaryReplicantsToLoad());
   }
 }

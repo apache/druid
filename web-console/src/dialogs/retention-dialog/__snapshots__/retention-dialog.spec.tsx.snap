@@ -232,23 +232,23 @@ exports[`retention dialog matches snapshot 1`] = `
                               </span>
                             </div>
                             <div
-                              class="bp3-input-group suggestible-input"
+                              class="formatted-input suggestible-input"
                             >
-                              <input
-                                class="bp3-input"
-                                placeholder="P1D"
-                                style="padding-right: 0px;"
-                                type="text"
-                                value="P1000Y"
-                              />
-                              <span
-                                class="bp3-input-action"
+                              <div
+                                class="bp3-input-group"
                               >
+                                <input
+                                  class="bp3-input"
+                                  placeholder="P1D"
+                                  style="padding-right: 0px;"
+                                  type="text"
+                                  value="P1000Y"
+                                />
                                 <span
-                                  class="bp3-popover-wrapper"
+                                  class="bp3-input-action"
                                 >
                                   <span
-                                    class="bp3-popover-target"
+                                    class="bp3-popover2-target"
                                   >
                                     <button
                                       class="bp3-button bp3-minimal"
@@ -276,7 +276,7 @@ exports[`retention dialog matches snapshot 1`] = `
                                     </button>
                                   </span>
                                 </span>
-                              </span>
+                              </div>
                             </div>
                             <label
                               class="bp3-control bp3-switch include-future"

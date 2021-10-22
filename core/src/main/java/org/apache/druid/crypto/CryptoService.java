@@ -113,6 +113,10 @@ public class CryptoService
 
       SecretKey tmp = getKeyFromPassword(passPhrase, salt);
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+
+      // error-prone warns if the transformation is not a compile-time constant
+      // since it cannot check it for insecure combinations.
+      @SuppressWarnings("InsecureCryptoUsage")
       Cipher ecipher = Cipher.getInstance(transformation);
       ecipher.init(Cipher.ENCRYPT_MODE, secret);
       return new EncryptedData(
@@ -134,6 +138,9 @@ public class CryptoService
       SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
       SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
 
+      // error-prone warns if the transformation is not a compile-time constant
+      // since it cannot check it for insecure combinations.
+      @SuppressWarnings("InsecureCryptoUsage")
       Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());

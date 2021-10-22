@@ -77,8 +77,8 @@ exports[`header bar matches snapshot 1`] = `
         }
       }
     />
-    <Blueprint3.Popover
-      boundary="scrollParent"
+    <Blueprint3.Popover2
+      boundary="clippingParents"
       captureDismiss={false}
       content={
         <Blueprint3.Menu>
@@ -166,21 +166,20 @@ exports[`header bar matches snapshot 1`] = `
       inheritDarkTheme={true}
       interactionKind="click"
       minimal={false}
-      modifiers={Object {}}
       openOnTargetFocus={true}
       position="bottom-right"
+      positioningStrategy="absolute"
       targetTagName="span"
       transitionDuration={300}
       usePortal={true}
-      wrapperTagName="span"
     >
       <Blueprint3.Button
         icon="cog"
         minimal={true}
       />
-    </Blueprint3.Popover>
-    <Blueprint3.Popover
-      boundary="scrollParent"
+    </Blueprint3.Popover2>
+    <Blueprint3.Popover2
+      boundary="clippingParents"
       captureDismiss={false}
       content={
         <Blueprint3.Menu>
@@ -244,19 +243,18 @@ exports[`header bar matches snapshot 1`] = `
       inheritDarkTheme={true}
       interactionKind="click"
       minimal={false}
-      modifiers={Object {}}
       openOnTargetFocus={true}
       position="bottom-right"
+      positioningStrategy="absolute"
       targetTagName="span"
       transitionDuration={300}
       usePortal={true}
-      wrapperTagName="span"
     >
       <Blueprint3.Button
         icon="help"
         minimal={true}
       />
-    </Blueprint3.Popover>
+    </Blueprint3.Popover2>
   </Blueprint3.NavbarGroup>
 </Blueprint3.Navbar>
 `;

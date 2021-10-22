@@ -158,6 +158,12 @@ public interface IntegrationTestingConfig
 
   String getCloudRegion();
 
+  String getS3AssumeRoleWithExternalId();
+
+  String getS3AssumeRoleExternalId();
+
+  String getS3AssumeRoleWithoutExternalId();
+
   String getAzureKey();
 
   String getHadoopGcsCredentialsPath();

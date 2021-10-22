@@ -20,20 +20,26 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -47,31 +53,40 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
 {
-
+  private final GroupByQueryConfig config;
   private final AggregationTestHelper helper;
   private final AggregationTestHelper timeSeriesHelper;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  public DoublesSketchAggregatorTest(final GroupByQueryConfig config)
+  @Rule
+  public final ExpectedException expectedException = ExpectedException.none();
+
+  public DoublesSketchAggregatorTest(final GroupByQueryConfig config, final String vectorize)
   {
+    this.config = config;
     DoublesSketchModule.registerSerde();
     DoublesSketchModule module = new DoublesSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+        module.getJacksonModules(),
+        config,
+        tempFolder
+    ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         module.getJacksonModules(),
         tempFolder
-    );
+    ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "groupByConfig = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[]{config});
+      for (String vectorize : new String[]{"false", "true", "force"}) {
+        constructors.add(new Object[]{config, vectorize});
+      }
     }
     return constructors;
   }
@@ -381,7 +396,11 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     // post agg with nulls
     Object quantileObjectWithNulls = row.get(5);
     Assert.assertTrue(quantileObjectWithNulls instanceof Double);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.4 : 7.5, (double) quantileObjectWithNulls, 0.1); // median value
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? 7.4 : 7.5,
+        (double) quantileObjectWithNulls,
+        0.1
+    ); // median value
 
     // post agg with nulls
     Object quantilesObjectWithNulls = row.get(6);
@@ -522,5 +541,131 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     );
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
+  }
+
+  @Test
+  public void testFailureWhenMaxStreamLengthHit() throws Exception
+  {
+    if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
+      expectedException.expect(new RecursiveExceptionMatcher(IllegalStateException.class));
+      expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
+
+      helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
+          String.join(
+              "\n",
+              "{",
+              "  \"type\": \"string\",",
+              "  \"parseSpec\": {",
+              "    \"format\": \"tsv\",",
+              "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+              "    \"dimensionsSpec\": {",
+              "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
+              "      \"dimensionExclusions\": [],",
+              "      \"spatialDimensions\": []",
+              "    },",
+              "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
+              "  }",
+              "}"
+          ),
+          "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+          0, // minTimestamp
+          Granularities.NONE,
+          10, // maxRowCount
+          String.join(
+              "\n",
+              "{",
+              "  \"queryType\": \"groupBy\",",
+              "  \"dataSource\": \"test_datasource\",",
+              "  \"granularity\": \"ALL\",",
+              "  \"dimensions\": [],",
+              "  \"aggregations\": [",
+              "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128, \"maxStreamLength\": 10}",
+              "  ],",
+              "  \"postAggregations\": [",
+              "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+              "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+              "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
+              "  ],",
+              "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+              "}"
+          )
+      );
+    } else {
+      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
+          String.join(
+              "\n",
+              "{",
+              "  \"type\": \"string\",",
+              "  \"parseSpec\": {",
+              "    \"format\": \"tsv\",",
+              "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+              "    \"dimensionsSpec\": {",
+              "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
+              "      \"dimensionExclusions\": [],",
+              "      \"spatialDimensions\": []",
+              "    },",
+              "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
+              "  }",
+              "}"
+          ),
+          "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+          0, // minTimestamp
+          Granularities.NONE,
+          10, // maxRowCount
+          String.join(
+              "\n",
+              "{",
+              "  \"queryType\": \"groupBy\",",
+              "  \"dataSource\": \"test_datasource\",",
+              "  \"granularity\": \"ALL\",",
+              "  \"dimensions\": [],",
+              "  \"aggregations\": [",
+              "    {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128, \"maxStreamLength\": 10}",
+              "  ],",
+              "  \"postAggregations\": [",
+              "    {\"type\": \"quantilesDoublesSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+              "    {\"type\": \"quantilesDoublesSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+              "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
+              "  ],",
+              "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+              "}"
+          )
+      );
+
+      expectedException.expect(new RecursiveExceptionMatcher(IllegalStateException.class));
+      expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
+      seq.toList();
+    }
+  }
+
+  private static class RecursiveExceptionMatcher extends BaseMatcher<Object>
+  {
+    private final Class<? extends Throwable> expected;
+
+    private RecursiveExceptionMatcher(Class<? extends Throwable> expected)
+    {
+      this.expected = expected;
+    }
+
+    @Override
+    public boolean matches(Object item)
+    {
+      if (expected.isInstance(item)) {
+        return true;
+      } else if (item instanceof Throwable) {
+        if (((Throwable) item).getCause() != null) {
+          return matches(((Throwable) item).getCause());
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public void describeTo(Description description)
+    {
+      description.appendText("a recursive instance of ").appendText(expected.getName());
+    }
   }
 }

@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.22.0-SNAPSHOT</version>
+    <version>0.23.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -147,7 +147,7 @@
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil</artifactId>
+      <artifactId>fastutil-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

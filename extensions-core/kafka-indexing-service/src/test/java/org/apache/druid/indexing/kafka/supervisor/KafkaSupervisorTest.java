@@ -311,7 +311,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            true,
             false,
             null,
             false,
@@ -450,7 +449,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             INPUT_FORMAT
         ),
         new KafkaIndexTaskTuningConfig(
-            null,
             null,
             null,
             null,
@@ -1190,7 +1188,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
     }
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
-            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId(), "Dummy task status failure err message")));
     EasyMock.expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of(iHaveFailed)).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(aNewTaskCapture))).andReturn(true);
     EasyMock.replay(taskStorage);
@@ -1279,7 +1277,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(ImmutableList.of(captured.getValue()))
             .anyTimes();
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
-            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId(), "Dummy task status failure err message")));
     EasyMock.expect(taskStorage.getStatus(runningTaskId))
             .andReturn(Optional.of(TaskStatus.running(runningTaskId)))
             .anyTimes();
@@ -3280,7 +3278,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            true,
             false,
             null,
             false,
@@ -3321,7 +3318,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         null,
@@ -3619,7 +3615,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         resetOffsetAutomatically,
@@ -3732,7 +3727,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         false,

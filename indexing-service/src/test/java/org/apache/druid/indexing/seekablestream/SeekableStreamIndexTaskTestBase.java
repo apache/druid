@@ -79,7 +79,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import org.assertj.core.api.Assertions;
@@ -461,7 +461,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected void unlockAppenderatorBasePersistDirForTask(SeekableStreamIndexTask task)
       throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
   {
-    Method unlockBasePersistDir = ((AppenderatorImpl) task.getAppenderator())
+    Method unlockBasePersistDir = ((StreamAppenderator) task.getAppenderator())
         .getClass()
         .getDeclaredMethod("unlockBasePersistDirectory");
     unlockBasePersistDir.setAccessible(true);
