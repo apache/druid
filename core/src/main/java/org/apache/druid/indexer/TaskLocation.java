@@ -80,8 +80,16 @@ public class TaskLocation
 
   public URL makeURL(final String encodedPathAndQueryString) throws MalformedURLException
   {
-    final String scheme = tlsPort > 0 ? "https" : "http";
-    final int portToUse = tlsPort > 0 ? tlsPort : port;
+    final String scheme;
+    final int portToUse;
+
+    if (tlsPort > 0) {
+      scheme = "https";
+      portToUse = tlsPort;
+    } else {
+      scheme = "http";
+      portToUse = port;
+    }
 
     if (!encodedPathAndQueryString.startsWith("/")) {
       throw new IAE("Path must start with '/'");
