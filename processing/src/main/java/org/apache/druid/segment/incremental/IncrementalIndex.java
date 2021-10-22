@@ -348,7 +348,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract AggregatorType[] getAggsForRow(int rowOffset);
 
-  protected abstract Object getAggVal(AggregatorType agg);
+  /**
+   * Return the current aggregated value for a particular aggregator, row number, and aggregator number.
+   *
+   * Note: rowOffset and aggPosition are unused today, but may be used in the future by
+   * https://github.com/apache/druid/pull/10001.
+   */
+  protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
 
   protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
 
@@ -691,7 +697,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return getFacts().getMaxTimeMillis();
   }
 
-  @SuppressWarnings("unused") // Potentially useful for alternative IncrementalIndex implementations
+  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
   public AggregatorType[] getAggs()
   {
     return aggs;
@@ -922,7 +928,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
             AggregatorType[] aggs = getAggsForRow(rowOffset);
             for (int i = 0; i < aggs.length; ++i) {
-              theVals.put(metrics[i].getName(), getAggVal(aggs[i]));
+              theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
             }
 
             if (postAggs != null) {

@@ -111,6 +111,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the float representation of the aggregate
    */
+  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
   float getFloat(ByteBuffer buf, int position);
 
   /**
@@ -128,6 +129,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the long representation of the aggregate
    */
+  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
   long getLong(ByteBuffer buf, int position);
 
   /**
@@ -149,6 +151,7 @@ public interface BufferAggregator extends HotLoopCallee
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the double representation of the aggregate
    */
+  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
   default double getDouble(ByteBuffer buf, int position)
   {
     return (double) getFloat(buf, position);

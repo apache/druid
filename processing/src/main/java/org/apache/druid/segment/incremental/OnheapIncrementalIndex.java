@@ -334,7 +334,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  protected Object getAggVal(Aggregator agg)
+  protected Object getAggVal(Aggregator agg, int rowOffset, int aggPosition)
   {
     return agg.get();
   }
