@@ -1626,21 +1626,6 @@
                   <npmVersion>${npm.version}</npmVersion>
                 </configuration>
               </plugin>
-              <plugin>
-                <artifactId>maven-help-plugin</artifactId>
-                <version>2.1.1</version>
-                <executions>
-                  <execution>
-                    <phase>generate-resources</phase>
-                    <goals>
-                      <goal>effective-pom</goal>
-                    </goals>
-                    <configuration>
-                      <output>${project.build.directory}/effective-pom.xml</output>
-                    </configuration>
-                  </execution>
-                </executions>
-              </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1961,6 +1946,12 @@
         </profile>
       <profile>
         <id>hadoop3</id>
+        <activation>
+          <property>
+            <name>hadoop3.enabled</name>
+            <value>true</value>
+          </property>
+        </activation>
         <properties>
           <hadoop.compile.version>3.0.0</hadoop.compile.version>
           <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
