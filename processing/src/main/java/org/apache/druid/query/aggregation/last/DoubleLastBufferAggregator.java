@@ -53,4 +53,22 @@ public class DoubleLastBufferAggregator extends NumericLastBufferAggregator<Base
     final boolean rhsNull = isValueNull(buf, position);
     return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
   }
+
+  @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return (float) buf.getDouble(position + VALUE_OFFSET);
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) buf.getDouble(position + VALUE_OFFSET);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position + VALUE_OFFSET);
+  }
 }

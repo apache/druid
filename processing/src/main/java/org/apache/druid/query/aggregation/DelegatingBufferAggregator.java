@@ -52,6 +52,24 @@ public abstract class DelegatingBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return delegate.getFloat(buf, position);
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return delegate.getLong(buf, position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return delegate.getDouble(buf, position);
+  }
+
+  @Override
   public void close()
   {
     delegate.close();
@@ -67,5 +85,11 @@ public abstract class DelegatingBufferAggregator implements BufferAggregator
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
     delegate.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+  }
+
+  @Override
+  public boolean isNull(ByteBuffer buf, int position)
+  {
+    return delegate.isNull(buf, position);
   }
 }

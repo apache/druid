@@ -76,7 +76,7 @@ public class GroupingAggregatorFactoryTest
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       BufferAggregator aggregator = factory.factorizeBuffered(metricFactory);
       Assert.assertEquals(LongConstantBufferAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1L, aggregator.get(null, 0));
+      Assert.assertEquals(1, aggregator.getLong(null, 0));
     }
 
     @Test

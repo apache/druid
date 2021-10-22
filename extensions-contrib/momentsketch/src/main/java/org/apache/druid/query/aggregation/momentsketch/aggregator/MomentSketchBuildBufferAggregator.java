@@ -79,6 +79,18 @@ public class MomentSketchBuildBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public float getFloat(final ByteBuffer buffer, final int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public long getLong(final ByteBuffer buffer, final int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public void close()
   {
   }

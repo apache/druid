@@ -53,4 +53,23 @@ public class FloatAnyBufferAggregator extends NumericAnyBufferAggregator<BaseFlo
     final boolean isNull = isValueNull(buf, position);
     return isNull ? null : buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
+
+  @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return buf.getFloat(position + FOUND_VALUE_OFFSET);
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) buf.getFloat(position + FOUND_VALUE_OFFSET);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) buf.getFloat(position + FOUND_VALUE_OFFSET);
+  }
+
 }

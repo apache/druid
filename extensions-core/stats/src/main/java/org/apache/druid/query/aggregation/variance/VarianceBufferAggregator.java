@@ -51,6 +51,24 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getFloat()");
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getFloat()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
   }

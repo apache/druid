@@ -53,6 +53,24 @@ public final class NoopBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return 0;
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return 0L;
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return 0d;
+  }
+
+  @Override
   public void close()
   {
   }

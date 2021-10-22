@@ -111,6 +111,18 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   }
 
   @Override
+  public float getFloat(final ByteBuffer buf, final int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public long getLong(final ByteBuffer buf, final int position)
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public void close()
   {
     values = null;

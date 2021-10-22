@@ -94,8 +94,8 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
     Long result = (Long) agg.get(buffer, 0);
 
     Assert.assertEquals(longs[0], result, 0.0001);
-    Assert.assertEquals((long) longs[0], agg.get(buffer, 0));
-    Assert.assertEquals(longs[0], (long) agg.get(buffer, 0), 0.0001);
+    Assert.assertEquals((long) longs[0], agg.getLong(buffer, 0));
+    Assert.assertEquals(longs[0], agg.getLong(buffer, 0), 0.0001);
   }
 
   @Test
@@ -152,8 +152,8 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
     Long result = (Long) agg.get(buffer, 0);
 
     Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.get(buffer, 0));
-    Assert.assertEquals(objects[0], (long) agg.get(buffer, 0), 0.0001);
+    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
+    Assert.assertEquals(objects[0], agg.getLong(buffer, 0), 0.0001);
   }
 
   @Test

@@ -154,7 +154,7 @@ public class TimestampMinMaxAggregatorTest
       aggregate(selector, aggregator, buffer, 0);
     }
 
-    Assert.assertEquals(expected, new Timestamp((long) aggregator.get(buffer, 0)));
+    Assert.assertEquals(expected, new Timestamp(aggregator.getLong(buffer, 0)));
 
     aggregator.init(buffer, 0);
 

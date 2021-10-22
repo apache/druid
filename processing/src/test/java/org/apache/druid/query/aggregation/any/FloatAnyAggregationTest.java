@@ -93,7 +93,8 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
     Float result = (Float) agg.get(buffer, 0);
 
     Assert.assertEquals(floats[0], result, 0.0001);
-    Assert.assertEquals(floats[0], (float) agg.get(buffer, 0), 0.0001);
+    Assert.assertEquals((long) floats[0], agg.getLong(buffer, 0));
+    Assert.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -150,7 +151,8 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
     Float result = (Float) agg.get(buffer, 0);
 
     Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0], (float) agg.get(buffer, 0), 0.0001);
+    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
+    Assert.assertEquals(objects[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test

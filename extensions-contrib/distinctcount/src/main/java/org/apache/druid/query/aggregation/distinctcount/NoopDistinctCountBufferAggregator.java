@@ -58,6 +58,24 @@ public final class NoopDistinctCountBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return (float) 0;
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return (long) 0;
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return 0;
+  }
+
+  @Override
   public void close()
   {
   }

@@ -56,6 +56,24 @@ public class FilteredBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    return delegate.getLong(buf, position);
+  }
+
+  @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    return delegate.getFloat(buf, position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return delegate.getDouble(buf, position);
+  }
+
+  @Override
   public void relocate(
       final int oldPosition,
       final int newPosition,
@@ -64,6 +82,12 @@ public class FilteredBufferAggregator implements BufferAggregator
   )
   {
     delegate.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
+  }
+
+  @Override
+  public boolean isNull(final ByteBuffer buf, final int position)
+  {
+    return delegate.isNull(buf, position);
   }
 
   @Override
