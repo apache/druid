@@ -37,7 +37,6 @@ import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
