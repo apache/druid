@@ -75,16 +75,7 @@ public class HllSketchBuildUtil
       final ByteBuffer buf = selector.lookupNameUtf8(id);
 
       if (buf != null) {
-        // We must copy the bytes here, because HllSketch doesn't have a method that accepts ByteBuffer.
-        // Should be possible to optimize this by adding such a method to DataSketches.
-        final byte[] bytes = new byte[buf.remaining()];
-        buf.get(bytes);
-        sketch.update(bytes);
-      } else if (NullHandling.replaceWithDefault()) {
-        // Treat as empty string.
-        sketch.update(StringUtils.EMPTY_BYTES);
-      } else {
-        // Do nothing.
+        sketch.update(buf);
       }
     } else {
       final String s = NullHandling.nullToEmptyIfNeeded(selector.lookupName(id));

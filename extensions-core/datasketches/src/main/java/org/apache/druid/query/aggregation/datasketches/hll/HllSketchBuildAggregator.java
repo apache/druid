@@ -21,9 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
-import org.apache.druid.java.util.common.StringEncoding;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 
 import java.util.function.Consumer;
