@@ -144,16 +144,14 @@ public final class CloseableUtils
   }
 
   /**
-   * Like {@link Closeable#close()} but sends any exceptions to the provided Consumer, and then throws them away.
+   * Like {@link Closeable#close()} but sends any exceptions to the provided Consumer and then returns quietly.
    *
    * If the Consumer throws an exception, that exception is thrown by this method. So if your intent is to chomp
    * exceptions, you should avoid writing a Consumer that might throw an exception.
-   *
-   * Throwables that are not Exceptions are thrown rather than sent to the Consumer.
    */
   public static void closeAndSuppressExceptions(
       @Nullable final Closeable closeable,
-      final Consumer<Exception> chomper
+      final Consumer<Throwable> chomper
   )
   {
     if (closeable == null) {
@@ -163,7 +161,7 @@ public final class CloseableUtils
     try {
       closeable.close();
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       chomper.accept(e);
     }
   }

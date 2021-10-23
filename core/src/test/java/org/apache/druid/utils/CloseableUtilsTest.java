@@ -40,10 +40,11 @@ public class CloseableUtilsTest
   private final TestCloseable quietCloseable2 = new TestCloseable(null);
   private final TestCloseable ioExceptionCloseable = new TestCloseable(new IOException());
   private final TestCloseable runtimeExceptionCloseable = new TestCloseable(new IllegalArgumentException());
+  private final TestCloseable assertionErrorCloseable = new TestCloseable(new AssertionError());
 
   // For closeAndSuppressException tests.
   private final AtomicLong chomped = new AtomicLong();
-  private final Consumer<Exception> chomper = e -> chomped.incrementAndGet();
+  private final Consumer<Throwable> chomper = e -> chomped.incrementAndGet();
 
   @Test
   public void test_closeAll_array_quiet() throws IOException
@@ -154,6 +155,21 @@ public class CloseableUtilsTest
   }
 
   @Test
+  public void test_closeAndWrapExceptions_assertionError()
+  {
+    Throwable e = null;
+    try {
+      CloseableUtils.closeAndWrapExceptions(assertionErrorCloseable);
+    }
+    catch (Throwable e1) {
+      e = e1;
+    }
+
+    assertClosed(assertionErrorCloseable);
+    Assert.assertThat(e, CoreMatchers.instanceOf(AssertionError.class));
+  }
+
+  @Test
   public void test_closeAndSuppressExceptions_null()
   {
     CloseableUtils.closeAndSuppressExceptions(null, chomper);
@@ -181,6 +197,14 @@ public class CloseableUtilsTest
   {
     CloseableUtils.closeAndSuppressExceptions(runtimeExceptionCloseable, chomper);
     assertClosed(runtimeExceptionCloseable);
+    Assert.assertEquals(1, chomped.get());
+  }
+
+  @Test
+  public void test_closeAndSuppressExceptions_assertionError()
+  {
+    CloseableUtils.closeAndSuppressExceptions(assertionErrorCloseable, chomper);
+    assertClosed(assertionErrorCloseable);
     Assert.assertEquals(1, chomped.get());
   }
 
@@ -379,6 +403,32 @@ public class CloseableUtilsTest
     Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
+  @Test
+  public void test_closeAndWrapInCatch_assertionError()
+  {
+    Exception e = null;
+    try {
+      //noinspection ThrowableNotThrown
+      CloseableUtils.closeAndWrapInCatch(new RuntimeException("this one was caught"), assertionErrorCloseable);
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    Assert.assertTrue(assertionErrorCloseable.isClosed());
+
+    // First exception
+    Assert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
+    );
+
+    // Second exception
+    Assert.assertEquals(1, e.getSuppressed().length);
+    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(AssertionError.class));
+  }
+
   private static void assertClosed(final TestCloseable... closeables)
   {
     for (TestCloseable closeable : closeables) {
@@ -389,10 +439,10 @@ public class CloseableUtilsTest
   private static class TestCloseable implements Closeable
   {
     @Nullable
-    private final Exception e;
+    private final Throwable e;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    TestCloseable(@Nullable Exception e)
+    TestCloseable(@Nullable Throwable e)
     {
       this.e = e;
     }
