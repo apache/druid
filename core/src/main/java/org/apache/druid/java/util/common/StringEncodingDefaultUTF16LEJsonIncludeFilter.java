@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
  * exclusions (see spotbugs-exclude.xml).
  */
-@SuppressWarnings({"EqualsAndHashcode", "EqualsWhichDoesntCheckParameterClass"})
+@SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode", "EqualsWhichDoesntCheckParameterClass"})
 public class StringEncodingDefaultUTF16LEJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
 {
   @Override
