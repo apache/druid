@@ -42,7 +42,6 @@ public class HeapBasedTopNAlgorithm
   )
   {
     super(storageAdapter);
-
     this.query = query;
   }
 

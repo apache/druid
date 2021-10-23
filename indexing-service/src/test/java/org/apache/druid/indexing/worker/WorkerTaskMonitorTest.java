@@ -31,7 +31,7 @@ import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestRealtimeTask;
 import org.apache.druid.indexing.common.TestTasks;
@@ -163,7 +163,9 @@ public class WorkerTaskMonitorTest
         null,
         null,
         null,
-        false
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -189,7 +191,7 @@ public class WorkerTaskMonitorTest
                 null,
                 NoopJoinableFactory.INSTANCE,
                 null,
-                new SegmentLoaderFactory(null, jsonMapper),
+                new SegmentCacheManagerFactory(jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
@@ -360,6 +362,10 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(1, announcements.size());
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
     Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
+    Assert.assertEquals(
+        "Canceled as unknown task. See middleManager or indexer logs for more details.",
+        announcements.get(0).getTaskStatus().getErrorMsg()
+    );
   }
 
   @Test(timeout = 60_000L)

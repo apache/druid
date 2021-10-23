@@ -34,7 +34,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -46,6 +46,7 @@ import java.util.List;
  */
 public class DoubleMeanAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("doubleMean");
   private final String name;
   private final String fieldName;
 
@@ -78,25 +79,19 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return "doubleMean";
-  }
-
   /**
    * actual type is {@link DoubleMeanHolder}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @Override
@@ -127,7 +122,7 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return capabilities == null || capabilities.getType().isNumeric();
+    return capabilities == null || capabilities.isNumeric();
   }
 
   @Override

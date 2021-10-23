@@ -31,12 +31,14 @@ import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -65,16 +67,12 @@ public class ExpressionPostAggregator implements PostAggregator
   @Nullable
   private final String ordering;
 
-  // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
-  // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
-  @Nullable
-  private final ValueType outputType;
-
   private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
 
   private final Supplier<Expr> parsed;
   private final Supplier<Set<String>> dependentFields;
+  private final Supplier<byte[]> cacheKey;
 
   /**
    * Constructor for serialization.
@@ -110,7 +108,6 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        null, // in the future this will be computed by decorate
         macroTable,
         finalizers,
         parsed,
@@ -122,7 +119,6 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
-      @Nullable final ValueType outputType,
       final ExprMacroTable macroTable,
       final Map<String, Function<Object, Object>> finalizers,
       final Supplier<Expr> parsed,
@@ -134,9 +130,6 @@ public class ExpressionPostAggregator implements PostAggregator
     this.name = name;
     this.expression = expression;
     this.ordering = ordering;
-    // allow nulls to match previous behavior when type was never specified, however this should be non-nullable
-    // in the future, when expression support type inference
-    this.outputType = outputType;
     // comparator should be specialized to output type ... someday
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
     this.macroTable = macroTable;
@@ -144,6 +137,12 @@ public class ExpressionPostAggregator implements PostAggregator
 
     this.parsed = parsed;
     this.dependentFields = dependentFields;
+    this.cacheKey = Suppliers.memoize(() -> {
+      return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
+          .appendCacheable(parsed.get())
+          .appendString(ordering)
+          .build();
+    });
   }
 
 
@@ -182,10 +181,14 @@ public class ExpressionPostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    // computed by decorate
-    return outputType;
+    final ExpressionType type = parsed.get().getOutputType(signature);
+    if (type == null) {
+      return null;
+    } else {
+      return ExpressionType.toColumnType(type);
+    }
   }
 
   @Override
@@ -195,7 +198,6 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        null, // this should be computed from expression output type once it supports output type inference
         macroTable,
         CollectionUtils.mapValues(aggregators, aggregatorFactory -> aggregatorFactory::finalizeComputation),
         parsed,
@@ -229,10 +231,7 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-        .appendString(expression)
-        .appendString(ordering)
-        .build();
+    return cacheKey.get();
   }
 
   public enum Ordering implements Comparator<Comparable>
@@ -241,7 +240,7 @@ public class ExpressionPostAggregator implements PostAggregator
      * Ensures the following order: numeric > NaN > Infinite.
      *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
-     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ValueType, ExprMacroTable, Map, Supplier, Supplier)}.
+     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ExprMacroTable, Map, Supplier, Supplier)}.
      */
     @SuppressWarnings("unused")
     numericFirst {

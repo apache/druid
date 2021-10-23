@@ -86,6 +86,28 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 is an alias for 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                . Only one of these properties can be used.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -335,6 +357,28 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 is an alias for 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                . Only one of these properties can be used.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -584,6 +628,28 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 is an alias for 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                . Only one of these properties can be used.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -833,6 +899,28 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 is an alias for 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                . Only one of these properties can be used.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },

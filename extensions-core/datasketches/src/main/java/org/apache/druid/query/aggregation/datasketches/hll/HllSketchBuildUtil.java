@@ -42,10 +42,14 @@ public class HllSketchBuildUtil
     } else if (value instanceof String) {
       updateSketchWithString(sketch, stringEncoding, (String) value);
     } else if (value instanceof List) {
-      // noinspection unchecked
-      List<String> list = (List<String>) value;
-      for (String v : list) {
-        updateSketchWithString(sketch, stringEncoding, v);
+      // noinspection rawtypes
+      for (Object entry : (List) value) {
+        if (entry != null) {
+          final String asString = entry.toString();
+          if (!NullHandling.isNullOrEquivalent(asString)) {
+            updateSketchWithString(sketch, stringEncoding, asString);
+          }
+        }
       }
     } else if (value instanceof char[]) {
       sketch.update((char[]) value);
@@ -57,28 +61,6 @@ public class HllSketchBuildUtil
       sketch.update((long[]) value);
     } else {
       throw new IAE("Unsupported type " + value.getClass());
-    }
-  }
-
-  public static void updateSketchWithString(
-      final HllSketch sketch,
-      final StringEncoding stringEncoding,
-      @Nullable final String value
-  )
-  {
-    if (value == null) {
-      return;
-    }
-
-    switch (stringEncoding) {
-      case UTF8:
-        sketch.update(StringUtils.toUtf8(value));
-        break;
-      case UTF16LE:
-        sketch.update(value.toCharArray());
-        break;
-      default:
-        throw new UOE("Unsupported string encoding [%s]", stringEncoding);
     }
   }
 
@@ -107,6 +89,28 @@ public class HllSketchBuildUtil
     } else {
       final String s = NullHandling.nullToEmptyIfNeeded(selector.lookupName(id));
       updateSketchWithString(sketch, stringEncoding, s);
+    }
+  }
+
+  private static void updateSketchWithString(
+      final HllSketch sketch,
+      final StringEncoding stringEncoding,
+      @Nullable final String value
+  )
+  {
+    if (value == null) {
+      return;
+    }
+
+    switch (stringEncoding) {
+      case UTF8:
+        sketch.update(StringUtils.toUtf8(value));
+        break;
+      case UTF16LE:
+        sketch.update(value.toCharArray());
+        break;
+      default:
+        throw new UOE("Unsupported string encoding [%s]", stringEncoding);
     }
   }
 }

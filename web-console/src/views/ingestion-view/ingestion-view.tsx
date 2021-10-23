@@ -749,6 +749,18 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               accessor: 'group_id',
               width: 300,
               Aggregated: () => '',
+              Cell: row => {
+                const value = row.value;
+                return (
+                  <a
+                    onClick={() => {
+                      this.setState({ taskFilter: addFilter(taskFilter, 'group_id', value) });
+                    }}
+                  >
+                    {value}
+                  </a>
+                );
+              },
               show: hiddenTaskColumns.exists('Group ID'),
             },
             {

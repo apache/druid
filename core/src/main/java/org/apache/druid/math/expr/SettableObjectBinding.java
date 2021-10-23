@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
@@ -53,5 +54,11 @@ public class SettableObjectBinding implements Expr.ObjectBinding
   {
     bindings.put(name, value);
     return this;
+  }
+
+  @VisibleForTesting
+  public Map<String, Object> asMap()
+  {
+    return bindings;
   }
 }

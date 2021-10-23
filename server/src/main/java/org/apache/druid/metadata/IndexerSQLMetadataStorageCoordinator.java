@@ -57,6 +57,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Batch;
@@ -73,6 +74,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -224,13 +226,40 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return matchingSegments;
   }
 
-  private List<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
+  @Override
+  public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
+  {
+    int numSegmentsMarkedUnused = connector.retryTransaction(
+        (handle, status) -> {
+          return handle
+              .createStatement(
+                  StringUtils.format(
+                      "UPDATE %s SET used=false WHERE dataSource = :dataSource "
+                      + "AND start >= :start AND %2$send%2$s <= :end",
+                      dbTables.getSegmentsTable(),
+                      connector.getQuoteString()
+                  )
+              )
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute();
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+
+    log.info("Marked %,d segments unused for %s for interval %s.", numSegmentsMarkedUnused, dataSource, interval);
+    return numSegmentsMarkedUnused;
+  }
+
+  private Set<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
       final Interval interval
   ) throws IOException
   {
-    final List<SegmentIdWithShardSpec> identifiers = new ArrayList<>();
+    final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
 
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
@@ -814,15 +843,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .execute();
   }
 
+  /**
+   * This function creates a new segment for the given datasource/interval/etc. A critical
+   * aspect of the creation is to make sure that the new version & new partition number will make
+   * sense given the existing segments & pending segments also very important is to avoid
+   * clashes with existing pending & used/unused segments.
+   * @param handle Database handle
+   * @param dataSource datasource for the new segment
+   * @param interval interval for the new segment
+   * @param partialShardSpec Shard spec info minus segment id stuff
+   * @param existingVersion Version of segments in interval, used to compute the version of the very first segment in
+   *                        interval
+   * @return
+   * @throws IOException
+   */
   @Nullable
   private SegmentIdWithShardSpec createNewSegment(
       final Handle handle,
       final String dataSource,
       final Interval interval,
       final PartialShardSpec partialShardSpec,
-      final String maxVersion
+      final String existingVersion
   ) throws IOException
   {
+    // Get the time chunk and associated data segments for the given interval, if any
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
         handle,
         dataSource,
@@ -855,66 +899,94 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // See PartitionIds.
             .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
           // Don't use the stream API for performance.
+          // Note that this will compute the max id of existing, visible, data segments in the time chunk:
           if (maxId == null || maxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
             maxId = SegmentIdWithShardSpec.fromDataSegment(segment);
           }
         }
       }
 
-      final List<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
+      // Get the version of the existing chunk, we might need it in some of the cases below
+      // to compute the new identifier's version
+      @Nullable
+      final String versionOfExistingChunk;
+      if (!existingChunks.isEmpty()) {
+        // remember only one chunk possible for given interval so get the first & only one
+        versionOfExistingChunk = existingChunks.get(0).getVersion();
+      } else {
+        versionOfExistingChunk = null;
+      }
+
+      // next, we need to enrich the maxId computed before with the information of the pending segments
+      // it is possible that a pending segment has a higher id in which case we need that, it will work,
+      // and it will avoid clashes when inserting the new pending segment later in the caller of this method
+      final Set<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
           handle,
           dataSource,
           interval
       );
-
+      // Make sure we add the maxId we obtained from the segments table:
       if (maxId != null) {
         pendings.add(maxId);
       }
-
+      //  Now compute the maxId with all the information: pendings + segments:
+      // The versionOfExistingChunks filter is ensure that we pick the max id with the version of the existing chunk
+      // in the case that there may be a pending segment with a higher version but no corresponding used segments
+      // which may generate a clash with an existing segment once the new id is generated
       maxId = pendings.stream()
                       .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
+                      .filter(id -> versionOfExistingChunk == null ? true : id.getVersion().equals(versionOfExistingChunk))
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
                         if (versionCompare != 0) {
                           return versionCompare;
                         } else {
-                          return Integer.compare(id1.getShardSpec().getPartitionNum(), id2.getShardSpec().getPartitionNum());
+                          return Integer.compare(
+                              id1.getShardSpec().getPartitionNum(),
+                              id2.getShardSpec().getPartitionNum()
+                          );
                         }
                       })
                       .orElse(null);
 
-      // Find the major version of existing segments
-      @Nullable final String versionOfExistingChunks;
-      if (!existingChunks.isEmpty()) {
-        versionOfExistingChunks = existingChunks.get(0).getVersion();
-      } else if (!pendings.isEmpty()) {
-        versionOfExistingChunks = pendings.get(0).getVersion();
+      // The following code attempts to compute the new version, if this
+      // new version is not null at the end of next block then it will be
+      // used as the new version in the case for initial or appended segment
+      final String newSegmentVersion;
+      if (versionOfExistingChunk != null) {
+        // segment version overrides, so pick that now that we know it exists
+        newSegmentVersion = versionOfExistingChunk;
+      } else if (!pendings.isEmpty() && maxId != null) {
+        // there is no visible segments in the time chunk, so pick the maxId of pendings, as computed above
+        newSegmentVersion = maxId.getVersion();
       } else {
-        versionOfExistingChunks = null;
+        // no segments, no pendings, so this must be the very first segment created for this interval
+        newSegmentVersion = null;
       }
 
       if (maxId == null) {
+        // When appending segments, null maxId means that we are allocating the very initial
+        // segment for this time chunk.
         // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
-        // or you use segment lock. When appending segments, null maxId means that we are allocating the very initial
-        // segment for this time chunk. Since the core partitions set is not determined for appended segments, we set
+        // or you use segment lock. Since the core partitions set is not determined for appended segments, we set
         // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
         // OvershadowableManager handles the atomic segment update.
         final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
                                    ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
                                    : PartitionIds.ROOT_GEN_START_PARTITION_ID;
-        String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
+        String version = newSegmentVersion == null ? existingVersion : newSegmentVersion;
         return new SegmentIdWithShardSpec(
             dataSource,
             interval,
             version,
             partialShardSpec.complete(jsonMapper, newPartitionId, 0)
         );
-      } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
+      } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(existingVersion) > 0) {
         log.warn(
-            "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
+            "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
             dataSource,
             interval,
-            maxVersion,
+            existingVersion,
             maxId
         );
         return null;
@@ -929,7 +1001,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),
-            Preconditions.checkNotNull(versionOfExistingChunks, "versionOfExistingChunks"),
+            Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
             partialShardSpec.complete(
                 jsonMapper,
                 maxId.getShardSpec().getPartitionNum() + 1,
@@ -1421,6 +1493,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             .bind("commit_metadata_sha1", BaseEncoding.base16().encode(
                 Hashing.sha1().hashBytes(jsonMapper.writeValueAsBytes(metadata)).asBytes()))
             .execute()
+    );
+  }
+
+  @Override
+  public int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    List<String> datasourcesToDelete = connector.getDBI().withHandle(
+        handle -> handle
+            .createQuery(
+                StringUtils.format(
+                    "SELECT dataSource FROM %1$s WHERE created_date < '%2$s'",
+                    dbTables.getDataSourceTable(),
+                    dateTime.toString()
+                )
+            )
+            .mapTo(String.class)
+            .list()
+    );
+    datasourcesToDelete.removeAll(excludeDatasources);
+    return connector.getDBI().withHandle(
+        handle -> {
+          final PreparedBatch batch = handle.prepareBatch(
+              StringUtils.format(
+                  "DELETE FROM %1$s WHERE dataSource = :dataSource AND created_date < '%2$s'",
+                  dbTables.getDataSourceTable(),
+                  dateTime.toString()
+              )
+          );
+          for (String datasource : datasourcesToDelete) {
+            batch.bind("dataSource", datasource).add();
+          }
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
+        }
     );
   }
 }

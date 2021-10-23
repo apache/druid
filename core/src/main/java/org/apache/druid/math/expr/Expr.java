@@ -23,8 +23,10 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -38,8 +40,9 @@ import java.util.Set;
  * immutable.
  */
 @SubclassesMustOverrideEqualsAndHashCode
-public interface Expr
+public interface Expr extends Cacheable
 {
+
   String NULL_LITERAL = "null";
   Joiner ARG_JOINER = Joiner.on(", ");
 
@@ -132,20 +135,20 @@ public interface Expr
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression.
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
    *
    * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
    * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
    * the entire expression. Otherwise, all vectorizable expressions must produce an output type to correctly operate
    * with the vectorized engine.
    *
-   * Outside of the context of vectorized expressions, a return value of null can also indicate that the given type
+   * Outside the context of vectorized expressions, a return value of null can also indicate that the given type
    * information was not enough to resolve the output type, so the expression must be evaluated using default
    * {@link #eval} handling where types are only known after evaluation, through {@link ExprEval#type}, such as
    * transform expressions at ingestion time
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inspector)
+  default ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -171,6 +174,12 @@ public interface Expr
     throw Exprs.cannotVectorize(this);
   }
 
+  @Override
+  default byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
+  }
+
   /**
    * Mechanism to supply input types for the bindings which will back {@link IdentifierExpr}, to use in the aid of
    * inferring the output type of an expression with {@link #getOutputType}. A null value means that either the binding
@@ -179,14 +188,14 @@ public interface Expr
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but could be other
      * things depending on the backing adapter)
      */
     @Nullable
-    ExprType getType(String name);
+    ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -194,7 +203,7 @@ public interface Expr
     {
       boolean numeric = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
@@ -204,7 +213,7 @@ public interface Expr
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -214,7 +223,7 @@ public interface Expr
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -223,17 +232,17 @@ public interface Expr
     {
       boolean scalar = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isScalar();
+        scalar &= argType.isPrimitive();
       }
       return scalar;
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -286,7 +295,7 @@ public interface Expr
 
   /**
    * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
-   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * the vectorized column selector interfaces, and includes {@link ExpressionType} information about all input bindings
    * which exist
    */
   interface VectorInputBinding extends VectorInputBindingInspector

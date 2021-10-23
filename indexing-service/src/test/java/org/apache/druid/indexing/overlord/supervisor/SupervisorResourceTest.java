@@ -30,10 +30,12 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -92,7 +94,14 @@ public class SupervisorResourceTest extends EasyMockSupport
           @Override
           public Authorizer getAuthorizer(String name)
           {
+            // Create an Authorizer that only allows Datasource WRITE requests
+            // because all SupervisorResource APIs must only check Datasource WRITE access
             return (authenticationResult, resource, action) -> {
+              if (!resource.getType().equals(ResourceType.DATASOURCE)
+                  || action != Action.WRITE) {
+                return new Access(false);
+              }
+
               if (authenticationResult.getIdentity().equals("druid")) {
                 return Access.OK;
               } else {
@@ -905,12 +914,11 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v2"
         )
     );
-    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
-    history.put("id1", versions1);
-    history.put("id2", versions2);
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(3);
-    EasyMock.expect(supervisorManager.getSupervisorHistory()).andReturn(history).times(3);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1")).andReturn(versions1).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2")).andReturn(versions2).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3")).andReturn(Collections.emptyList()).times(1);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
@@ -1002,13 +1010,12 @@ public class SupervisorResourceTest extends EasyMockSupport
             "tombstone"
         )
     );
-    Map<String, List<VersionedSupervisorSpec>> history = new HashMap<>();
-    history.put("id1", versions1);
-    history.put("id2", versions2);
-    history.put("id3", versions3);
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(4);
-    EasyMock.expect(supervisorManager.getSupervisorHistory()).andReturn(history).times(4);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1")).andReturn(versions1).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2")).andReturn(versions2).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3")).andReturn(versions3).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4")).andReturn(Collections.emptyList()).times(1);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(

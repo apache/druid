@@ -21,7 +21,6 @@ package org.apache.druid.security.basic.authorization.db.updater;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -52,12 +51,10 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserMapBundle;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
-import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
@@ -86,7 +83,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static final String GROUP_MAPPINGS = "groupMappings";
   private static final String ROLES = "roles";
 
-  public static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
+  public static final List<ResourceAction> SUPERUSER_PERMISSIONS = AuthorizationUtils.makeSuperUserPermissions();
 
   private final AuthorizerMapper authorizerMapper;
   private final MetadataStorageConnector connector;
@@ -1194,50 +1191,5 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           );
       createGroupMappingInternal(authorizerName, groupMapping);
     }
-  }
-
-  private static List<ResourceAction> makeSuperUserPermissions()
-  {
-    ResourceAction datasourceR = new ResourceAction(
-        new Resource(".*", ResourceType.DATASOURCE),
-        Action.READ
-    );
-
-    ResourceAction datasourceW = new ResourceAction(
-        new Resource(".*", ResourceType.DATASOURCE),
-        Action.WRITE
-    );
-
-    ResourceAction viewR = new ResourceAction(
-        new Resource(".*", ResourceType.VIEW),
-        Action.READ
-    );
-
-    ResourceAction viewW = new ResourceAction(
-        new Resource(".*", ResourceType.VIEW),
-        Action.WRITE
-    );
-
-    ResourceAction configR = new ResourceAction(
-        new Resource(".*", ResourceType.CONFIG),
-        Action.READ
-    );
-
-    ResourceAction configW = new ResourceAction(
-        new Resource(".*", ResourceType.CONFIG),
-        Action.WRITE
-    );
-
-    ResourceAction stateR = new ResourceAction(
-        new Resource(".*", ResourceType.STATE),
-        Action.READ
-    );
-
-    ResourceAction stateW = new ResourceAction(
-        new Resource(".*", ResourceType.STATE),
-        Action.WRITE
-    );
-
-    return Lists.newArrayList(datasourceR, datasourceW, viewR, viewW, configR, configW, stateR, stateW);
   }
 }

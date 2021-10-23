@@ -28,7 +28,6 @@ import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 
 import java.util.HashSet;
 import java.util.List;
@@ -45,14 +44,14 @@ import java.util.Set;
 public class SqlResourceCollectorShuttle extends SqlShuttle
 {
   private final Set<Resource> resources;
+  private final PlannerContext plannerContext;
   private final SqlValidator validator;
-  private final String druidSchemaName;
 
-  public SqlResourceCollectorShuttle(SqlValidator validator, String druidSchemaName)
+  public SqlResourceCollectorShuttle(SqlValidator validator, PlannerContext plannerContext)
   {
     this.validator = validator;
     this.resources = new HashSet<>();
-    this.druidSchemaName = druidSchemaName;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -69,10 +68,10 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
         // 'schema'.'identifier'
         if (qualifiedNameParts.size() == 2) {
           final String schema = qualifiedNameParts.get(0);
-          if (druidSchemaName.equals(schema)) {
-            resources.add(new Resource(qualifiedNameParts.get(1), ResourceType.DATASOURCE));
-          } else if (NamedViewSchema.NAME.equals(schema)) {
-            resources.add(new Resource(qualifiedNameParts.get(1), ResourceType.VIEW));
+          final String resourceName = qualifiedNameParts.get(1);
+          final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);
+          if (resourceType != null) {
+            resources.add(new Resource(resourceName, resourceType));
           }
         }
       }

@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggrega
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -45,7 +46,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
@@ -115,12 +115,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       tgtHllType = HllSketchAggregatorFactory.DEFAULT_TGT_HLL_TYPE.name();
     }
 
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
@@ -131,7 +130,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       );
     } else {
       final RelDataType dataType = columnRexNode.getType();
-      final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
+      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
         throw new ISE(
             "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
@@ -151,7 +150,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
             dataType
         );
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
-        virtualColumns.add(virtualColumn);
       }
 
       aggregatorFactory = new HllSketchBuildAggregatorFactory(
@@ -167,7 +165,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     return toAggregation(
         name,
         finalizeAggregations,
-        virtualColumns,
         aggregatorFactory
     );
   }
@@ -175,7 +172,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
   protected abstract Aggregation toAggregation(
       String name,
       boolean finalizeAggregations,
-      List<VirtualColumn> virtualColumns,
       AggregatorFactory aggregatorFactory
   );
 }

@@ -20,11 +20,14 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { deepGet, EMPTY_ARRAY, oneOf } from '../utils';
+import { deepGet, EMPTY_ARRAY, oneOf, typeIs } from '../utils';
 
 import { IngestionSpec } from './ingestion-spec';
 
-export type DruidFilter = Record<string, any>;
+export interface DruidFilter {
+  readonly type: string;
+  readonly [k: string]: any;
+}
 
 export interface DimensionFiltersWithRest {
   dimensionFilters: DruidFilter[];
@@ -81,33 +84,39 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
   {
     name: 'type',
     type: 'string',
+    required: true,
     suggestions: KNOWN_FILTER_TYPES,
   },
   {
     name: 'dimension',
     type: 'string',
-    defined: (df: DruidFilter) => oneOf(df.type, 'selector', 'in', 'interval', 'regex', 'like'),
+    defined: typeIs('selector', 'in', 'interval', 'regex', 'like'),
+    required: true,
   },
   {
     name: 'value',
     type: 'string',
-    defined: (df: DruidFilter) => df.type === 'selector',
+    defined: typeIs('selector'),
+    required: true,
   },
   {
     name: 'values',
     type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'in',
+    defined: typeIs('in'),
+    required: true,
   },
   {
     name: 'intervals',
     type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'interval',
+    defined: typeIs('interval'),
+    required: true,
     placeholder: 'ex: 2020-01-01/2020-06-01',
   },
   {
     name: 'pattern',
     type: 'string',
-    defined: (df: DruidFilter) => oneOf(df.type, 'regex', 'like'),
+    defined: typeIs('regex', 'like'),
+    required: true,
   },
 
   {
@@ -115,39 +124,39 @@ export const FILTER_FIELDS: Field<DruidFilter>[] = [
     label: 'Sub-filter type',
     type: 'string',
     suggestions: ['selector', 'in', 'interval', 'regex', 'like'],
-    defined: (df: DruidFilter) => df.type === 'not',
+    defined: typeIs('not'),
+    required: true,
   },
   {
     name: 'field.dimension',
     label: 'Sub-filter dimension',
     type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not',
+    defined: typeIs('not'),
   },
   {
     name: 'field.value',
     label: 'Sub-filter value',
     type: 'string',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
+    defined: df => df.type === 'not' && deepGet(df, 'field.type') === 'selector',
   },
   {
     name: 'field.values',
     label: 'Sub-filter values',
     type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'in',
+    defined: df => df.type === 'not' && deepGet(df, 'field.type') === 'in',
   },
   {
     name: 'field.intervals',
     label: 'Sub-filter intervals',
     type: 'string-array',
-    defined: (df: DruidFilter) => df.type === 'not' && deepGet(df, 'field.type') === 'interval',
+    defined: df => df.type === 'not' && deepGet(df, 'field.type') === 'interval',
     placeholder: 'ex: 2020-01-01/2020-06-01',
   },
   {
     name: 'field.pattern',
     label: 'Sub-filter pattern',
     type: 'string',
-    defined: (df: DruidFilter) =>
-      df.type === 'not' && oneOf(deepGet(df, 'field.type'), 'regex', 'like'),
+    defined: df => df.type === 'not' && oneOf(deepGet(df, 'field.type'), 'regex', 'like'),
   },
 ];
 

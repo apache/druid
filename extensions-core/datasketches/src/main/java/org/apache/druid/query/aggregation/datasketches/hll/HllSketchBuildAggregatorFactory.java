@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -43,6 +44,7 @@ import java.util.function.Supplier;
  */
 public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME);
 
   @JsonCreator
   public HllSketchBuildAggregatorFactory(
@@ -58,9 +60,9 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
-  public String getComplexTypeName()
+  public ColumnType getType()
   {
-    return HllSketchModule.BUILD_TYPE_NAME;
+    return TYPE;
   }
 
   @Override
@@ -81,8 +83,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     return new HllSketchBuildAggregator(
         processor,
         getLgK(),
-        TgtHllType.valueOf(getTgtHllType()),
-        getStringEncoding()
+        TgtHllType.valueOf(getTgtHllType())
     );
   }
 

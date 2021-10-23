@@ -113,7 +113,7 @@ public interface ApplyFunction
    * @see Expr#getOutputType
    */
   @Nullable
-  ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args);
+  ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args);
 
   /**
    * Base class for "map" functions, which are a class of {@link ApplyFunction} which take a lambda function that is
@@ -130,9 +130,9 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
-      return ExprType.asArrayType(expr.getOutputType(new LambdaInputBindingInspector(inspector, expr, args)));
+      return ExpressionType.asArrayType(expr.getOutputType(new LambdaInputBindingInspector(inspector, expr, args)));
     }
 
     /**
@@ -145,13 +145,13 @@ public interface ApplyFunction
       Long[] longsOut = null;
       Double[] doublesOut = null;
 
-      ExprType elementType = null;
+      ExpressionType elementType = null;
       for (int i = 0; i < length; i++) {
 
         ExprEval evaluated = expr.eval(bindings.withIndex(i));
         if (elementType == null) {
           elementType = evaluated.type();
-          switch (elementType) {
+          switch (elementType.getType()) {
             case STRING:
               stringsOut = new String[length];
               break;
@@ -176,7 +176,7 @@ public interface ApplyFunction
         );
       }
 
-      switch (elementType) {
+      switch (elementType.getType()) {
         case STRING:
           return ExprEval.ofStringArray(stringsOut);
         case LONG:
@@ -336,7 +336,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
       // output type is accumulator type, which is last argument
       return args.get(args.size() - 1).getOutputType(inspector);
@@ -496,19 +496,16 @@ public interface ApplyFunction
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
-      switch (arrayEval.type()) {
+      switch (arrayEval.elementType().getType()) {
         case STRING:
-        case STRING_ARRAY:
           String[] filteredString =
               this.filter(arrayEval.asStringArray(), lambdaExpr, lambdaBinding).toArray(String[]::new);
           return ExprEval.ofStringArray(filteredString);
         case LONG:
-        case LONG_ARRAY:
           Long[] filteredLong =
               this.filter(arrayEval.asLongArray(), lambdaExpr, lambdaBinding).toArray(Long[]::new);
           return ExprEval.ofLongArray(filteredLong);
         case DOUBLE:
-        case DOUBLE_ARRAY:
           Double[] filteredDouble =
               this.filter(arrayEval.asDoubleArray(), lambdaExpr, lambdaBinding).toArray(Double[]::new);
           return ExprEval.ofDoubleArray(filteredDouble);
@@ -539,7 +536,7 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
       // output type is input array type
       return args.get(0).getOutputType(inspector);
@@ -594,9 +591,9 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, LambdaExpr expr, List<Expr> args)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     public abstract ExprEval match(Object[] values, LambdaExpr expr, SettableLambdaBinding bindings);
@@ -945,10 +942,10 @@ public interface ApplyFunction
 
     @Nullable
     @Override
-    public ExprType getType(String name)
+    public ExpressionType getType(String name)
     {
       if (lambdaIdentifiers.containsKey(name)) {
-        return ExprType.elementType(args.get(lambdaIdentifiers.getInt(name)).getOutputType(inspector));
+        return ExpressionType.elementType(args.get(lambdaIdentifiers.getInt(name)).getOutputType(inspector));
       }
       return inspector.getType(name);
     }

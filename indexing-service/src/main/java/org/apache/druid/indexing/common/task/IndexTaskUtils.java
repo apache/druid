@@ -56,28 +56,25 @@ public class IndexTaskUtils
   }
 
   /**
-   * Authorizes action to be performed on a task's datasource
+   * Authorizes WRITE action on a task's datasource
    *
-   * @return authorization result
+   * @throws ForbiddenException if not authorized
    */
-  public static Access datasourceAuthorizationCheck(
+  public static void authorizeRequestForDatasourceWrite(
       final HttpServletRequest req,
-      Action action,
       String datasource,
       AuthorizerMapper authorizerMapper
-  )
+  ) throws ForbiddenException
   {
     ResourceAction resourceAction = new ResourceAction(
         new Resource(datasource, ResourceType.DATASOURCE),
-        action
+        Action.WRITE
     );
 
     Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
     if (!access.isAllowed()) {
       throw new ForbiddenException(access.toString());
     }
-
-    return access;
   }
 
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final Task task)

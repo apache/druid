@@ -19,8 +19,10 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
@@ -29,8 +31,10 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 
 import javax.annotation.Nullable;
 
@@ -50,16 +54,19 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private final String url;
   private final int capacity;
   private final List<String> urls;
-  private final Map<String, ?> config;
-  private final Map<String, String> headers;
+  private final Map<String, Object> config;
+  private final Map<String, Object> headers;
+  private final ObjectMapper jsonMapper;
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
   public SchemaRegistryBasedProtobufBytesDecoder(
       @JsonProperty("url") @Deprecated String url,
       @JsonProperty("capacity") Integer capacity,
       @JsonProperty("urls") @Nullable List<String> urls,
-      @JsonProperty("config") @Nullable Map<String, ?> config,
-      @JsonProperty("headers") @Nullable Map<String, String> headers
+      @JsonProperty("config") @Nullable Map<String, Object> config,
+      @JsonProperty("headers") @Nullable Map<String, Object> headers,
+      @JacksonInject @Json ObjectMapper jsonMapper
   )
   {
     this.url = url;
@@ -67,10 +74,11 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.urls = urls;
     this.config = config;
     this.headers = headers;
+    this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
     } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), this.config, this.headers);
+      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
     }
   }
 
@@ -93,13 +101,13 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   }
 
   @JsonProperty
-  public Map<String, ?> getConfig()
+  public Map<String, Object> getConfig()
   {
     return config;
   }
 
   @JsonProperty
-  public Map<String, String> getHeaders()
+  public Map<String, Object> getHeaders()
   {
     return headers;
   }
@@ -119,6 +127,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.config = null;
     this.headers = null;
     this.registry = registry;
+    this.jsonMapper = new ObjectMapper();
   }
 
   @Override

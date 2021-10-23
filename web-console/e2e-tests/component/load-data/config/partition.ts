@@ -57,7 +57,11 @@ export class HashedPartitionsSpec implements PartitionsSpec {
   readonly type: string;
 
   static async read(page: playwright.Page): Promise<HashedPartitionsSpec> {
-    const numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
+    // The shards control may not be visible in that case this is not an error, it is simply not set (null)
+    let numShards: number | null = null;
+    try {
+      numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
+    } catch {}
     return new HashedPartitionsSpec({ numShards });
   }
 

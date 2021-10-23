@@ -66,7 +66,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
   {
     final Object[] vector = objectSupplier.get();
 
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN)
                                              .writableRegion(position, helper.getSize());
 
     final Union union = Union.writableWrap(mem);
@@ -84,7 +84,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN);
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final Object[] vector = objectSupplier.get();
 
     for (int i = 0; i < numRows; i++) {

@@ -37,6 +37,7 @@ export interface CoordinatorDynamicConfig {
   decommissioningNodes?: string[];
   decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
+  maxNonPrimaryReplicantsToLoad?: number;
 }
 
 export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[] = [
@@ -194,6 +195,19 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
+    name: 'useBatchedSegmentSampler',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of
+        size k instead of fixed size 1 to pick segments to move. This option can be enabled to speed
+        up segment balancing process, especially if there are huge number of segments in the cluster
+        or if there are too many segments to move.
+      </>
+    ),
+  },
+  {
     name: 'percentOfSegmentsToConsiderPerMove',
     type: 'number',
     defaultValue: 100,
@@ -231,6 +245,20 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         Boolean flag for whether or not additional replication is needed for segments that have
         failed to load due to the expiry of coordinator load timeout. If this is set to true, the
         coordinator will attempt to replicate the failed segment on a different historical server.
+      </>
+    ),
+  },
+  {
+    name: 'maxNonPrimaryReplicantsToLoad',
+    type: 'number',
+    defaultValue: 2147483647,
+    info: (
+      <>
+        The maximum number of non-primary replicants to load in a single Coordinator cycle. Once
+        this limit is hit, only primary replicants will be loaded for the remainder of the cycle.
+        Tuning this value lower can help reduce the delay in loading primary segments when the
+        cluster has a very large number of non-primary replicants to load (such as when a single
+        historical drops out of the cluster leaving many under-replicated segments).
       </>
     ),
   },

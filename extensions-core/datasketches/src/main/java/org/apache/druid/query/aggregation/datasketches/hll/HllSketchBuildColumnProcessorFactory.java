@@ -27,7 +27,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.function.Consumer;
@@ -46,9 +46,9 @@ public class HllSketchBuildColumnProcessorFactory implements ColumnProcessorFact
   }
 
   @Override
-  public ValueType defaultType()
+  public ColumnType defaultType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override

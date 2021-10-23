@@ -31,6 +31,9 @@ public class BrokerSegmentWatcherConfig
   private Set<String> watchedTiers = null;
 
   @JsonProperty
+  private Set<String> ignoredTiers = null;
+
+  @JsonProperty
   private Set<String> watchedDataSources = null;
 
   @JsonProperty
@@ -39,6 +42,11 @@ public class BrokerSegmentWatcherConfig
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
+  }
+
+  public Set<String> getIgnoredTiers()
+  {
+    return ignoredTiers;
   }
 
   public Set<String> getWatchedDataSources()

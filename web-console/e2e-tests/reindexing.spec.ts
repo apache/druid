@@ -128,15 +128,9 @@ function validateConnectLocalData(preview: string) {
       ',"namespace":"Talk"' +
       ',"page":"Talk:Oswald Tilghman"' +
       ',"user":"GELongstreet"' +
-      ',"added":"36"' +
-      ',"deleted":"0"' +
-      ',"delta":"36"' +
-      ',"cityName":null' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
-      ',"metroCode":null' +
+      ',"added":36' +
+      ',"deleted":0' +
+      ',"delta":36' +
       '}',
   );
   const lastLine = lines[lines.length - 1];
@@ -153,15 +147,9 @@ function validateConnectLocalData(preview: string) {
       ',"namespace":"Main"' +
       ',"page":"Hapoel Katamon Jerusalem F.C."' +
       ',"user":"The Quixotic Potato"' +
-      ',"added":"1"' +
-      ',"deleted":"0"' +
-      ',"delta":"1"' +
-      ',"cityName":null' +
-      ',"countryIsoCode":null' +
-      ',"countryName":null' +
-      ',"regionIsoCode":null' +
-      ',"regionName":null' +
-      ',"metroCode":null' +
+      ',"added":1' +
+      ',"deleted":0' +
+      ',"delta":1' +
       '}',
   );
 }

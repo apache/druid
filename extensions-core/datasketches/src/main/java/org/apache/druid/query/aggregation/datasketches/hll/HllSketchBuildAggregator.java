@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 
 import java.util.function.Consumer;
@@ -34,18 +36,15 @@ import java.util.function.Supplier;
 public class HllSketchBuildAggregator implements Aggregator
 {
   private final Consumer<Supplier<HllSketch>> processor;
-  private final StringEncoding stringEncoding;
   private HllSketch sketch;
 
   public HllSketchBuildAggregator(
       final Consumer<Supplier<HllSketch>> processor,
       final int lgK,
-      final TgtHllType tgtHllType,
-      final StringEncoding stringEncoding
+      final TgtHllType tgtHllType
   )
   {
     this.processor = processor;
-    this.stringEncoding = stringEncoding;
     this.sketch = new HllSketch(lgK, tgtHllType);
   }
 
@@ -55,7 +54,7 @@ public class HllSketchBuildAggregator implements Aggregator
    * See https://github.com/druid-io/druid/pull/3956
    */
   @Override
-  public void aggregate()
+  public synchronized void aggregate()
   {
     processor.accept(() -> sketch);
   }

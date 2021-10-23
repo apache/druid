@@ -20,13 +20,12 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
@@ -34,8 +33,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-
-import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -63,13 +60,10 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
   @Override
   public QueryRunner<ResultRow> mergeRunners(
-      final ExecutorService exec,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
-    // mergeRunners should take ListeningExecutorService at some point
-    final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
-
     return new QueryRunner<ResultRow>()
     {
       @Override
@@ -77,7 +71,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       {
         QueryRunner<ResultRow> rowQueryRunner = strategySelector
             .strategize((GroupByQuery) queryPlus.getQuery())
-            .mergeRunners(queryExecutor, queryRunners);
+            .mergeRunners(queryProcessingPool, queryRunners);
         return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
