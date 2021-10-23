@@ -131,7 +131,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
                                                     new LongSumAggregatorFactory("_a0:sum", "a0"),
-                                                    new CountAggregatorFactory("_a0:count")
+                                                    useDefault
+                                                    ? new CountAggregatorFactory("_a0:count")
+                                                    : new FilteredAggregatorFactory(
+                                                        new CountAggregatorFactory("_a0:count"),
+                                                        not(selector("a0", null, null))
+                                                    )
                                                 )
                                                 .setPostAggregatorSpecs(Collections.singletonList(new ArithmeticPostAggregator(
                                                     "_a0",
