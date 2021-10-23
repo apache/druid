@@ -466,12 +466,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
         if (majorVersionCompare == 0) {
-          for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
-            if (chunk.getObject().overshadows(object)) {
-              return true;
-            }
-          }
-          return false;
+          PartitionHolder<ObjectType> partitionHolder = entry.getPartitionHolder();
+          return partitionHolder.isMinorOvershadowed(
+              object.getStartRootPartitionId(),
+              object.getEndRootPartitionId(),
+              object.getMinorVersion()
+          );
         } else {
           return majorVersionCompare < 0;
         }
@@ -502,11 +502,10 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (versionCompare > 0) {
           return false;
         } else if (versionCompare == 0) {
-          // Intentionally use the Iterators API instead of the stream API for performance.
-          //noinspection ConstantConditions
-          final boolean nonOvershadowedObject = Iterators.all(
-              timelineEntry.partitionHolder.iterator(), chunk -> !chunk.getObject().overshadows(object)
-          );
+          PartitionHolder<ObjectType> partitionHolder = timelineEntry.getPartitionHolder();
+          final boolean nonOvershadowedObject = !partitionHolder.isMinorOvershadowed(object.getStartRootPartitionId(),
+                                                                                     object.getEndRootPartitionId(),
+                                                                                     object.getMinorVersion());
           if (nonOvershadowedObject) {
             return false;
           }

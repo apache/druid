@@ -119,6 +119,14 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     return overshadowableManager.getChunk(partitionNum);
   }
 
+  public boolean isMinorOvershadowed(int startRootPartitionId, int endRootPartitionId, short minorVersion)
+  {
+    return overshadowableManager.isOvershadowedByVisibleGroup(
+        OvershadowableManager.RootPartitionRange.of(startRootPartitionId, endRootPartitionId),
+        minorVersion
+    );
+  }
+
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
