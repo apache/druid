@@ -453,6 +453,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-opencensus-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.confluent.druid.extensions:confluent-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

@@ -229,6 +229,7 @@
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/opencensus-extensions</module>
         <module>extensions-contrib/confluent-extensions</module>
+        <module>extensions-contrib/opentelemetry-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
