@@ -43,8 +43,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -380,10 +380,10 @@ public class TimeseriesQueryQueryToolChestTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("rows", ValueType.LONG)
-                    .add("index", ValueType.DOUBLE)
+                    .add("rows", ColumnType.LONG)
+                    .add("index", ColumnType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", ValueType.LONG)
+                    .add("const", ColumnType.LONG)
                     .build(),
         TOOL_CHEST.resultArraySignature(query)
     );
@@ -406,11 +406,11 @@ public class TimeseriesQueryQueryToolChestTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add(TIMESTAMP_RESULT_FIELD_NAME, ValueType.LONG)
-                    .add("rows", ValueType.LONG)
-                    .add("index", ValueType.DOUBLE)
+                    .add(TIMESTAMP_RESULT_FIELD_NAME, ColumnType.LONG)
+                    .add("rows", ColumnType.LONG)
+                    .add("index", ColumnType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", ValueType.LONG)
+                    .add("const", ColumnType.LONG)
                     .build(),
         TOOL_CHEST.resultArraySignature(query)
     );

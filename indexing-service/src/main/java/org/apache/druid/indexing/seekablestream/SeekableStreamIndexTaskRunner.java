@@ -81,8 +81,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
@@ -265,7 +263,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, 0L));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -408,6 +406,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     Throwable caughtExceptionOuter = null;
+
+    //milliseconds waited for created segments to be handed off
+    long handoffWaitMs = 0L;
+
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
 
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
@@ -811,6 +813,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
+        final long start = System.nanoTime();
         try {
           handedOffList = Futures.allAsList(handOffWaitList)
                                  .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
@@ -822,6 +825,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              .addData("taskId", task.getId())
              .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
              .emit();
+        }
+        finally {
+          handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         }
       }
 
@@ -898,7 +904,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null));
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }
 
@@ -1060,9 +1066,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * was not successful.
    *
    * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -1072,7 +1079,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                handoffWaitMs
             )
         )
     );
@@ -1351,12 +1359,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
    */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
+  private void authorizeRequest(final HttpServletRequest req)
   {
-    return IndexTaskUtils.datasourceAuthorizationCheck(req, action, task.getDataSource(), authorizerMapper);
+    task.authorizeRequestForDatasourceWrite(req, authorizerMapper);
   }
 
   public Appenderator getAppenderator()
@@ -1433,7 +1439,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizeRequest(req);
     stopGracefully();
     return Response.status(Response.Status.OK).build();
   }
@@ -1443,7 +1449,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Status getStatusHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return status;
   }
 
@@ -1458,7 +1464,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return getCurrentOffsets();
   }
 
@@ -1472,7 +1478,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public Map<PartitionIdType, SequenceOffsetType> getEndOffsetsHTTP(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return getEndOffsets();
   }
 
@@ -1492,7 +1498,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizeRequest(req);
     return setEndOffsets(sequences, finish);
   }
 
@@ -1542,7 +1548,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return Response.ok(doGetRowStats()).build();
   }
 
@@ -1553,7 +1559,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return Response.ok(doGetLiveReports()).build();
   }
 
@@ -1565,7 +1571,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );
@@ -1716,7 +1722,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   )
   {
-    authorizationCheck(req, Action.READ);
+    authorizeRequest(req);
     return getCheckpoints();
   }
 
@@ -1743,7 +1749,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizeRequest(req);
     return pause();
   }
 
@@ -1798,7 +1804,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizeRequest(req);
     resume();
     return Response.status(Response.Status.OK).build();
   }
@@ -1831,7 +1837,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Produces(MediaType.APPLICATION_JSON)
   public DateTime getStartTime(@Context final HttpServletRequest req)
   {
-    authorizationCheck(req, Action.WRITE);
+    authorizeRequest(req);
     return startTime;
   }
 

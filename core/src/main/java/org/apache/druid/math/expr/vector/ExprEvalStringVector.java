@@ -21,7 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -70,9 +70,9 @@ public final class ExprEvalStringVector extends ExprEvalVector<String[]>
   }
 
   @Override
-  public ExprType getType()
+  public ExpressionType getType()
   {
-    return ExprType.STRING;
+    return ExpressionType.STRING;
   }
 
   @Override

@@ -79,14 +79,15 @@ public class HdfsClasspathSetupTest
     conf = new Configuration(true);
     localFS = new LocalFileSystem();
     localFS.initialize(hdfsTmpDir.toURI(), conf);
+    localFS.setWorkingDirectory(new Path(hdfsTmpDir.toURI()));
   }
 
   @Before
   public void setUp() throws IOException
   {
     // intermedatePath and finalClasspath are relative to hdfsTmpDir directory.
-    intermediatePath = new Path(StringUtils.format("/tmp/classpath/%s", UUIDUtils.generateUuid()));
-    finalClasspath = new Path(StringUtils.format("/tmp/intermediate/%s", UUIDUtils.generateUuid()));
+    intermediatePath = new Path(StringUtils.format("tmp/classpath/%s", UUIDUtils.generateUuid()));
+    finalClasspath = new Path(StringUtils.format("tmp/intermediate/%s", UUIDUtils.generateUuid()));
     dummyJarFile = tempFolder.newFile("dummy-test.jar");
     Files.copy(
         new ByteArrayInputStream(StringUtils.toUtf8(dummyJarString)),
@@ -116,7 +117,7 @@ public class HdfsClasspathSetupTest
   public void testAddSnapshotJarToClasspath() throws IOException
   {
     Job job = Job.getInstance(conf, "test-job");
-    Path intermediatePath = new Path("/tmp/classpath");
+    Path intermediatePath = new Path("tmp/classpath");
     JobHelper.addSnapshotJarToClassPath(dummyJarFile, intermediatePath, localFS, job);
     Path expectedJarPath = new Path(intermediatePath, dummyJarFile.getName());
     // check file gets uploaded to HDFS

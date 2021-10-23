@@ -154,6 +154,13 @@ export function oneOf<T>(thing: T, ...options: T[]): boolean {
   return options.includes(thing);
 }
 
+export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => {
+    if (x.type == null) return false;
+    return options.includes(x.type);
+  };
+}
+
 // ----------------------------
 
 export function countBy<T>(
@@ -225,11 +232,6 @@ export function uniq(array: readonly string[]): string[] {
       return true;
     }
   });
-}
-
-export function parseList(list: string): string[] {
-  if (!list) return [];
-  return list.split(',');
 }
 
 // ----------------------------
@@ -401,4 +403,8 @@ export function stringifyValue(value: unknown): string {
     default:
       return String(value);
   }
+}
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
 }

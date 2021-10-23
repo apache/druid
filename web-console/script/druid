@@ -59,7 +59,10 @@ function _build_distribution() {
     && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
     && cd distribution/target \
     && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
-    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> apache-druid-$(_get_druid_version)/conf/druid/single-server/micro-quickstart/_common/common.runtime.properties
+    && cd apache-druid-$(_get_druid_version) \
+    && java -classpath "lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions:druid-testing-tools \
+    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
   )
 }
 

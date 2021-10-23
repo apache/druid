@@ -70,8 +70,8 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
@@ -136,8 +136,8 @@ public class ClientQuerySegmentWalkerTest
           .build(),
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("s", ValueType.STRING)
-                  .add("n", ValueType.LONG)
+                  .add("s", ColumnType.STRING)
+                  .add("n", ColumnType.LONG)
                   .build()
   );
 
@@ -150,8 +150,8 @@ public class ClientQuerySegmentWalkerTest
           .build(),
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("s", ValueType.STRING)
-                  .add("n", ValueType.LONG)
+                  .add("s", ColumnType.STRING)
+                  .add("n", ColumnType.LONG)
                   .build()
   );
 
@@ -164,8 +164,8 @@ public class ClientQuerySegmentWalkerTest
           .build(),
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("s", ValueType.STRING)
-                  .add("n", ValueType.LONG)
+                  .add("s", ColumnType.STRING)
+                  .add("n", ColumnType.LONG)
                   .build()
   );
 
@@ -182,11 +182,11 @@ public class ClientQuerySegmentWalkerTest
       ARRAY_INLINE_ROWS,
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("s", ValueType.STRING)
-                  .add("n", ValueType.LONG)
-                  .add("ad", ValueType.DOUBLE_ARRAY)
-                  .add("al", ValueType.LONG_ARRAY)
-                  .add("as", ValueType.STRING_ARRAY)
+                  .add("s", ColumnType.STRING)
+                  .add("n", ColumnType.LONG)
+                  .add("ad", ColumnType.DOUBLE_ARRAY)
+                  .add("al", ColumnType.LONG_ARRAY)
+                  .add("as", ColumnType.STRING_ARRAY)
                   .build()
   );
 
@@ -195,8 +195,8 @@ public class ClientQuerySegmentWalkerTest
       ARRAY_INLINE_ROWS,
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("s", ValueType.STRING)
-                  .add("n", ValueType.LONG)
+                  .add("s", ColumnType.STRING)
+                  .add("n", ColumnType.LONG)
                   .add("ad", null)
                   .add("al", null)
                   .add("as", null)
@@ -351,7 +351,7 @@ public class ClientQuerySegmentWalkerTest
                 query.withDataSource(
                     InlineDataSource.fromIterable(
                         ImmutableList.of(new Object[]{"x"}, new Object[]{"y"}, new Object[]{"z"}),
-                        RowSignature.builder().add("s", ValueType.STRING).build()
+                        RowSignature.builder().add("s", ColumnType.STRING).build()
                     )
                 )
             )
@@ -521,7 +521,7 @@ public class ClientQuerySegmentWalkerTest
                             query.getDataSource().getChildren().get(0),
                             InlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
-                                RowSignature.builder().add("s", ValueType.STRING).build()
+                                RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
                         )
                     )
@@ -598,7 +598,7 @@ public class ClientQuerySegmentWalkerTest
                             unionDataSource.getChildren().get(0),
                             InlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
-                                RowSignature.builder().add("s", ValueType.STRING).build()
+                                RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
                         )
                     )
@@ -611,7 +611,7 @@ public class ClientQuerySegmentWalkerTest
                             unionDataSource.getChildren().get(1),
                             InlineDataSource.fromIterable(
                                 ImmutableList.of(new Object[]{"y"}),
-                                RowSignature.builder().add("s", ValueType.STRING).build()
+                                RowSignature.builder().add("s", ColumnType.STRING).build()
                             )
                         )
                     )
@@ -812,7 +812,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [DOUBLE_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]");
 
     testQuery(
         query,
@@ -834,7 +834,7 @@ public class ClientQuerySegmentWalkerTest
                                    .withId("queryId");
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,
@@ -869,7 +869,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [LONG_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<LONG>]");
 
     testQuery(
         query,
@@ -891,7 +891,7 @@ public class ClientQuerySegmentWalkerTest
                                    .withId("queryId");
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,
@@ -927,7 +927,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [STRING_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
 
     testQuery(
         query,
@@ -949,7 +949,7 @@ public class ClientQuerySegmentWalkerTest
                                    .withId("queryId");
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,
@@ -988,7 +988,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [DOUBLE_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]");
 
     testQuery(
         query,
@@ -1012,7 +1012,7 @@ public class ClientQuerySegmentWalkerTest
                                           .withId(UUID.randomUUID().toString());
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,
@@ -1049,7 +1049,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [LONG_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<LONG>]");
 
     testQuery(
         query,
@@ -1073,7 +1073,7 @@ public class ClientQuerySegmentWalkerTest
                                           .withId(UUID.randomUUID().toString());
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,
@@ -1111,7 +1111,7 @@ public class ClientQuerySegmentWalkerTest
 
     // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [STRING_ARRAY]");
+    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
 
     testQuery(
         query,
@@ -1135,7 +1135,7 @@ public class ClientQuerySegmentWalkerTest
                                           .withId(UUID.randomUUID().toString());
 
 
-    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // 'unknown' is treated as ColumnType.STRING. this might not always be the case, so this is a test case of wacky
     // behavior of sorts
     testQuery(
         query,

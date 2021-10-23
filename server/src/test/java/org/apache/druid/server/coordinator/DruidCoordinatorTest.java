@@ -52,6 +52,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -223,6 +226,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadManagementPeons,
         null,
         new HashSet<>(),
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
@@ -746,6 +750,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         null,
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
         null,
         null,
         null,
@@ -779,6 +784,129 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(thirdExec);
     Assert.assertFalse(secondExec == thirdExec);
     Assert.assertFalse(firstExec == thirdExec);
+  }
+
+  @Test(timeout = 3000)
+  public void testCoordinatorCustomDutyGroupsRunAsExpected() throws Exception
+  {
+    // Some nessesary setup to start the Coordinator
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(CoordinatorCompactionConfig.empty())).anyTimes();
+    EasyMock.replay(configManager);
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+    DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
+    DataSegment dataSegment = new DataSegment(
+        "dataSource1",
+        Intervals.of("2010-01-01/P1D"),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        0
+    );
+    dataSource.addSegment(dataSegment);
+    DataSourcesSnapshot dataSourcesSnapshot =
+        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+    EasyMock
+        .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
+        .andReturn(dataSourcesSnapshot)
+        .anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.replay(serverInventoryView);
+
+    // Create CoordinatorCustomDutyGroups
+    // We will have two groups and each group has one duty
+    CountDownLatch latch1 = new CountDownLatch(1);
+    CoordinatorCustomDuty duty1 = new CoordinatorCustomDuty() {
+      @Override
+      public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+      {
+        latch1.countDown();
+        return params;
+      }
+    };
+    CoordinatorCustomDutyGroup group1 = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(duty1));
+
+    CountDownLatch latch2 = new CountDownLatch(1);
+    CoordinatorCustomDuty duty2 = new CoordinatorCustomDuty() {
+      @Override
+      public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+      {
+        latch2.countDown();
+        return params;
+      }
+    };
+    CoordinatorCustomDutyGroup group2 = new CoordinatorCustomDutyGroup("group2", Duration.standardSeconds(1), ImmutableList.of(duty2));
+    CoordinatorCustomDutyGroups groups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group1, group2));
+
+    coordinator = new DruidCoordinator(
+        druidCoordinatorConfig,
+        new ZkPathsConfig()
+        {
+
+          @Override
+          public String getBase()
+          {
+            return "druid";
+          }
+        },
+        configManager,
+        segmentsMetadataManager,
+        serverInventoryView,
+        metadataRuleManager,
+        () -> curator,
+        serviceEmitter,
+        scheduledExecutorFactory,
+        null,
+        null,
+        new NoopServiceAnnouncer()
+        {
+          @Override
+          public void announce(DruidNode node)
+          {
+            // count down when this coordinator becomes the leader
+            leaderAnnouncerLatch.countDown();
+          }
+
+          @Override
+          public void unannounce(DruidNode node)
+          {
+            leaderUnannouncerLatch.countDown();
+          }
+        },
+        druidNode,
+        loadManagementPeons,
+        null,
+        new HashSet<>(),
+        groups,
+        new CostBalancerStrategyFactory(),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector(),
+        null,
+        ZkEnablementConfig.ENABLED
+    );
+    coordinator.start();
+
+    // Wait until group 1 duty ran for latch1 to countdown
+    latch1.await();
+    // Wait until group 2 duty ran for latch2 to countdown
+    latch2.await();
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,

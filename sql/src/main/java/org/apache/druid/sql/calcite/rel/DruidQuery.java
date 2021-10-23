@@ -69,7 +69,9 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -395,8 +397,8 @@ public class DruidQuery
       }
 
       final RelDataType dataType = rexNode.getType();
-      final ValueType outputType = Calcites.getValueTypeForRelDataType(dataType);
-      if (outputType == null || outputType == ValueType.COMPLEX) {
+      final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
         throw new CannotBuildQueryException(aggregate, rexNode);
       }

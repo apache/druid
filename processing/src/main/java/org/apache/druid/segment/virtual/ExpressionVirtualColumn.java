@@ -40,7 +40,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -57,7 +57,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private final String name;
   private final String expression;
   @Nullable
-  private final ValueType outputType;
+  private final ColumnType outputType;
   private final Supplier<Expr> parsedExpression;
   private final Supplier<byte[]> cacheKey;
 
@@ -65,7 +65,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("outputType") @Nullable ValueType outputType,
+      @JsonProperty("outputType") @Nullable ColumnType outputType,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -82,7 +82,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       String name,
       Expr parsedExpression,
-      ValueType outputType
+      ColumnType outputType
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
@@ -109,7 +109,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
   @Nullable
   @JsonProperty
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     return outputType;
   }
@@ -180,10 +180,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
     // array types must not currently escape from the expression system
     if (outputType != null && outputType.isArray()) {
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING).setHasMultipleValues(true);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
     }
 
-    return new ColumnCapabilitiesImpl().setType(outputType == null ? ValueType.FLOAT : outputType);
+    return new ColumnCapabilitiesImpl().setType(outputType == null ? ColumnType.FLOAT : outputType);
   }
 
   @Override
@@ -194,20 +194,20 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // if we can infer the column capabilities from the expression plan, then use that
     if (inferred != null) {
       // explicit outputType is used as a hint, how did it compare to the planners inferred output type?
-      if (inferred.getType() != outputType && outputType != null) {
+      if (outputType != null && inferred.getType() != outputType.getType()) {
         // if both sides are numeric, let it slide and log at debug level
         // but mismatches involving strings and arrays might be worth knowing about so warn
-        if (!inferred.getType().isNumeric() && !outputType.isNumeric()) {
+        if (!inferred.isNumeric() && !outputType.isNumeric()) {
           log.warn(
               "Projected output type %s of expression %s does not match provided type %s",
-              inferred.getType(),
+              inferred.asTypeString(),
               expression,
               outputType
           );
         } else {
           log.debug(
               "Projected output type %s of expression %s does not match provided type %s",
-              inferred.getType(),
+              inferred.asTypeString(),
               expression,
               outputType
           );
@@ -250,7 +250,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
            Objects.equals(expression, that.expression) &&
-           outputType == that.outputType;
+           Objects.equals(outputType, that.outputType);
   }
 
   @Override

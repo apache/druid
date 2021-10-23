@@ -36,6 +36,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -316,7 +317,11 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        if (QueryContexts.isDebug(baseQuery)) {
+          log.error(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        } else {
+          log.noStackTrace().error(e, "Exception while processing queryId [%s]", baseQuery.getId());
+        }
         if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
           // Mimic behavior from QueryResource, where this code was originally taken from.
           statsMap.put("interrupted", true);

@@ -126,7 +126,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 ### `doubleMean` aggregator
 
-Computes and returns arithmetic mean of a column values as 64 bit float value. `doubleMean` is a query time aggregator only. It is not available for indexing.
+Computes and returns the arithmetic mean of a column's values as a 64-bit floating point value. `doubleMean` is a query time aggregator only. It is not available for indexing.
 
 To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator](../development/extensions-core/datasketches-quantiles.md#aggregator) from the DataSketches extension.
 

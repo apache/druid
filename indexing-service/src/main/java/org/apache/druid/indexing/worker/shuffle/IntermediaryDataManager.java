@@ -21,12 +21,15 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.io.ByteSource;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.batch.parallel.PartitionStat;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 /**
@@ -43,6 +46,10 @@ import java.util.Optional;
 @ExtensionPoint
 public interface IntermediaryDataManager
 {
+  void start();
+
+  void stop();
+
   /**
    * Write a segment into one of configured locations
    *
@@ -51,9 +58,9 @@ public interface IntermediaryDataManager
    * @param segment - Segment to write
    * @param segmentDir - Directory of the segment to write
    *
-   * @return size of the writen segment
+   * @return the writen segment
    */
-  long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir) throws IOException;
+  DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir) throws IOException;
 
   /**
    * Find the partition file. Note that the returned ByteSource method size() should be fast.
@@ -74,4 +81,30 @@ public interface IntermediaryDataManager
    *
    */
   void deletePartitions(String supervisorTaskId) throws IOException;
+
+  PartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment);
+
+  default String getPartitionFilePath(
+      String supervisorTaskId,
+      String subTaskId,
+      Interval interval,
+      int bucketId
+  )
+  {
+    return Paths.get(getPartitionDirPath(supervisorTaskId, interval, bucketId), subTaskId).toString();
+  }
+
+  default String getPartitionDirPath(
+      String supervisorTaskId,
+      Interval interval,
+      int bucketId
+  )
+  {
+    return Paths.get(
+        supervisorTaskId,
+        interval.getStart().toString(),
+        interval.getEnd().toString(),
+        String.valueOf(bucketId)
+    ).toString();
+  }
 }

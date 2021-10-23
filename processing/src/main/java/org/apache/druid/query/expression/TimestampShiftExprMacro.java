@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.Chronology;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -115,9 +115,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -151,9 +151,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 }

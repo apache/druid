@@ -101,6 +101,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -1747,7 +1748,20 @@ public class CompactionTaskTest
     )
     {
       super(
-          new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+          new TaskConfig(
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null,
+              null,
+              false,
+              false,
+              TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+          ),
           null,
           taskActionClient,
           null,
@@ -1916,7 +1930,7 @@ public class CompactionTaskTest
 
   private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
-    return new TestColumn(dimensionSchema.getValueType());
+    return new TestColumn(dimensionSchema.getColumnType());
   }
 
   private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
@@ -1928,12 +1942,12 @@ public class CompactionTaskTest
   {
     private final ColumnCapabilities columnCapabilities;
 
-    TestColumn(ValueType type)
+    TestColumn(ColumnType type)
     {
       columnCapabilities = new ColumnCapabilitiesImpl()
           .setType(type)
-          .setDictionaryEncoded(type == ValueType.STRING) // set a fake value to make string columns
-          .setHasBitmapIndexes(type == ValueType.STRING)
+          .setDictionaryEncoded(type.is(ValueType.STRING)) // set a fake value to make string columns
+          .setHasBitmapIndexes(type.is(ValueType.STRING))
           .setHasSpatialIndexes(false)
           .setHasMultipleValues(false);
     }

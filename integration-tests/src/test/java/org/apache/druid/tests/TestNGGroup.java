@@ -155,4 +155,8 @@ public class TestNGGroup
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 
   public static final String HIGH_AVAILABILTY = "high-availability";
+
+  public static final String SHUFFLE_DEEP_STORE = "shuffle-deep-store";
+
+  public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
 }

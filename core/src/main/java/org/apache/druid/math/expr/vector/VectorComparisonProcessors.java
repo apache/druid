@@ -23,6 +23,8 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -41,20 +43,20 @@ public class VectorComparisonProcessors
       Supplier<DoubleOutDoublesInFunctionVectorProcessor> doubleOutDoublesInProcessor
   )
   {
-    final ExprType leftType = left.getOutputType(inspector);
-    final ExprType rightType = right.getOutputType(inspector);
+    final ExpressionType leftType = left.getOutputType(inspector);
+    final ExpressionType rightType = right.getOutputType(inspector);
     ExprVectorProcessor<?> processor = null;
-    if (leftType == ExprType.STRING) {
-      if (rightType == null || rightType == ExprType.STRING) {
+    if (Types.is(leftType, ExprType.STRING)) {
+      if (Types.isNullOr(rightType, ExprType.STRING)) {
         processor = longOutStringsInFunctionVectorProcessor.get();
       } else {
         processor = doubleOutDoublesInProcessor.get();
       }
     } else if (leftType == null) {
-      if (rightType == ExprType.STRING || rightType == null) {
+      if (Types.isNullOr(rightType, ExprType.STRING)) {
         processor = longOutStringsInFunctionVectorProcessor.get();
       }
-    } else if (leftType == ExprType.DOUBLE || rightType == ExprType.DOUBLE) {
+    } else if (leftType.is(ExprType.DOUBLE) || Types.is(rightType, ExprType.DOUBLE)) {
       processor = doubleOutDoublesInProcessor.get();
     }
     if (processor != null) {

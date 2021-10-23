@@ -58,6 +58,7 @@ public class DruidStatement implements Closeable
   private final String connectionId;
   private final int statementId;
   private final Map<String, Object> queryContext;
+  @GuardedBy("lock")
   private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
   private final Object lock = new Object();
@@ -261,14 +262,6 @@ public class DruidStatement implements Closeable
     }
   }
 
-  public RelDataType getRowType()
-  {
-    synchronized (lock) {
-      ensure(State.PREPARED, State.RUNNING, State.DONE);
-      return sqlLifecycle.rowType();
-    }
-  }
-
   public long getCurrentOffset()
   {
     synchronized (lock) {
@@ -348,7 +341,9 @@ public class DruidStatement implements Closeable
         // First close. Run the onClose function.
         try {
           onClose.run();
-          sqlLifecycle.emitLogsAndMetrics(t, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(t, null, -1);
+          }
         }
         catch (Throwable t1) {
           t.addSuppressed(t1);
@@ -362,7 +357,11 @@ public class DruidStatement implements Closeable
       // First close. Run the onClose function.
       try {
         if (!(this.throwable instanceof ForbiddenException)) {
-          sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
+          }
+        } else {
+          DruidMeta.logFailure(this.throwable);
         }
         onClose.run();
       }
@@ -391,6 +390,7 @@ public class DruidStatement implements Closeable
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
+    DruidMeta.logFailure(t);
     try {
       close();
     }

@@ -65,8 +65,14 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
+    return pushToPath(dataSegmentFile, segment, this.getStorageDir(segment, useUniquePath));
+  }
+
+  @Override
+  public DataSegment pushToPath(File dataSegmentFile, DataSegment segment, String storageDirSuffix) throws IOException
+  {
     final File baseStorageDir = config.getStorageDirectory();
-    final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
+    final File outDir = new File(baseStorageDir, storageDirSuffix);
 
     log.debug("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
 
@@ -81,7 +87,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
                     .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
     }
 
-    final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
+    final File tmpOutDir = new File(config.getStorageDirectory(), makeIntermediateDir());
     log.debug("Creating intermediate directory[%s] for segment[%s].", tmpOutDir.toString(), segment.getId());
     org.apache.commons.io.FileUtils.forceMkdir(tmpOutDir);
 
@@ -90,8 +96,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       final long size = compressSegment(dataSegmentFile, tmpIndexFile);
 
       final DataSegment dataSegment = segment.withLoadSpec(makeLoadSpec(new File(outDir, INDEX_FILENAME).toURI()))
-                                       .withSize(size)
-                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
+                                             .withSize(size)
+                                             .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
       org.apache.commons.io.FileUtils.forceMkdir(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());

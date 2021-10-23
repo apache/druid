@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.histogram.ApproximateHistogramAggregat
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -169,7 +170,7 @@ public class QuantileSqlAggregator implements SqlAggregator
 
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+      if (rowSignature.getColumnType(input.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
         aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
             histogramName,
             input.getDirectColumn(),
@@ -192,7 +193,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       }
     } else {
       final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, ValueType.FLOAT);
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, ColumnType.FLOAT);
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
           virtualColumn.getOutputName(),
