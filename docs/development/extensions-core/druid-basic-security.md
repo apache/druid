@@ -26,6 +26,7 @@ title: "Basic Security"
 The Basic Security extension for Apache Druid adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
+- an Escalator which determines the authentication scheme for internal Druid processes.
 - an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups.
 
 To load the extension, [include](../../development/extensions.md#loading-extensions) `druid-basic-security` in the `druid.extensions.loadList` in your `common.runtime.properties`. For example:
@@ -33,7 +34,10 @@ To load the extension, [include](../../development/extensions.md#loading-extensi
 druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage", "druid-basic-security"]
 ```
 
-See [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces.
+To enable basic auth, configure the basic Authenticator, Escalator, and Authorizer in `common.runtime.properties`.
+See [Security overview](../../operations/security-overview.html#enable-an-authenticator) for an example configuration for HTTP basic authentication.
+
+Visit [Authentication and Authorization](../../design/auth.md) for more information on the implemented extension interfaces and for an example configuration.
 
 ## Configuration
 
@@ -41,13 +45,14 @@ The examples in the section use the following names for the Authenticators and A
 - `MyBasicMetadataAuthenticator`
 - `MyBasicLDAPAuthenticator`
 - `MyBasicMetadataAuthorizer`
-- `MyBasicLDAPAuthorizer`.
+- `MyBasicLDAPAuthorizer`
 
 These properties are not tied to specific Authenticator or Authorizer instances.
 
 To set the value for the configuration properties, add them to the common runtime properties file.
 
-### Properties
+### General properties
+
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often processes should poll the Coordinator for the current Druid metadata store authenticator/authorizer state.|60000|No|
@@ -56,28 +61,37 @@ To set the value for the configuration properties, add them to the common runtim
 |`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer Druid metadata store caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.|null|No|
 
 
-### Creating an Authenticator that uses the Druid metadata store to lookup and validate credentials
-```
-druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
-
-druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
-druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword=password1
-druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
-druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
-druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
-druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
-```
+### Authenticator
 
 To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
 The default credentials validator (`credentialsValidator`) is `metadata`. To use the LDAP validator, define a credentials validator with a type of 'ldap'.
 
 
-Configuration of the named authenticator is assigned through properties with the form:
+Use the following syntax to configure a named authenticator:
 
 ```
 druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
 ```
 
+Example configuration of an authenticator that uses the Druid metadata store to look up and validate credentials:
+```
+# Druid basic security
+druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
+druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
+
+# Default password for 'admin' user, should be changed for production.
+druid.auth.authenticator.MyBasicMetadataAuthenticator.initialAdminPassword=password1
+
+# Default password for internal 'druid_system' user, should be changed for production.
+druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
+
+# Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
+druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
+
+# If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
+druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
+druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
+```
 The remaining examples of authenticator configuration use either `MyBasicMetadataAuthenticator` or `MyBasicLDAPAuthenticator` as the authenticator name.
 
 
@@ -94,12 +108,19 @@ The remaining examples of authenticator configuration use either `MyBasicMetadat
 |`druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName`|Authorizer that requests should be directed to|N/A|Yes|
 
 ##### Credential iterations and API performance
-The credential iterations setting affects API performance, including query times. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords, but it adds latency.
 
-You can decrease the number of iterations to speed up API response times, but it potentially exposes your system to dictionary attacks. Therefore, only reduce the number of iterations if your environment fits one of the following conditions:
+As noted above, `credentialIterations` determines the number of iterations used to hash a password. A higher number increases security, but costs more in terms of CPU utilization. 
+
+This cost affects API performance, including query times. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords.
+
+You can decrease the number of iterations to speed up API response times, but it may expose your system to dictionary attacks. Therefore, only reduce the number of iterations if your environment fits one of the following conditions:
 - **All** passwords are long and random which make them as safe as a randomly-generated token.
 - You have secured network access to Druid so that no attacker can execute a dictionary attack against it.
+
+If Druid uses the default credentials validator (i.e., `credentialsValidator.type=metadata`), changing the `credentialIterations` value affects the number of hashing iterations only for users created after the change or for users who subsequently update their passwords via the `/druid-ext/basic-security/authentication/db/basic/users/{userName}/credentials` endpoint. If Druid uses the `ldap` validator, the change applies to any user at next log in (as well as to new users or users who update their passwords).
+
 #### Properties for LDAP user authentication
+
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.md) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
@@ -120,8 +141,11 @@ You can decrease the number of iterations to speed up API response times, but it
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`|If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.|false|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.authorizerName`|Authorizer that requests should be directed to.|N/A|Yes|
 
-### Creating an Escalator
+### Escalator
 
+The Escalator determines the authentication scheme to use for internal Druid cluster communications, for example, when a Broker service communicates with a Historical service during query processing.
+
+Example configuration:
 ```
 # Escalator
 druid.escalator.type=basic
@@ -138,22 +162,24 @@ druid.escalator.authorizerName=MyBasicMetadataAuthorizer
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
 
 
-### Creating an Authorizer
-```
-druid.auth.authorizers=["MyBasicMetadataAuthorizer"]
-
-druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
-```
+### Authorizer
 
 To use the Basic authorizer, add an authorizer with type `basic` to the authorizers list.
 
-Configuration of the named authorizer is assigned through properties with the form:
+Use the following syntax to configure a named authorizer:
 
 ```
 druid.auth.authorizer.<authorizerName>.<authorizerProperty>
 ```
 
-The authorizer configuration examples in the rest of this document will use "MyBasicMetadataAuthorizer" or "MyBasicLDAPAuthorizer" as the name of the authenticators being configured.
+Example configuration:
+```
+# Authorizer
+druid.auth.authorizers=["MyBasicMetadataAuthorizer"]
+druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
+```
+
+The examples in the rest of this article use `MyBasicMetadataAuthorizer` or `MyBasicLDAPAuthorizer` as the authorizer name.
 
 #### Properties for Druid metadata store user authorization
 |Property|Description|Default|required|

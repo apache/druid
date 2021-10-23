@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -31,7 +32,7 @@ import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuf
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -40,6 +41,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -58,7 +60,7 @@ public class ShuffleResourceTest
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder();
 
-  private IntermediaryDataManager intermediaryDataManager;
+  private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;
   private ShuffleResource shuffleResource;
 
@@ -96,7 +98,9 @@ public class ShuffleResourceTest
         null,
         null,
         ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
-        false
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
     {
@@ -110,7 +114,7 @@ public class ShuffleResourceTest
         return result;
       }
     };
-    intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }
@@ -151,7 +155,7 @@ public class ShuffleResourceTest
     final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
-    Assert.assertEquals(134, snapshot.get(supervisorTaskId).getShuffleBytes());
+    Assert.assertEquals(254, snapshot.get(supervisorTaskId).getShuffleBytes());
   }
 
   @Test
@@ -190,6 +194,9 @@ public class ShuffleResourceTest
 
   private static DataSegment newSegment(Interval interval)
   {
+    BucketNumberedShardSpec<?> shardSpec = Mockito.mock(BucketNumberedShardSpec.class);
+    Mockito.when(shardSpec.getBucketId()).thenReturn(0);
+
     return new DataSegment(
         DATASOURCE,
         interval,
@@ -197,7 +204,7 @@ public class ShuffleResourceTest
         null,
         null,
         null,
-        new NumberedShardSpec(0, 0),
+        shardSpec,
         0,
         10
     );
@@ -208,6 +215,7 @@ public class ShuffleResourceTest
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
 }

@@ -32,6 +32,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -62,6 +63,12 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useGroupingSetForExactDistinct = false;
+
+  @JsonProperty
+  private boolean computeInnerJoinCostAsFilter = true;
+
+  @JsonProperty
+  private boolean authorizeSystemTablesDirectly = false;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -120,6 +127,16 @@ public class PlannerConfig
     return serializeComplexValues;
   }
 
+  public boolean isComputeInnerJoinCostAsFilter()
+  {
+    return computeInnerJoinCostAsFilter;
+  }
+
+  public boolean isAuthorizeSystemTablesDirectly()
+  {
+    return authorizeSystemTablesDirectly;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -144,12 +161,18 @@ public class PlannerConfig
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
+    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
+        context,
+        CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
+    newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
   }
 

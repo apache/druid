@@ -49,16 +49,19 @@ public class MetadataStorageConnectorConfig
   @JsonProperty("dbcp")
   private Properties dbcpProperties;
 
+  @JsonProperty
   public boolean isCreateTables()
   {
     return createTables;
   }
 
+  @JsonProperty
   public String getHost()
   {
     return host;
   }
 
+  @JsonProperty
   public int getPort()
   {
     return port;
@@ -73,16 +76,19 @@ public class MetadataStorageConnectorConfig
     return connectURI;
   }
 
+  @JsonProperty
   public String getUser()
   {
     return user;
   }
 
+  @JsonProperty
   public String getPassword()
   {
     return passwordProvider == null ? null : passwordProvider.getPassword();
   }
 
+  @JsonProperty("dbcp")
   public Properties getDbcpProperties()
   {
     return dbcpProperties;
@@ -132,6 +138,7 @@ public class MetadataStorageConnectorConfig
         : !getDbcpProperties().equals(that.getDbcpProperties())) {
       return false;
     }
+
     return passwordProvider != null ? passwordProvider.equals(that.passwordProvider) : that.passwordProvider == null;
 
   }

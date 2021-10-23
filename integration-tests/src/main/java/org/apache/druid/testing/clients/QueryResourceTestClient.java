@@ -23,7 +23,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.Query;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -56,15 +55,6 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
   )
   {
     super(jsonMapper, smileMapper, httpClient, routerUrl, contentType, accept);
-  }
-
-  @Override
-  public String getBrokerURL()
-  {
-    return StringUtils.format(
-        "%s/druid/v2/",
-        routerUrl
-    );
   }
 
   /**

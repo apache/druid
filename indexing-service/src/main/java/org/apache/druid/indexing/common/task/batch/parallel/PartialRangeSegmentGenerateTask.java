@@ -34,7 +34,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartit
 import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 
@@ -56,6 +55,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private static final boolean SKIP_NULL = true;
 
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final Map<Interval, PartitionBoundaries> intervalToPartitions;
@@ -67,6 +67,8 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
       @JsonProperty("groupId") String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("supervisorTaskId") String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
@@ -83,6 +85,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema), !SKIP_NULL)
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -124,6 +127,13 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
+  }
+
+  @JsonProperty
   public Map<Interval, PartitionBoundaries> getIntervalToPartitions()
   {
     return intervalToPartitions;
@@ -155,7 +165,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     return SegmentAllocators.forNonLinearPartitioning(
         toolbox,
         getDataSource(),
-        getId(),
+        getSubtaskSpecId(),
         ingestionSchema.getDataSchema().getGranularitySpec(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         partitionAnalysis
@@ -165,22 +175,9 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   @Override
   GeneratedPartitionsMetadataReport createGeneratedPartitionsReport(TaskToolbox toolbox, List<DataSegment> segments)
   {
-    List<GenericPartitionStat> partitionStats = segments.stream()
-                                                        .map(segment -> createPartitionStat(toolbox, segment))
+    List<PartitionStat> partitionStats = segments.stream()
+                                                        .map(segment -> toolbox.getIntermediaryDataManager().generatePartitionStat(toolbox, segment))
                                                         .collect(Collectors.toList());
     return new GeneratedPartitionsMetadataReport(getId(), partitionStats);
-  }
-
-  private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)
-  {
-    return new GenericPartitionStat(
-        toolbox.getTaskExecutorNode().getHost(),
-        toolbox.getTaskExecutorNode().getPortToUse(),
-        toolbox.getTaskExecutorNode().isEnableTlsPort(),
-        segment.getInterval(),
-        (BucketNumberedShardSpec) segment.getShardSpec(),
-        null, // numRows is not supported yet
-        null  // sizeBytes is not supported yet
-    );
   }
 }

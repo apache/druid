@@ -422,6 +422,7 @@ exports[`tasks view matches snapshot 1`] = `
             },
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Group ID",
               "accessor": "group_id",
               "show": true,
@@ -597,6 +598,7 @@ exports[`tasks view matches snapshot 1`] = `
     icon="error"
     intent="primary"
     isOpen={false}
+    loading={false}
     onConfirm={[Function]}
   >
     <p />

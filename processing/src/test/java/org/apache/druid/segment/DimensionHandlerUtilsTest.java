@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class DimensionHandlerUtilsTest
 
     DimensionHandler dimensionHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
         "dim",
-        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX).setComplexTypeName("testType"),
+        new ColumnCapabilitiesImpl().setType(new ColumnType(ValueType.COMPLEX, "testType", null)),
         null
     );
 

@@ -28,14 +28,17 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -54,6 +57,7 @@ public class PlannerContext
   public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // This context parameter is an undocumented parameter, used internally, to allow the web console to
   // apply a limit without having to rewrite the SQL query.
@@ -66,9 +70,11 @@ public class PlannerContext
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
+  private final DruidSchemaCatalog rootSchema;
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
-  private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  private final boolean stringifyArrays;
+  private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
@@ -83,14 +89,18 @@ public class PlannerContext
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
+      final boolean stringifyArrays,
+      final DruidSchemaCatalog rootSchema,
       final Map<String, Object> queryContext
   )
   {
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
+    this.rootSchema = rootSchema;
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
+    this.stringifyArrays = stringifyArrays;
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -104,13 +114,16 @@ public class PlannerContext
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
+      final DruidSchemaCatalog rootSchema,
       final Map<String, Object> queryContext
   )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
+    final boolean stringifyArrays;
 
     if (queryContext != null) {
+      final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
       final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
       final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -125,9 +138,16 @@ public class PlannerContext
       } else {
         timeZone = plannerConfig.getSqlTimeZone();
       }
+
+      if (stringifyParam != null) {
+        stringifyArrays = Numbers.parseBoolean(stringifyParam);
+      } else {
+        stringifyArrays = true;
+      }
     } else {
       utcNow = new DateTime(DateTimeZone.UTC);
       timeZone = plannerConfig.getSqlTimeZone();
+      stringifyArrays = true;
     }
 
     return new PlannerContext(
@@ -135,6 +155,8 @@ public class PlannerContext
         macroTable,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
+        stringifyArrays,
+        rootSchema,
         queryContext
     );
   }
@@ -164,9 +186,20 @@ public class PlannerContext
     return localNow.getZone();
   }
 
+  @Nullable
+  public String getSchemaResourceType(String schema, String resourceName)
+  {
+    return rootSchema.getResourceType(schema, resourceName);
+  }
+
   public Map<String, Object> getQueryContext()
   {
     return queryContext;
+  }
+
+  public boolean isStringifyArrays()
+  {
+    return stringifyArrays;
   }
 
   public List<TypedValue> getParameters()
@@ -184,7 +217,7 @@ public class PlannerContext
     return sqlQueryId;
   }
 
-  public List<String> getNativeQueryIds()
+  public CopyOnWriteArrayList<String> getNativeQueryIds()
   {
     return nativeQueryIds;
   }

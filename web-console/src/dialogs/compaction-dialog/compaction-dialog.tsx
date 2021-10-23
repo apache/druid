@@ -42,12 +42,10 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
       tuningConfig: { partitionsSpec: { type: 'dynamic' } },
     },
   );
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const issueWithCurrentConfig = AutoForm.issueWithModel(currentConfig, COMPACTION_CONFIG_FIELDS);
-  function handleSubmit() {
-    if (issueWithCurrentConfig) return;
-    onSave(currentConfig);
-  }
+  const disableSubmit = Boolean(jsonError || issueWithCurrentConfig);
 
   return (
     <Dialog
@@ -68,7 +66,11 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
         ) : (
           <JsonInput
             value={currentConfig}
-            onChange={setCurrentConfig}
+            onChange={v => {
+              setCurrentConfig(v);
+              setJsonError(undefined);
+            }}
+            onError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, COMPACTION_CONFIG_FIELDS)}
             height="100%"
           />
@@ -81,8 +83,8 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
           <Button
             text="Submit"
             intent={Intent.PRIMARY}
-            onClick={handleSubmit}
-            disabled={Boolean(issueWithCurrentConfig)}
+            disabled={disableSubmit}
+            onClick={() => onSave(currentConfig)}
           />
         </div>
       </div>

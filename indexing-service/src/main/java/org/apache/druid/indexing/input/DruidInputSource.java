@@ -42,7 +42,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
@@ -52,7 +52,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -129,7 +129,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   private final DimFilter dimFilter;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
-  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final RetryPolicyFactory retryPolicyFactory;
   private final TaskConfig taskConfig;
 
@@ -155,7 +155,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @Nullable @JsonProperty("metrics") List<String> metrics,
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
-      @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
       @JacksonInject RetryPolicyFactory retryPolicyFactory,
       @JacksonInject TaskConfig taskConfig
   )
@@ -172,7 +172,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.metrics = metrics;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
-    this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
+    this.segmentCacheManagerFactory = Preconditions.checkNotNull(segmentCacheManagerFactory, "null segmentCacheManagerFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
     this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
   }
@@ -224,7 +224,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
-    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(temporaryDirectory);
 
     final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline();
     final Iterator<DruidSegmentInputEntity> entityIterator = FluentIterable
@@ -235,7 +235,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           //noinspection ConstantConditions
           return FluentIterable
               .from(partitionHolder)
-              .transform(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
+              .transform(chunk -> new DruidSegmentInputEntity(segmentCacheManager, chunk.getObject(), holder.getInterval()));
         }).iterator();
 
     final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
@@ -339,7 +339,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         metrics,
         indexIO,
         coordinatorClient,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         retryPolicyFactory,
         taskConfig
     );

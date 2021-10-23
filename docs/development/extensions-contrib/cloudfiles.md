@@ -23,7 +23,7 @@ title: "Rackspace Cloud Files"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-cloudfiles-extensions` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-cloudfiles-extensions` in the extensions load list.
 
 ## Deep Storage
 

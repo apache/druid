@@ -21,6 +21,8 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
@@ -61,7 +63,9 @@ public class ServerConfig
       int inflateBufferSize,
       int compressionLevel,
       boolean enableForwardedRequestCustomizer,
-      @NotNull List<String> allowedHttpMethods
+      @NotNull List<String> allowedHttpMethods,
+      boolean showDetailedJettyErrors,
+      ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
     this.numThreads = numThreads;
@@ -79,6 +83,8 @@ public class ServerConfig
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
+    this.showDetailedJettyErrors = showDetailedJettyErrors;
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   public ServerConfig()
@@ -144,6 +150,13 @@ public class ServerConfig
   @JsonProperty
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
+
+  @JsonProperty("errorResponseTransform")
+  @NotNull
+  private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
+
+  @JsonProperty
+  private boolean showDetailedJettyErrors = true;
 
   public int getNumThreads()
   {
@@ -215,6 +228,16 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  public boolean isShowDetailedJettyErrors()
+  {
+    return showDetailedJettyErrors;
+  }
+
+  public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+  {
+    return errorResponseTransformStrategy;
+  }
+
   @NotNull
   public List<String> getAllowedHttpMethods()
   {
@@ -235,17 +258,19 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           showDetailedJettyErrors == that.showDetailedJettyErrors &&
            maxIdleTime.equals(that.maxIdleTime) &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
-           allowedHttpMethods.equals(that.allowedHttpMethods);
+           allowedHttpMethods.equals(that.allowedHttpMethods) &&
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy);
   }
 
   @Override
@@ -266,7 +291,9 @@ public class ServerConfig
         inflateBufferSize,
         compressionLevel,
         enableForwardedRequestCustomizer,
-        allowedHttpMethods
+        allowedHttpMethods,
+        errorResponseTransformStrategy,
+        showDetailedJettyErrors
     );
   }
 
@@ -288,7 +315,9 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
-           ", allowedMethods=" + allowedHttpMethods +
+           ", allowedHttpMethods=" + allowedHttpMethods +
+           ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
+           ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            '}';
   }
 

@@ -47,6 +47,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -105,9 +106,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
       final String dimension = schema.getName();
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-      final boolean isString = schema.getValueType().name().equals(ValueType.STRING.name());
+      final boolean isString = schema.getColumnType().is(ValueType.STRING);
 
-      Assert.assertEquals(dimension, schema.getValueType().name(), columnAnalysis.getType());
+      Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
       Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
       if (isString) {
         if (analyses == null) {
@@ -166,8 +167,8 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       if ("null_column".equals(dimension)) {
         Assert.assertNull(columnAnalysis);
       } else {
-        final boolean isString = schema.getValueType().name().equals(ValueType.STRING.name());
-        Assert.assertEquals(dimension, schema.getValueType().name(), columnAnalysis.getType());
+        final boolean isString = schema.getColumnType().is(ValueType.STRING);
+        Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
         Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
 
         if (isString) {
@@ -415,15 +416,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ValueType getType()
+    public ColumnType getType()
     {
-      return ValueType.COMPLEX;
-    }
-
-    @Override
-    public String getComplexTypeName()
-    {
-      return TYPE;
+      return new ColumnType(ValueType.COMPLEX, TYPE, null);
     }
 
     @Override
@@ -439,7 +434,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ValueType getFinalizedType()
+    public ColumnType getFinalizedType()
     {
       return getType();
     }

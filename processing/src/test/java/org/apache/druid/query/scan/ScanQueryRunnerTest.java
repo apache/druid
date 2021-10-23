@@ -56,7 +56,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -82,7 +82,7 @@ import java.util.Set;
 public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final VirtualColumn EXPR_COLUMN =
-      new ExpressionVirtualColumn("expr", "index * 2", ValueType.LONG, TestExprMacroTable.INSTANCE);
+      new ExpressionVirtualColumn("expr", "index * 2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
 
   // Read the first set of 12 lines from the sample data, which covers the day 2011-01-12T00:00:00.000Z
   public static final String[] V_0112 = readLinesFromSample(0, 13).toArray(new String[0]);

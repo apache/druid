@@ -25,6 +25,7 @@ volumes:
   broker_var: {}
   coordinator_var: {}
   router_var: {}
+  druid_shared: {}
 
 
 services:
@@ -51,7 +52,7 @@ services:
     image: apache/druid:0.22.0
     container_name: coordinator
     volumes:
-      - ./storage:/opt/data
+      - druid_shared:/opt/shared
       - coordinator_var:/opt/druid/var
     depends_on: 
       - zookeeper
@@ -83,7 +84,7 @@ services:
     image: apache/druid:0.22.0
     container_name: historical
     volumes:
-      - ./storage:/opt/data
+      - druid_shared:/opt/shared
       - historical_var:/opt/druid/var
     depends_on: 
       - zookeeper
@@ -100,7 +101,7 @@ services:
     image: apache/druid:0.22.0
     container_name: middlemanager
     volumes:
-      - ./storage:/opt/data
+      - druid_shared:/opt/shared
       - middle_var:/opt/druid/var
     depends_on: 
       - zookeeper

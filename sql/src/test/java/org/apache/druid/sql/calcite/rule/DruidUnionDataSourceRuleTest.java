@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
@@ -47,8 +47,8 @@ public class DruidUnionDataSourceRuleTest
       new TableDataSource("foo"),
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("col1", ValueType.STRING)
-                  .add("col2", ValueType.LONG)
+                  .add("col1", ColumnType.STRING)
+                  .add("col2", ColumnType.LONG)
                   .build(),
       false,
       false

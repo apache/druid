@@ -73,7 +73,6 @@ public class KinesisIndexTaskSerdeTest
       null,
       null,
       null,
-      null,
       null
   );
   private static final KinesisIndexTaskIOConfig IO_CONFIG = new KinesisIndexTaskIOConfig(

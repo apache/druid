@@ -63,7 +63,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
   protected void setUp() throws Exception
   {
     SerializingTranscoder transcoder = new SerializingTranscoder(
-        50 * 1024 * 1024 // 50 MB
+        50 * 1024 * 1024 // 50 MiB
     );
     // disable compression
     transcoder.setCompressionThreshold(Integer.MAX_VALUE);

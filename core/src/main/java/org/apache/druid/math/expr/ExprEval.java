@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -46,9 +47,18 @@ public abstract class ExprEval<T>
    */
   public static ExprEval deserialize(ByteBuffer buffer, int position)
   {
-    // | expression type (byte) | expression bytes |
-    ExprType type = ExprType.fromByte(buffer.get(position));
-    int offset = position + 1;
+    final ExprType type = ExprType.fromByte(buffer.get(position));
+    return deserialize(buffer, position + 1, type);
+  }
+
+  /**
+   * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
+   *
+   * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
+   */
+  public static ExprEval deserialize(ByteBuffer buffer, int offset, ExprType type)
+  {
+    // | expression bytes |
     switch (type) {
       case LONG:
         // | expression type (byte) | is null (byte) | long bytes |
@@ -74,76 +84,82 @@ public abstract class ExprEval<T>
         buffer.get(stringBytes, 0, length);
         buffer.position(oldPosition);
         return of(StringUtils.fromUtf8(stringBytes));
-      case LONG_ARRAY:
-        // | expression type (byte) | array length (int) | array bytes |
-        final int longArrayLength = buffer.getInt(offset);
-        offset += Integer.BYTES;
-        if (longArrayLength < 0) {
-          return ofLongArray(null);
+      case ARRAY:
+        final ExprType elementType = ExprType.fromByte(buffer.get(offset++));
+        switch (elementType) {
+          case LONG:
+            // | expression type (byte) | array element type (byte) | array length (int) | array bytes |
+            final int longArrayLength = buffer.getInt(offset);
+            offset += Integer.BYTES;
+            if (longArrayLength < 0) {
+              return ofLongArray(null);
+            }
+            final Long[] longs = new Long[longArrayLength];
+            for (int i = 0; i < longArrayLength; i++) {
+              final byte isNull = buffer.get(offset);
+              offset += Byte.BYTES;
+              if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
+                // | is null (byte) | long bytes |
+                longs[i] = buffer.getLong(offset);
+                offset += Long.BYTES;
+              } else {
+                // | is null (byte) |
+                longs[i] = null;
+              }
+            }
+            return ofLongArray(longs);
+          case DOUBLE:
+            // | expression type (byte) | array element type (byte) | array length (int) | array bytes |
+            final int doubleArrayLength = buffer.getInt(offset);
+            offset += Integer.BYTES;
+            if (doubleArrayLength < 0) {
+              return ofDoubleArray(null);
+            }
+            final Double[] doubles = new Double[doubleArrayLength];
+            for (int i = 0; i < doubleArrayLength; i++) {
+              final byte isNull = buffer.get(offset);
+              offset += Byte.BYTES;
+              if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
+                // | is null (byte) | double bytes |
+                doubles[i] = buffer.getDouble(offset);
+                offset += Double.BYTES;
+              } else {
+                // | is null (byte) |
+                doubles[i] = null;
+              }
+            }
+            return ofDoubleArray(doubles);
+          case STRING:
+            // | expression type (byte) | array element type (byte) | array length (int) | array bytes |
+            final int stringArrayLength = buffer.getInt(offset);
+            offset += Integer.BYTES;
+            if (stringArrayLength < 0) {
+              return ofStringArray(null);
+            }
+            final String[] stringArray = new String[stringArrayLength];
+            for (int i = 0; i < stringArrayLength; i++) {
+              final int stringElementLength = buffer.getInt(offset);
+              offset += Integer.BYTES;
+              if (stringElementLength < 0) {
+                // | string length (int) |
+                stringArray[i] = null;
+              } else {
+                // | string length (int) | string bytes |
+                final byte[] stringElementBytes = new byte[stringElementLength];
+                final int oldPosition2 = buffer.position();
+                buffer.position(offset);
+                buffer.get(stringElementBytes, 0, stringElementLength);
+                buffer.position(oldPosition2);
+                stringArray[i] = StringUtils.fromUtf8(stringElementBytes);
+                offset += stringElementLength;
+              }
+            }
+            return ofStringArray(stringArray);
+          default:
+            throw new UOE("Cannot deserialize expression array of type %s", elementType);
         }
-        final Long[] longs = new Long[longArrayLength];
-        for (int i = 0; i < longArrayLength; i++) {
-          final byte isNull = buffer.get(offset);
-          offset += Byte.BYTES;
-          if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
-            // | is null (byte) | long bytes |
-            longs[i] = buffer.getLong(offset);
-            offset += Long.BYTES;
-          } else {
-            // | is null (byte) |
-            longs[i] = null;
-          }
-        }
-        return ofLongArray(longs);
-      case DOUBLE_ARRAY:
-        // | expression type (byte) | array length (int) | array bytes |
-        final int doubleArrayLength = buffer.getInt(offset);
-        offset += Integer.BYTES;
-        if (doubleArrayLength < 0) {
-          return ofDoubleArray(null);
-        }
-        final Double[] doubles = new Double[doubleArrayLength];
-        for (int i = 0; i < doubleArrayLength; i++) {
-          final byte isNull = buffer.get(offset);
-          offset += Byte.BYTES;
-          if (isNull == NullHandling.IS_NOT_NULL_BYTE) {
-            // | is null (byte) | double bytes |
-            doubles[i] = buffer.getDouble(offset);
-            offset += Double.BYTES;
-          } else {
-            // | is null (byte) |
-            doubles[i] = null;
-          }
-        }
-        return ofDoubleArray(doubles);
-      case STRING_ARRAY:
-        // | expression type (byte) | array length (int) | array bytes |
-        final int stringArrayLength = buffer.getInt(offset);
-        offset += Integer.BYTES;
-        if (stringArrayLength < 0) {
-          return ofStringArray(null);
-        }
-        final String[] stringArray = new String[stringArrayLength];
-        for (int i = 0; i < stringArrayLength; i++) {
-          final int stringElementLength = buffer.getInt(offset);
-          offset += Integer.BYTES;
-          if (stringElementLength < 0) {
-            // | string length (int) |
-            stringArray[i] = null;
-          } else {
-            // | string length (int) | string bytes |
-            final byte[] stringElementBytes = new byte[stringElementLength];
-            final int oldPosition2 = buffer.position();
-            buffer.position(offset);
-            buffer.get(stringElementBytes, 0, stringElementLength);
-            buffer.position(oldPosition2);
-            stringArray[i] = StringUtils.fromUtf8(stringElementBytes);
-            offset += stringElementLength;
-          }
-        }
-        return ofStringArray(stringArray);
       default:
-        throw new UOE("how can this be?");
+        throw new UOE("Cannot deserialize expression type %s", type);
     }
   }
 
@@ -157,8 +173,8 @@ public abstract class ExprEval<T>
   public static void serialize(ByteBuffer buffer, int position, ExprEval<?> eval, int maxSizeBytes)
   {
     int offset = position;
-    buffer.put(offset++, eval.type().getId());
-    switch (eval.type()) {
+    buffer.put(offset++, eval.type().getType().getId());
+    switch (eval.type().getType()) {
       case LONG:
         if (eval.isNumericNull()) {
           buffer.put(offset, NullHandling.IS_NULL_BYTE);
@@ -191,99 +207,172 @@ public abstract class ExprEval<T>
           buffer.putInt(offset, NULL_LENGTH);
         }
         break;
-      case LONG_ARRAY:
-        Long[] longs = eval.asLongArray();
-        if (longs == null) {
-          // | expression type (byte) | array length (int) |
-          checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, NULL_LENGTH);
-        } else {
-          // | expression type (byte) | array length (int) | array bytes |
-          final int sizeBytes = 1 + Integer.BYTES + (Long.BYTES * longs.length);
-          checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
-          buffer.putInt(offset, longs.length);
-          offset += Integer.BYTES;
-          for (Long aLong : longs) {
-            if (aLong != null) {
-              buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-              offset++;
-              buffer.putLong(offset, aLong);
-              offset += Long.BYTES;
-            } else {
-              buffer.put(offset++, NullHandling.IS_NULL_BYTE);
-            }
-          }
-        }
-        break;
-      case DOUBLE_ARRAY:
-        Double[] doubles = eval.asDoubleArray();
-        if (doubles == null) {
-          // | expression type (byte) | array length (int) |
-          checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, NULL_LENGTH);
-        } else {
-          // | expression type (byte) | array length (int) | array bytes |
-          final int sizeBytes = 1 + Integer.BYTES + (Double.BYTES * doubles.length);
-          checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
-          buffer.putInt(offset, doubles.length);
-          offset += Integer.BYTES;
-
-          for (Double aDouble : doubles) {
-            if (aDouble != null) {
-              buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-              offset++;
-              buffer.putDouble(offset, aDouble);
-              offset += Long.BYTES;
-            } else {
-              buffer.put(offset++, NullHandling.IS_NULL_BYTE);
-            }
-          }
-        }
-        break;
-      case STRING_ARRAY:
-        String[] strings = eval.asStringArray();
-        if (strings == null) {
-          // | expression type (byte) | array length (int) |
-          checkMaxBytes(eval.type(), 1 + Integer.BYTES, maxSizeBytes);
-          buffer.putInt(offset, NULL_LENGTH);
-        } else {
-          // | expression type (byte) | array length (int) | array bytes |
-          buffer.putInt(offset, strings.length);
-          offset += Integer.BYTES;
-          int sizeBytes = 1 + Integer.BYTES;
-          for (String string : strings) {
-            if (string == null) {
-              // | string length (int) |
-              sizeBytes += Integer.BYTES;
-              checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
+      case ARRAY:
+        // | expression type (byte) | array type (byte) | array length (int) | array bytes |
+        buffer.put(offset++, eval.type().getElementType().getType().getId());
+        switch (eval.type().getElementType().getType()) {
+          case LONG:
+            Long[] longs = eval.asLongArray();
+            if (longs == null) {
+              // | expression type (byte) | array type (byte) | array length (int) |
+              checkMaxBytes(eval.type(), 2 + Integer.BYTES, maxSizeBytes);
               buffer.putInt(offset, NULL_LENGTH);
-              offset += Integer.BYTES;
             } else {
-              // | string length (int) | string bytes |
-              final byte[] stringElementBytes = StringUtils.toUtf8(string);
-              sizeBytes += Integer.BYTES + stringElementBytes.length;
+              // | expression type (byte) | array type (byte) | array length (int) | array bytes |
+              final int sizeBytes = 2 + Integer.BYTES + (Long.BYTES * longs.length);
               checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
-              buffer.putInt(offset, stringElementBytes.length);
+              buffer.putInt(offset, longs.length);
               offset += Integer.BYTES;
-              final int oldPosition = buffer.position();
-              buffer.position(offset);
-              buffer.put(stringElementBytes, 0, stringElementBytes.length);
-              buffer.position(oldPosition);
-              offset += stringElementBytes.length;
+              for (Long aLong : longs) {
+                if (aLong != null) {
+                  buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+                  offset++;
+                  buffer.putLong(offset, aLong);
+                  offset += Long.BYTES;
+                } else {
+                  buffer.put(offset++, NullHandling.IS_NULL_BYTE);
+                }
+              }
             }
-          }
+            break;
+          case DOUBLE:
+            Double[] doubles = eval.asDoubleArray();
+            if (doubles == null) {
+              // | expression type (byte) | array type (byte) | array length (int) |
+              checkMaxBytes(eval.type(), 2 + Integer.BYTES, maxSizeBytes);
+              buffer.putInt(offset, NULL_LENGTH);
+            } else {
+              // | expression type (byte) | array type (byte) | array length (int) | array bytes |
+              final int sizeBytes = 2 + Integer.BYTES + (Double.BYTES * doubles.length);
+              checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
+              buffer.putInt(offset, doubles.length);
+              offset += Integer.BYTES;
+
+              for (Double aDouble : doubles) {
+                if (aDouble != null) {
+                  buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+                  offset++;
+                  buffer.putDouble(offset, aDouble);
+                  offset += Long.BYTES;
+                } else {
+                  buffer.put(offset++, NullHandling.IS_NULL_BYTE);
+                }
+              }
+            }
+            break;
+          case STRING:
+            String[] strings = eval.asStringArray();
+            if (strings == null) {
+              // | expression type (byte) | array type (byte) | array length (int) |
+              checkMaxBytes(eval.type(), 2 + Integer.BYTES, maxSizeBytes);
+              buffer.putInt(offset, NULL_LENGTH);
+            } else {
+              // | expression type (byte) | array type (byte) | array length (int) | array bytes |
+              buffer.putInt(offset, strings.length);
+              offset += Integer.BYTES;
+              int sizeBytes = 2 + Integer.BYTES;
+              for (String string : strings) {
+                if (string == null) {
+                  // | string length (int) |
+                  sizeBytes += Integer.BYTES;
+                  checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
+                  buffer.putInt(offset, NULL_LENGTH);
+                  offset += Integer.BYTES;
+                } else {
+                  // | string length (int) | string bytes |
+                  final byte[] stringElementBytes = StringUtils.toUtf8(string);
+                  sizeBytes += Integer.BYTES + stringElementBytes.length;
+                  checkMaxBytes(eval.type(), sizeBytes, maxSizeBytes);
+                  buffer.putInt(offset, stringElementBytes.length);
+                  offset += Integer.BYTES;
+                  final int oldPosition = buffer.position();
+                  buffer.position(offset);
+                  buffer.put(stringElementBytes, 0, stringElementBytes.length);
+                  buffer.position(oldPosition);
+                  offset += stringElementBytes.length;
+                }
+              }
+            }
+            break;
+          default:
+            throw new UOE("Cannot serialize expression array type %s", eval.type());
         }
         break;
       default:
-        throw new UOE("how can this be?");
+        throw new UOE("Cannot serialize expression type %s", eval.type());
     }
   }
 
-  private static void checkMaxBytes(ExprType type, int sizeBytes, int maxSizeBytes)
+  public static void checkMaxBytes(ExpressionType type, int sizeBytes, int maxSizeBytes)
   {
     if (sizeBytes > maxSizeBytes) {
       throw new ISE("Unable to serialize [%s], size [%s] is larger than max [%s]", type, sizeBytes, maxSizeBytes);
     }
+  }
+
+  /**
+   * Used to estimate the size in bytes to {@link #serialize} the {@link ExprEval} value, checking against a maximum
+   * size and failing with an {@link ISE} if the estimate is over the maximum.
+   */
+  public static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
+  {
+    final int estimated;
+    switch (eval.type().getType()) {
+      case STRING:
+        String stringValue = eval.asString();
+        estimated = 1 + Integer.BYTES + (stringValue == null ? 0 : StringUtils.estimatedBinaryLengthAsUTF8(stringValue));
+        break;
+      case LONG:
+      case DOUBLE:
+        estimated = 1 + (NullHandling.sqlCompatible() ? 1 + Long.BYTES : Long.BYTES);
+        break;
+      case ARRAY:
+        switch (eval.type().getElementType().getType()) {
+          case STRING:
+            String[] stringArray = eval.asStringArray();
+            if (stringArray == null) {
+              estimated = 2 + Integer.BYTES;
+            } else {
+              final int elementsSize = Arrays.stream(stringArray)
+                                             .filter(Objects::nonNull)
+                                             .mapToInt(StringUtils::estimatedBinaryLengthAsUTF8)
+                                             .sum();
+              // since each value is variably sized, there is an integer per element
+              estimated = 2 + Integer.BYTES + (Integer.BYTES * stringArray.length) + elementsSize;
+            }
+            break;
+          case LONG:
+            Long[] longArray = eval.asLongArray();
+            if (longArray == null) {
+              estimated = 2 + Integer.BYTES;
+            } else {
+              final int elementsSize = Arrays.stream(longArray)
+                                             .filter(Objects::nonNull)
+                                             .mapToInt(x -> Long.BYTES)
+                                             .sum();
+              estimated = 2 + Integer.BYTES + (NullHandling.sqlCompatible() ? longArray.length : 0) + elementsSize;
+            }
+            break;
+          case DOUBLE:
+            Double[] doubleArray = eval.asDoubleArray();
+            if (doubleArray == null) {
+              estimated = 2 + Integer.BYTES;
+            } else {
+              final int elementsSize = Arrays.stream(doubleArray)
+                                             .filter(Objects::nonNull)
+                                             .mapToInt(x -> Long.BYTES)
+                                             .sum();
+              estimated = 2 + Integer.BYTES + (NullHandling.sqlCompatible() ? doubleArray.length : 0) + elementsSize;
+            }
+            break;
+          default:
+            throw new ISE("Unsupported array type: %s", eval.type());
+        }
+        break;
+      default:
+        throw new ISE("Unsupported type: %s", eval.type());
+    }
+    checkMaxBytes(eval.type(), estimated, maxSizeBytes);
   }
 
   /**
@@ -318,7 +407,7 @@ public abstract class ExprEval<T>
       return new String[]{null};
     } else {
       if (val != null) {
-        return val.toArray();
+        return new String[0];
       }
       return null;
     }
@@ -524,7 +613,12 @@ public abstract class ExprEval<T>
     this.value = value;
   }
 
-  public abstract ExprType type();
+  public abstract ExpressionType type();
+
+  public ExpressionType elementType()
+  {
+    return type().isArray() ? (ExpressionType) type().getElementType() : type();
+  }
 
   @Nullable
   public T value()
@@ -567,7 +661,18 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * returns true if numeric primitive value for this ExprEval is null, otherwise false.
+   * The method returns true if numeric primitive value for this {@link ExprEval} is null, otherwise false.
+   *
+   * If this method returns false, then the values returned by {@link #asLong()}, {@link #asDouble()},
+   * and {@link #asInt()} are "valid", since this method is primarily used during {@link Expr} evaluation to decide
+   * if primitive numbers can be fetched to use.
+   *
+   * If a type cannot sanely convert into a primitive numeric value, then this method should always return true so that
+   * these primitive numeric getters are not called, since returning false is assumed to mean these values are valid.
+   *
+   * Note that all types must still return values for {@link #asInt()}, {@link #asLong()}}, and {@link #asDouble()},
+   * since this can still happen if {@link NullHandling#sqlCompatible()} is false, but it should be assumed that this
+   * can only happen in that mode and 0s are typical and expected for values that would otherwise be null.
    */
   public abstract boolean isNumericNull();
 
@@ -576,10 +681,25 @@ public abstract class ExprEval<T>
     return false;
   }
 
+  /**
+   * Get the primtive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return placeholder a value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract int asInt();
 
+  /**
+   * Get the primtive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract long asLong();
 
+  /**
+   * Get the primtive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
+   * {@link NullHandling#sqlCompatible()} is false)
+   */
   public abstract double asDouble();
 
   public abstract boolean asBoolean();
@@ -596,7 +716,7 @@ public abstract class ExprEval<T>
   @Nullable
   public abstract Double[] asDoubleArray();
 
-  public abstract ExprEval castTo(ExprType castTo);
+  public abstract ExprEval castTo(ExpressionType castTo);
 
   public abstract Expr toExpr();
 
@@ -663,9 +783,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ExpressionType type()
     {
-      return ExprType.DOUBLE;
+      return ExpressionType.DOUBLE;
     }
 
     @Override
@@ -682,9 +802,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExpressionType castTo)
     {
-      switch (castTo) {
+      switch (castTo.getType()) {
         case DOUBLE:
           return this;
         case LONG:
@@ -695,12 +815,15 @@ public abstract class ExprEval<T>
           }
         case STRING:
           return ExprEval.of(asString());
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(asDoubleArray());
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(asLongArray());
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(asStringArray());
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case DOUBLE:
+              return ExprEval.ofDoubleArray(asDoubleArray());
+            case LONG:
+              return ExprEval.ofLongArray(asLongArray());
+            case STRING:
+              return ExprEval.ofStringArray(asStringArray());
+          }
       }
       throw new IAE("invalid type " + castTo);
     }
@@ -725,9 +848,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ExpressionType type()
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -751,9 +874,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExpressionType castTo)
     {
-      switch (castTo) {
+      switch (castTo.getType()) {
         case DOUBLE:
           if (value == null) {
             return ExprEval.ofDouble(null);
@@ -764,12 +887,15 @@ public abstract class ExprEval<T>
           return this;
         case STRING:
           return ExprEval.of(asString());
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(asDoubleArray());
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(asLongArray());
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(asStringArray());
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case DOUBLE:
+              return ExprEval.ofDoubleArray(asDoubleArray());
+            case LONG:
+              return ExprEval.ofLongArray(asLongArray());
+            case STRING:
+              return ExprEval.ofStringArray(asStringArray());
+          }
       }
       throw new IAE("invalid type " + castTo);
     }
@@ -807,9 +933,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ExpressionType type()
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override
@@ -942,21 +1068,24 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ExpressionType castTo)
     {
-      switch (castTo) {
+      switch (castTo.getType()) {
         case DOUBLE:
           return ExprEval.ofDouble(computeNumber());
         case LONG:
           return ExprEval.ofLong(computeNumber());
         case STRING:
           return this;
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(asDoubleArray());
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(asLongArray());
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(asStringArray());
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case DOUBLE:
+              return ExprEval.ofDoubleArray(asDoubleArray());
+            case LONG:
+              return ExprEval.ofLongArray(asLongArray());
+            case STRING:
+              return ExprEval.ofStringArray(asStringArray());
+          }
       }
       throw new IAE("invalid type " + castTo);
     }
@@ -982,6 +1111,12 @@ public abstract class ExprEval<T>
       if (!isStringValueCached()) {
         if (value == null) {
           cacheStringValue(null);
+        } else if (value.length == 1) {
+          if (value[0] == null) {
+            cacheStringValue(null);
+          } else {
+            cacheStringValue(String.valueOf(value[0]));
+          }
         } else {
           cacheStringValue(Arrays.toString(value));
         }
@@ -993,7 +1128,11 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      return false;
+      if (isScalar()) {
+        return getScalarValue() == null;
+      }
+
+      return true;
     }
 
     @Override
@@ -1038,6 +1177,18 @@ public abstract class ExprEval<T>
     {
       return value == null ? null : value[index];
     }
+
+    protected boolean isScalar()
+    {
+      return value != null && value.length == 1;
+    }
+
+    @Nullable
+    protected T getScalarValue()
+    {
+      assert value != null && value.length == 1;
+      return value[0];
+    }
   }
 
   private static class LongArrayExprEval extends ArrayExprEval<Long>
@@ -1050,9 +1201,65 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ExpressionType type()
     {
-      return ExprType.LONG_ARRAY;
+      return ExpressionType.LONG_ARRAY;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
+          return false;
+        }
+        return Evals.asBoolean(scalarValue.longValue());
+      }
+      return super.asBoolean();
     }
 
     @Nullable
@@ -1077,18 +1284,37 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ExpressionType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;
       }
-      switch (castTo) {
-        case LONG_ARRAY:
-          return this;
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(asDoubleArray());
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(asStringArray());
+      switch (castTo.getType()) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case LONG:
+              return this;
+            case DOUBLE:
+              return ExprEval.ofDoubleArray(asDoubleArray());
+            case STRING:
+              return ExprEval.ofStringArray(asStringArray());
+          }
+          break;
       }
 
       throw new IAE("invalid type " + castTo);
@@ -1111,16 +1337,74 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ExpressionType type()
     {
-      return ExprType.DOUBLE_ARRAY;
+      return ExpressionType.DOUBLE_ARRAY;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        Number scalar = getScalarValue();
+        if (scalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return scalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        Number scalarValue = getScalarValue();
+        if (scalarValue == null) {
+          assert NullHandling.replaceWithDefault();
+          return false;
+        }
+        return Evals.asBoolean(scalarValue.longValue());
+      }
+      return super.asBoolean();
     }
 
     @Nullable
     @Override
     public String[] asStringArray()
     {
-      return value == null ? null : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
+      return value == null
+             ? null
+             : Arrays.stream(value).map(x -> x != null ? x.toString() : null).toArray(String[]::new);
     }
 
     @Nullable
@@ -1138,18 +1422,36 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ExpressionType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;
       }
-      switch (castTo) {
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(asLongArray());
-        case DOUBLE_ARRAY:
-          return this;
-        case STRING_ARRAY:
-          return ExprEval.ofStringArray(asStringArray());
+      switch (castTo.getType()) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case LONG:
+              return ExprEval.ofLongArray(asLongArray());
+            case DOUBLE:
+              return this;
+            case STRING:
+              return ExprEval.ofStringArray(asStringArray());
+          }
       }
 
       throw new IAE("invalid type " + castTo);
@@ -1168,8 +1470,13 @@ public abstract class ExprEval<T>
 
     private boolean longValueValid = false;
     private boolean doubleValueValid = false;
+    @Nullable
     private Long[] longValues;
+    @Nullable
     private Double[] doubleValues;
+    @Nullable
+    private Number computedNumericScalar;
+    private boolean isScalarNumberValid;
 
     private StringArrayExprEval(@Nullable String[] value)
     {
@@ -1177,9 +1484,70 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ExpressionType type()
     {
-      return ExprType.STRING_ARRAY;
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        return computedNumericScalar == null;
+      }
+      return true;
+    }
+
+    @Override
+    public int asInt()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
+        }
+        return computedNumericScalar.intValue();
+      }
+      return super.asInt();
+    }
+
+    @Override
+    public long asLong()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0L;
+        }
+        return computedNumericScalar.longValue();
+      }
+      return super.asLong();
+    }
+
+    @Override
+    public double asDouble()
+    {
+      if (isScalar()) {
+        computeScalarNumericIfNeeded();
+        if (computedNumericScalar == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0.0;
+        }
+        return computedNumericScalar.doubleValue();
+      }
+      return super.asDouble();
+    }
+
+    @Override
+    public boolean asBoolean()
+    {
+      if (isScalar()) {
+        return Evals.asBoolean(getScalarValue());
+      }
+      return super.asBoolean();
     }
 
     @Nullable
@@ -1212,18 +1580,36 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ExpressionType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;
       }
-      switch (castTo) {
-        case STRING_ARRAY:
-          return this;
-        case LONG_ARRAY:
-          return ExprEval.ofLongArray(asLongArray());
-        case DOUBLE_ARRAY:
-          return ExprEval.ofDoubleArray(asDoubleArray());
+      switch (castTo.getType()) {
+        case STRING:
+          if (value.length == 1) {
+            return ExprEval.of(asString());
+          }
+          break;
+        case LONG:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
+          }
+          break;
+        case DOUBLE:
+          if (value.length == 1) {
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
+          }
+          break;
+        case ARRAY:
+          switch (castTo.getElementType().getType()) {
+            case STRING:
+              return this;
+            case LONG:
+              return ExprEval.ofLongArray(asLongArray());
+            case DOUBLE:
+              return ExprEval.ofDoubleArray(asDoubleArray());
+          }
       }
       throw new IAE("invalid type " + castTo);
     }
@@ -1241,6 +1627,9 @@ public abstract class ExprEval<T>
         return null;
       }
       return Arrays.stream(value).map(value -> {
+        if (value == null) {
+          return null;
+        }
         Long lv = GuavaUtils.tryParseLong(value);
         if (lv == null) {
           Double d = Doubles.tryParse(value);
@@ -1258,7 +1647,24 @@ public abstract class ExprEval<T>
       if (value == null) {
         return null;
       }
-      return Arrays.stream(value).map(Doubles::tryParse).toArray(Double[]::new);
+      return Arrays.stream(value).map(val -> {
+        if (val == null) {
+          return null;
+        }
+        return Doubles.tryParse(val);
+      }).toArray(Double[]::new);
+    }
+
+
+    /**
+     * must not be called unless array has a single element
+      */
+    private void computeScalarNumericIfNeeded()
+    {
+      if (!isScalarNumberValid) {
+        computedNumericScalar = computeNumber(getScalarValue());
+        isScalarNumberValid = true;
+      }
     }
   }
 }

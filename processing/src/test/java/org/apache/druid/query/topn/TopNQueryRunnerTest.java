@@ -43,6 +43,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -91,7 +92,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -1148,7 +1149,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   {
 
     final HashMap<String, Object> specialContext = new HashMap<String, Object>();
-    specialContext.put("bySegment", "true");
+    specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -2245,7 +2246,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new ExtractionDimensionSpec(
                 ColumnHolder.TIME_COLUMN_NAME,
                 "t",
-                ValueType.LONG,
+                ColumnType.LONG,
                 new JavaScriptExtractionFn(
                     "function(f) { return \"42\"; }",
                     false,
@@ -3639,7 +3640,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
         )
-        .context(ImmutableMap.of("finalize", true, "bySegment", true))
+        .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true, QueryContexts.BY_SEGMENT_KEY, true))
         .build();
     TopNResultValue topNResult = new TopNResultValue(
         Arrays.<Map<String, Object>>asList(
@@ -4255,7 +4256,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.INDEX_METRIC, "index_alias", ValueType.FLOAT))
+        .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.INDEX_METRIC, "index_alias", ColumnType.FLOAT))
         .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -4474,7 +4475,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -4546,7 +4547,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ColumnType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -4562,7 +4563,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong", ValueType.LONG, ExprMacroTable.nil()))
+        .virtualColumns(new ExpressionVirtualColumn("ql_expr", "qualityLong", ColumnType.LONG, ExprMacroTable.nil()))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -4623,7 +4624,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionVirtualColumn(
                 "vc",
                 "market + ' ' + market",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -4821,7 +4822,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ColumnType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -4893,7 +4894,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.FLOAT))
+        .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ColumnType.FLOAT))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -4965,7 +4966,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", ColumnType.LONG))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5037,7 +5038,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ColumnType.LONG))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5073,7 +5074,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("__time", "__time_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("__time", "__time_alias", ColumnType.LONG))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5109,7 +5110,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("market", "alias", ValueType.DOUBLE))
+        .dimension(new DefaultDimensionSpec("market", "alias", ColumnType.DOUBLE))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5133,7 +5134,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.DOUBLE))
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ColumnType.DOUBLE))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5299,7 +5300,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.QUALITY_DIMENSION, "alias", ValueType.LONG, strlenFn))
+        .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.QUALITY_DIMENSION, "alias", ColumnType.LONG, strlenFn))
         .metric("maxIndex")
         .threshold(4)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -5369,7 +5370,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   public void testFullOnTopNNumericStringColumnWithDecoration()
   {
     ListFilteredDimensionSpec filteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.LONG),
+        new DefaultDimensionSpec("qualityNumericString", "qns_alias", ColumnType.LONG),
         Sets.newHashSet("120000", "140000", "160000"),
         true
     );
@@ -5438,7 +5439,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   public void testFullOnTopNDecorationOnNumeric()
   {
     ListFilteredDimensionSpec filteredSpec = new ListFilteredDimensionSpec(
-        new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG),
+        new DefaultDimensionSpec("qualityLong", "ql_alias", ColumnType.LONG),
         Sets.newHashSet("1200", "1400", "1600"),
         true
     );
@@ -5671,7 +5672,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ColumnType.LONG))
         .metric(new NumericTopNMetricSpec("longNumericNull"))
         .threshold(10000)
         .aggregators(new LongSumAggregatorFactory("longNumericNull", "longNumericNull"))
@@ -5739,7 +5740,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ColumnType.LONG))
         .metric(new NumericTopNMetricSpec("floatNumericNull"))
         .threshold(10000)
         .aggregators(new LongSumAggregatorFactory("floatNumericNull", "floatNumericNull"))
@@ -5807,7 +5808,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("index", "index_alias", ColumnType.LONG))
         .metric(new NumericTopNMetricSpec("doubleNumericNull"))
         .threshold(10000)
         .aggregators(new LongSumAggregatorFactory("doubleNumericNull", "doubleNumericNull"))
@@ -5876,7 +5877,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("longNumericNull", "dim", ValueType.LONG))
+        .dimension(new DefaultDimensionSpec("longNumericNull", "dim", ColumnType.LONG))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(10000)
         .aggregators(new CountAggregatorFactory("count"))
@@ -5908,7 +5909,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("doubleNumericNull", "dim", ValueType.DOUBLE))
+        .dimension(new DefaultDimensionSpec("doubleNumericNull", "dim", ColumnType.DOUBLE))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(10000)
         .aggregators(new CountAggregatorFactory("count"))
@@ -5940,7 +5941,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
-        .dimension(new DefaultDimensionSpec("floatNumericNull", "dim", ValueType.FLOAT))
+        .dimension(new DefaultDimensionSpec("floatNumericNull", "dim", ColumnType.FLOAT))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(10000)
         .aggregators(new CountAggregatorFactory("count"))
@@ -5986,6 +5987,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         null,
                         "0",
                         null,
+                        false,
                         "__acc + 1",
                         "__acc + diy_count",
                         null,
@@ -5998,6 +6000,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         ImmutableSet.of("index"),
                         null,
                         "0.0",
+                        null,
                         null,
                         "__acc + index",
                         null,
@@ -6012,6 +6015,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         null,
                         "0.0",
                         "<DOUBLE>[]",
+                        null,
                         "__acc + index",
                         "array_concat(__acc, diy_decomposed_sum)",
                         null,
@@ -6024,6 +6028,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         ImmutableSet.of(QueryRunnerTestHelper.QUALITY_DIMENSION),
                         "acc",
                         "[]",
+                        null,
                         null,
                         "array_set_add(acc, quality)",
                         "array_set_add_all(acc, array_agg_distinct)",

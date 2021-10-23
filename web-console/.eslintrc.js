@@ -20,7 +20,7 @@ module.exports = {
   env: {
     browser: true,
   },
-  extends: ['@awesome-code-style'],
+  extends: ['@awesome-code-style', '@awesome-code-style/eslint-config/react'],
   parserOptions: {
     project: 'tsconfig.json',
   },

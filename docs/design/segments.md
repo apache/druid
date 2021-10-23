@@ -27,7 +27,7 @@ Apache Druid stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time
 interval, where the time interval is configurable in the
 `segmentGranularity` parameter of the
-[`granularitySpec`](../ingestion/index.md#granularityspec).  For Druid to
+[`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).  For Druid to
 operate well under heavy query load, it is important for the segment
 file size to be within the recommended range of 300MB-700MB. If your
 segment files are larger than this range, then consider either
@@ -187,7 +187,7 @@ Each column is stored as two parts:
 A ColumnDescriptor is essentially an object that allows us to use Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serialization/deserialization logic that can deserialize the rest of the binary.
 
 ### Compression
-Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/index.md#indexspec) for more details.
+Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
 ## Sharding Data to Create Segments
 

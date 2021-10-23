@@ -37,7 +37,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -59,9 +59,9 @@ public class LookupJoinMatcher implements JoinMatcher
       new ColumnProcessorFactory<Supplier<String>>()
       {
         @Override
-        public ValueType defaultType()
+        public ColumnType defaultType()
         {
-          return ValueType.STRING;
+          return ColumnType.STRING;
         }
 
         @Override
@@ -155,7 +155,7 @@ public class LookupJoinMatcher implements JoinMatcher
                                       expr ->
                                           ColumnProcessors.makeProcessor(
                                               expr,
-                                              ValueType.STRING,
+                                              ColumnType.STRING,
                                               LEFT_KEY_READER,
                                               leftSelectorFactory
                                           )

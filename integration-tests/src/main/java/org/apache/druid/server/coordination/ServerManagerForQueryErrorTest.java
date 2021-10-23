@@ -25,7 +25,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -55,7 +55,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -91,7 +90,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   public ServerManagerForQueryErrorTest(
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
-      @Processing ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       CachePopulator cachePopulator,
       @Smile ObjectMapper objectMapper,
       Cache cache,
@@ -104,7 +103,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
     super(
         conglomerate,
         emitter,
-        exec,
+        queryProcessingPool,
         cachePopulator,
         objectMapper,
         cache,
@@ -116,7 +115,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   }
 
   @Override
-  <T> QueryRunner<T> buildQueryRunnerForSegment(
+  protected <T> QueryRunner<T> buildQueryRunnerForSegment(
       Query<T> query,
       SegmentDescriptor descriptor,
       QueryRunnerFactory<T, Query<T>> factory,

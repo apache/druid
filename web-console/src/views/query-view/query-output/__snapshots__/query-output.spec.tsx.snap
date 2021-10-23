@@ -29,36 +29,32 @@ exports[`query output matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="bp3-popover-wrapper clickable-cell"
+                class="clickable-cell bp3-popover2-target"
               >
-                <span
-                  class="bp3-popover-target"
+                <div
+                  class=""
                 >
-                  <div
-                    class=""
+                  language
+                  <span
+                    class="bp3-icon bp3-icon-filter"
+                    icon="filter"
                   >
-                    language
-                    <span
-                      class="bp3-icon bp3-icon-filter"
-                      icon="filter"
+                    <svg
+                      data-icon="filter"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      width="14"
                     >
-                      <svg
-                        data-icon="filter"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          filter
-                        </desc>
-                        <path
-                          d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </span>
+                      <desc>
+                        filter
+                      </desc>
+                      <path
+                        d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
               </span>
             </div>
             <div
@@ -75,36 +71,32 @@ exports[`query output matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="bp3-popover-wrapper clickable-cell"
+                class="clickable-cell bp3-popover2-target"
               >
-                <span
-                  class="bp3-popover-target"
+                <div
+                  class=""
                 >
-                  <div
-                    class=""
+                  Count
+                  <span
+                    class="bp3-icon bp3-icon-filter"
+                    icon="filter"
                   >
-                    Count
-                    <span
-                      class="bp3-icon bp3-icon-filter"
-                      icon="filter"
+                    <svg
+                      data-icon="filter"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      width="14"
                     >
-                      <svg
-                        data-icon="filter"
-                        height="14"
-                        viewBox="0 0 16 16"
-                        width="14"
-                      >
-                        <desc>
-                          filter
-                        </desc>
-                        <path
-                          d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
-                          fill-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </span>
+                      <desc>
+                        filter
+                      </desc>
+                      <path
+                        d="M13.99.99h-12a1.003 1.003 0 00-.71 1.71l4.71 4.71V14a1.003 1.003 0 001.71.71l2-2c.18-.18.29-.43.29-.71V7.41L14.7 2.7a1.003 1.003 0 00-.71-1.71z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
               </span>
             </div>
             <div
@@ -121,17 +113,13 @@ exports[`query output matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="bp3-popover-wrapper clickable-cell"
+                class="clickable-cell bp3-popover2-target"
               >
-                <span
-                  class="bp3-popover-target"
+                <div
+                  class=""
                 >
-                  <div
-                    class=""
-                  >
-                    dist_language
-                  </div>
-                </span>
+                  dist_language
+                </div>
               </span>
             </div>
             <div
@@ -148,17 +136,13 @@ exports[`query output matches snapshot 1`] = `
               class="rt-resizable-header-content"
             >
               <span
-                class="bp3-popover-wrapper clickable-cell"
+                class="clickable-cell bp3-popover2-target"
               >
-                <span
-                  class="bp3-popover-target"
+                <div
+                  class=""
                 >
-                  <div
-                    class=""
-                  >
-                    language_filtered_count
-                  </div>
-                </span>
+                  language_filtered_count
+                </div>
               </span>
             </div>
             <div
@@ -186,16 +170,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell null"
                   >
-                    <span
-                      class="table-cell null"
-                    >
-                      null
-                    </span>
+                    null
                   </span>
                 </span>
               </div>
@@ -207,16 +187,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      6881
-                    </span>
+                    6881
                   </span>
                 </span>
               </div>
@@ -228,16 +204,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
+                    1
                   </span>
                 </span>
               </div>
@@ -249,16 +221,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
+                    0
                   </span>
                 </span>
               </div>
@@ -280,16 +248,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      JavaScript
-                    </span>
+                    JavaScript
                   </span>
                 </span>
               </div>
@@ -301,16 +265,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      166
-                    </span>
+                    166
                   </span>
                 </span>
               </div>
@@ -322,16 +282,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
+                    1
                   </span>
                 </span>
               </div>
@@ -343,16 +299,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
+                    0
                   </span>
                 </span>
               </div>
@@ -374,16 +326,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      Python
-                    </span>
+                    Python
                   </span>
                 </span>
               </div>
@@ -395,16 +343,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      62
-                    </span>
+                    62
                   </span>
                 </span>
               </div>
@@ -416,16 +360,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
+                    1
                   </span>
                 </span>
               </div>
@@ -437,16 +377,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
+                    0
                   </span>
                 </span>
               </div>
@@ -468,16 +404,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      HTML
-                    </span>
+                    HTML
                   </span>
                 </span>
               </div>
@@ -489,16 +421,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      46
-                    </span>
+                    46
                   </span>
                 </span>
               </div>
@@ -510,16 +438,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      1
-                    </span>
+                    1
                   </span>
                 </span>
               </div>
@@ -531,16 +455,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell plain"
                   >
-                    <span
-                      class="table-cell plain"
-                    >
-                      0
-                    </span>
+                    0
                   </span>
                 </span>
               </div>
@@ -562,16 +482,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell null"
                   >
-                    <span
-                      class="table-cell null"
-                    >
-                      null
-                    </span>
+                    null
                   </span>
                 </span>
               </div>
@@ -583,16 +499,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell null"
                   >
-                    <span
-                      class="table-cell null"
-                    >
-                      null
-                    </span>
+                    null
                   </span>
                 </span>
               </div>
@@ -604,16 +516,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell null"
                   >
-                    <span
-                      class="table-cell null"
-                    >
-                      null
-                    </span>
+                    null
                   </span>
                 </span>
               </div>
@@ -625,16 +533,12 @@ exports[`query output matches snapshot 1`] = `
             >
               <div>
                 <span
-                  class="bp3-popover-wrapper"
+                  class="bp3-popover2-target"
                 >
                   <span
-                    class="bp3-popover-target"
+                    class="table-cell null"
                   >
-                    <span
-                      class="table-cell null"
-                    >
-                      null
-                    </span>
+                    null
                   </span>
                 </span>
               </div>

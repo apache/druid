@@ -45,7 +45,7 @@ public class FileUtilsTest
     long buffersMemoryBefore = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
-      raf.setLength(1 << 20); // 1 MB
+      raf.setLength(1 << 20); // 1 MiB
     }
     try (MappedByteBufferHandler mappedByteBufferHandler = FileUtils.map(dataFile)) {
       Assert.assertEquals(42, mappedByteBufferHandler.get().get(0));

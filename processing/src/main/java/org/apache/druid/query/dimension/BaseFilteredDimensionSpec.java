@@ -22,7 +22,7 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 /**
  */
@@ -56,7 +56,7 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     return delegate.getOutputType();
   }

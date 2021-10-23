@@ -44,7 +44,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -226,7 +226,7 @@ public class IngestSegmentFirehoseFactoryTest
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
 
-    final SegmentLoaderFactory slf = new SegmentLoaderFactory(null, MAPPER);
+    final SegmentCacheManagerFactory slf = new SegmentCacheManagerFactory(MAPPER);
     final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
     Collection<Object[]> values = new ArrayList<>();

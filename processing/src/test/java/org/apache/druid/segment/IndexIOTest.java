@@ -361,7 +361,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
       queryableIndex.getDimensionHandlers();
       List<String> columnNames = queryableIndex.getColumnNames();
       for (String columnName : columnNames) {
-        queryableIndex.getColumnHolder(columnName).toString();
+        Assert.assertNotNull(queryableIndex.getColumnHolder(columnName).toString());
       }
     }
     catch (Exception ex) {

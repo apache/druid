@@ -23,6 +23,8 @@ exports[`lookups view matches snapshot 1`] = `
           "Lookup tier",
           "Type",
           "Version",
+          "Poll period",
+          "Summary",
           "Actions",
         ]
       }
@@ -93,6 +95,7 @@ exports[`lookups view matches snapshot 1`] = `
           "filterable": true,
           "id": "lookup_name",
           "show": true,
+          "width": 200,
         },
         Object {
           "Header": "Lookup tier",
@@ -100,6 +103,7 @@ exports[`lookups view matches snapshot 1`] = `
           "filterable": true,
           "id": "tier",
           "show": true,
+          "width": 100,
         },
         Object {
           "Header": "Type",
@@ -107,6 +111,7 @@ exports[`lookups view matches snapshot 1`] = `
           "filterable": true,
           "id": "type",
           "show": true,
+          "width": 150,
         },
         Object {
           "Header": "Version",
@@ -114,11 +119,26 @@ exports[`lookups view matches snapshot 1`] = `
           "filterable": true,
           "id": "version",
           "show": true,
+          "width": 190,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Poll period",
+          "accessor": [Function],
+          "id": "poolPeriod",
+          "show": true,
+          "width": 150,
+        },
+        Object {
+          "Header": "Summary",
+          "accessor": [Function],
+          "id": "summary",
+          "show": true,
         },
         Object {
           "Cell": [Function],
           "Header": "Actions",
-          "accessor": [Function],
+          "accessor": "id",
           "filterable": false,
           "id": "actions",
           "show": true,
@@ -135,7 +155,14 @@ exports[`lookups view matches snapshot 1`] = `
     defaultResized={Array []}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={
+      Array [
+        Object {
+          "desc": false,
+          "id": "lookup_name",
+        },
+      ]
+    }
     expanderDefaults={
       Object {
         "filterable": false,
