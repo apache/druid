@@ -210,6 +210,7 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * @return true if the aggregated value is primitive long/double/float and aggregated value is null otherwise false.
    */
+  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
   default boolean isNull(ByteBuffer buf, int position)
   {
     return false;

@@ -354,7 +354,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * Note: rowOffset and aggPosition are unused today, but may be used in the future by
    * https://github.com/apache/druid/pull/10001.
    */
-  protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
+  protected abstract Object getAggVal(
+      AggregatorType agg,
+      @SuppressWarnings("unused") int rowOffset,
+      @SuppressWarnings("unused") int aggPosition
+  );
 
   protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
 
