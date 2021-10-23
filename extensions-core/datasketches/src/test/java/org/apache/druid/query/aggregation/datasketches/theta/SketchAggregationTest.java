@@ -517,6 +517,7 @@ public class SketchAggregationTest
     List<String> value = new ArrayList<>();
     value.add("foo");
     value.add(null);
+    value.add("");
     value.add("bar");
     List[] columnValues = new List[]{value};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);

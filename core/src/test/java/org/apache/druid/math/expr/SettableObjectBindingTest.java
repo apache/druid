@@ -19,46 +19,21 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 
-import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.collect.ImmutableMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Simple map backed object binding
- */
-public class SettableObjectBinding implements Expr.ObjectBinding
+public class SettableObjectBindingTest
 {
-  private final Map<String, Object> bindings;
-
-  public SettableObjectBinding()
+  @Test
+  public void testSettableBinding()
   {
-    this.bindings = new HashMap<>();
-  }
-
-  public SettableObjectBinding(int expectedSize)
-  {
-    this.bindings = Maps.newHashMapWithExpectedSize(expectedSize);
-  }
-
-  @Nullable
-  @Override
-  public Object get(String name)
-  {
-    return bindings.get(name);
-  }
-
-  public SettableObjectBinding withBinding(String name, @Nullable Object value)
-  {
-    bindings.put(name, value);
-    return this;
-  }
-
-  @VisibleForTesting
-  public Map<String, Object> asMap()
-  {
-    return bindings;
+    SettableObjectBinding binding = new SettableObjectBinding(10);
+    Assert.assertEquals(0, binding.asMap().size());
+    binding = binding.withBinding("x", ExpressionType.LONG);
+    Assert.assertEquals(ExpressionType.LONG, binding.get("x"));
+    Assert.assertNull(binding.get("y"));
+    Assert.assertEquals(ImmutableMap.of("x", ExpressionType.LONG), binding.asMap());
   }
 }
