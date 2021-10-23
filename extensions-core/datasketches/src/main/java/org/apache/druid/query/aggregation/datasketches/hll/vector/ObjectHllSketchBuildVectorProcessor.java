@@ -71,14 +71,15 @@ public class ObjectHllSketchBuildVectorProcessor implements HllSketchBuildVector
     final Object[] vector = selector.getObjectVector();
 
     for (int i = 0; i < numRows; i++) {
+      final int idx = rows != null ? rows[i] : i;
       final int position = positions[i] + positionOffset;
       final HllSketch sketch = helper.getSketchAtPosition(buf, position);
 
-      if (vector[i] != null) {
+      if (vector[idx] != null) {
         HllSketchBuildUtil.updateSketch(
             sketch,
             stringEncoding,
-            vector[i]
+            vector[idx]
         );
       }
     }

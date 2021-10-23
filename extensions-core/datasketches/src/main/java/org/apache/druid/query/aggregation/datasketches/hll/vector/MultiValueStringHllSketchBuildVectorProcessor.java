@@ -73,10 +73,11 @@ public class MultiValueStringHllSketchBuildVectorProcessor implements HllSketchB
     final IndexedInts[] vector = selector.getRowVector();
 
     for (int i = 0; i < numRows; i++) {
+      final int idx = rows != null ? rows[i] : i;
       final int position = positions[i] + positionOffset;
       final HllSketch sketch = helper.getSketchAtPosition(buf, position);
 
-      final IndexedInts ids = vector[rows != null ? rows[i] : i];
+      final IndexedInts ids = vector[idx];
       final int sz = ids.size();
 
       for (int j = 0; j < sz; j++) {

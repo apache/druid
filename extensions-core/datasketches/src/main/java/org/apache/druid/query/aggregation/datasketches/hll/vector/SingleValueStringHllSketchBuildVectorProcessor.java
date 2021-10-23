@@ -67,6 +67,7 @@ public class SingleValueStringHllSketchBuildVectorProcessor implements HllSketch
     final int[] vector = selector.getRowVector();
 
     for (int i = 0; i < numRows; i++) {
+      final int idx = rows != null ? rows[i] : i;
       final int position = positions[i] + positionOffset;
       final HllSketch sketch = helper.getSketchAtPosition(buf, position);
 
@@ -74,7 +75,7 @@ public class SingleValueStringHllSketchBuildVectorProcessor implements HllSketch
           sketch,
           stringEncoding,
           selector,
-          vector[i]
+          vector[idx]
       );
     }
   }

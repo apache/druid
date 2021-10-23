@@ -26,7 +26,7 @@ import com.google.common.primitives.SignedBytes;
 /**
  * An enum that provides a way for users to specify what encoding should be used when hashing strings.
  *
- * The main reason for thsi setting's existence is getting the best performance possible. When operating on memory
+ * The main reason for this setting's existence is getting the best performance possible. When operating on memory
  * mapped segments -- which store strings as UTF-8 -- it is fastest to use "UTF8". When operating on the result of
  * expressions, or on an in-heap IncrementalIndex -- which use Java strings -- it is fastest to use "UTF16LE".
  *

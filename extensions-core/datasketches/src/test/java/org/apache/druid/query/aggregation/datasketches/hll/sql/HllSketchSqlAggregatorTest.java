@@ -75,6 +75,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
@@ -143,6 +144,12 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new HllSketchBuildAggregatorFactory("a5", "dim2", null, null, null, true)
       );
 
+  private static final List<AggregatorFactory> EXPECTED_FILTERED_AGGREGATORS =
+      EXPECTED_PA_AGGREGATORS.stream()
+                             .limit(5)
+                             .map(factory -> new FilteredAggregatorFactory(factory, selector("dim2", "a", null)))
+                             .collect(Collectors.toList());
+
   private static final List<PostAggregator> EXPECTED_PA_POST_AGGREGATORS =
       ImmutableList.of(
           new FieldAccessPostAggregator("p0", "a0"),
@@ -169,6 +176,20 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new HllSketchToStringPostAggregator("p21", new FieldAccessPostAggregator("p20", "a0")),
           new ExpressionPostAggregator("p22", "upper(p21)", null, TestExprMacroTable.INSTANCE),
           new HllSketchToEstimatePostAggregator("p24", new FieldAccessPostAggregator("p23", "a0"), true)
+      );
+
+  private static final List<PostAggregator> EXPECTED_FILTERED_POST_AGGREGATORS =
+      ImmutableList.of(
+          new FieldAccessPostAggregator("p0", "a0"),
+          new FieldAccessPostAggregator("p1", "a1"),
+          new FieldAccessPostAggregator("p2", "a2"),
+          new FieldAccessPostAggregator("p3", "a3"),
+          new FieldAccessPostAggregator("p4", "a4"),
+          new HllSketchToEstimatePostAggregator("p6", new FieldAccessPostAggregator("p5", "a0"), false),
+          new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a1"), false),
+          new HllSketchToEstimatePostAggregator("p10", new FieldAccessPostAggregator("p9", "a2"), false),
+          new HllSketchToEstimatePostAggregator("p12", new FieldAccessPostAggregator("p11", "a3"), false),
+          new HllSketchToEstimatePostAggregator("p14", new FieldAccessPostAggregator("p13", "a4"), false)
       );
 
   @Override
@@ -463,7 +484,97 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggsTimeseries() throws Exception
+  public void testHllSketchFilteredAggregatorsGroupBy() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')))\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY cnt",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(EXPECTED_FILTERED_AGGREGATORS)
+                        .setPostAggregatorSpecs(EXPECTED_FILTERED_POST_AGGREGATORS)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                "\"AgEHDAMIAQDhUv8P\"",
+                "\"AgEHDAMIAgALpZ0PPgu1BA==\"",
+                "\"AgEHDAMIAQAr8vsG\"",
+                "\"AgEHDAMIAQCba0kG\"",
+                "\"AgEHDAMIAgC1EYgHuUivDA==\"",
+                1.0,
+                2.000000004967054,
+                1.0,
+                1.0,
+                2.000000004967054
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testHllSketchFilteredAggregatorsTimeseries() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')))\n"
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                  .aggregators(EXPECTED_FILTERED_AGGREGATORS)
+                  .postAggregators(EXPECTED_FILTERED_POST_AGGREGATORS)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                "\"AgEHDAMIAQDhUv8P\"",
+                "\"AgEHDAMIAgALpZ0PPgu1BA==\"",
+                "\"AgEHDAMIAQAr8vsG\"",
+                "\"AgEHDAMIAQCba0kG\"",
+                "\"AgEHDAMIAgC1EYgHuUivDA==\"",
+                1.0,
+                2.000000004967054,
+                1.0,
+                1.0,
+                2.000000004967054
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testHllSketchPostAggsGroupBy() throws Exception
   {
     testQuery(
         "SELECT\n"
@@ -500,7 +611,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggsGroupBy() throws Exception
+  public void testHllSketchPostAggsTimeseries() throws Exception
   {
     testQuery(
         "SELECT\n"
