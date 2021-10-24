@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -39,6 +38,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -108,7 +108,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public void cleanup(ScanQueryLimitRowIterator iterFromMake)
               {
-                CloseQuietly.close(iterFromMake);
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
               }
             });
       }
