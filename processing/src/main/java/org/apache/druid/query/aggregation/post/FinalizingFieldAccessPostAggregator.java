@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -106,7 +107,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
     return finalizedType;
   }

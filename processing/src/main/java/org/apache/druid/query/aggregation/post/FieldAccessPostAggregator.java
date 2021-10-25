@@ -26,6 +26,8 @@ import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -89,9 +91,16 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return type;
+    if (type != null) {
+      return type;
+    }
+    final ColumnCapabilities capabilities = signature.getColumnCapabilities(fieldName);
+    if (capabilities != null) {
+      return capabilities.toColumnType();
+    }
+    return null;
   }
 
   @Override

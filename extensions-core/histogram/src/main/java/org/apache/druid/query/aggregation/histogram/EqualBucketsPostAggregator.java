@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
@@ -69,9 +70,10 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
 
   /**
    * actual type is {@link Histogram}
+   * @param signature
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
     return HistogramAggregatorFactory.TYPE;
   }
