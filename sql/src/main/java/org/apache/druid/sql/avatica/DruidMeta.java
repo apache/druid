@@ -576,7 +576,7 @@ public class DruidMeta extends MetaImpl
       if (connectionCount.get() > config.getMaxConnections()) {
         // We aren't going to make a connection after all.
         connectionCount.decrementAndGet();
-        throw errorHandler.logFailureAndSanitize(new ISE("Too many connections, limit is[%,d]", config.getMaxConnections()));
+        throw errorHandler.logFailureAndSanitize(new ISE("Too many connections"), "Too many connections, limit is[%,d] per broker", config.getMaxConnections());
       }
     }
 
