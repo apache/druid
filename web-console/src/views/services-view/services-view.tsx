@@ -41,6 +41,7 @@ import {
   deepGet,
   formatBytes,
   formatBytesCompact,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
   NumberLike,
@@ -51,7 +52,6 @@ import {
   QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './services-view.scss';
 
@@ -112,7 +112,7 @@ export interface ServicesViewState {
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
 
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
 }
 
 interface ServiceQueryResultRow {
@@ -218,7 +218,7 @@ ORDER BY "rank" DESC, "service" DESC`;
       servicesState: QueryState.INIT,
       serviceFilter: [],
 
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
       ),
     };
@@ -302,7 +302,7 @@ ORDER BY "rank" DESC, "service" DESC`;
 
   renderServicesTable() {
     const { capabilities } = this.props;
-    const { servicesState, serviceFilter, groupServicesBy, hiddenColumns } = this.state;
+    const { servicesState, serviceFilter, groupServicesBy, visibleColumns } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -333,14 +333,14 @@ ORDER BY "rank" DESC, "service" DESC`;
         columns={[
           {
             Header: 'Service',
-            show: hiddenColumns.exists('Service'),
+            show: visibleColumns.shown('Service'),
             accessor: 'service',
             width: 300,
             Aggregated: () => '',
           },
           {
             Header: 'Type',
-            show: hiddenColumns.exists('Type'),
+            show: visibleColumns.shown('Type'),
             accessor: 'service_type',
             width: 150,
             Cell: ({ value }) => {
@@ -359,7 +359,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Tier',
-            show: hiddenColumns.exists('Tier'),
+            show: visibleColumns.shown('Tier'),
             id: 'tier',
             accessor: row => {
               return row.tier ? row.tier : row.worker ? row.worker.category : null;
@@ -378,13 +378,13 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Host',
-            show: hiddenColumns.exists('Host'),
+            show: visibleColumns.shown('Host'),
             accessor: 'host',
             Aggregated: () => '',
           },
           {
             Header: 'Port',
-            show: hiddenColumns.exists('Port'),
+            show: visibleColumns.shown('Port'),
             id: 'port',
             accessor: row => {
               const ports: string[] = [];
@@ -400,7 +400,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Curr size',
-            show: hiddenColumns.exists('Curr size'),
+            show: visibleColumns.shown('Curr size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
@@ -419,7 +419,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Max size',
-            show: hiddenColumns.exists('Max size'),
+            show: visibleColumns.shown('Max size'),
             id: 'max_size',
             width: 100,
             filterable: false,
@@ -438,7 +438,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Usage',
-            show: hiddenColumns.exists('Usage'),
+            show: visibleColumns.shown('Usage'),
             id: 'usage',
             width: 100,
             filterable: false,
@@ -505,7 +505,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: 'Detail',
-            show: hiddenColumns.exists('Detail'),
+            show: visibleColumns.shown('Detail'),
             id: 'queue',
             width: 400,
             filterable: false,
@@ -575,7 +575,7 @@ ORDER BY "rank" DESC, "service" DESC`;
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasOverlordAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.worker,
@@ -690,7 +690,7 @@ ORDER BY "rank" DESC, "service" DESC`;
 
   render(): JSX.Element {
     const { capabilities } = this.props;
-    const { groupServicesBy, hiddenColumns } = this.state;
+    const { groupServicesBy, visibleColumns } = this.state;
 
     return (
       <div className="services-view app-view">
@@ -725,10 +725,10 @@ ORDER BY "rank" DESC, "service" DESC`;
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
-                hiddenColumns: prevState.hiddenColumns.toggle(column),
+                visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            tableColumnsHidden={hiddenColumns.storedArray}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
         {this.renderServicesTable()}
