@@ -36,7 +36,7 @@ This tutorial assumes you will download the required files from GitHub. The file
 
 The default `docker-compose.yml` launches eight containers: Zookeeper, PostgreSQL, and six Druid containers. Each Druid service is configured to use up to 7 GB of memory (6 GB direct memory and 1 GB heap). However, the Quickstart will not use all the available memory.
 
-Docker needs at least 6 GiB of memory available for the Druid cluster. If you experience any processes crashing with a 137 error code you likely don't have enough memory allocated to Docker.
+Docker needs at least 6 GiB of memory available for the Druid cluster. For Docker Desktop on Mac OS, adjust the memory settings in the [Docker Desktop preferences](https://docs.docker.com/desktop/mac/). If you experience a crash with a 137 error code you likely don't have enough memory allocated to Docker.
 
 
 ## Getting started
