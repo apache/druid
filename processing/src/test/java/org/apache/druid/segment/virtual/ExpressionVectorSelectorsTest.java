@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -133,7 +133,7 @@ public class ExpressionVectorSelectorsTest
     return EXPRESSIONS.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
   }
 
-  private ExprType outputType;
+  private ExpressionType outputType;
   private String expression;
 
   public ExpressionVectorSelectorsTest(String expression)
@@ -157,7 +157,7 @@ public class ExpressionVectorSelectorsTest
         }
     );
     if (outputType == null) {
-      outputType = ExprType.STRING;
+      outputType = ExpressionType.STRING;
     }
   }
 
@@ -169,7 +169,7 @@ public class ExpressionVectorSelectorsTest
 
   public static void sanityTestVectorizedExpressionSelectors(
       String expression,
-      @Nullable ExprType outputType,
+      @Nullable ExpressionType outputType,
       QueryableIndex index,
       Closer closer,
       int rowsPerSegment
@@ -181,7 +181,7 @@ public class ExpressionVectorSelectorsTest
             new ExpressionVirtualColumn(
                 "v",
                 expression,
-                ExprType.toValueType(outputType),
+                ExpressionType.toColumnType(outputType),
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -220,7 +220,7 @@ public class ExpressionVectorSelectorsTest
       }
       while (!cursor.isDone()) {
         boolean[] nulls;
-        switch (outputType) {
+        switch (outputType.getType()) {
           case LONG:
             nulls = selector.getNullVector();
             long[] longs = selector.getLongVector();

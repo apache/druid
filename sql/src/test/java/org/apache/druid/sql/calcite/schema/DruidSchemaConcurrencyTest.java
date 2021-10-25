@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.DruidServer;
@@ -135,7 +136,8 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig()
     )
     {
       @Override
@@ -238,7 +240,8 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig()
     )
     {
       @Override

@@ -114,7 +114,7 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return inspector.getType(binding);
   }
@@ -147,12 +147,12 @@ class IdentifierExpr implements Expr
   @Override
   public ExprVectorProcessor<?> buildVectorized(VectorInputBindingInspector inspector)
   {
-    ExprType inputType = inspector.getType(binding);
+    ExpressionType inputType = inspector.getType(binding);
 
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
       // (numbers will be populated with default values in default mode and non-null)
-      return new IdentifierVectorProcessor<String[]>(ExprType.STRING)
+      return new IdentifierVectorProcessor<String[]>(ExpressionType.STRING)
       {
         @Override
         public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
@@ -164,9 +164,9 @@ class IdentifierExpr implements Expr
         }
       };
     }
-    switch (inputType) {
+    switch (inputType.getType()) {
       case LONG:
-        return new IdentifierVectorProcessor<long[]>(ExprType.LONG)
+        return new IdentifierVectorProcessor<long[]>(inputType)
         {
           @Override
           public ExprEvalVector<long[]> evalVector(VectorInputBinding bindings)
@@ -175,7 +175,7 @@ class IdentifierExpr implements Expr
           }
         };
       case DOUBLE:
-        return new IdentifierVectorProcessor<double[]>(ExprType.DOUBLE)
+        return new IdentifierVectorProcessor<double[]>(inputType)
         {
           @Override
           public ExprEvalVector<double[]> evalVector(VectorInputBinding bindings)
@@ -184,7 +184,7 @@ class IdentifierExpr implements Expr
           }
         };
       case STRING:
-        return new IdentifierVectorProcessor<String[]>(ExprType.STRING)
+        return new IdentifierVectorProcessor<String[]>(inputType)
         {
           @Override
           public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
@@ -219,15 +219,15 @@ class IdentifierExpr implements Expr
 
 abstract class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>
 {
-  private final ExprType outputType;
+  private final ExpressionType outputType;
 
-  public IdentifierVectorProcessor(ExprType outputType)
+  public IdentifierVectorProcessor(ExpressionType outputType)
   {
     this.outputType = outputType;
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
     return outputType;
   }

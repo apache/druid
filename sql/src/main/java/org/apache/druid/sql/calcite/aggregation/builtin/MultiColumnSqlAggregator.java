@@ -27,8 +27,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -122,7 +122,7 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
       List<FieldInfo> fieldInfoList
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
+    final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     List<AggregatorFactory> aggregatorFactories = new ArrayList<>();
     List<PostAggregator> postAggregators = new ArrayList<>();
 
@@ -140,13 +140,13 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
   }
 
   abstract AggregatorFactory createAggregatorFactory(
-      ValueType valueType,
+      ColumnType valueType,
       String prefixedName,
       FieldInfo fieldInfo,
       ExprMacroTable macroTable);
 
   abstract PostAggregator createFinalPostAggregator(
-      ValueType valueType,
+      ColumnType valueType,
       String name,
       List<PostAggregator> postAggregators);
 }

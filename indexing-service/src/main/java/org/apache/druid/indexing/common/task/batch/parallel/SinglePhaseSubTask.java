@@ -624,7 +624,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                false // not applicable for parallel subtask
+                false, // not applicable for parallel subtask
+                segmentAvailabilityWaitTimeMs
             )
         )
     );

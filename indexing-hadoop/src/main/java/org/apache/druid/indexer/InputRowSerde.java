@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -106,7 +107,7 @@ public class InputRowSerde
     Map<String, IndexSerdeTypeHelper> typeHelperMap = new HashMap<>();
     for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
       IndexSerdeTypeHelper typeHelper;
-      switch (dimensionSchema.getValueType()) {
+      switch (dimensionSchema.getColumnType().getType()) {
         case STRING:
           typeHelper = STRING_HELPER;
           break;
@@ -120,7 +121,7 @@ public class InputRowSerde
           typeHelper = DOUBLE_HELPER;
           break;
         default:
-          throw new IAE("Invalid type: [%s]", dimensionSchema.getValueType());
+          throw new IAE("Invalid type: [%s]", dimensionSchema.getColumnType());
       }
       typeHelperMap.put(dimensionSchema.getName(), typeHelper);
     }
@@ -340,24 +341,24 @@ public class InputRowSerde
             parseExceptionMessages.add(e.getMessage());
           }
 
-          final ValueType type = aggFactory.getType();
+          final ColumnType type = aggFactory.getType();
 
           if (agg.isNull()) {
             out.writeByte(NullHandling.IS_NULL_BYTE);
           } else {
             out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
-            if (ValueType.FLOAT.equals(type)) {
+            if (type.is(ValueType.FLOAT)) {
               out.writeFloat(agg.getFloat());
-            } else if (ValueType.LONG.equals(type)) {
+            } else if (type.is(ValueType.LONG)) {
               WritableUtils.writeVLong(out, agg.getLong());
-            } else if (ValueType.DOUBLE.equals(type)) {
+            } else if (type.is(ValueType.DOUBLE)) {
               out.writeDouble(agg.getDouble());
-            } else if (ValueType.COMPLEX.equals(type)) {
+            } else if (type.is(ValueType.COMPLEX)) {
               Object val = agg.get();
-              ComplexMetricSerde serde = getComplexMetricSerde(aggFactory.getComplexTypeName());
+              ComplexMetricSerde serde = getComplexMetricSerde(type.getComplexTypeName());
               writeBytes(serde.toBytes(val), out);
             } else {
-              throw new IAE("Unable to serialize type[%s]", type);
+              throw new IAE("Unable to serialize type[%s]", type.asTypeString());
             }
           }
         }
@@ -471,21 +472,21 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         final String metric = readString(in);
         final AggregatorFactory agg = getAggregator(metric, aggs, i);
-        final ValueType type = agg.getType();
+        final ColumnType type = agg.getType();
         final byte metricNullability = in.readByte();
 
         if (metricNullability == NullHandling.IS_NULL_BYTE) {
           // metric value is null.
           continue;
         }
-        if (ValueType.FLOAT.equals(type)) {
+        if (type.is(ValueType.FLOAT)) {
           event.put(metric, in.readFloat());
-        } else if (ValueType.LONG.equals(type)) {
+        } else if (type.is(ValueType.LONG)) {
           event.put(metric, WritableUtils.readVLong(in));
-        } else if (ValueType.DOUBLE.equals(type)) {
+        } else if (type.is(ValueType.DOUBLE)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(agg.getComplexTypeName());
+          ComplexMetricSerde serde = getComplexMetricSerde(agg.getType().getComplexTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }

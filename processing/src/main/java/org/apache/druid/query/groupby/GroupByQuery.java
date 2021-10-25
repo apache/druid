@@ -65,8 +65,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -549,7 +549,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final IntList orderedFieldNumbers = new IntArrayList();
     final Set<Integer> dimsInOrderBy = new HashSet<>();
     final List<Boolean> needsReverseList = new ArrayList<>();
-    final List<ValueType> dimensionTypes = new ArrayList<>();
+    final List<ColumnType> dimensionTypes = new ArrayList<>();
     final List<StringComparator> comparators = new ArrayList<>();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
@@ -560,7 +560,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         orderedFieldNumbers.add(resultRowSignature.indexOf(dim.getOutputName()));
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
-        final ValueType type = dimensions.get(dimIndex).getOutputType();
+        final ColumnType type = dimensions.get(dimIndex).getOutputType();
         dimensionTypes.add(type);
         comparators.add(orderSpec.getDimensionComparator());
       }
@@ -570,7 +570,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       if (!dimsInOrderBy.contains(i)) {
         orderedFieldNumbers.add(resultRowSignature.indexOf(dimensions.get(i).getOutputName()));
         needsReverseList.add(false);
-        final ValueType type = dimensions.get(i).getOutputType();
+        final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
         comparators.add(StringComparators.LEXICOGRAPHIC);
       }
@@ -736,7 +736,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   private static int compareDimsForLimitPushDown(
       final IntList fields,
       final List<Boolean> needsReverseList,
-      final List<ValueType> dimensionTypes,
+      final List<ColumnType> dimensionTypes,
       final List<StringComparator> comparators,
       final ResultRow lhs,
       final ResultRow rhs
@@ -745,13 +745,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     for (int i = 0; i < fields.size(); i++) {
       final int fieldNumber = fields.getInt(i);
       final StringComparator comparator = comparators.get(i);
-      final ValueType dimensionType = dimensionTypes.get(i);
+      final ColumnType dimensionType = dimensionTypes.get(i);
 
       final int dimCompare;
       final Object lhsObj = lhs.get(fieldNumber);
       final Object rhsObj = rhs.get(fieldNumber);
 
-      if (ValueType.isNumeric(dimensionType)) {
+      if (dimensionType.isNumeric()) {
         if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
         } else {

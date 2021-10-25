@@ -63,6 +63,7 @@ exports[`data source view matches snapshot 1`] = `
           "Availability",
           "Availability detail",
           "Total data size",
+          "Segment rows",
           "Segment size",
           "Segment granularity",
           "Total rows",
@@ -77,7 +78,12 @@ exports[`data source view matches snapshot 1`] = `
       }
       onChange={[Function]}
       onClose={[Function]}
-      tableColumnsHidden={Array []}
+      tableColumnsHidden={
+        Array [
+          "Segment size",
+          "Segment granularity",
+        ]
+      }
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -184,7 +190,7 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment size (rows)
+            Segment rows
             <br />
             minimum / average / maximum
           </React.Fragment>,
@@ -196,6 +202,18 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
+            Segment size
+            <br />
+            minimum / average / maximum
+          </React.Fragment>,
+          "accessor": "avg_segment_size",
+          "filterable": false,
+          "show": false,
+          "width": 270,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
             Segment
             <br />
             granularity
@@ -203,7 +221,7 @@ exports[`data source view matches snapshot 1`] = `
           "accessor": [Function],
           "filterable": false,
           "id": "segment_granularity",
-          "show": true,
+          "show": false,
           "width": 100,
         },
         Object {

@@ -105,6 +105,14 @@ public class JettyTest extends BaseJettyTest
   private LatchedRequestStateHolder latchedRequestState;
 
   @Override
+  public void setProperties()
+  {
+    // call super.setProperties first in case it is setting the same property as this class
+    super.setProperties();
+    System.setProperty("druid.server.http.showDetailedJettyErrors", "true");
+  }
+
+  @Override
   protected Injector setupInjector()
   {
     TLSServerConfig tlsConfig;
@@ -552,6 +560,13 @@ public class JettyTest extends BaseJettyTest
     // has validateServerHostnames set to false
     String endpointIdentificationAlgorithm = transformedSSLEngine.getSSLParameters().getEndpointIdentificationAlgorithm();
     Assert.assertTrue(endpointIdentificationAlgorithm == null || endpointIdentificationAlgorithm.isEmpty());
+  }
+
+  @Test
+  public void testJettyErrorHandlerWithFilter()
+  {
+    // Response filter is disabled by default hence we show servlet information
+    Assert.assertTrue(server.getErrorHandler().isShowServlet());
   }
 
   private void waitForJettyServerModuleActiveConnectionsZero(JettyServerModule jsm) throws InterruptedException

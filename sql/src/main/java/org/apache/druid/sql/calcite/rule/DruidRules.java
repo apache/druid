@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -38,9 +37,11 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 public class DruidRules
 {
+  @SuppressWarnings("rawtypes")
   public static final Predicate<DruidRel> CAN_BUILD_ON = druidRel -> druidRel.getPartialDruidQuery() != null;
 
   private DruidRules()
@@ -88,10 +89,9 @@ public class DruidRules
             PartialDruidQuery::withSortProject
         ),
         DruidOuterQueryRule.AGGREGATE,
-        DruidOuterQueryRule.FILTER_AGGREGATE,
-        DruidOuterQueryRule.FILTER_PROJECT_AGGREGATE,
-        DruidOuterQueryRule.PROJECT_AGGREGATE,
-        DruidOuterQueryRule.AGGREGATE_SORT_PROJECT,
+        DruidOuterQueryRule.WHERE_FILTER,
+        DruidOuterQueryRule.SELECT_PROJECT,
+        DruidOuterQueryRule.SORT,
         DruidUnionRule.instance(),
         DruidUnionDataSourceRule.instance(),
         DruidSortUnionRule.instance(),
@@ -111,7 +111,7 @@ public class DruidRules
     )
     {
       super(
-          operand(relClass, operand(DruidRel.class, null, CAN_BUILD_ON, any())),
+          operand(relClass, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
           StringUtils.format("%s(%s)", DruidQueryRule.class.getSimpleName(), stage)
       );
       this.stage = stage;
@@ -143,7 +143,7 @@ public class DruidRules
   public abstract static class DruidOuterQueryRule extends RelOptRule
   {
     public static final RelOptRule AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())),
+        operand(Aggregate.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
         "AGGREGATE"
     )
     {
@@ -164,23 +164,21 @@ public class DruidRules
       }
     };
 
-    public static final RelOptRule FILTER_AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
-        "FILTER_AGGREGATE"
+    public static final RelOptRule WHERE_FILTER = new DruidOuterQueryRule(
+        operand(Filter.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
+        "WHERE_FILTER"
     )
     {
       @Override
       public void onMatch(final RelOptRuleCall call)
       {
-        final Aggregate aggregate = call.rel(0);
-        final Filter filter = call.rel(1);
-        final DruidRel druidRel = call.rel(2);
+        final Filter filter = call.rel(0);
+        final DruidRel druidRel = call.rel(1);
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
                              .withWhereFilter(filter)
-                             .withAggregate(aggregate)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);
@@ -188,28 +186,21 @@ public class DruidRules
       }
     };
 
-    public static final RelOptRule FILTER_PROJECT_AGGREGATE = new DruidOuterQueryRule(
-        operand(
-            Aggregate.class,
-            operand(Project.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))
-        ),
-        "FILTER_PROJECT_AGGREGATE"
+    public static final RelOptRule SELECT_PROJECT = new DruidOuterQueryRule(
+        operand(Project.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
+        "SELECT_PROJECT"
     )
     {
       @Override
       public void onMatch(final RelOptRuleCall call)
       {
-        final Aggregate aggregate = call.rel(0);
-        final Project project = call.rel(1);
-        final Filter filter = call.rel(2);
-        final DruidRel druidRel = call.rel(3);
+        final Project filter = call.rel(0);
+        final DruidRel druidRel = call.rel(1);
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
-                             .withWhereFilter(filter)
-                             .withSelectProject(project)
-                             .withAggregate(aggregate)
+                             .withSelectProject(filter)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);
@@ -217,52 +208,21 @@ public class DruidRules
       }
     };
 
-    public static final RelOptRule PROJECT_AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
-        "PROJECT_AGGREGATE"
+    public static final RelOptRule SORT = new DruidOuterQueryRule(
+        operand(Sort.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
+        "SORT"
     )
     {
       @Override
       public void onMatch(final RelOptRuleCall call)
       {
-        final Aggregate aggregate = call.rel(0);
-        final Project project = call.rel(1);
-        final DruidRel druidRel = call.rel(2);
+        final Sort sort = call.rel(0);
+        final DruidRel druidRel = call.rel(1);
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
-                             .withSelectProject(project)
-                             .withAggregate(aggregate)
-        );
-        if (outerQueryRel.isValidDruidQuery()) {
-          call.transformTo(outerQueryRel);
-        }
-      }
-    };
-
-    public static final RelOptRule AGGREGATE_SORT_PROJECT = new DruidOuterQueryRule(
-        operand(
-            Project.class,
-            operand(Sort.class, operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))
-        ),
-        "AGGREGATE_SORT_PROJECT"
-    )
-    {
-      @Override
-      public void onMatch(RelOptRuleCall call)
-      {
-        final Project sortProject = call.rel(0);
-        final Sort sort = call.rel(1);
-        final Aggregate aggregate = call.rel(2);
-        final DruidRel druidRel = call.rel(3);
-
-        final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
-            druidRel,
-            PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
-                             .withAggregate(aggregate)
                              .withSort(sort)
-                             .withSortProject(sortProject)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);

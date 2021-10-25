@@ -93,7 +93,7 @@ public class DoublesSketchMergeBufferAggregatorHelper
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN));
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN));
   }
 
   private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)

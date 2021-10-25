@@ -33,6 +33,7 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
@@ -41,6 +42,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -55,10 +57,11 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
-public class ApproxCountDistinctSqlAggregator implements SqlAggregator
+public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ApproxCountDistinctSqlAggFunction();
-  private static final String NAME = "APPROX_COUNT_DISTINCT";
+  public static final String NAME = "APPROX_COUNT_DISTINCT_BUILTIN";
+
+  private static final SqlAggFunction FUNCTION_INSTANCE = new BuiltinApproxCountDistinctSqlAggFunction();
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -97,11 +100,11 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (arg.isDirectColumnAccess()
-        && rowSignature.getColumnType(arg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+        && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
       final RelDataType dataType = rexNode.getType();
-      final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
+      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
         throw new ISE(
             "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
@@ -135,9 +138,9 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     );
   }
 
-  private static class ApproxCountDistinctSqlAggFunction extends SqlAggFunction
+  private static class BuiltinApproxCountDistinctSqlAggFunction extends SqlAggFunction
   {
-    ApproxCountDistinctSqlAggFunction()
+    BuiltinApproxCountDistinctSqlAggFunction()
     {
       super(
           NAME,
@@ -148,7 +151,8 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
           OperandTypes.ANY,
           SqlFunctionCategory.STRING,
           false,
-          false
+          false,
+          Optionality.FORBIDDEN
       );
     }
   }

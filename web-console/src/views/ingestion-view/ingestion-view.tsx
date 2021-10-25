@@ -47,6 +47,7 @@ import {
   deepGet,
   formatDuration,
   getDruidErrorMessage,
+  LocalStorageBackedVisibility,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
@@ -58,7 +59,6 @@ import {
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './ingestion-view.scss';
 
@@ -143,8 +143,8 @@ export interface IngestionViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId?: string;
   supervisorTableActionDialogActions: BasicAction[];
-  hiddenTaskColumns: LocalStorageBackedArray<string>;
-  hiddenSupervisorColumns: LocalStorageBackedArray<string>;
+  hiddenTaskColumns: LocalStorageBackedVisibility;
+  hiddenSupervisorColumns: LocalStorageBackedVisibility;
 }
 
 function statusToColor(status: string): string {
@@ -238,10 +238,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       taskTableActionDialogActions: [],
       supervisorTableActionDialogActions: [],
 
-      hiddenTaskColumns: new LocalStorageBackedArray<string>(
+      hiddenTaskColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
       ),
-      hiddenSupervisorColumns: new LocalStorageBackedArray<string>(
+      hiddenSupervisorColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
       ),
     };
@@ -587,19 +587,19 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               id: 'datasource',
               accessor: 'supervisor_id',
               width: 300,
-              show: hiddenSupervisorColumns.exists('Datasource'),
+              show: hiddenSupervisorColumns.shown('Datasource'),
             },
             {
               Header: 'Type',
               id: 'type',
               accessor: row => row.type,
-              show: hiddenSupervisorColumns.exists('Type'),
+              show: hiddenSupervisorColumns.shown('Type'),
             },
             {
               Header: 'Topic/Stream',
               id: 'source',
               accessor: row => row.source,
-              show: hiddenSupervisorColumns.exists('Topic/Stream'),
+              show: hiddenSupervisorColumns.shown('Topic/Stream'),
             },
             {
               Header: 'Status',
@@ -612,7 +612,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   {row.value}
                 </span>
               ),
-              show: hiddenSupervisorColumns.exists('Status'),
+              show: hiddenSupervisorColumns.shown('Status'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -637,7 +637,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   />
                 );
               },
-              show: hiddenSupervisorColumns.exists(ACTION_COLUMN_LABEL),
+              show: hiddenSupervisorColumns.shown(ACTION_COLUMN_LABEL),
             },
           ]}
         />
@@ -753,7 +753,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               accessor: 'task_id',
               width: 500,
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Task ID'),
+              show: hiddenTaskColumns.shown('Task ID'),
             },
             {
               Header: 'Group ID',
@@ -772,7 +772,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   </a>
                 );
               },
-              show: hiddenTaskColumns.exists('Group ID'),
+              show: hiddenTaskColumns.shown('Group ID'),
             },
             {
               Header: 'Type',
@@ -790,7 +790,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   </a>
                 );
               },
-              show: hiddenTaskColumns.exists('Type'),
+              show: hiddenTaskColumns.shown('Type'),
             },
             {
               Header: 'Datasource',
@@ -807,7 +807,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   </a>
                 );
               },
-              show: hiddenTaskColumns.exists('Datasource'),
+              show: hiddenTaskColumns.shown('Datasource'),
             },
 
             {
@@ -817,14 +817,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.location);
               },
-              show: hiddenTaskColumns.exists('Location'),
+              show: hiddenTaskColumns.shown('Location'),
             },
             {
               Header: 'Created time',
               accessor: 'created_time',
               width: 190,
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Created time'),
+              show: hiddenTaskColumns.shown('Created time'),
             },
             {
               Header: 'Status',
@@ -876,7 +876,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.status.status);
               },
-              show: hiddenTaskColumns.exists('Status'),
+              show: hiddenTaskColumns.shown('Status'),
             },
             {
               Header: 'Duration',
@@ -885,7 +885,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterable: false,
               Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Duration'),
+              show: hiddenTaskColumns.shown('Duration'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -913,7 +913,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 );
               },
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists(ACTION_COLUMN_LABEL),
+              show: hiddenTaskColumns.shown(ACTION_COLUMN_LABEL),
             },
           ]}
         />
@@ -1105,7 +1105,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                     hiddenSupervisorColumns: prevState.hiddenSupervisorColumns.toggle(column),
                   }))
                 }
-                tableColumnsHidden={hiddenSupervisorColumns.storedArray}
+                tableColumnsHidden={hiddenSupervisorColumns.getHiddenColumns()}
               />
             </ViewControlBar>
             {this.renderSupervisorTable()}
@@ -1157,7 +1157,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                     hiddenTaskColumns: prevState.hiddenTaskColumns.toggle(column),
                   }))
                 }
-                tableColumnsHidden={hiddenTaskColumns.storedArray}
+                tableColumnsHidden={hiddenTaskColumns.getHiddenColumns()}
               />
             </ViewControlBar>
             {this.renderTaskTable()}

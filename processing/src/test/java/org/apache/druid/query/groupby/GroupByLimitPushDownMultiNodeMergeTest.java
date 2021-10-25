@@ -77,7 +77,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -727,26 +727,26 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new ExpressionVirtualColumn(
                 "d0:v",
                 "timestamp_extract(\"__time\",'YEAR','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
                 "d1:v",
                 "timestamp_extract(\"__time\",'MONTH','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionVirtualColumn(
                 "d2:v",
                 "timestamp_extract(\"__time\",'DAY','UTC')",
-                ValueType.LONG,
+                ColumnType.LONG,
                 TestExprMacroTable.INSTANCE
             )
         )
         .setDimensions(
-            new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
-            new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG),
-            new DefaultDimensionSpec("d2:v", "d2", ValueType.LONG)
+            new DefaultDimensionSpec("d0:v", "d0", ColumnType.LONG),
+            new DefaultDimensionSpec("d1:v", "d1", ColumnType.LONG),
+            new DefaultDimensionSpec("d2:v", "d2", ColumnType.LONG)
         ).setAggregatorSpecs(new CountAggregatorFactory("a0"))
         .setLimitSpec(
             ls2
@@ -856,7 +856,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new ExtractionDimensionSpec(
                 ColumnHolder.TIME_COLUMN_NAME,
                 "hour",
-                ValueType.LONG,
+                ColumnType.LONG,
                 new TimeFormatExtractionFn(
                     null,
                     null,
@@ -1000,8 +1000,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(
-            new DefaultDimensionSpec("dimA", "d0", ValueType.STRING),
-            new DefaultDimensionSpec("dimB", "d1", ValueType.STRING)
+            new DefaultDimensionSpec("dimA", "d0", ColumnType.STRING),
+            new DefaultDimensionSpec("dimB", "d1", ColumnType.STRING)
         ).setAggregatorSpecs(new LongSumAggregatorFactory("a0", "metA"))
         .setLimitSpec(ls)
         .setContext(context)

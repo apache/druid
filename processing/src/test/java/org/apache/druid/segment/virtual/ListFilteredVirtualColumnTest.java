@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +38,7 @@ public class ListFilteredVirtualColumnTest
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         "hello",
-        new DefaultDimensionSpec("column", "output", ValueType.STRING),
+        new DefaultDimensionSpec("column", "output", ColumnType.STRING),
         ImmutableSet.of("foo", "bar"),
         true
     );
@@ -52,7 +52,7 @@ public class ListFilteredVirtualColumnTest
   {
     ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
         "hello",
-        new DefaultDimensionSpec("column", "output", ValueType.STRING),
+        new DefaultDimensionSpec("column", "output", ColumnType.STRING),
         ImmutableSet.of("foo", "bar"),
         false
     );

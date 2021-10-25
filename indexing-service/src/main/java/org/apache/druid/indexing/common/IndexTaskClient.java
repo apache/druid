@@ -276,16 +276,8 @@ public abstract class IndexTaskClient implements AutoCloseable
       byte[] content
   ) throws MalformedURLException
   {
-    final String host = location.getHost();
-    final String scheme = location.getTlsPort() >= 0 ? "https" : "http";
-    final int port = location.getTlsPort() >= 0 ? location.getTlsPort() : location.getPort();
-
-    // Use URL constructor, not URI, since the path is already encoded.
     // The below line can throw a MalformedURLException, and this method should return immediately without rety.
-    final URL serviceUrl = new URL(
-        scheme,
-        host,
-        port,
+    final URL serviceUrl = location.makeURL(
         encodedQueryString == null ? path : StringUtils.format("%s?%s", path, encodedQueryString)
     );
 

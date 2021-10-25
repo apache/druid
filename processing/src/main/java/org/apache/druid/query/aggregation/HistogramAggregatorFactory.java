@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -37,6 +37,10 @@ import java.util.List;
 
 public class HistogramAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("histogram");
+  // todo: this isn't registered with serde, is it a lie? should we just report null as the type name? or register a serde?
+  public static final ColumnType TYPE_VISUAL = ColumnType.ofComplex("histogramVisual");
+
   private final String name;
   private final String fieldName;
   private final List<Float> breaksList;
@@ -201,28 +205,22 @@ public class HistogramAggregatorFactory extends AggregatorFactory
     return buf.array();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return "histogram";
-  }
-
   /**
    * actual type is {@link Histogram}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   /**
    * actual type is {@link HistogramVisual}
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.COMPLEX;
+    return TYPE_VISUAL;
   }
 
   @Override

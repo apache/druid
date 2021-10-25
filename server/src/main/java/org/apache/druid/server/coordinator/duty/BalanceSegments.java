@@ -144,6 +144,8 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
+
+    // Prioritize moving segments from decomissioning servers.
     int decommissioningMaxPercentOfMaxSegmentsToMove =
         params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
     int maxSegmentsToMoveFromDecommissioningNodes =
@@ -155,6 +157,7 @@ public class BalanceSegments implements CoordinatorDuty
     Pair<Integer, Integer> decommissioningResult =
         balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
 
+    // After moving segments from decomissioning servers, move the remaining segments from the rest of the servers.
     int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
     log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
     Pair<Integer, Integer> generalResult =
@@ -184,6 +187,13 @@ public class BalanceSegments implements CoordinatorDuty
   )
   {
     if (maxSegmentsToMove <= 0) {
+      log.debug("maxSegmentsToMove is 0; no balancing work can be performed.");
+      return new Pair<>(0, 0);
+    } else if (toMoveFrom.isEmpty()) {
+      log.debug("toMoveFrom is empty; no balancing work can be performed.");
+      return new Pair<>(0, 0);
+    } else if (toMoveTo.isEmpty()) {
+      log.debug("toMoveTo is empty; no balancing work can be peformed.");
       return new Pair<>(0, 0);
     }
 

@@ -112,7 +112,11 @@ public class DruidJoinRule extends RelOptRule
 
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
-    ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType(), right).get();
+    ConditionAnalysis conditionAnalysis = analyzeCondition(
+        join.getCondition(),
+        join.getLeft().getRowType(),
+        right
+    ).get();
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
@@ -147,10 +151,14 @@ public class DruidJoinRule extends RelOptRule
       final Project rightProject = right.getPartialDruidQuery().getSelectProject();
 
       // Right-side projection expressions rewritten to be on top of the join.
-      Iterables.addAll(
-          newProjectExprs,
-          RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())
-      );
+      for (final RexNode rexNode : RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())) {
+        if (join.getJoinType().generatesNullsOnRight()) {
+          newProjectExprs.add(makeNullableIfLiteral(rexNode, rexBuilder));
+        } else {
+          newProjectExprs.add(rexNode);
+        }
+      }
+
       newRight = right.withPartialQuery(PartialDruidQuery.create(rightScan));
       conditionAnalysis = conditionAnalysis.pushThroughRightProject(rightProject);
     } else {
@@ -195,6 +203,19 @@ public class DruidJoinRule extends RelOptRule
     call.transformTo(relBuilder.build());
   }
 
+  private static RexNode makeNullableIfLiteral(final RexNode rexNode, final RexBuilder rexBuilder)
+  {
+    if (rexNode.isA(SqlKind.LITERAL)) {
+      return rexBuilder.makeLiteral(
+          RexLiteral.value(rexNode),
+          rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true),
+          false
+      );
+    } else {
+      return rexNode;
+    }
+  }
+
   /**
    * Returns whether {@link #analyzeCondition} would return something.
    */
@@ -208,7 +229,11 @@ public class DruidJoinRule extends RelOptRule
    * If this condition is an AND of some combination of (1) literals; (2) equality conditions of the form
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  private static Optional<ConditionAnalysis> analyzeCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
+  private static Optional<ConditionAnalysis> analyzeCondition(
+      final RexNode condition,
+      final RelDataType leftRowType,
+      DruidRel<?> right
+  )
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
     final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();

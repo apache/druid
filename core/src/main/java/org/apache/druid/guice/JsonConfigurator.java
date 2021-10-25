@@ -100,7 +100,9 @@ public class JsonConfigurator
           value = jsonMapper.readValue(modifiedPropValue, Object.class);
         }
         catch (IOException e) {
-          log.info(e, "Unable to parse [%s]=[%s] as a json object, using as is.", prop, propValue);
+          // Do not log exception message or the property value as it might
+          // expose sensitive information
+          log.info("Unable to parse value of property [%s] as a json object, using as is.", prop);
           value = propValue;
         }
         hieraricalPutValue(propertyPrefix, prop, prop.substring(propertyBase.length()), value, jsonMap);

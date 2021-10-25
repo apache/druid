@@ -20,19 +20,21 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
-public class ExprTypeConversion
+public class ExpressionTypeConversion
 {
   /**
    * Infer the output type of a list of possible 'conditional' expression outputs (where any of these could be the
    * output expression if the corresponding case matching expression evaluates to true)
    */
-  public static ExprType conditional(Expr.InputBindingInspector inspector, List<Expr> args)
+  public static ExpressionType conditional(Expr.InputBindingInspector inspector, List<Expr> args)
   {
-    ExprType type = null;
+    ExpressionType type = null;
     for (Expr arg : args) {
       if (type == null) {
         type = arg.getOutputType(inspector);
@@ -49,12 +51,12 @@ public class ExprTypeConversion
    * potentially coming from an underlying numeric column, or when an underlying column was completely missing and so
    * all values are null. This method is not well suited for array handling.
    */
-  public static ExprType autoDetect(ExprEval eval, ExprEval otherEval)
+  public static ExpressionType autoDetect(ExprEval eval, ExprEval otherEval)
   {
-    ExprType type = eval.type();
-    ExprType otherType = otherEval.type();
-    if (type == ExprType.STRING && otherType == ExprType.STRING) {
-      return ExprType.STRING;
+    ExpressionType type = eval.type();
+    ExpressionType otherType = otherEval.type();
+    if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
+      return ExpressionType.STRING;
     }
 
     type = eval.value() != null ? type : otherType;
@@ -71,7 +73,7 @@ public class ExprTypeConversion
    * otherwise, output is {@link ExprType#DOUBLE}
    */
   @Nullable
-  public static ExprType operator(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExpressionType operator(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
     if (type == null) {
       return other;
@@ -79,15 +81,15 @@ public class ExprTypeConversion
     if (other == null) {
       return type;
     }
-    if (ExprType.isArray(type) || ExprType.isArray(other)) {
-      if (type != other) {
+    if (type.isArray() || other.isArray()) {
+      if (!type.equals(other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
       return type;
     }
     // if both arguments are a string, type becomes a string
-    if (ExprType.STRING.equals(type) && ExprType.STRING.equals(other)) {
-      return ExprType.STRING;
+    if (type.is(ExprType.STRING) && other.is(ExprType.STRING)) {
+      return ExpressionType.STRING;
     }
 
     // otherwise a decimal or integer number
@@ -103,7 +105,7 @@ public class ExprTypeConversion
    *  {@link ExprType#DOUBLE}
    */
   @Nullable
-  public static ExprType function(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExpressionType function(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
     if (type == null) {
       type = other;
@@ -112,15 +114,15 @@ public class ExprTypeConversion
       other = type;
     }
     // arrays cannot be auto converted
-    if (ExprType.isArray(type) || ExprType.isArray(other)) {
-      if (type != other) {
+    if ((type != null && type.isArray()) || (other != null && other.isArray())) {
+      if (!Objects.equals(type, other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
       return type;
     }
     // if either argument is a string, type becomes a string
-    if (ExprType.STRING.equals(type) || ExprType.STRING.equals(other)) {
-      return ExprType.STRING;
+    if (Types.is(type, ExprType.STRING) || Types.is(other, ExprType.STRING)) {
+      return ExpressionType.STRING;
     }
 
     return numeric(type, other);
@@ -135,28 +137,28 @@ public class ExprTypeConversion
    * any number will be coerced to {@link ExprType#LONG}
    */
   @Nullable
-  public static ExprType integerMathFunction(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExpressionType integerMathFunction(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
-    final ExprType functionType = ExprTypeConversion.function(type, other);
+    final ExpressionType functionType = ExpressionTypeConversion.function(type, other);
     // any number is long
-    return ExprType.isNumeric(functionType) ? ExprType.LONG : functionType;
+    return functionType != null && functionType.isNumeric() ? ExpressionType.LONG : functionType;
   }
 
   /**
    * Default best effort numeric type conversion. If both types are {@link ExprType#LONG}, returns
    * {@link ExprType#LONG}, else {@link ExprType#DOUBLE}
    */
-  public static ExprType numeric(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExpressionType numeric(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
     // all numbers win over longs
     // floats vs doubles would be handled here, but we currently only support doubles...
-    if (ExprType.LONG.equals(type) && ExprType.LONG.equals(other)) {
-      return ExprType.LONG;
+    if (Types.is(type, ExprType.LONG) && Types.isNullOr(other, ExprType.LONG)) {
+      return ExpressionType.LONG;
     }
-    return ExprType.DOUBLE;
+    return ExpressionType.DOUBLE;
   }
 
-  private ExprTypeConversion()
+  private ExpressionTypeConversion()
   {
     // no instantiation
   }

@@ -27,9 +27,8 @@ import org.junit.Test;
 
 /**
  */
-public class DictionaryMergeIteratorTest
+public class DictionaryMergingIteratorTest
 {
-
   @Test
   public void basicTest()
   {
@@ -45,7 +44,11 @@ public class DictionaryMergeIteratorTest
     Indexed<String> i4 = new ListIndexed<String>(s4);
     Indexed<String> i5 = new ListIndexed<String>(s5);
 
-    IndexMerger.DictionaryMergeIterator iterator = new IndexMerger.DictionaryMergeIterator(new Indexed[]{i1, i2, i3, i4, i5}, false);
+    DictionaryMergingIterator<String> iterator = new DictionaryMergingIterator<>(
+        new Indexed[]{i1, i2, i3, i4, i5},
+        StringDimensionMergerV9.DICTIONARY_MERGING_COMPARATOR,
+        false
+    );
 
     Assert.assertArrayEquals(new String[]{"a", "b", "c", "d", "e", "f"}, Iterators.toArray(iterator, String.class));
 
