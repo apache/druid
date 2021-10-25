@@ -39,6 +39,9 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -56,7 +59,9 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   {
     CalciteTests.getJsonMapper().registerModule(new BloomFilterSerializersModule());
     return new DruidOperatorTable(
-        ImmutableSet.of(),
+        ImmutableSet.of(
+            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(new BuiltinApproxCountDistinctSqlAggregator()))
+        ),
         ImmutableSet.of(new BloomFilterOperatorConversion())
     );
   }

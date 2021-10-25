@@ -7985,6 +7985,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testApproxCountDistinctBuiltin() throws Exception
+  {
+    testQuery(
+        "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dim2) FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new CardinalityAggregatorFactory(
+                              "a0",
+                              null,
+                              dimensions(new DefaultDimensionSpec("dim2", null)),
+                              false,
+                              true
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators() throws Exception
   {
     // When HLL is disabled, do exact count distinct through a nested query.

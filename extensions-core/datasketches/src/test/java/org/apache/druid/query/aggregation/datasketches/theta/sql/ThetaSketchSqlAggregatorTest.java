@@ -52,6 +52,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -118,10 +120,17 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
+    final ThetaSketchApproxCountDistinctSqlAggregator approxCountDistinctSqlAggregator =
+        new ThetaSketchApproxCountDistinctSqlAggregator();
+
     return new DruidOperatorTable(
         ImmutableSet.of(
             new ThetaSketchApproxCountDistinctSqlAggregator(),
-            new ThetaSketchObjectSqlAggregator()
+            new ThetaSketchObjectSqlAggregator(),
+
+            // Use APPROX_COUNT_DISTINCT_DS_THETA as APPROX_COUNT_DISTINCT impl for these tests.
+            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)),
+            new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)
         ),
         ImmutableSet.of(
             new ThetaSketchEstimateOperatorConversion(),
@@ -133,12 +142,27 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   public void testApproxCountDistinctThetaSketch() throws Exception
   {
     // Cannot vectorize due to SUBSTRING.
     cannotVectorize();
+
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n"
+                       // uppercase
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2) FILTER(WHERE dim2 <> ''),\n"
+                       // lowercase; also, filtered
+                       + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n"
+                       // on extractionFn, using A.C.D.
+                       + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n"
+                       // on expression, using COUNT DISTINCT
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1, 32768),\n"
+                       // on native theta sketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1)\n"
+                       // on native theta sketch column
+                       + "FROM druid.foo";
 
     final List<Object[]> expectedResults;
 
@@ -169,21 +193,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     testQuery(
-        "SELECT\n"
-        + "  SUM(cnt),\n"
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n"
-        // uppercase
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2) FILTER(WHERE dim2 <> ''),\n"
-        // lowercase; also, filtered
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1)),\n"
-        // on extractionFn
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1) || 'x'),\n"
-        // on expression
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1, 32768),\n"
-        // on native theta sketch column
-        + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1)\n"
-        // on native theta sketch column
-        + "FROM druid.foo",
+        sql,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)

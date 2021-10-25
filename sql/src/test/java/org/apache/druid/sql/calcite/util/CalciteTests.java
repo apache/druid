@@ -110,7 +110,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -130,6 +130,7 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -255,7 +256,9 @@ public class CalciteTests
                 )
             );
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
-      }
+        SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
+      },
+      new SqlAggregationModule()
   );
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
@@ -1024,9 +1027,7 @@ public class CalciteTests
   public static DruidOperatorTable createOperatorTable()
   {
     try {
-      final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-      extractionOperators.add(INJECTOR.getInstance(QueryLookupOperatorConversion.class));
-      return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
+      return INJECTOR.getInstance(DruidOperatorTable.class);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
