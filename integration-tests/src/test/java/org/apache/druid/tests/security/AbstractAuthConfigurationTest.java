@@ -98,7 +98,7 @@ public abstract class AbstractAuthConfigurationTest
    * create a ResourceAction set of permissions that can only read a 'auth_test' datasource, for Authorizer
    * implementations which use ResourceAction pattern matching
    */
-  protected static final List<ResourceAction> DATASOURCE_READ_ONLY_PERMISSIONS = Collections.singletonList(
+  protected static final List<ResourceAction> DATASOURCE_ONLY_PERMISSIONS = Collections.singletonList(
       new ResourceAction(
           new Resource("auth_test", ResourceType.DATASOURCE),
           Action.READ
@@ -109,38 +109,10 @@ public abstract class AbstractAuthConfigurationTest
    * create a ResourceAction set of permissions that can only read 'auth_test' + partial SYSTEM_TABLE, for Authorizer
    * implementations which use ResourceAction pattern matching
    */
-  protected static final List<ResourceAction> DATASOURCE_READ_SYS_PERMISSIONS = ImmutableList.of(
+  protected static final List<ResourceAction> DATASOURCE_SYS_PERMISSIONS = ImmutableList.of(
       new ResourceAction(
           new Resource("auth_test", ResourceType.DATASOURCE),
           Action.READ
-      ),
-      new ResourceAction(
-          new Resource("segments", ResourceType.SYSTEM_TABLE),
-          Action.READ
-      ),
-      // test missing state permission but having servers permission
-      new ResourceAction(
-          new Resource("servers", ResourceType.SYSTEM_TABLE),
-          Action.READ
-      ),
-      // test missing state permission but having server_segments permission
-      new ResourceAction(
-          new Resource("server_segments", ResourceType.SYSTEM_TABLE),
-          Action.READ
-      ),
-      new ResourceAction(
-          new Resource("tasks", ResourceType.SYSTEM_TABLE),
-          Action.READ
-      )
-  );
-
-  /**
-   * create a ResourceAction set of permissions that can write datasource 'auth_test'
-   */
-  protected static final List<ResourceAction> DATASOURCE_WRITE_SYS_PERMISSIONS = ImmutableList.of(
-      new ResourceAction(
-          new Resource("auth_test", ResourceType.DATASOURCE),
-          Action.WRITE
       ),
       new ResourceAction(
           new Resource("segments", ResourceType.SYSTEM_TABLE),
@@ -166,7 +138,7 @@ public abstract class AbstractAuthConfigurationTest
    * create a ResourceAction set of permissions that can only read 'auth_test' + STATE + SYSTEM_TABLE read access, for
    * Authorizer implementations which use ResourceAction pattern matching
    */
-  protected static final List<ResourceAction> DATASOURCE_READ_SYS_STATE_PERMISSIONS = ImmutableList.of(
+  protected static final List<ResourceAction> DATASOURCE_SYS_STATE_PERMISSIONS = ImmutableList.of(
       new ResourceAction(
           new Resource("auth_test", ResourceType.DATASOURCE),
           Action.READ
@@ -215,18 +187,16 @@ public abstract class AbstractAuthConfigurationTest
   protected CoordinatorResourceTestClient coordinatorClient;
 
   protected HttpClient adminClient;
-  protected HttpClient datasourceReadOnlyUserClient;
-  protected HttpClient datasourceReadAndSysUserClient;
-  protected HttpClient datasourceWriteAndSysUserClient;
-  protected HttpClient datasourceReadWithStateUserClient;
+  protected HttpClient datasourceOnlyUserClient;
+  protected HttpClient datasourceAndSysUserClient;
+  protected HttpClient datasourceWithStateUserClient;
   protected HttpClient stateOnlyUserClient;
   protected HttpClient internalSystemClient;
 
 
-  protected abstract void setupDatasourceReadOnlyUser() throws Exception;
-  protected abstract void setupDatasourceReadAndSysTableUser() throws Exception;
-  protected abstract void setupDatasourceWriteAndSysTableUser() throws Exception;
-  protected abstract void setupDatasourceReadAndSysAndStateUser() throws Exception;
+  protected abstract void setupDatasourceOnlyUser() throws Exception;
+  protected abstract void setupDatasourceAndSysTableUser() throws Exception;
+  protected abstract void setupDatasourceAndSysAndStateUser() throws Exception;
   protected abstract void setupSysTableAndStateOnlyUser() throws Exception;
   protected abstract void setupTestSpecificHttpClients() throws Exception;
   protected abstract String getAuthenticatorName();
@@ -272,44 +242,44 @@ public abstract class AbstractAuthConfigurationTest
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceReadOnlyUser() throws Exception
+  public void test_systemSchemaAccess_datasourceOnlyUser() throws Exception
   {
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
-        datasourceReadOnlyUserClient,
+        datasourceOnlyUserClient,
         HttpMethod.GET,
         config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
         null
     );
 
     // as user that can only read auth_test
-    LOG.info("Checking sys.segments query as datasourceReadOnlyUser...");
+    LOG.info("Checking sys.segments query as datasourceOnlyUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadOnlyUserClient,
+        datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
     );
 
-    LOG.info("Checking sys.servers query as datasourceReadOnlyUser...");
+    LOG.info("Checking sys.servers query as datasourceOnlyUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadOnlyUserClient,
+        datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceReadOnlyUser...");
+    LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadOnlyUserClient,
+        datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
     );
 
-    LOG.info("Checking sys.tasks query as datasourceReadOnlyUser...");
+    LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadOnlyUserClient,
+        datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Allowed:false, Message:\"}"
@@ -317,119 +287,83 @@ public abstract class AbstractAuthConfigurationTest
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceReadAndSysUser() throws Exception
+  public void test_systemSchemaAccess_datasourceAndSysUser() throws Exception
   {
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
-        datasourceReadAndSysUserClient,
+        datasourceAndSysUserClient,
         HttpMethod.GET,
         config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
         null
     );
 
     // as user that can only read auth_test
-    LOG.info("Checking sys.segments query as datasourceReadAndSysUser...");
+    LOG.info("Checking sys.segments query as datasourceAndSysUser...");
     verifySystemSchemaQuery(
-        datasourceReadAndSysUserClient,
+        datasourceAndSysUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments.stream()
                      .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
-    LOG.info("Checking sys.servers query as datasourceReadAndSysUser...");
+    LOG.info("Checking sys.servers query as datasourceAndSysUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadAndSysUserClient,
+        datasourceAndSysUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceReadAndSysUser...");
+    LOG.info("Checking sys.server_segments query as datasourceAndSysUser...");
     verifySystemSchemaQueryFailure(
-        datasourceReadAndSysUserClient,
+        datasourceAndSysUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
     );
 
-    // Verify that sys.tasks result is empty as it is filtered by Datasource WRITE access
-    LOG.info("Checking sys.tasks query as datasourceReadAndSysUser...");
+    LOG.info("Checking sys.tasks query as datasourceAndSysUser...");
     verifySystemSchemaQuery(
-        datasourceReadAndSysUserClient,
-        SYS_SCHEMA_TASKS_QUERY,
-        Collections.emptyList()
-    );
-  }
-
-  @Test
-  public void test_systemSchemaAccess_datasourceWriteAndSysUser() throws Exception
-  {
-    // Verify that sys.segments result is empty as it is filtered by Datasource READ access
-    LOG.info("Checking sys.segments query as datasourceWriteAndSysUser...");
-    verifySystemSchemaQuery(
-        datasourceWriteAndSysUserClient,
-        SYS_SCHEMA_SEGMENTS_QUERY,
-        Collections.emptyList()
-    );
-
-    LOG.info("Checking sys.servers query as datasourceWriteAndSysUser...");
-    verifySystemSchemaQueryFailure(
-        datasourceWriteAndSysUserClient,
-        SYS_SCHEMA_SERVERS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
-    );
-
-    LOG.info("Checking sys.server_segments query as datasourceWriteAndSysUser...");
-    verifySystemSchemaQueryFailure(
-        datasourceWriteAndSysUserClient,
-        SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Insufficient permission to view servers : Allowed:false, Message:\"}"
-    );
-
-    LOG.info("Checking sys.tasks query as datasourceWriteAndSysUser...");
-    verifySystemSchemaQuery(
-        datasourceWriteAndSysUserClient,
+        datasourceAndSysUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                  .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                   .collect(Collectors.toList())
     );
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceReadAndSysWithStateUser() throws Exception
+  public void test_systemSchemaAccess_datasourceAndSysWithStateUser() throws Exception
   {
     // check that we can access a state-permission restricted resource on the broker
     HttpUtil.makeRequest(
-        datasourceReadWithStateUserClient,
+        datasourceWithStateUserClient,
         HttpMethod.GET,
         config.getBrokerUrl() + "/status",
         null
     );
 
     // as user that can read auth_test and STATE
-    LOG.info("Checking sys.segments query as datasourceReadWithStateUser...");
+    LOG.info("Checking sys.segments query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
-        datasourceReadWithStateUserClient,
+        datasourceWithStateUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments.stream()
                      .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
                      .collect(Collectors.toList())
     );
 
-    LOG.info("Checking sys.servers query as datasourceReadWithStateUser...");
+    LOG.info("Checking sys.servers query as datasourceWithStateUser...");
     verifySystemSchemaServerQuery(
-        datasourceReadWithStateUserClient,
+        datasourceWithStateUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceReadWithStateUser...");
+    LOG.info("Checking sys.server_segments query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
-        datasourceReadWithStateUserClient,
+        datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments.stream()
                            .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
@@ -437,12 +371,13 @@ public abstract class AbstractAuthConfigurationTest
                            .collect(Collectors.toList())
     );
 
-    // Verify that sys.tasks result is empty as it is filtered by Datasource WRITE access
-    LOG.info("Checking sys.tasks query as datasourceReadWithStateUser...");
+    LOG.info("Checking sys.tasks query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
-        datasourceReadWithStateUserClient,
+        datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        Collections.emptyList()
+        adminTasks.stream()
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
   }
 
@@ -565,10 +500,9 @@ public abstract class AbstractAuthConfigurationTest
   protected void setupHttpClientsAndUsers() throws Exception
   {
     setupHttpClients();
-    setupDatasourceReadOnlyUser();
-    setupDatasourceReadAndSysTableUser();
-    setupDatasourceWriteAndSysTableUser();
-    setupDatasourceReadAndSysAndStateUser();
+    setupDatasourceOnlyUser();
+    setupDatasourceAndSysTableUser();
+    setupDatasourceAndSysAndStateUser();
     setupSysTableAndStateOnlyUser();
   }
 
@@ -832,23 +766,18 @@ public abstract class AbstractAuthConfigurationTest
         httpClient
     );
 
-    datasourceReadOnlyUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceReadOnlyUser", "helloworld"),
+    datasourceOnlyUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceOnlyUser", "helloworld"),
         httpClient
     );
 
-    datasourceReadAndSysUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceReadAndSysUser", "helloworld"),
+    datasourceAndSysUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceAndSysUser", "helloworld"),
         httpClient
     );
 
-    datasourceWriteAndSysUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceWriteAndSysUser", "helloworld"),
-        httpClient
-    );
-
-    datasourceReadWithStateUserClient = new CredentialedHttpClient(
-        new BasicCredentials("datasourceReadWithStateUser", "helloworld"),
+    datasourceWithStateUserClient = new CredentialedHttpClient(
+        new BasicCredentials("datasourceWithStateUser", "helloworld"),
         httpClient
     );
 

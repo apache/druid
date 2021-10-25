@@ -872,7 +872,7 @@ public class SystemSchema extends AbstractSchema
       );
 
       Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = task -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(task.getDataSource()));
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
 
       final Iterable<TaskStatusPlus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
@@ -1014,7 +1014,7 @@ public class SystemSchema extends AbstractSchema
       );
 
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(supervisor.getSource()));
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
 
       final Iterable<SupervisorStatus> authorizedSupervisors = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
