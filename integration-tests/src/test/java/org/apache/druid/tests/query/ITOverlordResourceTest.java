@@ -30,7 +30,7 @@ import org.testng.annotations.Test;
 
 import java.util.function.Consumer;
 
-@Test(groups = TestNGGroup.OVERLORD_RESOURCE)
+@Test(groups = TestNGGroup.HTTP_ENDPOINT)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITOverlordResourceTest
 {
