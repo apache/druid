@@ -32,6 +32,7 @@ import javax.ws.rs.ext.Provider;
 public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
 {
   private static final Logger log = new Logger(CustomExceptionMapper.class);
+
   @Override
   public Response toResponse(JsonMappingException exception)
   {
