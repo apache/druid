@@ -69,11 +69,6 @@ public class IncrementalIndexCreator implements Closeable
     JSON_MAPPER.registerSubtypes(new NamedType(c, name));
   }
 
-  static {
-    // The off-heap incremental-index is not registered for production, but we want to include it in the tests.
-    IncrementalIndexCreator.addIndexSpec(OffheapIncrementalIndexTestSpec.class, OffheapIncrementalIndexTestSpec.TYPE);
-  }
-
   /**
    * Fetch all the available incremental-index implementations.
    * It can be used to parametrize the test. If more parameters are needed, use indexTypeCartesianProduct().
