@@ -50,9 +50,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -216,46 +218,78 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
     }
 
-    List<DataSegment> cachedSegments = new ArrayList<>();
+    List<DataSegment> cachedSegments = Collections.synchronizedList(new ArrayList<>());
     File[] segmentsToLoad = baseDir.listFiles();
-    int ignored = 0;
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+    AtomicInteger ignored = new AtomicInteger();
+    AtomicInteger count = new AtomicInteger();
+    ExecutorService loadingExecutor = Execs.multiThreaded(config.getNumCacheLoadThreads(), "Segment-CacheFile-Startup-%s");
+    ConcurrentLinkedQueue<File> segmentToLoadQueue = new ConcurrentLinkedQueue<>();
+    CountDownLatch countDownLatch = new CountDownLatch(config.getNumCacheLoadThreads());
 
-        if (!segment.getId().toString().equals(file.getName())) {
-          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-          ignored++;
-        } else if (segmentManager.isSegmentCached(segment)) {
-          cachedSegments.add(segment);
-        } else {
-          log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getId());
-
-          File segmentInfoCacheFile = new File(baseDir, segment.getId().toString());
-          if (!segmentInfoCacheFile.delete()) {
-            log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
-          }
-        }
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segmentInfo file")
-           .addData("file", file)
-           .emit();
-      }
+    for (File segment : segmentsToLoad) {
+      segmentToLoadQueue.offer(segment);
     }
 
-    if (ignored > 0) {
+    try {
+      for (int i = 0; i < config.getNumCacheLoadThreads(); i++) {
+        loadingExecutor.submit(
+            () -> loadLocalCache(baseDir, cachedSegments, ignored, count, segmentsToLoad.length, segmentToLoadQueue, countDownLatch)
+        );
+      }
+      countDownLatch.await();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      loadingExecutor.shutdownNow();
+    }
+
+    if (ignored.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
          .addData("numIgnored", ignored)
-         .emit();
+          .emit();
     }
 
     addSegments(
         cachedSegments,
         () -> log.info("Cache load took %,d ms", System.currentTimeMillis() - start)
     );
+  }
+
+  private void loadLocalCache(File baseDir, List<DataSegment> cachedSegments, AtomicInteger ignored, AtomicInteger count, int cacheFileNum, ConcurrentLinkedQueue<File> segmentToLoadQueue, CountDownLatch countDownLatch)
+  {
+    while (segmentToLoadQueue.size() > 0) {
+      File file = segmentToLoadQueue.poll();
+      count.getAndIncrement();
+      log.info("Loading segment cache file [%d/%d][%s].", count.get(), cacheFileNum, file);
+      if (file != null) {
+        try {
+          final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+
+          if (!segment.getId().toString().equals(file.getName())) {
+            log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+            ignored.getAndIncrement();
+          } else if (segmentManager.isSegmentCached(segment)) {
+            cachedSegments.add(segment);
+          } else {
+            log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getId());
+
+            File segmentInfoCacheFile = new File(baseDir, segment.getId().toString());
+            if (!segmentInfoCacheFile.delete()) {
+              log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+            }
+          }
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to load segment from segmentInfo file")
+              .addData("file", file)
+              .emit();
+        }
+      }
+    }
+
+    countDownLatch.countDown();
   }
 
   /**
