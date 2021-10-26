@@ -162,6 +162,8 @@
     <cve>CVE-2019-16869</cve>
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -286,16 +288,18 @@
     <cve>CVE-2019-17571</cve>
   </suppress>
   <suppress>
-     <!--
-       - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
-       -->
-     <notes><![CDATA[
-     file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: io.netty:netty:3.10.5.Final)
-     ]]></notes>
-     <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.5.Final$</packageUrl>
-     <cve>CVE-2019-16869</cve>
-     <cve>CVE-2019-20444</cve>
-     <cve>CVE-2019-20445</cve>
+    <!--
+      - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
+      -->
+    <notes><![CDATA[
+    file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: io.netty:netty:3.10.5.Final)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.5.Final$</packageUrl>
+    <cve>CVE-2019-16869</cve>
+    <cve>CVE-2019-20444</cve>
+    <cve>CVE-2019-20445</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
   </suppress>
   <suppress>
        <!--
