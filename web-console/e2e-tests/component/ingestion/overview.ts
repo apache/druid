@@ -18,7 +18,7 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { extractTable } from '../../util/table';
+import { extractFilterTable, extractTable } from '../../util/table';
 
 import { IngestionTask } from './task';
 
@@ -61,5 +61,31 @@ export class IngestionOverview {
           status: row[TaskColumn.STATUS],
         }),
     );
+  }
+
+  async showAllTasks(): Promise<string[][]> {
+    await extractFilterTable(this.page, 'div.bottom-pane div.rt-tr-group', 'div.rt-td');
+    await this.openTaskActions();
+    await this.clickMenuItem('Show all tasks');
+    const targetTask = await extractFilterTable(
+      this.page,
+      'div.bottom-pane div.rt-thead.-filters div.rt-tr',
+      'div.rt-th',
+    );
+    return targetTask;
+  }
+
+  private async openTaskActions(): Promise<void> {
+    await this.page.click('span[icon=wrench]');
+    await this.waitForPopupMenu();
+  }
+
+  private async waitForPopupMenu(): Promise<void> {
+    await this.page.waitForSelector('ul.bp3-menu');
+  }
+
+  private async clickMenuItem(text: string): Promise<void> {
+    const menuItemSelector = `//a[*[contains(text(),"${text}")]]`;
+    await this.page.click(menuItemSelector);
   }
 }

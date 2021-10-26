@@ -54,3 +54,34 @@ export async function extractTable(
     [tableSelector, rowSelector],
   );
 }
+
+export async function extractFilterTable(
+  page: playwright.Page,
+  tableSelector: string,
+  rowSelector: string,
+): Promise<string[][]> {
+  await page.waitForSelector(tableSelector);
+
+  return page.evaluate(
+    ([tableSelector, rowSelector]) => {
+      const BLANK_VALUE = '\xa0';
+      const data = [];
+      const rows = document.querySelectorAll(tableSelector);
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const columns = row.querySelectorAll(rowSelector);
+        const values = Array.from(columns).map(c => {
+          const realTexts = Array.from(c.querySelectorAll('.bp3-input'));
+          return realTexts.length
+            ? (realTexts[0] as HTMLInputElement).value
+            : (c as HTMLInputElement).value;
+        });
+        if (!values.every(value => value === BLANK_VALUE)) {
+          data.push(values);
+        }
+      }
+      return data;
+    },
+    [tableSelector, rowSelector],
+  );
+}

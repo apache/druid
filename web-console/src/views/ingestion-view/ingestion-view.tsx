@@ -652,6 +652,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     const { goToDatasource, goToLoadData } = this.props;
 
     const actions: BasicAction[] = [];
+    actions.push({
+      icon: IconNames.TH_LIST,
+      title: 'Show all tasks',
+      onAction: () => this.setState({ taskFilter: [] }),
+    });
     if (datasource && status === 'SUCCESS') {
       actions.push({
         icon: IconNames.MULTI_SELECT,
@@ -674,6 +679,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         onAction: () => this.setState({ killTaskId: id }),
       });
     }
+
     return actions;
   }
 

@@ -104,6 +104,10 @@ export async function clickText(page: playwright.Page, text: string): Promise<vo
   await page.click(`//*[text()="${text}"]`);
 }
 
+export async function clickCellText(page: playwright.Page, text: string): Promise<void> {
+  await page.click(`//*[text()="${text}"]/following-sibling::div`);
+}
+
 export async function selectSuggestibleInput(
   page: playwright.Page,
   label: string,
