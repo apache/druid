@@ -29,7 +29,12 @@ import {
   possibleDruidFormatForValues,
   TimestampSpec,
 } from '../../../druid-models';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
@@ -71,6 +76,10 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
     <ReactTable
       className="parse-time-table -striped -highlight"
       data={headerAndRows.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={headerAndRows.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(
         headerAndRows.header.length ? headerAndRows.header : ['__error__'],
         (columnName, i) => {
@@ -129,9 +138,6 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
           };
         },
       )}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

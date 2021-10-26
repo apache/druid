@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -44,7 +43,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;
@@ -59,14 +57,12 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   private final Iterable<QueryRunner<T>> queryables;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
   private final QueryProcessingPool queryProcessingPool;
 
   public GroupByMergedQueryRunner(
       QueryProcessingPool queryProcessingPool,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Iterable<QueryRunner<T>> queryables
   )
   {
@@ -74,7 +70,6 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.configSupplier = configSupplier;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -86,8 +81,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         null,
-        querySpecificConfig,
-        bufferPool
+        querySpecificConfig
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
     final boolean bySegment = QueryContexts.isBySegment(query);
