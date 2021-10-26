@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -43,11 +42,9 @@ import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -60,8 +57,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
-      final GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool
+      final GroupByQueryConfig config
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -123,8 +119,11 @@ public class GroupByQueryHelper
     final AppendableIndexBuilder indexBuilder;
 
     if (query.getContextValue("useOffheap", false)) {
-      indexBuilder = new OffheapIncrementalIndex.Builder()
-          .setBufferPool(bufferPool);
+      throw new UnsupportedOperationException(
+          "The 'useOffheap' option is no longer available for groupBy v1. Please move to the newer groupBy engine, "
+          + "which always operates off-heap, by removing any custom 'druid.query.groupBy.defaultStrategy' runtime "
+          + "properties and 'groupByStrategy' query context parameters that you have set."
+      );
     } else {
       indexBuilder = new OnheapIncrementalIndex.Builder();
     }
@@ -196,12 +195,11 @@ public class GroupByQueryHelper
       GroupByQuery query,
       @Nullable GroupByQuery subquery,
       GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Sequence<ResultRow> rows
   )
   {
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, ResultRow>> indexAccumulatorPair =
-        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config, bufferPool);
+        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config);
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }

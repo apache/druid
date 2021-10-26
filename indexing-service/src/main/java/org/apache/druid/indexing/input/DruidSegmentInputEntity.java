@@ -23,7 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -37,13 +37,13 @@ public class DruidSegmentInputEntity implements InputEntity
 {
   private static final EmittingLogger log = new EmittingLogger(DruidSegmentInputEntity.class);
 
-  private final SegmentLoader segmentLoader;
+  private final SegmentCacheManager segmentCacheManager;
   private final DataSegment segment;
   private final Interval intervalFilter;
 
-  DruidSegmentInputEntity(SegmentLoader segmentLoader, DataSegment segment, Interval intervalFilter)
+  DruidSegmentInputEntity(SegmentCacheManager segmentCacheManager, DataSegment segment, Interval intervalFilter)
   {
-    this.segmentLoader = segmentLoader;
+    this.segmentCacheManager = segmentCacheManager;
     this.segment = segment;
     this.intervalFilter = intervalFilter;
   }
@@ -71,7 +71,7 @@ public class DruidSegmentInputEntity implements InputEntity
   {
     final File segmentFile;
     try {
-      segmentFile = segmentLoader.getSegmentFiles(segment);
+      segmentFile = segmentCacheManager.getSegmentFiles(segment);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

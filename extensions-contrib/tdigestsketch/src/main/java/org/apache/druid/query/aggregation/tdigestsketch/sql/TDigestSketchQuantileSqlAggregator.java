@@ -39,8 +39,8 @@ import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorF
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -50,7 +50,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
@@ -123,9 +122,9 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
       for (AggregatorFactory factory : existing.getAggregatorFactories()) {
         if (factory instanceof TDigestSketchAggregatorFactory) {
           final boolean matches = TDigestSketchUtils.matchingAggregatorFactoryExists(
+              virtualColumnRegistry,
               input,
               compression,
-              existing,
               (TDigestSketchAggregatorFactory) factory
           );
 
@@ -148,8 +147,6 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     }
 
     // No existing match found. Create a new one.
-    final List<VirtualColumn> virtualColumns = new ArrayList<>();
-
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new TDigestSketchAggregatorFactory(
           sketchName,
@@ -160,9 +157,8 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           input,
-          ValueType.FLOAT
+          ColumnType.FLOAT
       );
-      virtualColumns.add(virtualColumn);
       aggregatorFactory = new TDigestSketchAggregatorFactory(
           sketchName,
           virtualColumn.getOutputName(),
@@ -171,7 +167,6 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     }
 
     return Aggregation.create(
-        virtualColumns,
         ImmutableList.of(aggregatorFactory),
         new TDigestSketchToQuantilePostAggregator(
             name,

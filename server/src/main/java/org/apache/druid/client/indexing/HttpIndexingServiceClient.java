@@ -44,6 +44,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +70,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
     runTask(taskId, taskQuery);
   }
 
@@ -329,6 +330,54 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           {
           }
       );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId))
+          )
+      );
+
+      if (responseHolder.getContent().length() == 0) {
+        return null;
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(minTaskPriority))
+      );
+
+      final Map<String, List<Interval>> response = jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<Map<String, List<Interval>>>()
+          {
+          }
+      );
+      return response == null ? Collections.emptyMap() : response;
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);

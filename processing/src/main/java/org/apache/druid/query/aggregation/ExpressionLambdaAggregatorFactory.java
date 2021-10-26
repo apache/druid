@@ -25,14 +25,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.math.expr.SettableObjectBinding;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -41,7 +44,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionPlan;
 import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -63,7 +66,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   // minimum permitted agg size is 10 bytes so it is at least large enough to hold primitive numerics (long, double)
   // | expression type byte | is_null byte | primitive value (8 bytes) |
   private static final int MIN_SIZE_BYTES = 10;
-  private static final HumanReadableBytes DEFAULT_MAX_SIZE_BYTES = new HumanReadableBytes(1L << 10);
+  public static final HumanReadableBytes DEFAULT_MAX_SIZE_BYTES = new HumanReadableBytes(1L << 10);
 
   private final String name;
   @Nullable
@@ -72,6 +75,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final String foldExpressionString;
   private final String initialValueExpressionString;
   private final String initialCombineValueExpressionString;
+  private final boolean isNullUnlessAggregated;
 
   private final String combineExpressionString;
   @Nullable
@@ -94,6 +98,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       Suppliers.memoize(() -> new SettableObjectBinding(2));
   private final Supplier<SettableObjectBinding> finalizeBindings =
       Suppliers.memoize(() -> new SettableObjectBinding(1));
+  private final Supplier<Expr.InputBindingInspector> finalizeInspector;
 
   @JsonCreator
   public ExpressionLambdaAggregatorFactory(
@@ -102,6 +107,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       @JsonProperty("accumulatorIdentifier") @Nullable final String accumulatorIdentifier,
       @JsonProperty("initialValue") final String initialValue,
       @JsonProperty("initialCombineValue") @Nullable final String initialCombineValue,
+      @JsonProperty("isNullUnlessAggregated") @Nullable final Boolean isNullUnlessAggregated,
       @JsonProperty("fold") final String foldExpression,
       @JsonProperty("combine") @Nullable final String combineExpression,
       @JsonProperty("compare") @Nullable final String compareExpression,
@@ -118,6 +124,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
     this.initialValueExpressionString = initialValue;
     this.initialCombineValueExpressionString = initialCombineValue == null ? initialValue : initialCombineValue;
+    this.isNullUnlessAggregated = isNullUnlessAggregated == null ? NullHandling.sqlCompatible() : isNullUnlessAggregated;
     this.foldExpressionString = foldExpression;
     if (combineExpression != null) {
       this.combineExpressionString = combineExpression;
@@ -148,9 +155,15 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     this.foldExpression = Parser.lazyParse(foldExpressionString, macroTable);
     this.combineExpression = Parser.lazyParse(combineExpressionString, macroTable);
     this.compareExpression = Parser.lazyParse(compareExpressionString, macroTable);
+    this.finalizeInspector = Suppliers.memoize(
+        () -> InputBindings.inspectorFromTypeMap(
+            ImmutableMap.of(FINALIZE_IDENTIFIER, this.initialCombineValue.get().type())
+        )
+    );
     this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
     this.maxSizeBytes = maxSizeBytes != null ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
     Preconditions.checkArgument(this.maxSizeBytes.getBytesInInt() >= MIN_SIZE_BYTES);
+
   }
 
   @JsonProperty
@@ -184,6 +197,12 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   public String getInitialCombineValueExpressionString()
   {
     return initialCombineValueExpressionString;
+  }
+
+  @JsonProperty("isNullUnlessAggregated")
+  public boolean getIsNullUnlessAggregated()
+  {
+    return isNullUnlessAggregated;
   }
 
   @JsonProperty("fold")
@@ -225,10 +244,10 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         .appendStrings(fields)
         .appendString(initialValueExpressionString)
         .appendString(initialCombineValueExpressionString)
-        .appendString(foldExpressionString)
-        .appendString(combineExpressionString)
-        .appendString(compareExpressionString)
-        .appendString(finalizeExpressionString)
+        .appendCacheable(foldExpression.get())
+        .appendCacheable(combineExpression.get())
+        .appendCacheable(combineExpression.get())
+        .appendCacheable(finalizeExpression.get())
         .appendInt(maxSizeBytes.getBytesInInt())
         .build();
   }
@@ -239,7 +258,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     FactorizePlan thePlan = new FactorizePlan(metricFactory);
     return new ExpressionLambdaAggregator(
         thePlan.getExpression(),
-        thePlan.getBindings()
+        thePlan.getBindings(),
+        isNullUnlessAggregated,
+        maxSizeBytes.getBytesInInt()
     );
   }
 
@@ -251,6 +272,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         thePlan.getExpression(),
         thePlan.getInitialValue(),
         thePlan.getBindings(),
+        isNullUnlessAggregated,
         maxSizeBytes.getBytesInInt()
     );
   }
@@ -263,7 +285,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       return (o1, o2) ->
           compareExpr.eval(compareBindings.get().withBinding(COMPARE_O1, o1).withBinding(COMPARE_O2, o2)).asInt();
     }
-    switch (initialValue.get().type()) {
+    switch (initialValue.get().type().getType()) {
       case LONG:
         return LongSumAggregator.COMPARATOR;
       case DOUBLE:
@@ -319,6 +341,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         accumulatorId,
         initialValueExpressionString,
         initialCombineValueExpressionString,
+        isNullUnlessAggregated,
         foldExpressionString,
         combineExpressionString,
         compareExpressionString,
@@ -338,6 +361,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
             accumulatorId,
             initialValueExpressionString,
             initialCombineValueExpressionString,
+            isNullUnlessAggregated,
             foldExpressionString,
             combineExpressionString,
             compareExpressionString,
@@ -349,25 +373,27 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
     if (fields == null) {
-      return ExprType.toValueType(initialCombineValue.get().type());
+      return ExpressionType.toColumnType(initialCombineValue.get().type());
     }
-    return ExprType.toValueType(initialValue.get().type());
+    return ExpressionType.toColumnType(initialValue.get().type());
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
     Expr finalizeExpr = finalizeExpression.get();
     ExprEval<?> initialVal = initialCombineValue.get();
     if (finalizeExpr != null) {
-      return ExprType.toValueType(
-          finalizeExpr.eval(finalizeBindings.get().withBinding(FINALIZE_IDENTIFIER, initialVal)).type()
-      );
+      ExpressionType type = finalizeExpr.getOutputType(finalizeInspector.get());
+      if (type == null) {
+        type = initialVal.type();
+      }
+      return ExpressionType.toColumnType(type);
     }
-    return ExprType.toValueType(initialVal.type());
+    return ExpressionType.toColumnType(initialVal.type());
   }
 
   @Override
@@ -395,6 +421,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
            && foldExpressionString.equals(that.foldExpressionString)
            && initialValueExpressionString.equals(that.initialValueExpressionString)
            && initialCombineValueExpressionString.equals(that.initialCombineValueExpressionString)
+           && isNullUnlessAggregated == that.isNullUnlessAggregated
            && combineExpressionString.equals(that.combineExpressionString)
            && Objects.equals(compareExpressionString, that.compareExpressionString)
            && Objects.equals(finalizeExpressionString, that.finalizeExpressionString);
@@ -410,6 +437,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         foldExpressionString,
         initialValueExpressionString,
         initialCombineValueExpressionString,
+        isNullUnlessAggregated,
         combineExpressionString,
         compareExpressionString,
         finalizeExpressionString,
@@ -427,6 +455,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
            ", foldExpressionString='" + foldExpressionString + '\'' +
            ", initialValueExpressionString='" + initialValueExpressionString + '\'' +
            ", initialCombineValueExpressionString='" + initialCombineValueExpressionString + '\'' +
+           ", nullUnlessAggregated='" + isNullUnlessAggregated + '\'' +
            ", combineExpressionString='" + combineExpressionString + '\'' +
            ", compareExpressionString='" + compareExpressionString + '\'' +
            ", finalizeExpressionString='" + finalizeExpressionString + '\'' +
@@ -496,14 +525,14 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         public ColumnCapabilities getColumnCapabilities(String column)
         {
           if (accumulatorId.equals(column)) {
-            return ColumnCapabilitiesImpl.createDefault().setType(ExprType.toValueType(initialValue.get().type()));
+            return ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(initialValue.get().type()));
           }
           return inspector.getColumnCapabilities(column);
         }
 
         @Nullable
         @Override
-        public ExprType getType(String name)
+        public ExpressionType getType(String name)
         {
           if (accumulatorId.equals(name)) {
             return initialValue.get().type();

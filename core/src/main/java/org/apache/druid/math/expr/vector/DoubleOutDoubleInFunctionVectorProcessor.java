@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 /**
  * specialized {@link UnivariateFunctionVectorProcessor} for processing (double[]) -> double[]
@@ -29,15 +29,15 @@ public abstract class DoubleOutDoubleInFunctionVectorProcessor
 {
   public DoubleOutDoubleInFunctionVectorProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExprType.DOUBLE), maxVectorSize, new double[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new double[maxVectorSize]);
   }
 
   public abstract double apply(double input);
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.DOUBLE;
+    return ExpressionType.DOUBLE;
   }
 
   @Override

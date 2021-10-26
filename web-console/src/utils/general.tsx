@@ -22,15 +22,28 @@ import copy from 'copy-to-clipboard';
 import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
+import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
 
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
+
+export type NumberLike = number | BigInt;
+
+export function isNumberLikeNaN(x: NumberLike): boolean {
+  return isNaN(Number(x));
+}
 
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
@@ -99,28 +112,29 @@ interface NeedleAndMode {
 }
 
 export function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value.toLowerCase();
+  const input = filter.value;
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
       mode: 'exact',
     };
+  } else {
+    return {
+      needle: input.replace(/^"/, '').toLowerCase(),
+      mode: 'includes',
+    };
   }
-  return {
-    needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'includes',
-  };
 }
 
 export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (value == null) return false;
-  const haystack = String(value).toLowerCase();
   const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return needle === haystack;
+    return needle === String(value);
+  } else {
+    return String(value).toLowerCase().includes(needle);
   }
-  return haystack.includes(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
@@ -144,6 +158,13 @@ export function caseInsensitiveContains(testString: string, searchString: string
 
 export function oneOf<T>(thing: T, ...options: T[]): boolean {
   return options.includes(thing);
+}
+
+export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => {
+    if (x.type == null) return false;
+    return options.includes(x.type);
+  };
 }
 
 // ----------------------------
@@ -219,36 +240,31 @@ export function uniq(array: readonly string[]): string[] {
   });
 }
 
-export function parseList(list: string): string[] {
-  if (!list) return [];
-  return list.split(',');
-}
-
 // ----------------------------
 
-export function formatInteger(n: number): string {
+export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
-export function formatBytes(n: number): string {
+export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
-export function formatBytesCompact(n: number): string {
+export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
 }
 
-export function formatMegabytes(n: number): string {
-  return numeral(n / 1048576).format('0,0.0');
+export function formatMegabytes(n: NumberLike): string {
+  return numeral(Number(n) / 1048576).format('0,0.0');
 }
 
-export function formatPercent(n: number): string {
-  return (n * 100).toFixed(2) + '%';
+export function formatPercent(n: NumberLike): string {
+  return (Number(n) * 100).toFixed(2) + '%';
 }
 
-export function formatMillions(n: number): string {
-  const s = (n / 1e6).toFixed(3);
-  if (s === '0.000') return String(Math.round(n));
+export function formatMillions(n: NumberLike): string {
+  const s = (Number(n) / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
 }
 
@@ -256,14 +272,15 @@ function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
 
-export function formatDuration(ms: number): string {
-  const timeInHours = Math.floor(ms / 3600000);
-  const timeInMin = Math.floor(ms / 60000) % 60;
-  const timeInSec = Math.floor(ms / 1000) % 60;
+export function formatDuration(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
   return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
 }
 
-export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
+export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
@@ -272,7 +289,7 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
 
 export function parseJson(json: string): any {
   try {
-    return JSON.parse(json);
+    return JSONBig.parse(json);
   } catch (e) {
     return undefined;
   }
@@ -280,7 +297,7 @@ export function parseJson(json: string): any {
 
 export function validJson(json: string): boolean {
   try {
-    JSON.parse(json);
+    JSONBig.parse(json);
     return true;
   } catch (e) {
     return false;
@@ -303,16 +320,15 @@ export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
 
-export function sortWithPrefixSuffix(
+export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
   suffix: readonly string[],
-  cmp?: (a: string, b: string) => number,
 ): string[] {
   const pre = uniq(prefix.filter(x => things.includes(x)));
   const mid = things.filter(x => !prefix.includes(x) && !suffix.includes(x));
   const post = uniq(suffix.filter(x => things.includes(x)));
-  return pre.concat(cmp ? mid.sort(cmp) : mid, post);
+  return pre.concat(mid, post);
 }
 
 // ----------------------------
@@ -381,4 +397,20 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
     // do nothing
     return items.slice();
   }
+}
+
+export function stringifyValue(value: unknown): string {
+  switch (typeof value) {
+    case 'object':
+      if (!value) return String(value);
+      if (typeof (value as any).toISOString === 'function') return (value as any).toISOString();
+      return JSONBig.stringify(value);
+
+    default:
+      return String(value);
+  }
+}
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
 }

@@ -50,7 +50,7 @@ public class HllSketchBuildBufferAggregatorHelper
     this.emptySketch = new byte[size];
 
     //noinspection ResultOfObjectAllocationIgnored (HllSketch writes to "emptySketch" as a side effect of construction)
-    new HllSketch(lgK, tgtHllType, WritableMemory.wrap(emptySketch));
+    new HllSketch(lgK, tgtHllType, WritableMemory.writableWrap(emptySketch));
   }
 
   /**
@@ -123,7 +123,7 @@ public class HllSketchBuildBufferAggregatorHelper
 
   private WritableMemory getMemory(final ByteBuffer buf)
   {
-    return memCache.computeIfAbsent(buf, b -> WritableMemory.wrap(b, ByteOrder.LITTLE_ENDIAN));
+    return memCache.computeIfAbsent(buf, b -> WritableMemory.writableWrap(b, ByteOrder.LITTLE_ENDIAN));
   }
 
   private void putSketchIntoCache(final ByteBuffer buf, final int position, final HllSketch sketch)

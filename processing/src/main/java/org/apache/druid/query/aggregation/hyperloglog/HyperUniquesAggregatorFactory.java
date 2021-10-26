@@ -42,6 +42,8 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -56,6 +58,9 @@ import java.util.Objects;
  */
 public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType PRECOMPUTED_TYPE = ColumnType.ofComplex("preComputedHyperUnique");
+  public static final ColumnType TYPE = ColumnType.ofComplex("hyperUnique");
+
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
     final HyperLogLogCollector collector = (HyperLogLogCollector) object;
@@ -129,7 +134,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.getType() != ValueType.COMPLEX) {
+    if (!Types.is(capabilities, ValueType.COMPLEX)) {
       return NoopVectorAggregator.instance();
     } else {
       return new HyperUniquesVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
@@ -258,30 +263,19 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
         .appendBoolean(round)
         .build();
   }
-
-  @Override
-  public String getComplexTypeName()
-  {
-    if (isInputHyperUnique) {
-      return "preComputedHyperUnique";
-    } else {
-      return "hyperUnique";
-    }
-  }
-
   /**
    * actual type is {@link HyperLogLogCollector}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return isInputHyperUnique ? PRECOMPUTED_TYPE : TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return round ? ValueType.LONG : ValueType.DOUBLE;
+    return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @Override

@@ -61,6 +61,12 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  public ParallelIndexSupervisorTaskKillTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @After
   public void teardown()
   {
@@ -120,8 +126,10 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final TaskState state = task.run(toolbox).getStatusCode();
-    Assert.assertEquals(TaskState.FAILED, state);
+    final TaskStatus taskStatus = task.run(toolbox);
+    Assert.assertEquals("Failed in phase[segment generation]. See task logs for details.",
+                        taskStatus.getErrorMsg());
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
     final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
@@ -355,6 +363,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           getGroupId(),
           null,
           getSupervisorTaskId(),
+          getId(),
           numAttempts,
           getIngestionSpec(),
           getContext()
@@ -369,6 +378,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         String groupId,
         TaskResource taskResource,
         String supervisorTaskId,
+        String subtaskSpecId,
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
@@ -379,6 +389,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           groupId,
           taskResource,
           supervisorTaskId,
+          subtaskSpecId,
           numAttempts,
           ingestionSchema,
           context

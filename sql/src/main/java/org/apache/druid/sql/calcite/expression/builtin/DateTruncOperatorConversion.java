@@ -67,7 +67,7 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("DATE_TRUNC")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP)
       .requiredOperands(2)
-      .returnTypeNonNull(SqlTypeName.TIMESTAMP)
+      .returnTypeCascadeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 

@@ -18,11 +18,15 @@
 
 export * from './capabilities';
 export * from './column-metadata';
+export * from './date';
 export * from './druid-lookup';
 export * from './druid-query';
+export * from './formatter';
 export * from './general';
+export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
 export * from './object-change';
 export * from './query-cursor';
 export * from './query-manager';
 export * from './query-state';
+export * from './sanitizers';

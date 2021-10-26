@@ -47,6 +47,13 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
             10,
             new Duration("PT1s")
         )

@@ -48,6 +48,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -118,83 +119,83 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   private static final ExpressionVirtualColumn X_PLUS_Y = new ExpressionVirtualColumn(
       "expr",
       "x + y",
-      ValueType.FLOAT,
+      ColumnType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn CONSTANT_LIKE = new ExpressionVirtualColumn(
       "expr",
       "like('foo', 'f%')",
-      ValueType.FLOAT,
+      ColumnType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn CONSTANT_NULL_ARITHMETIC = new ExpressionVirtualColumn(
       "expr",
       "2.1 + null",
-      ValueType.FLOAT,
+      ColumnType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn Z_LIKE = new ExpressionVirtualColumn(
       "expr",
       "like(z, 'f%')",
-      ValueType.FLOAT,
+      ColumnType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn Z_CONCAT_X = new ExpressionVirtualColumn(
       "expr",
       "z + cast(x, 'string')",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn Z_CONCAT_NONEXISTENT = new ExpressionVirtualColumn(
       "expr",
       "concat(z, nonexistent)",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn TIME_FLOOR = new ExpressionVirtualColumn(
       "expr",
       "timestamp_floor(__time, 'P1D')",
-      ValueType.LONG,
+      ColumnType.LONG,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn SCALE_LONG = new ExpressionVirtualColumn(
       "expr",
       "x * 2",
-      ValueType.LONG,
+      ColumnType.LONG,
       TestExprMacroTable.INSTANCE
   );
   private static final ExpressionVirtualColumn SCALE_FLOAT = new ExpressionVirtualColumn(
       "expr",
       "x * 2",
-      ValueType.FLOAT,
+      ColumnType.FLOAT,
       TestExprMacroTable.INSTANCE
   );
 
   private static final ExpressionVirtualColumn SCALE_LIST_IMPLICIT = new ExpressionVirtualColumn(
       "expr",
       "b * 2",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
 
   private static final ExpressionVirtualColumn SCALE_LIST_EXPLICIT = new ExpressionVirtualColumn(
       "expr",
       "map(b -> b * 2, b)",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
 
   private static final ExpressionVirtualColumn SCALE_LIST_SELF_IMPLICIT = new ExpressionVirtualColumn(
       "expr",
       "b * b",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
 
   private static final ExpressionVirtualColumn SCALE_LIST_SELF_EXPLICIT = new ExpressionVirtualColumn(
       "expr",
       "map(b -> b * b, b)",
-      ValueType.STRING,
+      ColumnType.STRING,
       TestExprMacroTable.INSTANCE
   );
 
@@ -268,7 +269,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   {
     DimensionSpec spec = new DefaultDimensionSpec("expr", "expr");
 
-    // do some ugly faking to test if SingleStringInputDimensionSelector is created for multi-value expressions when possible
+    // do some ugly faking to test if SingleStringInputDeferredEvaluationExpressionDimensionSelector is created for multi-value expressions when possible
     ColumnSelectorFactory factory = new ColumnSelectorFactory()
     {
       @Override
@@ -331,7 +332,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
           @Override
           public boolean nameLookupPossibleInAdvance()
           {
-            // fake this so when SingleStringInputDimensionSelector it doesn't explode
+            // fake this so when SingleStringInputDeferredEvaluationExpressionDimensionSelector it doesn't explode
             return true;
           }
 
@@ -355,7 +356,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+        return new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                            .setHasMultipleValues(true)
                                            .setDictionaryEncoded(true);
       }
@@ -365,7 +366,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     final BaseObjectColumnValueSelector selectorExplicit =
         SCALE_LIST_SELF_EXPLICIT.makeDimensionSelector(spec, factory);
 
-    Assert.assertTrue(selectorImplicit instanceof SingleStringInputDimensionSelector);
+    Assert.assertTrue(selectorImplicit instanceof SingleStringInputDeferredEvaluationExpressionDimensionSelector);
     Assert.assertTrue(selectorExplicit instanceof ExpressionMultiValueDimensionSelector);
   }
 
@@ -742,7 +743,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ValueType.LONG).build(),
+            RowSignature.builder().add("x", ColumnType.LONG).build(),
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -765,7 +766,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ValueType.DOUBLE).build(),
+            RowSignature.builder().add("x", ColumnType.DOUBLE).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -788,7 +789,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ValueType.FLOAT).build(),
+            RowSignature.builder().add("x", ColumnType.FLOAT).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)

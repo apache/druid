@@ -418,7 +418,6 @@ public class TaskSerdeTest
                 NoneShardSpec.instance(),
                 indexSpec,
                 null,
-                null,
                 0,
                 0,
                 true,

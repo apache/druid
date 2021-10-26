@@ -59,16 +59,21 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
   @Override
   public boolean hasNext()
   {
-    while (next == null && delegate.hasNext()) {
+    while (true) {
       try {
-        // delegate.next() can throw ParseException
-        final InputRow row = delegate.next();
-        // filter.test() can throw ParseException
-        if (filter.test(row)) {
-          next = row;
-        } else {
-          rowIngestionMeters.incrementThrownAway();
+        // delegate.hasNext() can throw ParseException, since some types of delegating iterators will call next on
+        // their underlying iterator
+        while (next == null && delegate.hasNext()) {
+          // delegate.next() can throw ParseException
+          final InputRow row = delegate.next();
+          // filter.test() can throw ParseException
+          if (filter.test(row)) {
+            next = row;
+          } else {
+            rowIngestionMeters.incrementThrownAway();
+          }
         }
+        break;
       }
       catch (ParseException e) {
         parseExceptionHandler.handle(e);

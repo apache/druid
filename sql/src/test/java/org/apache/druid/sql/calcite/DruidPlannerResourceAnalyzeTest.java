@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
@@ -242,5 +243,40 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
         ),
         requiredResources
     );
+  }
+
+  @Test
+  public void testSysTables()
+  {
+    testSysTable("SELECT * FROM sys.segments", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.servers", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.server_segments", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.tasks", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.supervisors", null, PLANNER_CONFIG_DEFAULT);
+
+    testSysTable("SELECT * FROM sys.segments", "segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.servers", "servers", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.server_segments", "server_segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.tasks", "tasks", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.supervisors", "supervisors", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+  }
+
+  private void testSysTable(String sql, String name, PlannerConfig plannerConfig)
+  {
+    Set<Resource> requiredResources = analyzeResources(
+        plannerConfig,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    if (name == null) {
+      Assert.assertEquals(0, requiredResources.size());
+    } else {
+      Assert.assertEquals(
+          ImmutableSet.of(
+              new Resource(name, ResourceType.SYSTEM_TABLE)
+          ),
+          requiredResources
+      );
+    }
   }
 }

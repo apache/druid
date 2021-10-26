@@ -248,7 +248,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
     ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
     if (columnCapabilities != null) {
-      return columnCapabilities.getType().toString();
+      return columnCapabilities.asTypeString();
     } else {
       return null;
     }

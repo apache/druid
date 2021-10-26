@@ -40,6 +40,12 @@ exports[`segments-view matches snapshot 1`] = `
           text="View SQL query for table"
         />
       </Memo(MoreButton)>
+      <Blueprint3.Switch
+        checked={false}
+        disabled={false}
+        label="Show segment timeline"
+        onChange={[Function]}
+      />
       <Memo(TableColumnSelector)
         columns={
           Array [
@@ -63,7 +69,12 @@ exports[`segments-view matches snapshot 1`] = `
         }
         onChange={[Function]}
         onClose={[Function]}
-        tableColumnsHidden={Array []}
+        tableColumnsHidden={
+          Array [
+            "Time span",
+            "Partitioning",
+          ]
+        }
       />
     </Memo(ViewControlBar)>
     <ReactTable
@@ -181,7 +192,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Time span",
             "accessor": "time_span",
             "filterable": true,
-            "show": true,
+            "show": false,
             "sortable": true,
             "width": 100,
           },
@@ -190,7 +201,7 @@ exports[`segments-view matches snapshot 1`] = `
             "Header": "Partitioning",
             "accessor": "partitioning",
             "filterable": true,
-            "show": true,
+            "show": false,
             "sortable": true,
             "width": 100,
           },
@@ -272,7 +283,7 @@ exports[`segments-view matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={Array []}
       defaultPage={0}
-      defaultPageSize={25}
+      defaultPageSize={50}
       defaultResized={Array []}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
@@ -340,12 +351,9 @@ exports[`segments-view matches snapshot 1`] = `
       pageJumpText="jump to page"
       pageSizeOptions={
         Array [
-          5,
-          10,
-          20,
-          25,
           50,
           100,
+          200,
         ]
       }
       pageText="Page"
@@ -361,7 +369,7 @@ exports[`segments-view matches snapshot 1`] = `
       rowsText="rows"
       showPageJump={false}
       showPageSizeOptions={true}
-      showPagination={true}
+      showPagination={false}
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}

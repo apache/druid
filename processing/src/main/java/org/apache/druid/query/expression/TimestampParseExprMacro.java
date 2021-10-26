@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -104,9 +104,9 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        return ExprType.LONG;
+        return ExpressionType.LONG;
       }
 
       @Override

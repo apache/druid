@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -107,6 +108,12 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   private final CopyOnWriteArrayList<TestSubTask> runningTasks = new CopyOnWriteArrayList<>();
 
   private TestSupervisorTask task;
+
+  public ParallelIndexSupervisorTaskResourceTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
 
   @After
   public void teardown()
@@ -590,6 +597,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       final TestSubTask subTask = new TestSubTask(
           getGroupId(),
           getSupervisorTaskId(),
+          getId(),
           numAttempts,
           getIngestionSpec(),
           getContext()
@@ -633,6 +641,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     TestSubTask(
         String groupId,
         String supervisorTaskId,
+        String subtaskSpecId,
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
@@ -643,6 +652,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           groupId,
           null,
           supervisorTaskId,
+          subtaskSpecId,
           numAttempts,
           ingestionSchema,
           context
@@ -669,19 +679,20 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           .getGivenOrDefaultPartitionsSpec();
       final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
           toolbox,
-          getId(),
+          getSubtaskSpecId(),
           new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
           getIngestionSchema().getDataSchema(),
           getTaskLockHelper(),
           getIngestionSchema().getIOConfig().isAppendToExisting(),
-          partitionsSpec
+          partitionsSpec,
+          true
       );
 
       final SegmentIdWithShardSpec segmentIdentifier = segmentAllocator.allocate(
           new MapBasedInputRow(DateTimes.of("2017-01-01"), Collections.emptyList(), Collections.emptyMap()),
-          getId(),
+          getSubtaskSpecId(),
           null,
-          true
+          false
       );
 
       final DataSegment segment = new DataSegment(
@@ -698,7 +709,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
       taskClient.report(
           getSupervisorTaskId(),
-          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment))
+          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment), ImmutableMap.of())
       );
       return TaskStatus.fromCode(getId(), state);
     }

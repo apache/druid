@@ -44,6 +44,7 @@ import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.joda.time.Interval;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -237,6 +238,31 @@ public class OverlordResourceTestClient
       return jsonMapper.readValue(
           response.getContent(),
           new TypeReference<Map<String, IngestionStatsAndErrorsTaskReport>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    try {
+      String jsonBody = jsonMapper.writeValueAsString(minTaskPriority);
+
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals"))
+              .setContent(
+                  "application/json",
+                  StringUtils.toUtf8(jsonBody)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Map<String, List<Interval>>>()
           {
           }
       );
@@ -475,6 +501,41 @@ public class OverlordResourceTestClient
         );
       }
       LOG.info("Resumed supervisor with id[%s]", id);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public List<Object> getSupervisorHistory(String id)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format(
+                  "%ssupervisor/%s/history",
+                  getIndexerURL(),
+                  StringUtils.urlEncode(id)
+              ))
+          ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        return null;
+      } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting supervisor status, response [%s %s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      List<Object> responseData = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<Object>>()
+          {
+          }
+      );
+      return responseData;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

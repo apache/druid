@@ -59,7 +59,7 @@ if ($java_bin_dir eq "") {
   fail_check()
 }
 my $java_exec = "${java_bin_dir}/java";
-my $java_version = qx[$java_exec -version 2>&1];
+my $java_version = qx["$java_exec" -version 2>&1];
 if ($?) {
   fail_check();
 }

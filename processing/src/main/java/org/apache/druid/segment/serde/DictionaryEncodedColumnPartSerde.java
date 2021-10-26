@@ -303,11 +303,19 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
+        // Duplicate the first buffer since we are reading the dictionary twice.
         final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer,
+            buffer.duplicate(),
             GenericIndexed.STRING_STRATEGY,
             builder.getFileMapper()
         );
+
+        final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
+            buffer,
+            GenericIndexed.BYTE_BUFFER_STRATEGY,
+            builder.getFileMapper()
+        );
+
         builder.setType(ValueType.STRING);
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
@@ -325,6 +333,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
             rDictionary,
+            rDictionaryUtf8,
             rSingleValuedColumn,
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()

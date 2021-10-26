@@ -55,14 +55,14 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
     type: 'number',
     defaultValue: 5000000,
-    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
     info: <>Determines how many rows are in each segment.</>,
   },
   {
     name: 'tuningConfig.partitionsSpec.maxTotalRows',
     type: 'number',
     defaultValue: 20000000,
-    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'dynamic',
     info: <>Total number of rows in segments waiting for being pushed.</>,
   },
   // partitionsSpec type: hashed
@@ -70,9 +70,11 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
-    defined: (t: CompactionConfig) =>
+    placeholder: `(defaults to 500000)`,
+    defined: t =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
-      !deepGet(t, 'tuningConfig.partitionsSpec.numShards'),
+      !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
       <>
         <p>
@@ -87,11 +89,33 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
+    name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
+    type: 'number',
+    zeroMeansUndefined: true,
+    defined: t =>
+      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.numShards') &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
+    info: (
+      <>
+        <p>
+          Target number of rows to include in a partition, should be a number that targets segments
+          of 500MB~1GB.
+        </p>
+        <p>
+          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code>. Only one
+          of these properties can be used.
+        </p>
+      </>
+    ),
+  },
+  {
     name: 'tuningConfig.partitionsSpec.numShards',
     type: 'number',
     zeroMeansUndefined: true,
-    defined: (t: CompactionConfig) =>
+    defined: t =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed' &&
+      !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     info: (
       <>
@@ -111,15 +135,14 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.partitionDimensions',
     type: 'string-array',
     placeholder: '(all dimensions)',
-    defined: (t: CompactionConfig) => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
     info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
   },
   // partitionsSpec type: single_dim
   {
     name: 'tuningConfig.partitionsSpec.partitionDimension',
     type: 'string',
-    defined: (t: CompactionConfig) =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
     required: true,
     info: <p>The dimension to partition on.</p>,
   },
@@ -127,7 +150,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
-    defined: (t: CompactionConfig) =>
+    defined: t =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     required: (t: CompactionConfig) =>
@@ -144,7 +167,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.maxRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
-    defined: (t: CompactionConfig) =>
+    defined: t =>
       deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     required: (t: CompactionConfig) =>
@@ -156,8 +179,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.assumeGrouped',
     type: 'boolean',
     defaultValue: false,
-    defined: (t: CompactionConfig) =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
     info: (
       <p>
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
@@ -199,8 +221,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     defaultValue: 10,
     min: 1,
-    defined: (t: CompactionConfig) =>
-      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
+    defined: t => oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
     info: <>Maximum number of merge tasks which can be run at the same time.</>,
   },
   {

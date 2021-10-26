@@ -21,7 +21,9 @@ package org.apache.druid.sql.calcite.table;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeComparability;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.type.AbstractSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -29,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
@@ -57,7 +60,7 @@ public class RowSignatures
 
     for (int i = 0; i < rowOrder.size(); i++) {
       final RelDataType dataType = rowType.getFieldList().get(i).getType();
-      final ValueType valueType = Calcites.getValueTypeForRelDataType(dataType);
+      final ColumnType valueType = Calcites.getColumnTypeForRelDataType(dataType);
       if (valueType == null) {
         throw new ISE(
             "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
@@ -84,7 +87,7 @@ public class RowSignatures
   {
     Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
     if (simpleExtraction.getExtractionFn() != null
-        || rowSignature.getColumnType(simpleExtraction.getColumn()).orElse(null) == ValueType.STRING) {
+        || rowSignature.getColumnType(simpleExtraction.getColumn()).map(type -> type.is(ValueType.STRING)).orElse(false)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       return StringComparators.NUMERIC;
@@ -104,11 +107,11 @@ public class RowSignatures
       if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
         type = Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
       } else {
-        final ValueType columnType =
+        final ColumnType columnType =
             rowSignature.getColumnType(columnName)
                         .orElseThrow(() -> new ISE("Encountered null type for column[%s]", columnName));
 
-        switch (columnType) {
+        switch (columnType.getType()) {
           case STRING:
             // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
             type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
@@ -122,18 +125,26 @@ public class RowSignatures
           case DOUBLE:
             type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
             break;
-          case STRING_ARRAY:
-            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
-            break;
-          case LONG_ARRAY:
-            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
-            break;
-          case DOUBLE_ARRAY:
-            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
+          case ARRAY:
+            switch (columnType.getElementType().getType()) {
+              case STRING:
+                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+                break;
+              case LONG:
+                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
+                break;
+              case DOUBLE:
+                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
+                break;
+              default:
+                throw new ISE("valueType[%s] not translatable", columnType);
+            }
             break;
           case COMPLEX:
-            // Loses information about exactly what kind of complex column this is.
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.OTHER, true);
+            type = typeFactory.createTypeWithNullability(
+                new ComplexSqlType(SqlTypeName.OTHER, columnType, true),
+                true
+            );
             break;
           default:
             throw new ISE("valueType[%s] not translatable", columnType);
@@ -144,5 +155,46 @@ public class RowSignatures
     }
 
     return builder.build();
+  }
+
+  /**
+   * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information
+   */
+  public static final class ComplexSqlType extends AbstractSqlType
+  {
+    private final ColumnType columnType;
+
+    public ComplexSqlType(
+        SqlTypeName typeName,
+        ColumnType columnType,
+        boolean isNullable
+    )
+    {
+      super(typeName, isNullable, null);
+      this.columnType = columnType;
+      this.computeDigest();
+    }
+
+    @Override
+    public RelDataTypeComparability getComparability()
+    {
+      return RelDataTypeComparability.UNORDERED;
+    }
+
+    @Override
+    protected void generateTypeString(StringBuilder sb, boolean withDetail)
+    {
+      sb.append(columnType.asTypeString());
+    }
+
+    public String getComplexTypeName()
+    {
+      return columnType.getComplexTypeName();
+    }
+
+    public String asTypeString()
+    {
+      return columnType.asTypeString();
+    }
   }
 }

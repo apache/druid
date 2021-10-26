@@ -37,19 +37,20 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   private static final String PHASE_NAME = "partial segment merge";
 
   private final DataSchema dataSchema;
-  private final List<PartialGenericSegmentMergeIOConfig> mergeIOConfigs;
+  private final List<PartialSegmentMergeIOConfig> mergeIOConfigs;
 
   PartialGenericSegmentMergeParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
+      String baseSubtaskSpecName,
       DataSchema dataSchema,
-      List<PartialGenericSegmentMergeIOConfig> mergeIOConfigs,
+      List<PartialSegmentMergeIOConfig> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
       Map<String, Object> context
   )
   {
-    super(toolbox, taskId, groupId, tuningConfig, context);
+    super(toolbox, taskId, groupId, baseSubtaskSpecName, tuningConfig, context);
 
     this.dataSchema = dataSchema;
     this.mergeIOConfigs = mergeIOConfigs;
@@ -74,15 +75,16 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   }
 
   @VisibleForTesting
-  SubTaskSpec<PartialGenericSegmentMergeTask> newTaskSpec(PartialGenericSegmentMergeIOConfig ioConfig)
+  SubTaskSpec<PartialGenericSegmentMergeTask> newTaskSpec(PartialSegmentMergeIOConfig ioConfig)
   {
-    final PartialGenericSegmentMergeIngestionSpec ingestionSpec = new PartialGenericSegmentMergeIngestionSpec(
+    final PartialSegmentMergeIngestionSpec ingestionSpec = new PartialSegmentMergeIngestionSpec(
         dataSchema,
         ioConfig,
         getTuningConfig()
     );
+    final String subtaskSpecId = getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId();
     return new SubTaskSpec<PartialGenericSegmentMergeTask>(
-        getTaskId() + "_" + getAndIncrementNextSpecId(),
+        subtaskSpecId,
         getGroupId(),
         getTaskId(),
         getContext(),
@@ -97,6 +99,7 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
             getGroupId(),
             null,
             getSupervisorTaskId(),
+            subtaskSpecId,
             numAttempts,
             ingestionSpec,
             getContext()

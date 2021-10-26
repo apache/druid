@@ -19,57 +19,44 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.quantiles.DoublesUnion;
+import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 
 public class DoublesSketchMergeBufferAggregator implements BufferAggregator
 {
-
-  private final ColumnValueSelector selector;
-  private final int k;
-  private final int maxIntermediateSize;
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<DoublesUnion>> unions = new IdentityHashMap<>();
+  private final ColumnValueSelector<DoublesSketch> selector;
+  private final DoublesSketchMergeBufferAggregatorHelper helper;
 
   public DoublesSketchMergeBufferAggregator(
-      final ColumnValueSelector selector,
+      final ColumnValueSelector<DoublesSketch> selector,
       final int k,
-      final int maxIntermediateSize)
+      final int maxIntermediateSize
+  )
   {
     this.selector = selector;
-    this.k = k;
-    this.maxIntermediateSize = maxIntermediateSize;
+    this.helper = new DoublesSketchMergeBufferAggregatorHelper(k, maxIntermediateSize);
   }
 
   @Override
-  public synchronized void init(final ByteBuffer buffer, final int position)
+  public void init(final ByteBuffer buffer, final int position)
   {
-    final WritableMemory mem = getMemory(buffer);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final DoublesUnion union = DoublesUnion.builder().setMaxK(k).build(region);
-    putUnion(buffer, position, union);
+    helper.init(buffer, position);
   }
 
   @Override
-  public synchronized void aggregate(final ByteBuffer buffer, final int position)
+  public void aggregate(final ByteBuffer buffer, final int position)
   {
-    final DoublesUnion union = unions.get(buffer).get(position);
-    DoublesSketchMergeAggregator.updateUnion(selector, union);
+    DoublesSketchMergeAggregator.updateUnion(selector, helper.getSketchAtPosition(buffer, position));
   }
 
   @Override
-  public synchronized Object get(final ByteBuffer buffer, final int position)
+  public Object get(final ByteBuffer buffer, final int position)
   {
-    return unions.get(buffer).get(position).getResult();
+    return helper.getSketchAtPosition(buffer, position).getResult();
   }
 
   @Override
@@ -87,8 +74,7 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public synchronized void close()
   {
-    unions.clear();
-    memCache.clear();
+    helper.clear();
   }
 
   // A small number of sketches may run out of the given memory, request more memory on heap and move there.
@@ -96,31 +82,7 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public synchronized void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    DoublesUnion union = unions.get(oldBuffer).get(oldPosition);
-    final WritableMemory oldMem = getMemory(oldBuffer).writableRegion(oldPosition, maxIntermediateSize);
-    if (union.isSameResource(oldMem)) { // union was not relocated on heap
-      final WritableMemory newMem = getMemory(newBuffer).writableRegion(newPosition, maxIntermediateSize);
-      union = DoublesUnion.wrap(newMem);
-    }
-    putUnion(newBuffer, newPosition, union);
-
-    Int2ObjectMap<DoublesUnion> map = unions.get(oldBuffer);
-    map.remove(oldPosition);
-    if (map.isEmpty()) {
-      unions.remove(oldBuffer);
-      memCache.remove(oldBuffer);
-    }
-  }
-
-  private WritableMemory getMemory(final ByteBuffer buffer)
-  {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN));
-  }
-
-  private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)
-  {
-    Int2ObjectMap<DoublesUnion> map = unions.computeIfAbsent(buffer, buf -> new Int2ObjectOpenHashMap<>());
-    map.put(position, union);
+    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 
   @Override
@@ -128,5 +90,4 @@ public class DoublesSketchMergeBufferAggregator implements BufferAggregator
   {
     inspector.visit("selector", selector);
   }
-
 }

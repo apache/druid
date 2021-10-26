@@ -56,25 +56,25 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testParseConstants()
   {
     validateLiteral("null", null, null);
-    validateLiteral("'hello'", ExprType.STRING, "hello");
-    validateLiteral("'hello \\uD83E\\uDD18'", ExprType.STRING, "hello \uD83E\uDD18");
-    validateLiteral("1", ExprType.LONG, 1L);
-    validateLiteral("1.", ExprType.DOUBLE, 1.0, false);
-    validateLiteral("1.234", ExprType.DOUBLE, 1.234);
-    validateLiteral("1e10", ExprType.DOUBLE, 1.0E10, false);
-    validateLiteral("1e-10", ExprType.DOUBLE, 1.0E-10, false);
-    validateLiteral("1E10", ExprType.DOUBLE, 1.0E10, false);
-    validateLiteral("1E-10", ExprType.DOUBLE, 1.0E-10, false);
-    validateLiteral("1.E10", ExprType.DOUBLE, 1.0E10, false);
-    validateLiteral("1.E-10", ExprType.DOUBLE, 1.0E-10, false);
-    validateLiteral("1.e10", ExprType.DOUBLE, 1.0E10, false);
-    validateLiteral("1.e-10", ExprType.DOUBLE, 1.0E-10, false);
-    validateLiteral("1.1e10", ExprType.DOUBLE, 1.1E10, false);
-    validateLiteral("1.1e-10", ExprType.DOUBLE, 1.1E-10, false);
-    validateLiteral("1.1E10", ExprType.DOUBLE, 1.1E10);
-    validateLiteral("1.1E-10", ExprType.DOUBLE, 1.1E-10);
-    validateLiteral("Infinity", ExprType.DOUBLE, Double.POSITIVE_INFINITY);
-    validateLiteral("NaN", ExprType.DOUBLE, Double.NaN);
+    validateLiteral("'hello'", ExpressionType.STRING, "hello");
+    validateLiteral("'hello \\uD83E\\uDD18'", ExpressionType.STRING, "hello \uD83E\uDD18");
+    validateLiteral("1", ExpressionType.LONG, 1L);
+    validateLiteral("1.", ExpressionType.DOUBLE, 1.0, false);
+    validateLiteral("1.234", ExpressionType.DOUBLE, 1.234);
+    validateLiteral("1e10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1e-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1E10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1E-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.E10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.E-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.e10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.e-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.1e10", ExpressionType.DOUBLE, 1.1E10, false);
+    validateLiteral("1.1e-10", ExpressionType.DOUBLE, 1.1E-10, false);
+    validateLiteral("1.1E10", ExpressionType.DOUBLE, 1.1E10);
+    validateLiteral("1.1E-10", ExpressionType.DOUBLE, 1.1E-10);
+    validateLiteral("Infinity", ExpressionType.DOUBLE, Double.POSITIVE_INFINITY);
+    validateLiteral("NaN", ExpressionType.DOUBLE, Double.NaN);
   }
 
   @Test
@@ -612,12 +612,12 @@ public class ParserTest extends InitializedNullHandlingTest
     );
   }
 
-  private void validateLiteral(String expr, ExprType type, Object expected)
+  private void validateLiteral(String expr, ExpressionType type, Object expected)
   {
     validateLiteral(expr, type, expected, true);
   }
 
-  private void validateLiteral(String expr, ExprType type, Object expected, boolean roundTrip)
+  private void validateLiteral(String expr, ExpressionType type, Object expected, boolean roundTrip)
   {
     Expr parsed = Parser.parse(expr, ExprMacroTable.nil(), false);
     Expr parsedFlat = Parser.parse(expr, ExprMacroTable.nil(), true);
@@ -741,7 +741,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsed.eval(Parser.withMap(ImmutableMap.of())).value()
+        parsed.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
 
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
@@ -749,7 +749,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsedRoundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+        parsedRoundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
@@ -757,7 +757,7 @@ public class ParserTest extends InitializedNullHandlingTest
   private void validateConstantExpression(String expression, Object[] expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    Object evaluated = parsed.eval(Parser.withMap(ImmutableMap.of())).value();
+    Object evaluated = parsed.eval(InputBindings.withMap(ImmutableMap.of())).value();
     Assert.assertArrayEquals(
         expression,
         expected,
@@ -770,7 +770,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) roundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+        (Object[]) roundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }

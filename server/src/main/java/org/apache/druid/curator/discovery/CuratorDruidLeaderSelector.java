@@ -30,9 +30,9 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
@@ -40,6 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 {
@@ -100,8 +101,11 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
 
               // give others a chance to become leader.
-              final LeaderLatch oldLatch = createNewLeaderLatchWithListener();
-              CloseQuietly.close(oldLatch);
+              CloseableUtils.closeAndSuppressExceptions(
+                  createNewLeaderLatchWithListener(),
+                  e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
+              );
+
               leader = false;
               try {
                 //Small delay before starting the latch so that others waiting are chosen to become leader.
@@ -207,7 +211,8 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     if (!lifecycleLock.canStop()) {
       throw new ISE("can't stop.");
     }
-    CloseQuietly.close(leaderLatch.get());
+
+    CloseableUtils.closeAndSuppressExceptions(leaderLatch.get(), e -> log.warn(e, "Failed to close LeaderLatch."));
     listenerExecutor.shutdownNow();
   }
 }

@@ -61,7 +61,6 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
@@ -87,6 +86,7 @@ import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.servlet.http.HttpServletRequest;
@@ -173,7 +173,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @JsonIgnore
   @MonotonicNonNull
   private String errorMsg;
-
 
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
@@ -430,9 +429,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     finally {
       toolbox.getChatHandlerProvider().unregister(getId());
 
-      CloseQuietly.close(firehose);
+      CloseableUtils.closeAndSuppressExceptions(firehose, e -> log.warn("Failed to close Firehose"));
       appenderator.close();
-      CloseQuietly.close(driver);
+      CloseableUtils.closeAndSuppressExceptions(driver, e -> log.warn("Failed to close AppenderatorDriver"));
 
       toolbox.removeMonitor(metricsMonitor);
 
@@ -599,7 +598,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                0L
             )
         )
     );
@@ -776,7 +776,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getQueryRunnerFactoryConglomerate(),
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
-        toolbox.getQueryExecutorService(),
+        toolbox.getQueryProcessingPool(),
         toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
