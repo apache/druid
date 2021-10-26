@@ -55,6 +55,8 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -553,10 +555,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   renderSupervisorTable() {
     const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
 
+    const supervisors = supervisorsState.data || [];
     return (
       <>
         <ReactTable
-          data={supervisorsState.data || []}
+          data={supervisors}
           loading={supervisorsState.loading}
           noDataText={
             supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
@@ -575,6 +578,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
           }}
           filterable
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Datasource',
@@ -714,10 +720,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       hiddenTaskColumns,
       supervisorFilter,
     } = this.state;
+
+    const tasks = tasksState.data || [];
     return (
       <>
         <ReactTable
-          data={tasksState.data || []}
+          data={tasks}
           loading={tasksState.loading}
           noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
@@ -736,6 +744,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
           pivotBy={groupTasksBy ? [groupTasksBy] : []}
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={tasks.length > SMALL_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Task ID',

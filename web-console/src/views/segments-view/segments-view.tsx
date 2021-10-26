@@ -57,6 +57,8 @@ import {
   QueryManager,
   QueryState,
   sqlQueryCustomTableFilter,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -167,8 +169,6 @@ export interface SegmentsViewState {
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
-  static PAGE_SIZE = 25;
-
   static baseQuery(visibleColumns: LocalStorageBackedVisibility) {
     const columns = compact([
       visibleColumns.shown('Segment ID') && `"segment_id"`,
@@ -376,7 +376,7 @@ END AS "partitioning"`,
               await Api.instance.get(
                 `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
               )
-            ).data.segments;
+            ).data?.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
@@ -514,6 +514,9 @@ END AS "partitioning"`,
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={segments.length > STANDARD_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Segment ID',
@@ -688,7 +691,6 @@ END AS "partitioning"`,
             Aggregated: () => '',
           },
         ]}
-        defaultPageSize={SegmentsView.PAGE_SIZE}
       />
     );
   }

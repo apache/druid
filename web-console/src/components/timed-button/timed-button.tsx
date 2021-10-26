@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, ButtonProps, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
@@ -40,6 +41,7 @@ export interface TimedButtonProps extends ButtonProps {
 
 export const TimedButton = React.memo(function TimedButton(props: TimedButtonProps) {
   const {
+    className,
     label,
     delays,
     onRefresh,
@@ -71,7 +73,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   }
 
   return (
-    <ButtonGroup className="timed-button">
+    <ButtonGroup className={classNames('timed-button', className)}>
       <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
       <Popover2
         content={

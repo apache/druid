@@ -373,12 +373,9 @@ exports[`data source view matches snapshot 1`] = `
     pageJumpText="jump to page"
     pageSizeOptions={
       Array [
-        5,
-        10,
-        20,
-        25,
         50,
         100,
+        200,
       ]
     }
     pageText="Page"
@@ -392,7 +389,7 @@ exports[`data source view matches snapshot 1`] = `
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
-    showPagination={true}
+    showPagination={false}
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
