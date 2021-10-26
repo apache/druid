@@ -650,13 +650,16 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     type: string,
   ): BasicAction[] {
     const { goToDatasource, goToLoadData } = this.props;
+    const { taskFilter } = this.state;
 
     const actions: BasicAction[] = [];
-    actions.push({
-      icon: IconNames.TH_LIST,
-      title: 'Show all tasks',
-      onAction: () => this.setState({ taskFilter: [] }),
-    });
+    if (taskFilter.length) {
+      actions.push({
+        icon: IconNames.TH_LIST,
+        title: 'Show all tasks',
+        onAction: () => this.setState({ taskFilter: [] }),
+      });
+    }
     if (datasource && status === 'SUCCESS') {
       actions.push({
         icon: IconNames.MULTI_SELECT,
