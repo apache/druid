@@ -22,11 +22,11 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * <pre>
@@ -46,17 +46,17 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   private final DefaultIndexTaskInputRowIteratorBuilder delegate;
 
   /**
-   * @param partitionDimension Create range partitions for this dimension
+   * @param partitionDimensions Create range partitions for these dimensions
    * @param skipNull Whether to skip rows with a dimension value of null
    */
-  public RangePartitionIndexTaskInputRowIteratorBuilder(String partitionDimension, boolean skipNull)
+  public RangePartitionIndexTaskInputRowIteratorBuilder(List<String> partitionDimensions, boolean skipNull)
   {
     delegate = new DefaultIndexTaskInputRowIteratorBuilder();
 
     if (skipNull) {
-      delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimension));
+      delegate.appendInputRowHandler(createOnlySingleDimensionValueRowsHandler(partitionDimensions));
     } else {
-      delegate.appendInputRowHandler(createOnlySingleOrNullDimensionValueRowsHandler(partitionDimension));
+      delegate.appendInputRowHandler(createOnlySingleOrNullDimensionValueRowsHandler(partitionDimensions));
     }
   }
 
@@ -79,36 +79,40 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   }
 
   private static HandlingInputRowIterator.InputRowHandler createOnlySingleDimensionValueRowsHandler(
-      String partitionDimension
+      List<String> partitionDimensions
   )
   {
-    return inputRow -> {
-      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
-      return dimensionValueCount != 1;
-    };
+    return inputRow -> isRowHandled(inputRow, partitionDimensions, dimValueCount -> dimValueCount != 1);
   }
 
   private static HandlingInputRowIterator.InputRowHandler createOnlySingleOrNullDimensionValueRowsHandler(
-      String partitionDimension
+      List<String> partitionDimensions
   )
   {
-    return inputRow -> {
-      int dimensionValueCount = getSingleOrNullDimensionValueCount(inputRow, partitionDimension);
-      return dimensionValueCount > 1;  // Rows.objectToStrings() returns an empty list for a single null value
-    };
+    // Rows.objectToStrings() returns an empty list for a single null value
+    return inputRow -> isRowHandled(inputRow, partitionDimensions, dimValueCount -> dimValueCount > 1);
   }
 
-  private static int getSingleOrNullDimensionValueCount(InputRow inputRow, String partitionDimension)
+  /**
+   * @param valueCountPredicate Predicate that must be satisfied
+   *                            for atleast one of the partitionDimensions for the row to be marked as handled.
+   * @return true when the given InputRow should be marked handled
+   * and need not be processed further.
+   */
+  private static boolean isRowHandled(
+      InputRow inputRow,
+      List<String> partitionDimensions,
+      Predicate<Integer> valueCountPredicate
+  )
   {
-    List<String> dimensionValues = inputRow.getDimension(partitionDimension);
-    int dimensionValueCount = dimensionValues.size();
-    if (dimensionValueCount > 1) {
-      throw new IAE(
-          "Cannot partition on multi-value dimension [%s] for input row [%s]",
-          partitionDimension,
-          inputRow
-      );
+    for (String dimension : partitionDimensions) {
+      List<String> dimensionValues = inputRow.getDimension(dimension);
+      if (valueCountPredicate.test(dimensionValues.size())) {
+        return true;
+      }
     }
-    return dimensionValueCount;
+
+    return false;
   }
+
 }

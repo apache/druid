@@ -22,7 +22,8 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
@@ -54,12 +55,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
+
+
 public class RangePartitionCachingLocalSegmentAllocatorTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String TASKID = "taskid";
   private static final String SUPERVISOR_TASKID = "supervisor-taskid";
   private static final String PARTITION_DIMENSION = "dimension";
+  private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(PARTITION_DIMENSION);
   private static final Interval INTERVAL_EMPTY = Intervals.utc(0, 1000);
   private static final Interval INTERVAL_SINGLETON = Intervals.utc(1000, 2000);
   private static final Interval INTERVAL_NORMAL = Intervals.utc(2000, 3000);
@@ -68,9 +73,9 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       INTERVAL_SINGLETON, "version-singleton",
       INTERVAL_NORMAL, "version-normal"
   );
-  private static final String PARTITION0 = "0";
-  private static final String PARTITION5 = "5";
-  private static final String PARTITION9 = "9";
+  private static final StringTuple PARTITION0 = tupleOf("0");
+  private static final StringTuple PARTITION5 = tupleOf("5");
+  private static final StringTuple PARTITION9 = tupleOf("9");
   private static final PartitionBoundaries EMPTY_PARTITIONS = new PartitionBoundaries();
   private static final PartitionBoundaries SINGLETON_PARTITIONS = new PartitionBoundaries(PARTITION0, PARTITION0);
   private static final PartitionBoundaries NORMAL_PARTITIONS = new PartitionBoundaries(
@@ -101,7 +106,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
                            .collect(Collectors.toList())
     );
     final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
-        new SingleDimensionPartitionsSpec(null, 1, PARTITION_DIMENSION, false)
+        new MultiDimensionPartitionsSpec(null, 1, PARTITION_DIMENSIONS, false)
     );
     INTERVAL_TO_PARTITONS.forEach(partitionAnalysis::updateBucket);
     target = SegmentAllocators.forNonLinearPartitioning(
@@ -177,7 +182,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   {
     PartitionBoundaries partitions = INTERVAL_TO_PARTITONS.get(interval);
     boolean isLastPartition = (bucketId + 1) == partitions.size();
-    return isLastPartition ? null : partitions.get(bucketId + 1);
+    return isLastPartition ? null : partitions.get(bucketId + 1).get(0);
   }
 
   private void testAllocate(InputRow row, Interval interval, int bucketId, @Nullable String partitionEnd)
@@ -190,7 +195,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   private static String getPartitionStart(Interval interval, int bucketId)
   {
     boolean isFirstPartition = bucketId == 0;
-    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(bucketId);
+    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(bucketId).get(0);
   }
 
   private void testAllocate(
@@ -255,14 +260,14 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     return taskLock;
   }
 
-  private static InputRow createInputRow(Interval interval, String dimensionValue)
+  private static InputRow createInputRow(Interval interval, StringTuple dimensionValues)
   {
     long timestamp = interval.getStartMillis();
     InputRow inputRow = EasyMock.mock(InputRow.class);
     EasyMock.expect(inputRow.getTimestamp()).andStubReturn(DateTimes.utc(timestamp));
     EasyMock.expect(inputRow.getTimestampFromEpoch()).andStubReturn(timestamp);
     EasyMock.expect(inputRow.getDimension(PARTITION_DIMENSION))
-            .andStubReturn(Collections.singletonList(dimensionValue));
+            .andStubReturn(Collections.singletonList(dimensionValues.get(0)));
     EasyMock.replay(inputRow);
     return inputRow;
   }

@@ -38,6 +38,8 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
+import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
+
 public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
   @Rule
@@ -144,7 +146,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries("a"))
+          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries(tupleOf("a")))
       );
     }
   }

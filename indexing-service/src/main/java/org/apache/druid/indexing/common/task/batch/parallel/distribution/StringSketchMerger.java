@@ -20,13 +20,14 @@
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import org.apache.datasketches.quantiles.ItemsUnion;
+import org.apache.druid.data.input.StringTuple;
 
 /**
  * Merges {@link StringSketch}es.
  */
 public class StringSketchMerger implements StringDistributionMerger
 {
-  private final ItemsUnion<String> delegate;
+  private final ItemsUnion<StringTuple> delegate;
 
   public StringSketchMerger()
   {

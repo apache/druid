@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -59,6 +60,8 @@ import java.util.concurrent.TimeoutException;
  */
 abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> extends PerfectRollupWorkerTask
 {
+  private static final Logger LOG = new Logger(PartialSegmentGenerateTask.class);
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
@@ -112,6 +115,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         inputSource,
         toolbox.getIndexingTmpDir()
     );
+    LOG.info("Generated Segments: %s", segments);
     taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
 
     return TaskStatus.success(getId());
