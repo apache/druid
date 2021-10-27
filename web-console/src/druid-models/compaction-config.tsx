@@ -86,8 +86,12 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
         </p>
         <p>
-          <Code>targetRowsPerSegment</Code> is an alias for <Code>maxRowsPerSegment</Code> and{' '}
-          <Code>numShards</Code>. Only one of these properties can be used. Leave blank to show all
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
           properties.
         </p>
       </>
@@ -108,8 +112,15 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           of 500MB~1GB.
         </p>
         <p>
-          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code> and{' '}
-          <Code>numShards</Code>. Only one of these properties can be used. Leave blank to show all
+          <Code>maxRowsPerSegment</Code> renamed to <Code>targetRowsPerSegment</Code>
+        </p>
+        <p>
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
           properties.
         </p>
       </>
@@ -135,8 +146,8 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           determine intervals/partitions pass through the data.
         </p>
         <p>
-          <Code>numShards</Code> is an alias for <Code>targetRowsPerSegment</Code> and{' '}
-          <Code>maxRowsPerSegment</Code>. Only one of these properties can be used. Leave blank to
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows across partitions and find the best partitioning. Leave blank to
           show all properties.
         </p>
       </>
@@ -174,8 +185,8 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           of 500MB~1GB.
         </p>
         <p>
-          <Code>targetRowsPerSegment</Code> is an alias for <Code>maxRowsPerSegment</Code>. Only one
-          of these properties can be used. Leave blank to show all properties.
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
         </p>
       </>
     ),
@@ -194,8 +205,8 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       <>
         <p>Maximum number of rows to include in a partition.</p>{' '}
         <p>
-          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code>. Only one
-          of these properties can be used. Leave blank to show all properties.
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
         </p>
       </>
     ),
