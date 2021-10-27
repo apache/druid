@@ -21,11 +21,13 @@ package org.apache.druid.indexer.partitions;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * Partition a segment by a single dimension.
@@ -82,6 +84,13 @@ public class SingleDimensionPartitionsSpec extends MultiDimensionPartitionsSpec
   public String getPartitionDimension()
   {
     return partitionDimension;
+  }
+
+  @JsonIgnore
+  @Override
+  public List<String> getPartitionDimensions()
+  {
+    return super.getPartitionDimensions();
   }
 
   @Override
