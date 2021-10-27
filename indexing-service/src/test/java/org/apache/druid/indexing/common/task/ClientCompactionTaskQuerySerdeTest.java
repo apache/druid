@@ -116,7 +116,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, null),
         ImmutableMap.of("key", "value")
     );
 
@@ -264,7 +264,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, null))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -307,7 +307,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, null),
         new HashMap<>()
     );
 

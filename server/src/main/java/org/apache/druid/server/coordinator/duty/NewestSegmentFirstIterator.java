@@ -384,32 +384,48 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       return true;
     }
 
-    if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
-      // Only checks for segmentGranularity as auto compaction currently only supports segmentGranularity
-      final Granularity existingSegmentGranularity = lastCompactionState.getGranularitySpec() != null ?
-                                                     objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class).getSegmentGranularity() :
-                                                     null;
-      if (existingSegmentGranularity == null) {
-        // Candidate segments were all compacted without segment granularity set.
-        // We need to check if all segments have the same segment granularity as the configured segment granularity.
-        boolean needsCompaction = candidates.segments.stream()
-                                             .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
-        if (needsCompaction) {
+    if (config.getGranularitySpec() != null) {
+
+      final GranularitySpec existingGranularitySpec = lastCompactionState.getGranularitySpec() != null ?
+                                                      objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class) :
+                                                      null;
+      // Checks for segmentGranularity
+      if (config.getGranularitySpec().getSegmentGranularity() != null) {
+        final Granularity existingSegmentGranularity = existingGranularitySpec != null ?
+                                                       existingGranularitySpec.getSegmentGranularity() :
+                                                       null;
+        if (existingSegmentGranularity == null) {
+          // Candidate segments were all compacted without segment granularity set.
+          // We need to check if all segments have the same segment granularity as the configured segment granularity.
+          boolean needsCompaction = candidates.segments.stream()
+                                                       .anyMatch(segment -> !config.getGranularitySpec().getSegmentGranularity().isAligned(segment.getInterval()));
+          if (needsCompaction) {
+            log.info(
+                "Segments were previously compacted but without segmentGranularity in auto compaction."
+                + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
+                config.getGranularitySpec().getSegmentGranularity()
+            );
+            return true;
+          }
+
+        } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
           log.info(
-              "Segments were previously compacted but without segmentGranularity in auto compaction."
-              + " Configured segmentGranularity[%s] is different from granularity implied by segment intervals. Needs compaction",
-              config.getGranularitySpec().getSegmentGranularity()
+              "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getSegmentGranularity(),
+              existingSegmentGranularity
           );
           return true;
         }
+      }
 
-      } else if (!config.getGranularitySpec().getSegmentGranularity().equals(existingSegmentGranularity)) {
-        log.info(
-            "Configured segmentGranularity[%s] is different from the segmentGranularity[%s] of segments. Needs compaction",
-            config.getGranularitySpec().getSegmentGranularity(),
-            existingSegmentGranularity
-        );
-        return true;
+      // Checks for rollup
+      if (config.getGranularitySpec().isRollup() != null) {
+        final Boolean existingRollup = existingGranularitySpec != null ?
+                                       existingGranularitySpec.isRollup() :
+                                       null;
+        if (existingRollup == null || !config.getGranularitySpec().isRollup().equals(existingRollup)) {
+          return true;
+        }
       }
     }
 

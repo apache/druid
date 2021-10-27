@@ -829,7 +829,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
             null,
             null
         )
@@ -852,7 +852,7 @@ public class CompactSegmentsTest
     Assert.assertEquals(datasourceToSegments.get(dataSource).size(), segmentsCaptor.getValue().size());
     ClientCompactionTaskGranularitySpec actual = granularitySpecArgumentCaptor.getValue();
     Assert.assertNotNull(actual);
-    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null);
+    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expected, actual);
   }
 
@@ -888,7 +888,7 @@ public class CompactSegmentsTest
                 null
             ),
             null,
-            new ClientCompactionTaskGranularitySpec(Granularities.DAY, null),
+            new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
             null
         )
     );
@@ -923,7 +923,7 @@ public class CompactSegmentsTest
                 null,
                 null
             ),
-            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null),
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
             null,
             null
         )
@@ -951,7 +951,7 @@ public class CompactSegmentsTest
     Assert.assertEquals(datasourceToSegments.get(dataSource).size(), segmentsCaptor.getValue().size());
     ClientCompactionTaskGranularitySpec actual = granularitySpecArgumentCaptor.getValue();
     Assert.assertNotNull(actual);
-    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null);
+    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expected, actual);
   }
 
