@@ -99,6 +99,13 @@ use the `ComplexMetricRegistry.register` functions to associate serde functions 
 name used to register custom behavior must match the complex metric type name reported by Druid.
 **Note that custom plugins must be registered with both the executors and the Spark driver.**
 
+### DynamicConfigProviderRegistry
+The `DynamicConfigProviderRegistry` provides support for deserializing dynamic configuration values via Druid
+[DynamicConfigProviders](dynamic-config-provider.md).
+
+Custom providers should be registered on the driver if used to supply passwords for the backing metadata database and on
+the executors if used to supply deep storage credentials or keys.
+
 ### SegmentReaderRegistry
 The `SegmentReaderRegistry` provides support for reading segments from deep storage. Local, HDFS, GCS, S3, and Azure
 Storage deep storage implementations are supported by default.

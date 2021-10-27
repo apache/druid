@@ -1904,6 +1904,7 @@ DataFrameWriter
 DataSourceReader
 DataSourceWriter
 DynamicConfigProvider
+DynamicConfigProviders
 DynamicConfigProviderRegistry
 serializable
 serde
