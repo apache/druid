@@ -42,7 +42,7 @@ import scala.language.implicitConversions
 package object spark {
   private[spark] val MAPPER: ObjectMapper = new DefaultObjectMapper()
 
-  private[spark] val injectableValues: InjectableValues.Std =
+  private[spark] val baseInjectableValues: InjectableValues.Std =
     new InjectableValues.Std()
       .addValue(classOf[ExprMacroTable], new ExprMacroTable(Seq(
         new LikeExprMacro(),
@@ -59,7 +59,7 @@ package object spark {
       .addValue(classOf[ObjectMapper], MAPPER)
       .addValue(classOf[DataSegment.PruneSpecsHolder], PruneSpecsHolder.DEFAULT)
 
-  MAPPER.setInjectableValues(injectableValues)
+  MAPPER.setInjectableValues(baseInjectableValues)
 
   /*
    * Utility methods for serializing and deserializing objects using the same object mapper used
@@ -83,7 +83,7 @@ package object spark {
   }
 
   def setInjectableValue(clazz: Class[_], value: AnyRef): Unit = {
-    MAPPER.setInjectableValues(injectableValues.addValue(clazz, value))
+    MAPPER.setInjectableValues(baseInjectableValues.addValue(clazz, value))
   }
 
   implicit def druidDataFrameReaderToDataFrameReader(druidReader: DruidDataFrameReader): DataFrameReader =

@@ -20,13 +20,12 @@
 package org.apache.druid.spark.registries
 
 import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.InjectableValues
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import org.apache.druid.guice.LocalDataStorageDruidModule
 import org.apache.druid.java.util.common.{IAE, ISE, StringUtils}
 import org.apache.druid.segment.loading.{LoadSpec, LocalDataSegmentPuller, LocalLoadSpec}
 import org.apache.druid.spark
-import org.apache.druid.spark.MAPPER
+import org.apache.druid.spark.{MAPPER, baseInjectableValues}
 import org.apache.druid.spark.configuration.Configuration
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.utils.DeepStorageConstructorHelpers
@@ -233,7 +232,7 @@ object SegmentReaderRegistry extends Logging {
     Map[String, Configuration => Unit](
       LocalDataStorageDruidModule.SCHEME -> (_ => {
         val puller = new LocalDataSegmentPuller()
-        val injectableValues = spark.injectableValues
+        val injectableValues = baseInjectableValues
           .addValue(classOf[LocalDataSegmentPuller], puller)
         MAPPER.setInjectableValues(injectableValues)
         MAPPER.registerSubtypes(classOf[LocalLoadSpec])
@@ -241,7 +240,7 @@ object SegmentReaderRegistry extends Logging {
       "hdfs" -> ((conf: Configuration) => {
         val hadoopConfiguration = DeepStorageConstructorHelpers.createHadoopConfiguration(conf)
         val puller = new HdfsDataSegmentPuller(hadoopConfiguration)
-        val injectableValues = spark.injectableValues
+        val injectableValues = baseInjectableValues
           .addValue(classOf[HdfsDataSegmentPuller], puller)
         MAPPER.setInjectableValues(injectableValues)
         MAPPER.registerSubtypes(new NamedType(classOf[HdfsLoadSpec], "hdfs"))
@@ -249,7 +248,7 @@ object SegmentReaderRegistry extends Logging {
       GoogleStorageDruidModule.SCHEME -> (_ => {
         val googleStorage = DeepStorageConstructorHelpers.createGoogleStorage()
         val puller = new GoogleDataSegmentPuller(googleStorage)
-        val injectableValues = spark.injectableValues
+        val injectableValues = baseInjectableValues
           .addValue(classOf[GoogleDataSegmentPuller], puller)
         MAPPER.setInjectableValues(injectableValues)
         MAPPER.registerSubtypes(classOf[GoogleLoadSpec])
@@ -257,7 +256,7 @@ object SegmentReaderRegistry extends Logging {
       "s3" -> ((conf: Configuration) => {
         val s3 = DeepStorageConstructorHelpers.createServerSideEncryptingAmazonS3(conf)
         val puller = new S3DataSegmentPuller(s3)
-        val injectableValues = spark.injectableValues
+        val injectableValues = baseInjectableValues
           .addValue(classOf[S3DataSegmentPuller], puller)
         MAPPER.setInjectableValues(injectableValues)
         MAPPER.registerSubtypes(classOf[S3LoadSpec])
@@ -270,7 +269,7 @@ object SegmentReaderRegistry extends Logging {
           }
         }
         val puller = new AzureDataSegmentPuller(azureByteSourceFactory)
-        val injectableValues = spark.injectableValues
+        val injectableValues = baseInjectableValues
           .addValue(classOf[AzureDataSegmentPuller], puller)
         MAPPER.setInjectableValues(injectableValues)
         MAPPER.registerSubtypes(classOf[AzureLoadSpec])
