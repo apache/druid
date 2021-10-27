@@ -1426,6 +1426,61 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
   }
 
+  @Test
+  public void testLockRevoked() throws Exception
+  {
+    final Task task = new AbstractFixedIntervalTask(
+        "id1",
+        "id1",
+        new TaskResource("id1", 1),
+        "ds",
+        Intervals.of("2012-01-01/P1D"),
+        null
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return "test";
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      {
+        final Interval interval = Intervals.of("2012-01-01/P1D");
+        final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
+            TaskLockType.EXCLUSIVE,
+            interval
+        );
+
+        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
+        if (lock == null) {
+          throw new ISE("Failed to get a lock");
+        }
+
+        final TaskLock lockBeforeRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertFalse(lockBeforeRevoke.isRevoked());
+
+        taskLockbox.revokeLock(getId(), lock);
+
+        final TaskLock lockAfterRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertTrue(lockAfterRevoke.isRevoked());
+        return TaskStatus.failure(getId(), "lock revoked test");
+      }
+    };
+
+    final TaskStatus status = runTask(task);
+    Assert.assertEquals(taskLocation, status.getLocation());
+    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
+  }
+
   private TaskStatus runTask(final Task task) throws Exception
   {
     final Task dummyTask = new DefaultObjectMapper().readValue(
