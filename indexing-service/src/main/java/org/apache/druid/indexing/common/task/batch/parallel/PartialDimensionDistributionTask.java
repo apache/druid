@@ -45,7 +45,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -68,8 +67,6 @@ import java.util.function.Supplier;
 public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_distribution";
-
-  private static final Logger LOG = new Logger(PartialDimensionDistributionTask.class);
 
   // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
   private static final boolean SKIP_NULL = true;
@@ -199,8 +196,11 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     MultiDimensionPartitionsSpec partitionsSpec = (MultiDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
-    List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
-    Preconditions.checkNotNull(partitionDimensions, "partitionDimension required in partitionsSpec");
+    final List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
+    Preconditions.checkArgument(
+        partitionDimensions != null && !partitionDimensions.isEmpty(),
+        "partitionDimension required in partitionsSpec"
+    );
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
@@ -253,7 +253,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       boolean isAssumeGrouped
   )
   {
-    LOG.info("Kashif: Determining distributions on dimension [%s]", partitionDimensions);
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
     InputRowFilter inputRowFilter =
         !isAssumeGrouped && granularitySpec.isRollup()
@@ -297,7 +296,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     inputRowFilter.getIntervalToMaxPartitionDimensionValue()
                   .forEach((interval, max) -> intervalToDistribution.get(interval).putIfNewMax(max));
 
-    LOG.info("Kashif: Distributions: [%s]", intervalToDistribution);
     return intervalToDistribution;
   }
 

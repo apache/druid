@@ -22,10 +22,15 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import org.apache.datasketches.ArrayOfItemsSerDe;
 import org.apache.datasketches.ArrayOfStringsSerDe;
 import org.apache.datasketches.memory.Memory;
-import org.apache.datasketches.memory.UnsafeUtil;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.datasketches.memory.internal.UnsafeUtil;
 import org.apache.druid.data.input.StringTuple;
 
+/**
+ * Serde for {@link StringTuple}.
+ *
+ * Implementation similar to {@link ArrayOfStringsSerDe}.
+ */
 public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
 {
   private static final ArrayOfStringsSerDe STRINGS_SERDE = new ArrayOfStringsSerDe();
@@ -41,7 +46,7 @@ public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
       length += items[i].size() + Integer.BYTES;
     }
     final byte[] bytes = new byte[length];
-    final WritableMemory mem = WritableMemory.wrap(bytes);
+    final WritableMemory mem = WritableMemory.writableWrap(bytes);
     long offsetBytes = 0;
     for (int i = 0; i < items.length; i++) {
       mem.putInt(offsetBytes, items[i].size());

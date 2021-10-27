@@ -82,7 +82,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         supervisorTaskId,
         ingestionSchema,
         context,
-        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimension(ingestionSchema), !SKIP_NULL)
+        new RangePartitionIndexTaskInputRowIteratorBuilder(getPartitionDimensions(ingestionSchema), !SKIP_NULL)
     );
 
     this.subtaskSpecId = subtaskSpecId;
@@ -92,7 +92,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     this.intervalToPartitions = intervalToPartitions;
   }
 
-  private static List<String> getPartitionDimension(ParallelIndexIngestionSpec ingestionSpec)
+  private static List<String> getPartitionDimensions(ParallelIndexIngestionSpec ingestionSpec)
   {
     PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
     Preconditions.checkArgument(

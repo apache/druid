@@ -49,14 +49,14 @@ public class StringSketch implements StringDistribution
 {
   static final String NAME = "sketch";
   static final int SKETCH_K = 1 << 12;  // smallest value with normalized rank error < 0.1%; retain up to ~86k elements
-  static final Comparator<StringTuple> SKETCH_COMPARATOR = Comparator.naturalOrder();
+  static final Comparator<StringTuple> STRING_TUPLE_COMPARATOR = Comparator.naturalOrder();
   private static final ArrayOfStringTuplesSerDe ARRAY_OF_STRINGS_SERDE = new ArrayOfStringTuplesSerDe();
 
   private final ItemsSketch<StringTuple> delegate;
 
   public StringSketch()
   {
-    this(ItemsSketch.getInstance(SKETCH_K, SKETCH_COMPARATOR));
+    this(ItemsSketch.getInstance(SKETCH_K, STRING_TUPLE_COMPARATOR));
   }
 
   StringSketch(ItemsSketch<StringTuple> sketch)
@@ -74,7 +74,7 @@ public class StringSketch implements StringDistribution
   public void putIfNewMin(StringTuple value)
   {
     StringTuple min = delegate.getMinValue();
-    if (min == null || SKETCH_COMPARATOR.compare(value, min) < 0) {
+    if (min == null || min.compareTo(value) > 0) {
       delegate.update(value);
     }
   }
@@ -83,7 +83,7 @@ public class StringSketch implements StringDistribution
   public void putIfNewMax(StringTuple value)
   {
     StringTuple max = delegate.getMaxValue();
-    if (max == null || SKETCH_COMPARATOR.compare(value, max) > 0) {
+    if (max == null || max.compareTo(value) < 0) {
       delegate.update(value);
     }
   }
@@ -233,7 +233,7 @@ public class StringSketch implements StringDistribution
         byte[] sketchBytes = jsonNode.get(FIELD_SKETCH).binaryValue();
         ItemsSketch<StringTuple> sketch = ItemsSketch.getInstance(
             Memory.wrap(sketchBytes),
-            SKETCH_COMPARATOR,
+            STRING_TUPLE_COMPARATOR,
             ARRAY_OF_STRINGS_SERDE
         );
         return new StringSketch(sketch);
