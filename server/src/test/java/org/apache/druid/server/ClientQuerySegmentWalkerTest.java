@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -102,7 +101,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Tests ClientQuerySegmentWalker.
@@ -369,6 +367,7 @@ public class ClientQuerySegmentWalkerTest
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
+  // TODO: Check subquery id generation for this
   @Test
   public void testGroupByOnGroupByOnTable()
   {
@@ -1365,7 +1364,7 @@ public class ClientQuerySegmentWalkerTest
       // Need to blast various parameters that will vary and aren't important to test for.
       this.query = query.withOverriddenContext(
           ImmutableMap.<String, Object>builder()
-              .put(BaseQuery.SUB_QUERY_ID, "dummy")
+//              .put(BaseQuery.SUB_QUERY_ID, "dummy")
               .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
               .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
               .put(QueryContexts.FINALIZE_KEY, true)

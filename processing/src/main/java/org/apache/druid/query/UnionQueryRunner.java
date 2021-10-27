@@ -87,7 +87,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                                       ).withSubQueryId(
                                           generateSubqueryId(
                                               query.getSubQueryId(),
-                                              findNestingLevel(analysis.getDataSource(), analysis.getBaseDataSource()),
+                                              // toString() works since the datasource will be a TableDataSource
+                                              indexBaseDataSourcePair.rhs.toString(),
                                               indexBaseDataSourcePair.lhs
                                           )
                                       ))
@@ -108,19 +109,19 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
    * Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
    *
    * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
-   * @param nesting          The level under which the base datasource is present inside the original datasource
-   * @param orderNumber      Position of the generated subquery at the same level
+   * @param dataSourceName   Name of the datasource for which the UnionRunner is running
+   * @param dataSourceIndex  Position of the datasource for which the UnionRunner is running
    * @return Subquery Id which needs to be populated
    */
-  private String generateSubqueryId(String parentSubqueryId, int nesting, int orderNumber)
+  private String generateSubqueryId(String parentSubqueryId, String dataSourceName, int dataSourceIndex)
   {
-    final String DELIMITER = ".";
+    final String DELIMITER = "-";
     List<String> arr = new ArrayList<>();
     if (!StringUtils.isEmpty(parentSubqueryId)) {
       arr.add(parentSubqueryId);
     }
-    arr.addAll(Collections.nCopies(nesting, "1"));
-    arr.add(Integer.toString(orderNumber));
+
+    arr.add(dataSourceName + "." + dataSourceIndex);
 
     return String.join(DELIMITER, arr);
   }

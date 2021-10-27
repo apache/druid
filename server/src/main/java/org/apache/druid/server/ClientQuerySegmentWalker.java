@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
@@ -61,12 +62,14 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Query handler for Broker processes (see CliBroker).
@@ -150,18 +153,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     // transform TableDataSource to GlobalTableDataSource when eligible
     // before further transformation to potentially inline
-    final DataSource freeTradeDataSource = globalizeIfPossible(query.getDataSource());
+
+    // Populate the subquery ids of the subquery id present in the main query
+    Query<T> newQuery = query.withDataSource(generateSubqueryIds(query.getDataSource(), "1"));
+
+    final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
         toolChest,
         new AtomicInteger(),
         maxSubqueryRows,
         true,
-        "1",
         query.getId(),
-        query.getSqlQueryId()
+        query.getSqlQueryId(),
+        new MutableInt(1)
     );
 
     if (!canRunQueryUsingClusterWalker(query.withDataSource(inlineDryRun))
@@ -171,16 +179,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // Now that we know the structure is workable, actually do the inlining (if necessary).
-    final Query<T> newQuery = query.withDataSource(
+     newQuery = newQuery.withDataSource(
         inlineIfNecessary(
             freeTradeDataSource,
             toolChest,
             new AtomicInteger(),
             maxSubqueryRows,
             false,
-            "1",
             query.getId(),
-            query.getSqlQueryId()
+            query.getSqlQueryId(),
+            new MutableInt(1)
         )
     );
 
@@ -305,9 +313,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicInteger subqueryRowLimitAccumulator,
       final int maxSubqueryRows,
       final boolean dryRun,
-      final String subQueryIdPrefix,
       @Nullable final String parentQueryId,
-      @Nullable final String parentSqlQueryId
+      @Nullable final String parentSqlQueryId,
+      MutableInt subquerySequence
   )
   {
     if (dataSource instanceof QueryDataSource) {
@@ -335,9 +343,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             subqueryRowLimitAccumulator,
             maxSubqueryRows,
             dryRun,
-            generateSubqueryId(subQueryIdPrefix, nesting, 1),
             parentQueryId,
-            parentSqlQueryId
+            parentSqlQueryId,
+            subquerySequence
         );
 
         while (!stack.isEmpty()) {
@@ -357,15 +365,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               subqueryRowLimitAccumulator,
               maxSubqueryRows,
               dryRun,
-              generateSubqueryId(subQueryIdPrefix, 0, 2),
               parentQueryId,
-              parentSqlQueryId
+              parentSqlQueryId,
+              subquerySequence
           );
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
-        // This subquery id needs to be generated on the bases of outer query's id
-        Query subQueryWithId = subQuery.withSubQueryId(subQueryIdPrefix);
+        Query subQueryWithId = subQuery;
 
         if (StringUtils.isNotEmpty(parentQueryId)) {
           subQueryWithId = subQueryWithId.withId(parentQueryId);
@@ -374,6 +381,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         if (StringUtils.isNotEmpty(parentSqlQueryId)) {
           subQueryWithId = subQueryWithId.withSqlQueryId(parentSqlQueryId);
         }
+
+        String subQueryId = Integer.toString(subquerySequence.intValue());
+        subquerySequence.increment();
+
+        if (StringUtils.isNotEmpty(subQuery.getSubQueryId())) {
+          subQueryId = subQueryId + "-" + subQuery.getSubQueryId();
+        }
+
+        subQueryWithId = subQueryWithId.withSubQueryId(subQueryId);
 
         final Sequence<?> queryResults;
 
@@ -405,9 +421,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         subqueryRowLimitAccumulator,
                         maxSubqueryRows,
                         dryRun,
-                        generateSubqueryId(subQueryIdPrefix, 0, 1),
                         parentQueryId,
-                        parentSqlQueryId
+                        parentSqlQueryId,
+                        subquerySequence
                     )
                 )
             ),
@@ -415,9 +431,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             subqueryRowLimitAccumulator,
             maxSubqueryRows,
             dryRun,
-            subQueryIdPrefix,
             parentQueryId,
-            parentSqlQueryId
+            parentSqlQueryId,
+            subquerySequence
         );
       }
     } else {
@@ -432,9 +448,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                        subqueryRowLimitAccumulator,
                        maxSubqueryRows,
                        dryRun,
-                       generateSubqueryId(subQueryIdPrefix, 0, indexChildTuple.lhs),
                        parentQueryId,
-                       parentSqlQueryId
+                       parentSqlQueryId,
+                       subquerySequence
                    ))
                    .collect(Collectors.toList())
       );
@@ -509,6 +525,36 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     arr.add(Integer.toString(orderNumber));
 
     return String.join(DELIMITER, arr);
+  }
+
+  /**
+   * This method returns a datasource after populating all the QueryDataSources nested within it with their correct
+   * nesting level in the subquery id
+   * @param dataSource  Datasource to be traversed
+   * @param nestingLevel Nesting level of the datasource passed, should not be empty since we are directly appending
+   *                     the levels of the children datasources with the separator
+   * @return The same datasource with subquery id's populated if applicable
+   */
+  private DataSource generateSubqueryIds(DataSource dataSource, String nestingLevel) {
+    List<DataSource> children = dataSource.getChildren();
+
+    if(dataSource instanceof QueryDataSource) {
+      Query<?> dataSourceQuery = ((QueryDataSource) dataSource).getQuery();
+      if(StringUtils.isEmpty(dataSourceQuery.getSubQueryId())) {
+        dataSource = new QueryDataSource(dataSourceQuery.withSubQueryId(nestingLevel));
+      }
+    }
+
+    dataSource = dataSource.withChildren(
+        IntStream.range(0, children.size())
+            .mapToObj(ind -> new Pair<>(ind, children.get(ind)))
+            .map(indexChildTuple -> {
+              return generateSubqueryIds(indexChildTuple.rhs, nestingLevel + "." + indexChildTuple.lhs);
+            })
+            .collect(Collectors.toList())
+    );
+
+    return dataSource;
   }
 
   /**
