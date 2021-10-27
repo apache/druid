@@ -17,6 +17,7 @@ branches:
   only:
   - master
   - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+  - spark_druid_connector
 
 language: java
 
