@@ -881,7 +881,7 @@ The S3 input source skips all empty objects only when `prefixes` is specified.
 
 If you do not supply an `accessKeyId` and `secretAccessKey`, Druid uses the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods).
 
-#### S3 Input Examples
+#### S3 input examples
 
 Using URIs, this ingestion specification will ingest two specific objects:
 
