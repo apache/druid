@@ -870,7 +870,7 @@ The S3 input source skips all empty objects only when `prefixes` is specified.
 |`bucket`|Name of the S3 bucket|None|yes|
 |`path`|The path to the data|None|yes|
 
-#### S3 Input Properties Object
+#### S3 input properties object
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
