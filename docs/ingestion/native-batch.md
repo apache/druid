@@ -851,7 +851,7 @@ Specify objects to ingest as either:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |`type`|Set value to `s3`.|None|yes|
-|`uris`|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
+|`uris`| JSON array of URIs defining the location of S3 objects to ingest |None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |`prefixes`|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`objects`](#s3-input-objects)|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`properties`](#s3-input-properties-object)|Properties Object for overriding the default S3 configuration.|None|No (defaults will be used if not given)
