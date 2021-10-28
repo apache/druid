@@ -66,6 +66,47 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     super(httpClient, jsonMapper, taskInfoProvider, httpTimeout, dataSource, numThreads, numRetries);
   }
 
+  public boolean stop(final String id, final boolean publish)
+  {
+    log.debug("Stop task[%s] publish[%s]", id, publish);
+
+    try {
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
+              id,
+              HttpMethod.POST,
+              "stop",
+              publish ? "publish=true" : null,
+              true
+      );
+      return isSuccess(response);
+    }
+    catch (NoTaskLocationException e) {
+      return false;
+    }
+    catch (TaskNotRunnableException e) {
+      log.info("Task [%s] couldn't be stopped because it is no longer running", id);
+      return true;
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while stopping task [%s]", id);
+      return false;
+    }
+  }
+
+  public boolean resume(final String id)
+  {
+    log.debug("Resume task[%s]", id);
+
+    try {
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
+      return isSuccess(response);
+    }
+    catch (NoTaskLocationException | IOException e) {
+      log.warn(e, "Exception while stopping task [%s]", id);
+      return false;
+    }
+  }
+
   public Map<PartitionIdType, SequenceOffsetType> pause(final String id)
   {
     log.info("Pause task[%s]", id);
@@ -141,47 +182,6 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
   public void cancelPausingTask(final String id)
   {
     waitPausingTaskFinishedMap.put(id, false);
-  }
-
-  public boolean stop(final String id, final boolean publish)
-  {
-    log.debug("Stop task[%s] publish[%s]", id, publish);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.POST,
-          "stop",
-          publish ? "publish=true" : null,
-          true
-      );
-      return isSuccess(response);
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-    catch (TaskNotRunnableException e) {
-      log.info("Task [%s] couldn't be stopped because it is no longer running", id);
-      return true;
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception while stopping task [%s]", id);
-      return false;
-    }
-  }
-
-  public boolean resume(final String id)
-  {
-    log.debug("Resume task[%s]", id);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
-      return isSuccess(response);
-    }
-    catch (NoTaskLocationException | IOException e) {
-      log.warn(e, "Exception while stopping task [%s]", id);
-      return false;
-    }
   }
 
   public SeekableStreamIndexTaskRunner.Status getStatus(final String id)
