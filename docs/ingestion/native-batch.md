@@ -883,7 +883,7 @@ If you do not supply an `accessKeyId` and `secretAccessKey`, Druid uses the defa
 
 #### S3 input examples
 
-Using URIs, this ingestion specification will ingest two specific objects:
+Using URIs, the following ingestion specification ingests two specific objects:
 
 ```json
 ...
