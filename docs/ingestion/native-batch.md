@@ -854,7 +854,7 @@ Specify objects to ingest as either:
 |`uris`| JSON array of URIs defining the location of S3 objects to ingest |None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |`prefixes`|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`objects`](#s3-input-objects)|JSON array of S3 Objects to ingest.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
-|[`properties`](#s3-input-properties-object)|Properties Object for overriding the default S3 configuration.|None|No (defaults will be used if not given)
+|[`properties`](#s3-input-properties-object)|Properties Object to override the default S3 configuration.|None|No (defaults will be used if not given)
 
 > When you supply a list of `prefixes`, Druid will list the contents and then ingest
 *all* objects contained in the `prefixes` you specify.
