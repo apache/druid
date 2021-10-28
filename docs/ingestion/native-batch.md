@@ -843,7 +843,7 @@ Use the *S3 input source* to read objects directly from S3-like storage.
 
 The S3 input source is splittable, meaning it can be used by the [Parallel task](#parallel-task).  In this case each `index_parallel` task reads one or more objects.
 
-Objects to ingest can be specified as:
+Specify objects to ingest as either:
 
 - a list of S3 URI strings or
 - a list of S3 location prefixes
