@@ -20,32 +20,18 @@
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
  * Represents a tuple of String values, typically used to represent
  * (single-valued) dimension values for an InputRow.
  */
-@JsonSerialize(using = StringTuple.Serializer.class)
-@JsonDeserialize(using = StringTuple.Deserializer.class)
 public class StringTuple implements Comparable<StringTuple>
 {
-
-  @JsonProperty("values")
   private final String[] values;
 
   public static StringTuple create(String... values)
@@ -54,9 +40,7 @@ public class StringTuple implements Comparable<StringTuple>
   }
 
   @JsonCreator
-  private StringTuple(
-      @JsonProperty("values") String... values
-  )
+  public StringTuple(String[] values)
   {
     Preconditions.checkNotNull(values, "Array of values should not be null");
     this.values = values;
@@ -72,9 +56,10 @@ public class StringTuple implements Comparable<StringTuple>
     return values.length;
   }
 
+  @JsonValue
   public String[] toArray()
   {
-    return Arrays.copyOf(values, size());
+    return values;
   }
 
   @Override
@@ -147,49 +132,4 @@ public class StringTuple implements Comparable<StringTuple>
     return Arrays.toString(values);
   }
 
-  /**
-   * Custom serializer that serializes a StringTuple as an array of String values.
-   */
-  static class Serializer extends StdSerializer<StringTuple>
-  {
-    private Serializer()
-    {
-      super(StringTuple.class);
-    }
-
-    @Override
-    public void serialize(StringTuple value, JsonGenerator generator, SerializerProvider provider)
-        throws IOException
-    {
-      generator.writeStartArray();
-      for (int i = 0; i < value.size(); ++i) {
-        generator.writeString(value.get(i));
-      }
-      generator.writeEndArray();
-    }
-  }
-
-  /**
-   * Custom deserializer that deserializes a StringTuple from an array of String values.
-   */
-  static class Deserializer extends StdDeserializer<StringTuple>
-  {
-
-    private Deserializer()
-    {
-      super(StringTuple.class);
-    }
-
-    @Override
-    public StringTuple deserialize(JsonParser jsonParser, DeserializationContext context)
-        throws IOException
-    {
-      final JsonNode jsonNode = jsonParser.getCodec().readTree(jsonParser);
-      final String[] values = new String[jsonNode.size()];
-      for (int i = 0; i < jsonNode.size(); ++i) {
-        values[i] = jsonNode.get(i).asText();
-      }
-      return new StringTuple(values);
-    }
-  }
 }
