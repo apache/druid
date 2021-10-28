@@ -508,53 +508,32 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Creates a child subquery Id from the parent (sub)query as follows
-   * If the parent (sub)query Id is not null, i.e. it is a top level query, it simply returns the orderNumber
-   * Else it appends the orderNumber to the parent (sub)query Id with '-' as separator
-   *
-   * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
-   * @param nesting          The level under which the base datasource is present inside the original datasource
-   * @param orderNumber      Position of the generated subquery at the same level
-   * @return Subquery Id which needs to be populated
-   */
-  private String generateSubqueryId(String parentSubqueryId, int nesting, int orderNumber)
-  {
-    final String DELIMITER = ".";
-    List<String> arr = new ArrayList<>();
-    if (!StringUtils.isEmpty(parentSubqueryId)) {
-      arr.add(parentSubqueryId);
-    }
-    arr.addAll(Collections.nCopies(nesting, "1"));
-    arr.add(Integer.toString(orderNumber));
-
-    return String.join(DELIMITER, arr);
-  }
-
-  /**
    * This method returns a datasource after populating all the {@link QueryDataSource} nested within it with their
    * correct nesting level in the subquery id
-   * @param dataSource  Datasource to be traversed
+   *
+   * @param dataSource   Datasource to be traversed
    * @param nestingLevel Nesting level of the datasource passed, should not be empty since we are directly appending
    *                     the levels of the children datasources with the separator
    * @return The same datasource with subquery id's populated if applicable
    */
-  private DataSource generateSubqueryIds(DataSource dataSource, String nestingLevel) {
+  private DataSource generateSubqueryIds(DataSource dataSource, String nestingLevel)
+  {
     List<DataSource> children = dataSource.getChildren();
 
-    if(dataSource instanceof QueryDataSource) {
+    if (dataSource instanceof QueryDataSource) {
       Query<?> dataSourceQuery = ((QueryDataSource) dataSource).getQuery();
-      if(StringUtils.isEmpty(dataSourceQuery.getSubQueryId())) {    // Only add subquery id if not explicitly passed in
+      if (StringUtils.isEmpty(dataSourceQuery.getSubQueryId())) {    // Only add subquery id if not explicitly passed in
         dataSource = new QueryDataSource(dataSourceQuery.withSubQueryId(nestingLevel));
       }
     }
 
     dataSource = dataSource.withChildren(
         IntStream.range(0, children.size())
-            .mapToObj(ind -> new Pair<>(ind, children.get(ind)))
-            .map(indexChildTuple -> {
-              return generateSubqueryIds(indexChildTuple.rhs, nestingLevel + "." + indexChildTuple.lhs);
-            })
-            .collect(Collectors.toList())
+                 .mapToObj(ind -> new Pair<>(ind, children.get(ind)))
+                 .map(indexChildTuple -> {
+                   return generateSubqueryIds(indexChildTuple.rhs, nestingLevel + "." + (indexChildTuple.lhs + 1));
+                 })
+                 .collect(Collectors.toList())
     );
 
     return dataSource;
