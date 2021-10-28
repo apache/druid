@@ -48,7 +48,6 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
   });
 
   const jsonValue = jsonState.data || '';
-
   return (
     <div className="show-json">
       <div className="top-actions">
