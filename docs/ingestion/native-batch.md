@@ -919,7 +919,7 @@ The following specification ingests all the objects in two locations given in `p
 ...
 ```
 
-This time using `objects`, this specification will ingest two specific objects, one from the `foo` bucket, one from the `bar` bucket:
+The following example uses `objects` to ingest two specific objects, one from the `foo` bucket, one from the `bar` bucket:
 
 ```json
 ...
