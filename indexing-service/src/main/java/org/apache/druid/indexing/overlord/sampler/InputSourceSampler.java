@@ -39,7 +39,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -114,7 +113,7 @@ public class InputSourceSampler
           tempDir
       );
       try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
-           final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
+           final IncrementalIndex index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
            final Closer closer1 = closer) {
         List<SamplerResponseRow> responseRows = new ArrayList<>(nonNullSamplerConfig.getNumRows());
         int numRowsIndexed = 0;
@@ -226,7 +225,7 @@ public class InputSourceSampler
     return dataSchema.getTransformSpec().decorate(reader);
   }
 
-  private IncrementalIndex<Aggregator> buildIncrementalIndex(SamplerConfig samplerConfig, DataSchema dataSchema)
+  private IncrementalIndex buildIncrementalIndex(SamplerConfig samplerConfig, DataSchema dataSchema)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withTimestampSpec(dataSchema.getTimestampSpec())

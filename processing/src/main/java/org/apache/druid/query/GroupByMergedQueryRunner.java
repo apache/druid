@@ -167,7 +167,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   private void waitForFutureCompletion(
       GroupByQuery query,
       List<ListenableFuture<Void>> futures,
-      IncrementalIndex<?> closeOnFailure
+      IncrementalIndex closeOnFailure
   )
   {
     ListenableFuture<List<Void>> future = Futures.allAsList(futures);
