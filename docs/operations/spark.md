@@ -136,7 +136,7 @@ uploaded to the Spark cluster. Application jars should then be built with a comp
 
 ### Metadata Client Configs
 The properties used to configure the client that interacts with the Druid metadata server directly. Used by both reader
-and the writer. The `metadata.Password` property can either be provided as a string that will be used as-is or can be
+and the writer. The `metadata.password` property can either be provided as a string that will be used as-is or can be
 provided as a serialized DynamicConfigProvider that will be resolved when the metadata client is first instantiated. If
 a  custom DynamicConfigProvider is used, be sure to register the provider with the DynamicConfigProviderRegistry before use.
 
@@ -152,7 +152,8 @@ a  custom DynamicConfigProvider is used, be sure to register the provider with t
 |`metadata.baseName`|The base name used when creating Druid metadata tables|No|`druid`|
 
 ### Druid Client Configs
-The configuration properties used to query the Druid cluster for segment metadata. Only used in the reader.
+The configuration properties used to query the Druid cluster for segment metadata. Only used in the reader, and only if
+no schema is provided.
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
@@ -169,7 +170,7 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |---|-----------|--------|-------|
 |`table`|The Druid data source to read from|Yes||
 |`reader.deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
-|`reader.segments`|A hard-coded list of Druid segments to read. If set, the table and druid client configurations are ignored and the specified segments are read directly. Must be deserializable into Druid DataSegment instances|No|
+|`reader.segments`|A hard-coded list of Druid segments to read. If set, the table and druid metadata client configurations are ignored and the specified segments are read directly. Must be deserializable into Druid DataSegment instances|No|
 |`reader.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
 |`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 |`reader.useSparkConfForDeepStorage`|If true, use the Spark job's configuration to set up access to deep storage|No|False|
@@ -242,7 +243,7 @@ name prefixes
 |`s3.proxy.username`|The user name to use when connecting through a proxy|No||
 |`s3.proxy.password`|The password to use when connecting through a proxy. Plain string|No||
 |`s3.endpoint.url`|The S3 service endpoint to connect to||
-|`s3.endpoint.signingRegion`|The region to use for singing requests (e.g. `us-west-1`)|||
+|`s3.endpoint.signingRegion`|The region to use for signing requests (e.g. `us-west-1`)|||
 |`s3.protocol`|The communication protocol to use when communicating with AWS. This configuration is ignored if `s3EndpointConfigUrl` includes the protocol| |`https`|
 |`s3.disableChunkedEncoding`|Whether or not to disable chunked encoding| |False| <!-- Keeping the irritating inconsistency in property naming here to match the S3 extension names -->
 |`s3.enablePathStyleAccess`|Whether or not to enable path-style access| |False|
