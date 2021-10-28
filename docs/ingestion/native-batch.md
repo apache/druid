@@ -845,7 +845,7 @@ The S3 input source is splittable, meaning it can be used by the [Parallel task]
 
 Specify objects to ingest as either:
 
-- a list of S3 URI strings or
+- a list of S3 URI strings
 - a list of S3 location prefixes
 
 |property|description|default|required?|
