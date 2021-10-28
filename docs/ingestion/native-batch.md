@@ -879,7 +879,7 @@ The S3 input source skips all empty objects only when `prefixes` is specified.
 |`assumeRoleArn`|AWS ARN of the role to assume.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). `assumeRoleArn` can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |`assumeRoleExternalId`|A unique identifier that might be required when you assume a role in another account.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html).|None|no|
 
-> If `accessKeyId` and `secretAccessKey` are not given, then the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+If you do not supply an `accessKeyId` and `secretAccessKey`, Druid uses the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods).
 
 #### S3 Input Examples
 
