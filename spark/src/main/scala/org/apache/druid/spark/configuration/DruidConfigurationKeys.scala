@@ -64,9 +64,11 @@ object DruidConfigurationKeys {
   val vectorizeKey: String = "vectorize" // Default: false, experimental key!
   val batchSizeKey: String = "batchSize" // Default: 512
   val useSparkConfForDeepStorageKey: String = "useClusterConfForDeepStorage"
+  val allowIncompletePartitionsKey: String = "allowIncompletePartitions" // Default: false
   private[spark] val vectorizeDefaultKey: (String, Boolean) = (vectorizeKey, false)
   private[spark] val batchSizeDefaultKey: (String, Int) = (batchSizeKey, 512)
   private[spark] val useSparkConfForDeepStorageDefaultKey: (String, Boolean) = (useSparkConfForDeepStorageKey, false)
+  private[spark] val allowIncompletePartitionsDefaultKey: (String, Boolean) = (allowIncompletePartitionsKey, false)
 
 
   val deepStorageTypeKey: String = "deepStorageType"

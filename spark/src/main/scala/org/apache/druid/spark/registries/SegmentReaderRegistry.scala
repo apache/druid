@@ -70,12 +70,12 @@ object SegmentReaderRegistry extends Logging {
     *                 the corresponding segment on deep storage to the file.
     */
   def registerLoadFunction(loadSpecType: String, loadFunc: (JMap[String, AnyRef], File) => Unit): Unit = {
-    logInfo(s"Registering load function for deep storage type $loadSpecType")
+    logInfo(s"Registering load function for deep storage type $loadSpecType.")
     registeredSegmentLoaderFunctions(loadSpecType) = loadFunc
   }
 
   def registerInitializer(loadSpecType: String, initializeFunc: Configuration => Unit): Unit = {
-    logInfo(s"Registering initializer for deep storage type $loadSpecType")
+    logInfo(s"Registering initializer for deep storage type $loadSpecType.")
     registeredInitializers(loadSpecType) = (initializeFunc, false)
   }
 

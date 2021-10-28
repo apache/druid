@@ -136,7 +136,7 @@ uploaded to the Spark cluster. Application jars should then be built with a comp
 
 ### Metadata Client Configs
 The properties used to configure the client that interacts with the Druid metadata server directly. Used by both reader
-and the writer. The `metadataPassword` property can either be provided as a string that will be used as-is or can be
+and the writer. The `metadata.Password` property can either be provided as a string that will be used as-is or can be
 provided as a serialized DynamicConfigProvider that will be resolved when the metadata client is first instantiated. If
 a  custom DynamicConfigProvider is used, be sure to register the provider with the DynamicConfigProviderRegistry before use.
 
@@ -173,6 +173,7 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |`reader.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
 |`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 |`reader.useSparkConfForDeepStorage`|If true, use the Spark job's configuration to set up access to deep storage|No|False|
+|`reader.allowIncompletePartitions`|If true, read both complete and incomplete Druid partitions. If false, read only complete partitions.|No|False|
 |`reader.vectorize`|**Experimental!** If true, reads data from segments in batches if possible|No|False|
 |`reader.batchSize`|**Experimental!** The number of rows to read in one batch if `reader.vectorize` is set to true|No|512|
 

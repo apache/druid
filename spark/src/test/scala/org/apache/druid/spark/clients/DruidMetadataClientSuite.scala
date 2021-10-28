@@ -117,14 +117,15 @@ class DruidMetadataClientSuite extends AnyFunSuite with Matchers with DruidDataS
         }
     }
     val usedSegments = metadataClient.getSegmentPayloads(dataSource, None, None)
+    // Interval is 2020-01-01T00:00:00.000Z/2020-01-02T00:00:00.000Z
     val segmentsByDate =
-      metadataClient.getSegmentPayloads(dataSource, Some("2020-01-01T00:00:00.000Z"), Some("2020-01-02T00:00:00.000Z"))
+      metadataClient.getSegmentPayloads(dataSource, Some(1577836800000L), Some(1577923200000L))
 
     val expectedUsedSegments = Seq[DataSegment](firstSegment, thirdSegment)
     val expectedSegmentsByDate = Seq[DataSegment](firstSegment)
 
-    usedSegments should contain theSameElementsInOrderAs(expectedUsedSegments)
-    segmentsByDate should contain theSameElementsInOrderAs(expectedSegmentsByDate)
+    usedSegments should contain theSameElementsInOrderAs expectedUsedSegments
+    segmentsByDate should contain theSameElementsInOrderAs expectedSegmentsByDate
   }
 
   test("checkIfDataSourceExists should return true iff the specified dataSource exists") {
@@ -161,7 +162,7 @@ class DruidMetadataClientSuite extends AnyFunSuite with Matchers with DruidDataS
 
   test("publishSegments") {
     val metadataClient = DruidMetadataClient(Configuration(metadataClientProps(uri)))
-    metadataClient.publishSegments(List(firstSegment, thirdSegment).asJava, MAPPER)
+    metadataClient.publishSegments(List(firstSegment, thirdSegment).asJava)
 
     tryWithResources(openDbiToTestDb(uri)) {
       handle =>

@@ -75,14 +75,14 @@ class DruidBaseInputPartitionReader(
     if (!segmentDir.exists) {
       logInfo(
         StringUtils.format(
-          "Fetching segment[%s] to [%s].", segment.getId, segmentDir
+          "Fetching segment [%s] to [%s].", segment.getId, segmentDir
         )
       )
       if (!segmentDir.mkdir) throw new ISE("Failed to make directory[%s]", segmentDir)
       SegmentReaderRegistry.load(segment.getLoadSpec, segmentDir, hadoopConf)
     }
     val index = INDEX_IO.loadIndex(segmentDir)
-    logInfo(StringUtils.format("Loaded segment[%s].", segment.getId))
+    logInfo(s"Loaded segment [${segment.getId}].")
     index
   }
 }

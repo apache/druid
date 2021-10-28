@@ -39,7 +39,7 @@ import scala.collection.mutable
  * in extensions-core out of the box.
  */
 object ComplexMetricRegistry extends Logging {
-  private val registeredSerdeFunctions: mutable.HashMap[String, () => Unit] = new mutable.HashMap()
+  private val registeredSerdeInitFunctions: mutable.HashMap[String, () => Unit] = new mutable.HashMap()
   private val registeredSerializeFunctions: mutable.HashMap[Class[_], Any => Array[Byte]] =
     new mutable.HashMap()
 
@@ -54,7 +54,8 @@ object ComplexMetricRegistry extends Logging {
                 name: String,
                 registerSerdeFunc: () => Unit
               ): Unit = {
-    registeredSerdeFunctions(name) = registerSerdeFunc
+    logInfo(s"Registering serde initializers for complex metric type $name.")
+    registeredSerdeInitFunctions(name) = registerSerdeFunc
   }
 
   /**
@@ -73,7 +74,8 @@ object ComplexMetricRegistry extends Logging {
                 registerSerdeFunc: () => Unit,
                 deserializedClass: Class[_],
                 serializeFunc: Any => Array[Byte]): Unit = {
-    registeredSerdeFunctions(name) = registerSerdeFunc
+    logInfo(s"Registering serde initializers and serialization functions for complex metric type $name.")
+    registeredSerdeInitFunctions(name) = registerSerdeFunc
     registeredSerializeFunctions(deserializedClass) = serializeFunc
   }
 
@@ -85,22 +87,22 @@ object ComplexMetricRegistry extends Logging {
    *                      type that don't have compacted forms.
     */
   def registerByName(name: String, shouldCompact: Boolean = false): Unit = {
-    if (!registeredSerdeFunctions.contains(name) && knownMetrics.contains(name)) {
+    if (!registeredSerdeInitFunctions.contains(name) && knownMetrics.contains(name)) {
       knownMetrics(name)(shouldCompact)
     }
   }
 
   def getRegisteredMetricNames: Set[String] = {
-    registeredSerdeFunctions.keySet.toSet
+    registeredSerdeInitFunctions.keySet.toSet
   }
 
   def getRegisteredSerializedClasses: Set[Class[_]] = {
     registeredSerializeFunctions.keySet.toSet
   }
 
-  def registerSerde(serdeName: String): Unit = {
-    if (registeredSerdeFunctions.contains(serdeName)) {
-      registeredSerdeFunctions(serdeName).apply()
+  def registerSerdeInitFunctions(complexMetricTypeName: String): Unit = {
+    if (registeredSerdeInitFunctions.contains(complexMetricTypeName)) {
+      registeredSerdeInitFunctions(complexMetricTypeName).apply()
     }
   }
 
@@ -115,7 +117,7 @@ object ComplexMetricRegistry extends Logging {
   }
 
   def registerSerdes(): Unit = {
-    registeredSerdeFunctions.foreach(_._2.apply())
+    registeredSerdeInitFunctions.foreach(_._2.apply())
   }
 
   /**

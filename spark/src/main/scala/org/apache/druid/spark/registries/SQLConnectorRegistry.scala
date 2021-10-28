@@ -54,6 +54,7 @@ object SQLConnectorRegistry extends Logging {
                createFunc:
                (Supplier[MetadataStorageConnectorConfig], Supplier[MetadataStorageTablesConfig]) =>
                  SQLMetadataConnector): Unit = {
+    logInfo(s"Registering creation functions for SQL Connector $sqlConnectorType.")
     registeredSQLConnectorFunctions(sqlConnectorType) = createFunc
   }
 

@@ -20,21 +20,21 @@
 package org.apache.druid.spark.clients
 
 import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Suppliers
 import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler
-import org.apache.druid.java.util.common.StringUtils
+import org.apache.druid.java.util.common.{DateTimes, Intervals, JodaUtils, StringUtils}
 import org.apache.druid.metadata.{DynamicConfigProvider, MetadataStorageConnectorConfig,
   MetadataStorageTablesConfig, SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.registries.SQLConnectorRegistry
-import org.apache.druid.timeline.DataSegment
+import org.apache.druid.timeline.{DataSegment, Partitions, VersionedIntervalTimeline}
 import org.skife.jdbi.v2.{DBI, Handle}
 
 import java.util.Properties
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsJavaMapConverter}
+import scala.collection.JavaConverters.{asJavaIterableConverter, asScalaBufferConverter,
+  asScalaSetConverter, mapAsJavaMapConverter}
 
 class DruidMetadataClient(
                            metadataDbType: String,
@@ -72,15 +72,33 @@ class DruidMetadataClient(
   private lazy val metadataTableConfigSupplier = Suppliers.ofInstance(druidMetadataTableConfig)
   private lazy val connector = buildSQLConnector()
 
+  /**
+    * Get the non-overshadowed used segments for DATASOURCE between INTERVALSTART and INTERVALEND. If either interval
+    * endpoint is None, JodaUtils.MIN_INSTANCE/MAX_INSTANCE is used instead. By default, only segments for complete
+    * partitions are returned. This behavior can be overriden by setting ALLOWINCOMPLETEPARTITIONS, in which case all
+    * non-overshadowed segments in the interval will be returned, regardless of completesness.
+    *
+    * @param datasource The Druid data source to get segment payloads for.
+    * @param intervalStart The start of the interval to fetch segment payloads for. If None, MIN_INSTANT is used.
+    * @param intervalEnd The end of the interval to fetch segment payloads for. If None, MAX_INSTANT is used.
+    * @param allowIncompletePartitions Whether or not to include segments from incomplete partitions
+    * @return A Sequence of DataSegments representing all non-overshadowed used segments for the given data source and
+    *         interval.
+    */
   def getSegmentPayloads(
                           datasource: String,
-                          intervalStart: Option[String],
-                          intervalEnd: Option[String]
+                          intervalStart: Option[Long],
+                          intervalEnd: Option[Long],
+                          allowIncompletePartitions: Boolean = false
                         ): Seq[DataSegment] = {
     val dbi: DBI = connector.getDBI
+    val interval = Intervals.utc(
+      intervalStart.getOrElse(JodaUtils.MIN_INSTANT), intervalEnd.getOrElse(JodaUtils.MAX_INSTANT)
+    )
+    logInfo(s"Fetching segment payloads for interval [${interval.toString}] on datasource [$datasource].")
     val startClause = if (intervalStart.isDefined) " AND start >= :start" else ""
     val endClause = if (intervalEnd.isDefined) " AND \"end\" <= :end" else ""
-    dbi.withHandle((handle: Handle) => {
+    val allSegments = dbi.withHandle((handle: Handle) => {
       val statement =
         s"""
            |SELECT payload FROM ${druidMetadataTableConfig.getSegmentsTable}
@@ -88,8 +106,8 @@ class DruidMetadataClient(
         """.stripMargin
 
       val bindMap = Seq(Some("datasource" -> datasource),
-        intervalStart.map("start" -> _),
-        intervalEnd.map("end" -> _)
+        intervalStart.map(bound => "start" -> DateTimes.utc(bound).toString("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")),
+        intervalEnd.map(bound => "end" -> DateTimes.utc(bound).toString("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
       ).flatten.toMap
 
       val query = handle.createQuery(statement)
@@ -102,15 +120,20 @@ class DruidMetadataClient(
         )
       )
     })
+    val activeSegments = VersionedIntervalTimeline.forSegments(allSegments.asJava).findNonOvershadowedObjectsInInterval(
+      interval,
+      if (allowIncompletePartitions) Partitions.INCOMPLETE_OK else Partitions.ONLY_COMPLETE
+    ).asScala.toSeq
+    logInfo(s"Fetched payloads for ${activeSegments.size} segments for interval [${interval.toString}] on " +
+      s"datasource [$datasource].")
+    activeSegments
   }
 
-  def publishSegments(
-                       segments: java.util.List[DataSegment],
-                       mapper: ObjectMapper
-                     ): Unit = {
+  def publishSegments(segments: java.util.List[DataSegment]): Unit = {
     val metadataStorageUpdaterJobHandler = new SQLMetadataStorageUpdaterJobHandler(connector)
     metadataStorageUpdaterJobHandler.publishSegments(druidMetadataTableConfig.getSegmentsTable,
-      segments, mapper)
+      segments, MAPPER)
+    logInfo(s"Published ${segments.size()} segments.")
   }
 
   def checkIfDataSourceExists(dataSource: String): Boolean = {

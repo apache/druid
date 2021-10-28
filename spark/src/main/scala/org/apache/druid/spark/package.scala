@@ -89,9 +89,14 @@ package object spark {
   implicit def druidDataFrameReaderToDataFrameReader(druidReader: DruidDataFrameReader): DataFrameReader =
     druidReader.reader
 
+  // scalastyle:off number.of.methods (There are more than 30 configurable options for the Reader)
   implicit class DruidDataFrameReader(private[spark] val reader: DataFrameReader) {
     def druid(): DataFrame = {
       reader.format(DruidDataSourceV2ShortName).load()
+    }
+
+    def allowIncompletePartitions(allowIncompletePartitions: Boolean): DataFrameReader = {
+      reader.option(readerPrefix(DruidConfigurationKeys.allowIncompletePartitionsKey), allowIncompletePartitions)
     }
 
     def batchSize(batchSize: Int): DataFrameReader = {
@@ -212,4 +217,5 @@ package object spark {
       Configuration.toKey(base, key)
     }
   }
+  // scalastyle:on number.of.methods
 }

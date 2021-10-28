@@ -20,7 +20,7 @@
 package org.apache.druid.spark.v2.reader
 
 import com.fasterxml.jackson.core.`type`.TypeReference
-import org.apache.druid.java.util.common.{DateTimes, Intervals, JodaUtils}
+import org.apache.druid.java.util.common.{Intervals, JodaUtils}
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.clients.{DruidClient, DruidMetadataClient}
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
@@ -47,9 +47,6 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
   * can be further reduced by providing it directly (e.g. sparkSession.read.format("druid").schema(schema).options...)
   *
   * To aid comprehensibility, some idiomatic Scala has been somewhat java-fied.
-  *
-  * @param schema
-  * @param conf
   */
 class DruidDataSourceReader(
                              var schema: Option[StructType] = None,
@@ -157,13 +154,11 @@ class DruidDataSourceReader(
     // Otherwise, we'd need to full scan the segments table
     val (lowerTimeBound, upperTimeBound) = FilterUtils.getTimeFilterBounds(filters)
 
-    metadataClient.getSegmentPayloads(conf.getString(DruidConfigurationKeys.tableKey),
-      lowerTimeBound.map(bound =>
-        DateTimes.utc(bound).toString("yyyy-MM-ddTHH:mm:ss.SSS'Z'")
-      ),
-      upperTimeBound.map(bound =>
-        DateTimes.utc(bound).toString("yyyy-MM-ddTHH:mm:ss.SSS'Z'")
-      )
+    metadataClient.getSegmentPayloads(
+      conf.getString(DruidConfigurationKeys.tableKey),
+      lowerTimeBound,
+      upperTimeBound,
+      conf.getBoolean(DruidConfigurationKeys.allowIncompletePartitionsDefaultKey)
     )
   }
 
