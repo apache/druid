@@ -985,7 +985,7 @@ Similarly, task-specific credentials are used here, too:
 ...
 ```
 
-> Read more about S3 and Druid on the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension page, including using S3-like for [Deep Storage](../dependencies/deep-storage.html), more about authentication, and additional configuration options.
+Learn more about S3 and Druid on the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension page, including using S3-like for [Deep Storage](../dependencies/deep-storage.html), more about authentication, and additional configuration options.
 
 ### Google Cloud Storage Input Source
 
