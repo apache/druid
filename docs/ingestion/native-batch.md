@@ -861,7 +861,7 @@ all objects contained in the specified prefixes.
 
 You can view the payload of individual `index_parallel` tasks to see how Druid has divided up the work of ingestion.
 
-> The S3 input source will skip all empty objects only when `prefixes` is specified.
+The S3 input source skips all empty objects only when `prefixes` is specified.
 
 #### S3 Input Objects
 
