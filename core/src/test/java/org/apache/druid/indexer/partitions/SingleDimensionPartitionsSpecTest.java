@@ -21,13 +21,13 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class SingleDimensionPartitionsSpecTest
 {
@@ -70,8 +70,10 @@ public class SingleDimensionPartitionsSpecTest
   }
 
   @Test
-  public void testDeserializeWithMultipleDimensions()
+  public void testDeserializeWithUnrecognizedProperty()
   {
+    // Verify that single_dim spec does not recognize any extra fields from
+    // MultiDimensionPartitionsSpec
     String json = "{"
                   + "\"type\":\"single_dim\""
                   + ",\"targetPartitionSize\":100"
@@ -79,9 +81,43 @@ public class SingleDimensionPartitionsSpecTest
                   + ",\"partitionDimensions\":[\"dim2\"]"
                   + "}";
 
-    // Verify that single_dim spec does not recognize field "partitionDimensions"
-    exception.expect(UnrecognizedPropertyException.class);
-    deserialize(json);
+    try {
+      deserialize(json);
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "UnrecognizedPropertyException: Unrecognized field \"partitionDimensions\""
+      ));
+    }
+  }
+
+  @Test
+  public void testGetSerializableObjectContainsNoExtraField()
+  {
+    // This test verifies a serialized SingleDimensionPartitionsSpec has no field
+    // from the parent MultiDimensionPartitionsSpec
+    verifySerializableFields(SPEC);
+    verifySerializableFields(
+        new SingleDimensionPartitionsSpec(
+            null,
+            null,
+            "abc",
+            false,
+            100,
+            null
+        )
+    );
+  }
+
+  private void verifySerializableFields(SingleDimensionPartitionsSpec spec)
+  {
+    Map<String, Object> jsonMap = spec.getSerializableObject();
+
+    Assert.assertEquals(4, jsonMap.size());
+    Assert.assertTrue(jsonMap.containsKey(PartitionsSpec.MAX_ROWS_PER_SEGMENT));
+    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT));
+    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.ASSUME_GROUPED));
+    Assert.assertTrue(jsonMap.containsKey("partitionDimension"));
   }
 
   @Test

@@ -41,7 +41,6 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
   public static final String NAME = "multi_dim";
 
   private static final String PARITION_DIMENSIONS = "partitionDimensions";
-  private static final String MAX_PARTITION_SIZE = "maxPartitionSize";
 
   private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
@@ -50,18 +49,18 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
   private final List<String> partitionDimensions;
   private final boolean assumeGrouped;
 
-  // Values for these fields are derived from the one above:
+  // Value of this field is derived from targetRows and maxRows
   private final int resolvedMaxRowPerSegment;
 
   @JsonCreator
   public MultiDimensionPartitionsSpec(
-      @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
-      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
+      @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty(PARITION_DIMENSIONS) List<String> partitionDimensions,
       @JsonProperty("assumeGrouped") boolean assumeGrouped,  // false by default
 
       // Deprecated properties preserved for backward compatibility:
-      @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
+      @Deprecated @JsonProperty(TARGET_PARTITION_SIZE) @Nullable
           Integer targetPartitionSize,  // prefer targetRowsPerSegment
       @Deprecated @JsonProperty(MAX_PARTITION_SIZE) @Nullable
           Integer maxPartitionSize  // prefer maxRowsPerSegment
