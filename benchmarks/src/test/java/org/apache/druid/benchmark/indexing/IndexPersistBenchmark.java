@@ -96,7 +96,7 @@ public class IndexPersistBenchmark
   @Param({"none", "moderate", "high"})
   private String rollupOpportunity;
 
-  @Param({"onheap", "offheap", "oak"})
+  @Param({"onheap", "oak"})
   private String indexType;
 
   private AppendableIndexSpec appendableIndexSpec;

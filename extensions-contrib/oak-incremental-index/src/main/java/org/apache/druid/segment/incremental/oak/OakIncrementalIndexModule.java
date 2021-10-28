@@ -32,8 +32,7 @@ public class OakIncrementalIndexModule implements DruidModule
 {
   public static final Module JACKSON_MODULE = new SimpleModule("OakIncrementalIndexModule")
       .registerSubtypes(
-          new NamedType(OakIncrementalIndexSpec.class, OakIncrementalIndexSpec.TYPE),
-          new NamedType(OffheapIncrementalIndexSpec.class, OffheapIncrementalIndexSpec.TYPE)
+          new NamedType(OakIncrementalIndexSpec.class, OakIncrementalIndexSpec.TYPE)
       );
 
   @Override

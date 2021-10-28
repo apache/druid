@@ -127,6 +127,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
       addThreads[i].join();
     }
     checkThread.interrupt();
+    checkThread.join();
 
     Assert.assertEquals(0, checkFailedCount.get());
   }

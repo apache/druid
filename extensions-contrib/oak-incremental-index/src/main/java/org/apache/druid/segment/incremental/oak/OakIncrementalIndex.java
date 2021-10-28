@@ -22,7 +22,6 @@ package org.apache.druid.segment.incremental.oak;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import com.yahoo.oak.OakBuffer;
 import com.yahoo.oak.OakMap;
 import com.yahoo.oak.OakMapBuilder;
@@ -33,17 +32,12 @@ import com.yahoo.oak.OakUnsafeDirectBuffer;
 import com.yahoo.oak.OakUnscopedBuffer;
 import org.apache.druid.annotations.EverythingIsNonnullByDefault;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
@@ -52,12 +46,10 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 
@@ -70,28 +62,17 @@ import java.util.function.Function;
  * and performance overhead.
  */
 @EverythingIsNonnullByDefault
-public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> implements IncrementalIndex.FactsHolder
+public class OakIncrementalIndex extends IncrementalIndex implements IncrementalIndex.FactsHolder
 {
-  protected final int maxRowCount;
-  protected final long maxBytesInMemory;
-  private final boolean rollup;
-
+  private final BufferAggregator[] aggregators;
   private final OakMap<IncrementalIndexRow, OakInputRowContext> facts;
-  private final AtomicInteger rowIndexGenerator;
-
-  @Nullable
-  private Map<String, ColumnSelectorFactory> selectors;
 
   // Given a ByteBuffer and an offset inside the buffer, offset + aggOffsetInBuffer[i]
   // would give a position in the buffer where the i^th aggregator's value is stored.
-  @Nullable
-  private int[] aggregatorOffsetInBuffer;
-  private int aggregatorsTotalSize;
+  private final int[] aggregatorOffsetInBuffer;
+  private final int aggregatorsTotalSize;
 
   private static final Logger log = new Logger(OakIncrementalIndex.class);
-
-  @Nullable
-  private String outOfRowsReason = null;
 
   public OakIncrementalIndex(IncrementalIndexSchema incrementalIndexSchema,
                              boolean deserializeComplexMetrics,
@@ -102,16 +83,19 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
                              int oakBlockSize,
                              int oakChunkMaxItems)
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory);
 
-    assert selectors != null;
-    assert aggregatorOffsetInBuffer != null;
+    AggregatorFactory[] metrics = getMetricAggs();
+    this.aggregators = new BufferAggregator[metrics.length];
 
-    this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory = maxBytesInMemory <= 0 ? Long.MAX_VALUE : maxBytesInMemory;
+    this.aggregatorOffsetInBuffer = new int[metrics.length];
 
-    this.rowIndexGenerator = new AtomicInteger(0);
-    this.rollup = incrementalIndexSchema.isRollup();
+    int curAggOffset = 0;
+    for (int i = 0; i < metrics.length; i++) {
+      aggregatorOffsetInBuffer[i] = curAggOffset;
+      curAggOffset += metrics[i].getMaxIntermediateSizeWithNulls();
+    }
+    this.aggregatorsTotalSize = curAggOffset;
 
     final IncrementalIndexRow minRow = new IncrementalIndexRow(
         incrementalIndexSchema.getMinTimestamp(),
@@ -121,8 +105,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     );
 
     this.facts = new OakMapBuilder<>(
-        new OakKey.Comparator(dimensionDescsList, this.rollup),
-        new OakKey.Serializer(dimensionDescsList, this.rowIndexGenerator),
+        new OakKey.Comparator(dimensionDescsList, isRollup()),
+        new OakKey.Serializer(dimensionDescsList, indexIncrement),
         new OakValueSerializer(),
         minRow
     ).setPreferredBlockSize(oakBlockSize)
@@ -138,31 +122,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
   }
 
   @Override
-  public boolean canAppendRow()
+  public int size()
   {
-    final boolean countCheck = getNumEntries().get() < maxRowCount;
-    // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
-    final boolean canAdd = countCheck && sizeCheck;
-    if (!countCheck && !sizeCheck) {
-      outOfRowsReason = StringUtils.format(
-          "Maximum number of rows [%d] and maximum size in bytes [%d] reached",
-          maxRowCount,
-          maxBytesInMemory
-      );
-    } else if (!countCheck) {
-      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
-    } else if (!sizeCheck) {
-      outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
-    }
-
-    return canAdd;
+    return facts.size();
   }
 
   @Override
-  public String getOutOfRowsReason()
+  public long getBytesInMemory()
   {
-    return outOfRowsReason;
+    return facts.memorySize();
   }
 
   @Override
@@ -170,14 +138,10 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
   {
     super.close();
 
-    for (BufferAggregator agg : getAggs()) {
+    for (BufferAggregator agg : aggregators) {
       if (agg != null) {
         agg.close();
       }
-    }
-
-    if (selectors != null) {
-      selectors.clear();
     }
 
     clear();
@@ -193,59 +157,33 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
     if (!skipMaxRowsInMemoryCheck) {
       // We validate here as a sanity check that we did not exceed the row and memory limitations
       // in previous insertions.
-      if (getNumEntries().get() > maxRowCount || (maxBytesInMemory > 0 && getBytesInMemory().get() > maxBytesInMemory)) {
+      if (size() > maxRowCount || (maxBytesInMemory > 0 && getBytesInMemory() > maxBytesInMemory)) {
         throw new IndexSizeExceededException(
             "Maximum number of rows [%d out of %d] or max size in bytes [%d out of %d] reached",
-            getNumEntries().get(), maxRowCount,
-            getBytesInMemory().get(), maxBytesInMemory
+            size(), maxRowCount,
+            getBytesInMemory(), maxBytesInMemory
         );
       }
     }
 
-    final OakInputRowContext ctx = new OakInputRowContext(rowContainer, row);
-    if (rollup) {
-      // In rollup mode, we let the key-serializer assign the row index.
-      // Upon lookup, the comparator ignores this special index value and only compares according to the key itself.
-      // The serializer is only called on insertion, so it will not increment the index if the key already exits.
-      key.setRowIndex(OakKey.Serializer.ASSIGN_ROW_INDEX_IF_ABSENT);
-    } else {
-      // In plain mode, we force a new row index.
-      // Upon lookup, since there is no key with this index, a new key will be inserted every time.
-      key.setRowIndex(rowIndexGenerator.getAndIncrement());
-    }
+    // In rollup mode, we let the key-serializer assign the row index.
+    // Upon lookup, the comparator ignores this special index value and only compares according to the key itself.
+    // The serializer is only called on insertion, so it will not increment the index if the key already exits.
+    // In plain mode, we force a new row index.
+    // Upon lookup, since there is no key with this index, a new key will be inserted every time.
+    key.setRowIndex(isRollup() ? OakKey.Serializer.ASSIGN_ROW_INDEX_IF_ABSENT : indexIncrement.getAndIncrement());
 
     // This call is different from FactsHolder.putIfAbsent() because it also handles the aggregation
     // in case the key already exits.
+    final OakInputRowContext ctx = new OakInputRowContext(rowContainer, row);
     facts.zc().putIfAbsentComputeIfPresent(key, ctx, buffer -> aggregate(ctx, buffer));
-
-    int rowCount = facts.size();
-    long memorySize = facts.memorySize();
-
-    getNumEntries().set(rowCount);
-    getBytesInMemory().set(memorySize);
-
-    return new AddToFactsResult(rowCount, memorySize, ctx.parseExceptionMessages);
+    return new AddToFactsResult(size(), getBytesInMemory(), ctx.parseExceptionMessages);
   }
 
   @Override
   public int getLastRowIndex()
   {
-    return rowIndexGenerator.get() - 1;
-  }
-
-  @Override
-  protected BufferAggregator[] getAggsForRow(int rowOffset)
-  {
-    // We should never get here because we override iterableWithPostAggregations
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected Object getAggVal(BufferAggregator agg, int rowOffset, int aggPosition)
-  {
-    // We should never get here because we override iterableWithPostAggregations
-    // This implementation does not need an additional structure to keep rowOffset
-    throw new UnsupportedOperationException();
+    return indexIncrement.get() - 1;
   }
 
   private int getOffsetInBuffer(int aggOffset, int aggIndex)
@@ -263,35 +201,35 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
   protected float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getFloat(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return aggregators[aggIndex].getFloat(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
   @Override
   protected long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getLong(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return aggregators[aggIndex].getLong(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
   @Override
   protected Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].get(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return aggregators[aggIndex].get(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
   @Override
   protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].getDouble(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return aggregators[aggIndex].getDouble(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
   @Override
   protected boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggIndex)
   {
     OakIncrementalIndexRow oakRow = (OakIncrementalIndexRow) incrementalIndexRow;
-    return getAggs()[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
+    return aggregators[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
   @Override
@@ -300,44 +238,22 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
       final boolean descending
   )
   {
-    final AggregatorFactory[] metrics = getMetricAggs();
-    final BufferAggregator[] aggregators = getAggs();
-
     // It might be possible to rewrite this function to return a serialized row.
     Function<Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer>, Row> transformer = entry -> {
       OakUnsafeDirectBuffer keyOakBuff = (OakUnsafeDirectBuffer) entry.getKey();
       OakUnsafeDirectBuffer valueOakBuff = (OakUnsafeDirectBuffer) entry.getValue();
-      long serializedKeyAddress = keyOakBuff.getAddress();
+      final long serializedKeyAddress = keyOakBuff.getAddress();
+      final ByteBuffer valueBuff = valueOakBuff.getByteBuffer();
+      final int valueOffset = valueOakBuff.getOffset();
 
-      long timeStamp = OakKey.getTimestamp(serializedKeyAddress);
-      int dimsLength = OakKey.getDimsLength(serializedKeyAddress);
-
-      Map<String, Object> theVals = Maps.newLinkedHashMap();
-      for (int i = 0; i < dimsLength; ++i) {
-        Object dim = OakKey.getDim(serializedKeyAddress, i);
-        DimensionDesc dimensionDesc = dimensionDescsList.get(i);
-        if (dimensionDesc == null) {
-          continue;
-        }
-        String dimensionName = dimensionDesc.getName();
-        DimensionHandler handler = dimensionDesc.getHandler();
-        if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
-          theVals.put(dimensionName, null);
-          continue;
-        }
-        final DimensionIndexer indexer = dimensionDesc.getIndexer();
-        Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
-        theVals.put(dimensionName, rowVals);
-      }
-
-      ByteBuffer valueBuff = valueOakBuff.getByteBuffer();
-      int valueOffset = valueOakBuff.getOffset();
-      for (int i = 0; i < aggregators.length; ++i) {
-        Object theVal = aggregators[i].get(valueBuff, valueOffset + aggregatorOffsetInBuffer[i]);
-        theVals.put(metrics[i].getName(), theVal);
-      }
-
-      return new MapBasedRow(timeStamp, theVals);
+      return getMapBasedRowWithPostAggregations(
+          OakKey.getTimestamp(serializedKeyAddress),
+          OakKey.getDimsLength(serializedKeyAddress),
+          i -> OakKey.getDim(serializedKeyAddress, i),
+          aggregators.length,
+          i -> aggregators[i].get(valueBuff, valueOffset + aggregatorOffsetInBuffer[i]),
+          postAggs
+      );
     };
 
     return () -> transformIterator(descending, transformer);
@@ -345,42 +261,9 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
 
   // Aggregator management: initialization and aggregation
 
-  @Override
-  protected BufferAggregator[] initAggs(AggregatorFactory[] metrics,
-                                        Supplier<InputRow> rowSupplier,
-                                        boolean deserializeComplexMetrics,
-                                        boolean concurrentEventAdd)
-  {
-    this.selectors = new HashMap<>();
-    this.aggregatorOffsetInBuffer = new int[metrics.length];
-
-    int curAggOffset = 0;
-    for (int i = 0; i < metrics.length; i++) {
-      aggregatorOffsetInBuffer[i] = curAggOffset;
-      curAggOffset += metrics[i].getMaxIntermediateSizeWithNulls();
-    }
-    this.aggregatorsTotalSize = curAggOffset;
-
-    for (AggregatorFactory agg : metrics) {
-      ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
-          agg,
-          rowSupplier,
-          deserializeComplexMetrics
-      );
-
-      this.selectors.put(
-          agg.getName(),
-          new CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
-      );
-    }
-
-    return new BufferAggregator[metrics.length];
-  }
-
   public void initAggValue(OakInputRowContext ctx, ByteBuffer aggBuffer, int aggOffset)
   {
     AggregatorFactory[] metrics = getMetricAggs();
-    BufferAggregator[] aggregators = getAggs();
     assert selectors != null;
 
     if (aggregators.length > 0 && aggregators[aggregators.length - 1] == null) {
@@ -415,8 +298,6 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator> impl
 
   public void aggregate(OakInputRowContext ctx, ByteBuffer aggBuffer, int aggOffset)
   {
-    final BufferAggregator[] aggregators = getAggs();
-
     ctx.setRow();
 
     for (int i = 0; i < aggregators.length; i++) {

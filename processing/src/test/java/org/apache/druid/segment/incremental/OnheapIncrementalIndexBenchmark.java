@@ -71,7 +71,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Extending AbstractBenchmark means only runs if explicitly called
@@ -176,8 +175,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       Aggregator[] aggs;
       final AggregatorFactory[] metrics = getMetrics();
-      final AtomicInteger numEntries = getNumEntries();
-      final AtomicLong sizeInBytes = getBytesInMemory();
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
       } else {
@@ -197,14 +194,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
+        if ((numEntries.get() >= maxRowCount || bytesInMemory.get() >= maxBytesInMemory)
             && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
         if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
-          sizeInBytes.incrementAndGet();
+          bytesInMemory.incrementAndGet();
         } else {
           // We lost a race
           aggs = indexedMap.get(prev);
@@ -224,7 +221,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
+      return new AddToFactsResult(numEntries.get(), bytesInMemory.get(), new ArrayList<>());
     }
 
     @Override

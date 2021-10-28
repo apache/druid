@@ -21,11 +21,8 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -35,8 +32,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
@@ -65,15 +60,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
-  private final AtomicInteger indexIncrement = new AtomicInteger(0);
   private final long maxBytesPerRowForAggregators;
-  protected final int maxRowCount;
-  protected final long maxBytesInMemory;
 
-  @Nullable
-  private volatile Map<String, ColumnSelectorFactory> selectors;
-  @Nullable
-  private String outOfRowsReason = null;
+  protected final AtomicInteger numEntries = new AtomicInteger();
+  protected final AtomicLong bytesInMemory = new AtomicLong();
 
   OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
@@ -84,9 +74,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       long maxBytesInMemory
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
-    this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory);
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts, dimsComparator());
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
@@ -128,23 +116,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   @Override
-  protected void initAggs(
-      final AggregatorFactory[] metrics,
-      final Supplier<InputRow> rowSupplier,
-      final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
-  )
+  public int size()
   {
-    selectors = new HashMap<>();
-    for (AggregatorFactory agg : metrics) {
-      selectors.put(
-          agg.getName(),
-          new CachingColumnSelectorFactory(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
-              concurrentEventAdd
-          )
-      );
-    }
+    return numEntries.get();
+  }
+
+  @Override
+  public long getBytesInMemory()
+  {
+    return bytesInMemory.get();
   }
 
   @Override
@@ -161,8 +141,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
     Aggregator[] aggs;
     final AggregatorFactory[] metrics = getMetrics();
-    final AtomicInteger numEntries = getNumEntries();
-    final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
@@ -175,7 +153,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
+      if ((numEntries.get() >= maxRowCount || bytesInMemory.get() >= maxBytesInMemory)
           && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
           && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException(
@@ -188,7 +166,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
         long estimatedRowSize = estimateRowSizeInBytes(key, maxBytesPerRowForAggregators);
-        sizeInBytes.addAndGet(estimatedRowSize);
+        bytesInMemory.addAndGet(estimatedRowSize);
       } else {
         // We lost a race
         parseExceptionMessages.clear();
@@ -200,7 +178,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       }
     }
 
-    return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
+    return new AddToFactsResult(numEntries.get(), bytesInMemory.get(), parseExceptionMessages);
   }
 
   /**
@@ -302,36 +280,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     aggregators.remove(offset);
   }
 
-  @Override
-  public boolean canAppendRow()
-  {
-    final boolean countCheck = size() < maxRowCount;
-    // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
-    final boolean canAdd = countCheck && sizeCheck;
-    if (!countCheck && !sizeCheck) {
-      outOfRowsReason = StringUtils.format(
-          "Maximum number of rows [%d] and maximum size in bytes [%d] reached",
-          maxRowCount,
-          maxBytesInMemory
-      );
-    } else {
-      if (!countCheck) {
-        outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
-      } else if (!sizeCheck) {
-        outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
-      }
-    }
-
-    return canAdd;
-  }
-
-  @Override
-  public String getOutOfRowsReason()
-  {
-    return outOfRowsReason;
-  }
-
   protected Aggregator[] getAggsForRow(int rowOffset)
   {
     return concurrentGet(rowOffset);
@@ -373,53 +321,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final boolean descending
   )
   {
-    final AggregatorFactory[] metrics = getMetricAggs();
-
-    {
-      return () -> {
-        final List<DimensionDesc> dimensions = getDimensions();
-
-        return Iterators.transform(
-            getFacts().iterator(descending),
-            incrementalIndexRow -> {
-              final int rowOffset = incrementalIndexRow.getRowIndex();
-
-              Object[] theDims = incrementalIndexRow.getDims();
-
-              Map<String, Object> theVals = Maps.newLinkedHashMap();
-              for (int i = 0; i < theDims.length; ++i) {
-                Object dim = theDims[i];
-                DimensionDesc dimensionDesc = dimensions.get(i);
-                if (dimensionDesc == null) {
-                  continue;
-                }
-                String dimensionName = dimensionDesc.getName();
-                DimensionHandler handler = dimensionDesc.getHandler();
-                if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
-                  theVals.put(dimensionName, null);
-                  continue;
-                }
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
-                theVals.put(dimensionName, rowVals);
-              }
-
-              Aggregator[] aggs = getAggsForRow(rowOffset);
-              for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), aggs[i].get());
-              }
-
-              if (postAggs != null) {
-                for (PostAggregator postAgg : postAggs) {
-                  theVals.put(postAgg.getName(), postAgg.compute(theVals));
-                }
-              }
-
-              return new MapBasedRow(incrementalIndexRow.getTimestamp(), theVals);
-            }
-        );
-      };
-    }
+    return () -> Iterators.transform(
+        facts.iterator(descending),
+        incrementalIndexRow -> {
+          Aggregator[] aggs = getAggsForRow(incrementalIndexRow.getRowIndex());
+          return getMapBasedRowWithPostAggregations(
+              incrementalIndexRow.getTimestamp(),
+              incrementalIndexRow.getDimsLength(),
+              incrementalIndexRow::getDim,
+              aggs.length,
+              i -> aggs[i].get(),
+              postAggs
+          );
+        }
+    );
   }
 
   /**
@@ -433,8 +348,56 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     closeAggregators();
     aggregators.clear();
     facts.clear();
-    if (selectors != null) {
-      selectors.clear();
+  }
+
+  /**
+   * Caches references to selector objects for each column instead of creating a new object each time in order to save
+   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
+   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   */
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final ColumnSelectorFactory delegate;
+
+    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
+    {
+      this.delegate = delegate;
+
+      if (concurrentEventAdd) {
+        columnSelectorMap = new ConcurrentHashMap<>();
+      } else {
+        columnSelectorMap = new HashMap<>();
+      }
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return delegate.makeDimensionSelector(dimensionSpec);
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      ColumnValueSelector existing = columnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+
+      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
+      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
+      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
+      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
+      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
+      return existing != null ? existing : columnValueSelector;
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return delegate.getColumnCapabilities(columnName);
     }
   }
 
