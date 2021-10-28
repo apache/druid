@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ import java.util.Map;
  */
 public class MapPopulator<K, V>
 {
+  private static final Logger LOG = new Logger(MapPopulator.class);
   private final Parser<K, V> parser;
 
   public MapPopulator(
@@ -49,11 +51,13 @@ public class MapPopulator<K, V>
   {
     private final int lines;
     private final int entries;
+    private final int bytes;
 
-    public PopulateResult(int lines, int entries)
+    public PopulateResult(int lines, int entries, int bytes)
     {
       this.lines = lines;
       this.entries = entries;
+      this.bytes = bytes;
     }
 
     public int getLines()
@@ -64,6 +68,10 @@ public class MapPopulator<K, V>
     public int getEntries()
     {
       return entries;
+    }
+
+    public int getBytes() {
+      return bytes;
     }
   }
 
@@ -79,11 +87,23 @@ public class MapPopulator<K, V>
    */
   public PopulateResult populate(final ByteSource source, final Map<K, V> map) throws IOException
   {
+    return populateAndWarnAtByteLimit(source, map, null, null);
+  }
+
+  public PopulateResult populateAndWarnAtByteLimit(
+      final ByteSource source,
+      final Map<K, V> map,
+      final Long byteLimit,
+      final String name)
+      throws IOException
+  {
     return source.asCharSource(StandardCharsets.UTF_8).readLines(
         new LineProcessor<PopulateResult>()
         {
           private int lines = 0;
           private int entries = 0;
+          private int bytes = 0;
+          int byteLimitMultiple = 1;
 
           @Override
           public boolean processLine(String line)
@@ -92,6 +112,28 @@ public class MapPopulator<K, V>
               throw new ISE("Cannot read more than %,d lines", Integer.MAX_VALUE);
             }
             final Map<K, V> kvMap = parser.parseToMap(line);
+            if (null != byteLimit) {
+              for (Map.Entry<K, V> e : kvMap.entrySet()) {
+                if ((e.getKey() instanceof String) && (e.getValue() instanceof String)) {
+                  bytes += ((String) (e.getKey())).length()
+                           + ((String) (e.getValue())).length();
+                } else {
+                  LOG.warn(
+                      "cannot bytes when populating map because key and value classes are not "
+                      + "instance of String. Key class: [%s], Value class: [%s]",
+                      e.getKey().getClass().getName(),
+                      e.getValue().getClass().getName());
+                }
+              }
+              if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
+                LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
+                         name,
+                         byteLimit,
+                         bytes
+                );
+                byteLimitMultiple++;
+              }
+            }
             map.putAll(kvMap);
             lines++;
             entries += kvMap.size();
@@ -101,7 +143,7 @@ public class MapPopulator<K, V>
           @Override
           public PopulateResult getResult()
           {
-            return new PopulateResult(lines, entries);
+            return new PopulateResult(lines, entries, bytes);
           }
         }
     );

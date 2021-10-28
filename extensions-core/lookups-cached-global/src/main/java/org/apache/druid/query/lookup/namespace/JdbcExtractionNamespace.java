@@ -57,6 +57,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final String filter;
   @JsonProperty
   private final Period pollPeriod;
+  @JsonProperty
+  private final long maxSize;
 
   @JsonCreator
   public JdbcExtractionNamespace(
@@ -68,6 +70,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @JsonProperty(value = "tsColumn") @Nullable final String tsColumn,
       @JsonProperty(value = "filter") @Nullable final String filter,
       @Min(0) @JsonProperty(value = "pollPeriod") @Nullable final Period pollPeriod,
+      @Min(ExtractionNamespace.MIN_SIZE) @JsonProperty(value = "maxSize") @Nullable final Long maxSize,
       @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
@@ -90,6 +93,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     } else {
       this.pollPeriod = pollPeriod;
     }
+    this.maxSize = maxSize == null ? ExtractionNamespace.DEFAULT_MAX_SIZE : maxSize;
   }
 
   /**
@@ -151,6 +155,11 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getMaxSize() {
+    return maxSize;
+  }
+
+  @Override
   public String toString()
   {
     return "JdbcExtractionNamespace{" +
@@ -161,6 +170,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            ", tsColumn='" + tsColumn + '\'' +
            ", filter='" + filter + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", maxSize=" + maxSize +
            '}';
   }
 
@@ -182,7 +192,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            Objects.equals(keyColumn, that.keyColumn) &&
            Objects.equals(valueColumn, that.valueColumn) &&
            Objects.equals(tsColumn, that.tsColumn) &&
-           Objects.equals(pollPeriod, that.pollPeriod);
+           Objects.equals(pollPeriod, that.pollPeriod) &&
+           Objects.equals(maxSize, that.maxSize);
   }
 
   @Override
@@ -195,7 +206,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
         keyColumn,
         valueColumn,
         tsColumn,
-        pollPeriod
+        pollPeriod,
+        maxSize
     );
   }
 }

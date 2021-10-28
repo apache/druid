@@ -77,6 +77,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
   private final String fileRegex;
   @JsonProperty
   private final Period pollPeriod;
+  @JsonProperty
+  private final long maxSize;
 
   @JsonCreator
   public UriExtractionNamespace(
@@ -92,7 +94,9 @@ public class UriExtractionNamespace implements ExtractionNamespace
           Period pollPeriod,
       @Deprecated
       @JsonProperty(value = "versionRegex", required = false)
-          String versionRegex
+          String versionRegex,
+      @Min(ExtractionNamespace.MIN_SIZE) @JsonProperty(value = "maxSize") @Nullable
+          Long maxSize
   )
   {
     this.uri = uri;
@@ -127,6 +131,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
+    this.maxSize = maxSize == null ? ExtractionNamespace.DEFAULT_MAX_SIZE : maxSize;
   }
 
   public String getFileRegex()
@@ -156,6 +161,11 @@ public class UriExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getMaxSize() {
+    return maxSize;
+  }
+
+  @Override
   public String toString()
   {
     return "UriExtractionNamespace{" +
@@ -164,6 +174,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
            ", namespaceParseSpec=" + namespaceParseSpec +
            ", fileRegex='" + fileRegex + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", maxSize=" + maxSize +
            '}';
   }
 
@@ -191,7 +202,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
     if (getFileRegex() != null ? !getFileRegex().equals(that.getFileRegex()) : that.getFileRegex() != null) {
       return false;
     }
-    return pollPeriod.equals(that.pollPeriod);
+    return pollPeriod.equals(that.pollPeriod) &&
+           Objects.equals(maxSize, that.maxSize);
 
   }
 
@@ -203,6 +215,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     result = 31 * result + getNamespaceParseSpec().hashCode();
     result = 31 * result + (getFileRegex() != null ? getFileRegex().hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
+    result = 31 * result * Objects.hashCode(maxSize);
     return result;
   }
 

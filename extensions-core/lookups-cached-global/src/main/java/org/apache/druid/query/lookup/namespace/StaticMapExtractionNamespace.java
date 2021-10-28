@@ -25,7 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * This class is intended to be used in general cluster testing, and not as a serious lookup.
@@ -37,13 +40,17 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
 {
   static final String TYPE_NAME = "staticMap";
   private final Map<String, String> map;
+  @JsonProperty
+  private final long maxSize;
 
   @JsonCreator
   public StaticMapExtractionNamespace(
-      @JsonProperty("map") Map<String, String> map
+      @JsonProperty("map") Map<String, String> map,
+      @Min(ExtractionNamespace.MIN_SIZE) @JsonProperty(value = "maxSize") @Nullable final Long maxSize
   )
   {
     this.map = Preconditions.checkNotNull(map, "`map` required");
+    this.maxSize = maxSize == null ? ExtractionNamespace.DEFAULT_MAX_SIZE : maxSize;
   }
 
   @JsonProperty
@@ -57,6 +64,11 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
   {
     // Load once and forget it
     return 0;
+  }
+
+  @Override
+  public long getMaxSize() {
+    return maxSize;
   }
 
   @Override
@@ -78,6 +90,6 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
   @Override
   public int hashCode()
   {
-    return getMap().hashCode();
+    return Objects.hash(map, maxSize);
   }
 }

@@ -146,11 +146,17 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
             final long startNs = System.nanoTime();
             final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                 extractionNamespace.getNamespaceParseSpec().getParser()
-            ).populate(source, versionedCache.getCache());
+            ).populateAndWarnAtByteLimit(
+                source,
+                versionedCache.getCache(),
+                extractionNamespace.getMaxSize(),
+                entryId.toString()
+            );
             final long duration = System.nanoTime() - startNs;
             log.info(
-                "Finished loading %,d values from %,d lines for [%s] in %,d ns",
+                "Finished loading %,d values (%d bytes) from %,d lines for [%s] in %,d ns",
                 populateResult.getEntries(),
+                populateResult.getBytes(),
                 populateResult.getLines(),
                 entryId,
                 duration
