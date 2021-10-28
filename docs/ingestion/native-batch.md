@@ -874,7 +874,7 @@ The S3 input source skips all empty objects only when `prefixes` is specified.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|`accessKeyId`|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
+|`accessKeyId`|The [Password Provider](../operations/password-provider.md) or plain text string of the S3 InputSource's access key|None|yes if secretAccessKey is given|
 |`secretAccessKey`|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
 |`assumeRoleArn`|AWS ARN of the role to assume.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). `assumeRoleArn` can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |`assumeRoleExternalId`|A unique identifier that might be required when you assume a role in another account.  See the [AWS User Guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html).|None|no|
