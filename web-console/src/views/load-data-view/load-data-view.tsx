@@ -3072,6 +3072,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(initSupervisorId)}`,
       );
+      console.log('resp.data', resp.data);
       this.updateSpec(cleanSpec(resp.data));
       this.setState({ continueToSpec: true });
       this.updateStep('spec');
@@ -3152,6 +3153,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec, submitting } = this.state;
     if (submitting) return;
 
+    console.log('spec', spec);
     this.setState({ submitting: true });
     if (isTask(spec)) {
       let taskResp: any;

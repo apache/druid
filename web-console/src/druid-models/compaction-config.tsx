@@ -203,7 +203,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
       <>
-        <p>Maximum number of rows to include in a partition.</p>{' '}
+        <p>Maximum number of rows to include in a partition.</p>
         <p>
           Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
           be used to find the best partitioning. Leave blank to show all properties.
