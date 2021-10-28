@@ -67,6 +67,7 @@ class ParallelIndexTestingFactory
   static final String GROUP_ID = "group-id";
   static final TaskResource TASK_RESOURCE = null;
   static final String SUPERVISOR_TASK_ID = "supervisor-task-id";
+  static final String SUBTASK_SPEC_ID = "subtask-spec-id";
   static final int NUM_ATTEMPTS = 1;
   static final Map<String, Object> CONTEXT = Collections.emptyMap();
   static final IndexingServiceClient INDEXING_SERVICE_CLIENT = TestUtils.INDEXING_SERVICE_CLIENT;
@@ -76,10 +77,10 @@ class ParallelIndexTestingFactory
   static final ShuffleClient SHUFFLE_CLIENT = new ShuffleClient()
   {
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        PartitionLocation location
     )
     {
       return null;
@@ -185,6 +186,7 @@ class ParallelIndexTestingFactory
           logParseExceptions,
           maxParseExceptions,
           25,
+          null,
           null
       );
     }
@@ -219,7 +221,7 @@ class ParallelIndexTestingFactory
       DataSchema dataSchema
   )
   {
-    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(null, inputSource, inputFormat, false);
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(null, inputSource, inputFormat, false, false);
 
     return new ParallelIndexIngestionSpec(dataSchema, ioConfig, tuningConfig);
   }

@@ -16,43 +16,40 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  IButtonProps,
-  Menu,
-  MenuDivider,
-  MenuItem,
-  Popover,
-} from '@blueprintjs/core';
+import { Button, ButtonGroup, ButtonProps, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
-import { localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
+import { isInBackground, localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
 
 export interface DelayLabel {
   label: string;
   delay: number;
 }
 
-export interface TimedButtonProps extends IButtonProps {
+export interface TimedButtonProps extends ButtonProps {
   delays: DelayLabel[];
   onRefresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
   label: string;
   defaultDelay: number;
+  foregroundOnly?: boolean;
 }
 
 export const TimedButton = React.memo(function TimedButton(props: TimedButtonProps) {
   const {
+    className,
     label,
     delays,
     onRefresh,
-    type,
+    type: _type,
     text,
     icon,
     defaultDelay,
+    foregroundOnly,
     localStorageKey,
     ...other
   } = props;
@@ -64,6 +61,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   );
 
   useInterval(() => {
+    if (foregroundOnly && isInBackground()) return;
     onRefresh(true);
   }, selectedDelay);
 
@@ -75,9 +73,9 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   }
 
   return (
-    <ButtonGroup className="timed-button">
+    <ButtonGroup className={classNames('timed-button', className)}>
       <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
-      <Popover
+      <Popover2
         content={
           <Menu>
             <MenuDivider title={label} />
@@ -93,7 +91,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
         }
       >
         <Button {...other} rightIcon={IconNames.CARET_DOWN} />
-      </Popover>
+      </Popover2>
     </ButtonGroup>
   );
 });

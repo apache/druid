@@ -217,7 +217,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
+    IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
 
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
@@ -239,7 +239,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   public void testFilteredAggregators() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> index = indexCreator.createIndex((Object) new AggregatorFactory[]{
+    IncrementalIndex index = indexCreator.createIndex((Object) new AggregatorFactory[]{
         new CountAggregatorFactory("count"),
         new FilteredAggregatorFactory(
             new CountAggregatorFactory("count_selector_filtered"),
@@ -333,7 +333,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
       );
     }
 
-    final IncrementalIndex<?> index = indexCreator.createIndex(
+    final IncrementalIndex index = indexCreator.createIndex(
         (Object) ingestAggregatorFactories.toArray(
             new AggregatorFactory[0]
         )
@@ -446,7 +446,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     }
 
 
-    final IncrementalIndex<?> index = indexCreator.createIndex(
+    final IncrementalIndex index = indexCreator.createIndex(
         (Object) ingestAggregatorFactories.toArray(new AggregatorFactory[0])
     );
     final int concurrentThreads = 2;
@@ -624,7 +624,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex<?> index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
+    final IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
@@ -670,7 +670,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testgetDimensions()
   {
-    final IncrementalIndex<?> incrementalIndex = indexCreator.createIndex(
+    final IncrementalIndex incrementalIndex = indexCreator.createIndex(
         (builder, args) -> builder
             .setIndexSchema(
                 new IncrementalIndexSchema.Builder()
@@ -694,7 +694,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testDynamicSchemaRollup() throws IndexSizeExceededException
   {
-    final IncrementalIndex<?> index = indexCreator.createIndex(
+    final IncrementalIndex index = indexCreator.createIndex(
         (builder, args) -> builder
             .setSimpleTestingIndexSchema(/* empty */)
             .setMaxRowCount(10)

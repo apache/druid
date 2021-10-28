@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private final Interval dataInterval;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final Map<String, DimensionAccessor> accessors;
 
   private static class DimensionAccessor
@@ -66,7 +66,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory)
+  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex index, BitmapFactory bitmapFactory)
   {
     this.dataInterval = dataInterval;
     this.index = index;
@@ -90,7 +90,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
    * a null value.
    */
   private void processRows(
-      IncrementalIndex<?> index,
+      IncrementalIndex index,
       BitmapFactory bitmapFactory,
       List<IncrementalIndex.DimensionDesc> dimensions
   )

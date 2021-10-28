@@ -26,7 +26,6 @@ import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -35,6 +34,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -92,6 +92,51 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
       .writeInt(x -> x.size);
 
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
+
+  /**
+   * An ObjectStrategy that returns a big-endian ByteBuffer pointing to the original data.
+   *
+   * The returned ByteBuffer is a fresh read-only instance, so it is OK for callers to modify its position, limit, etc.
+   * However, it does point to the original data, so callers must take care not to use it if the original data may
+   * have been freed.
+   */
+  public static final ObjectStrategy<ByteBuffer> BYTE_BUFFER_STRATEGY = new ObjectStrategy<ByteBuffer>()
+  {
+    @Override
+    public Class<ByteBuffer> getClazz()
+    {
+      return ByteBuffer.class;
+    }
+
+    @Override
+    public ByteBuffer fromByteBuffer(final ByteBuffer buffer, final int numBytes)
+    {
+      final ByteBuffer dup = buffer.asReadOnlyBuffer();
+      dup.limit(buffer.position() + numBytes);
+      return dup;
+    }
+
+    @Override
+    @Nullable
+    public byte[] toBytes(@Nullable ByteBuffer buf)
+    {
+      if (buf == null) {
+        return null;
+      }
+
+      // This method doesn't have javadocs and I'm not sure if it is OK to modify the "val" argument. Copy defensively.
+      final ByteBuffer dup = buf.duplicate();
+      final byte[] bytes = new byte[dup.remaining()];
+      dup.get(bytes);
+      return bytes;
+    }
+
+    @Override
+    public int compare(ByteBuffer o1, ByteBuffer o2)
+    {
+      return o1.compareTo(o2);
+    }
+  };
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
   {
@@ -154,7 +199,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return fromIterable(Arrays.asList(objects), strategy);
   }
 
-  static GenericIndexed<ResourceHolder<ByteBuffer>> ofCompressedByteBuffers(
+  public static GenericIndexed<ResourceHolder<ByteBuffer>> ofCompressedByteBuffers(
       Iterable<ByteBuffer> buffers,
       CompressionStrategy compression,
       int bufferSize,
@@ -310,26 +355,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
-
-    int minIndex = 0;
-    int maxIndex = size - 1;
-    while (minIndex <= maxIndex) {
-      int currIndex = (minIndex + maxIndex) >>> 1;
-
-      T currValue = indexed.get(currIndex);
-      int comparison = strategy.compare(currValue, value);
-      if (comparison == 0) {
-        return currIndex;
-      }
-
-      if (comparison < 0) {
-        minIndex = currIndex + 1;
-      } else {
-        maxIndex = currIndex - 1;
-      }
-    }
-
-    return -(minIndex + 1);
+    return Indexed.indexOf(indexed::get, size, strategy, value);
   }
 
   @Override
@@ -530,13 +556,13 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
         headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {
-          CloseQuietly.close((Closeable) prevVal);
+          CloseableUtils.closeAndWrapExceptions((Closeable) prevVal);
         }
         prevVal = next;
       } while (objects.hasNext());
 
       if (prevVal instanceof Closeable) {
-        CloseQuietly.close((Closeable) prevVal);
+        CloseableUtils.closeAndWrapExceptions((Closeable) prevVal);
       }
     }
     catch (IOException e) {

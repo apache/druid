@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Popover, Position } from '@blueprintjs/core';
+import { Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
 import { BasicAction, basicActionsToMenu } from '../../utils/basic-action';
@@ -42,9 +43,9 @@ export const ActionCell = React.memo(function ActionCell(props: ActionCellProps)
     <div className="action-cell">
       {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
       {actionsMenu && (
-        <Popover content={actionsMenu} position={Position.BOTTOM_RIGHT}>
+        <Popover2 content={actionsMenu} position={Position.BOTTOM_RIGHT}>
           <ActionIcon icon={IconNames.WRENCH} />
-        </Popover>
+        </Popover2>
       )}
     </div>
   );

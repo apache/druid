@@ -81,7 +81,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -336,7 +336,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ColumnType.STRING))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -362,7 +362,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ColumnType.LONG))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -388,7 +388,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT))
+          .setDimensions(new DefaultDimensionSpec("dimSequential", "dimSequential", ColumnType.FLOAT))
           .setAggregatorSpecs(queryAggs)
           .setGranularity(Granularity.fromString(queryGranularity))
           .setContext(ImmutableMap.of("vectorize", vectorize))
@@ -414,7 +414,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(new DefaultDimensionSpec("stringZipf", "stringZipf", ValueType.STRING))
+          .setDimensions(new DefaultDimensionSpec("stringZipf", "stringZipf", ColumnType.STRING))
           .setAggregatorSpecs(
               queryAggs
           )
@@ -511,8 +511,7 @@ public class GroupByBenchmark
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryBenchmarkUtil.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
@@ -539,7 +538,7 @@ public class GroupByBenchmark
     @Param({"onheap", "offheap", "oak"})
     private String indexType;
 
-    IncrementalIndex<?> incIndex;
+    IncrementalIndex incIndex;
 
     @Setup(Level.Trial)
     public void setup(GroupByBenchmark global) throws JsonProcessingException
@@ -588,7 +587,7 @@ public class GroupByBenchmark
       for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment %d/%d", i + 1, numSegments);
 
-        final IncrementalIndex<?> incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
+        final IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.isWithRollup());
         global.generator.reset(RNG_SEED + i).addToIndex(incIndex, global.rowsPerSegment);
 
         log.info(
@@ -625,7 +624,7 @@ public class GroupByBenchmark
     }
   }
 
-  private IncrementalIndex<?> makeIncIndex(boolean withRollup)
+  private IncrementalIndex makeIncIndex(boolean withRollup)
   {
     return appendableIndexSpec.builder()
         .setIndexSchema(

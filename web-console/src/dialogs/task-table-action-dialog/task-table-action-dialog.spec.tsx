@@ -26,8 +26,8 @@ describe('task table action dialog', () => {
   it('matches snapshot', () => {
     const taskTableActionDialog = (
       <TaskTableActionDialog
-        status={'RUNNING'}
-        taskId={'test'}
+        status="RUNNING"
+        taskId="test"
         actions={[basicAction]}
         onClose={() => {}}
       />

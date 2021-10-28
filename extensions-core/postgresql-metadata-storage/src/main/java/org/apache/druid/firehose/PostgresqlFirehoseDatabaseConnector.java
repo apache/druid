@@ -19,12 +19,19 @@
 
 package org.apache.druid.firehose;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.skife.jdbi.v2.DBI;
+
+import java.util.Objects;
+import java.util.Set;
 
 
 @JsonTypeName("postgresql")
@@ -33,12 +40,14 @@ public class PostgresqlFirehoseDatabaseConnector extends SQLFirehoseDatabaseConn
   private final DBI dbi;
   private final MetadataStorageConnectorConfig connectorConfig;
 
+  @JsonCreator
   public PostgresqlFirehoseDatabaseConnector(
-      @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig
+      @JsonProperty("connectorConfig") MetadataStorageConnectorConfig connectorConfig,
+      @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
     this.connectorConfig = connectorConfig;
-    final BasicDataSource datasource = getDatasource(connectorConfig);
+    final BasicDataSource datasource = getDatasource(connectorConfig, securityConfig);
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName("org.postgresql.Driver");
     this.dbi = new DBI(datasource);
@@ -54,5 +63,38 @@ public class PostgresqlFirehoseDatabaseConnector extends SQLFirehoseDatabaseConn
   public DBI getDBI()
   {
     return dbi;
+  }
+
+  @Override
+  public Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown)
+  {
+    return ConnectionUriUtils.tryParseJdbcUriParameters(connectUri, allowUnknown);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    PostgresqlFirehoseDatabaseConnector that = (PostgresqlFirehoseDatabaseConnector) o;
+    return connectorConfig.equals(that.connectorConfig);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(connectorConfig);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PostgresqlFirehoseDatabaseConnector{" +
+           "connectorConfig=" + connectorConfig +
+           '}';
   }
 }

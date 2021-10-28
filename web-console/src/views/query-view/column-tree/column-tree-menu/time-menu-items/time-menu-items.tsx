@@ -124,7 +124,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={label}
           onClick={() => {
-            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addToWhere(clause), true);
+            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addWhere(clause), true);
           }}
         />
       );
@@ -136,7 +136,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     const monthStart = floorMonth(now);
     const yearStart = floorYear(now);
     return (
-      <MenuItem icon={IconNames.FILTER} text={`Filter`}>
+      <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
         {filterMenuItem(`Latest day`, fillWithColumn(LATEST_DAY, columnName))}
         {filterMenuItem(`Latest week`, fillWithColumn(LATEST_WEEK, columnName))}
@@ -170,7 +170,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
-        text={`Remove filter`}
+        text="Remove filter"
         onClick={() => {
           onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
@@ -180,15 +180,15 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    const selectIndex = parsedQuery.getSelectIndexForColumn(columnName);
-    if (!parsedQuery.isGroupedSelectIndex(selectIndex)) return;
+    const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
+    if (!groupedSelectIndexes.length) return;
 
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
-        text={'Remove group by'}
+        text="Remove group by"
         onClick={() => {
-          onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
+          onQueryChange(parsedQuery.removeSelectIndexes(groupedSelectIndexes), true);
         }}
       />
     );
@@ -204,14 +204,20 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={prettyPrintSql(ex)}
           onClick={() => {
-            onQueryChange(parsedQuery.addToGroupBy(ex.as(alias)), true);
+            onQueryChange(
+              parsedQuery.addSelect(ex.as(alias), {
+                insertIndex: 'last-grouping',
+                addToGroupBy: 'end',
+              }),
+              true,
+            );
           }}
         />
       );
     }
 
     return (
-      <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
+      <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(
           SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('PT1H')]),
           `${columnName}_by_hour`,
@@ -259,14 +265,14 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={prettyPrintSql(ex)}
           onClick={() => {
-            onQueryChange(parsedQuery.addSelectExpression(ex.as(alias)), true);
+            onQueryChange(parsedQuery.addSelect(ex.as(alias)), true);
           }}
         />
       );
     }
 
     return (
-      <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
+      <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}
         {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
       </MenuItem>

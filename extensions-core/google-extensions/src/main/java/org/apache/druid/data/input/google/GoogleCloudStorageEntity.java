@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nullable;
@@ -47,7 +48,7 @@ public class GoogleCloudStorageEntity extends RetryingInputEntity
   @Override
   public URI getUri()
   {
-    return location.toUri(GoogleCloudStorageInputSource.SCHEME);
+    return location.toUri(GoogleStorageDruidModule.SCHEME_GS);
   }
 
   @Override

@@ -105,7 +105,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
         return null;
       }
     };
-    IncrementalIndex<?> index = indexCreator.createIndex(schema);
+    IncrementalIndex index = indexCreator.createIndex(schema);
     index.add(
         new MapBasedInputRow(
             0,

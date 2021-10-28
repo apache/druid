@@ -210,7 +210,7 @@ public class FilteredAggregatorBenchmark
     @Param({"onheap", "offheap", "oak"})
     private String indexType;
 
-    IncrementalIndex<?> incIndex;
+    IncrementalIndex incIndex;
 
     @Setup
     public void setup(FilteredAggregatorBenchmark global) throws JsonProcessingException
@@ -240,7 +240,7 @@ public class FilteredAggregatorBenchmark
     @Param({"onheap", "offheap", "oak"})
     private String indexType;
 
-    IncrementalIndex<?> incIndex;
+    IncrementalIndex incIndex;
     List<InputRow> inputRows;
 
     @Setup(Level.Invocation)
@@ -276,7 +276,7 @@ public class FilteredAggregatorBenchmark
     {
       global.appendableIndexSpec = new OnheapIncrementalIndex.Spec();
 
-      IncrementalIndex<?> incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
+      IncrementalIndex incIndex = global.makeIncIndex(global.schemaInfo.getAggsArray());
       global.generator.addToIndex(incIndex, global.rowsPerSegment);
 
       qIndexesDir = FileUtils.createTempDir();
@@ -305,7 +305,7 @@ public class FilteredAggregatorBenchmark
     }
   }
 
-  private IncrementalIndex<?> makeIncIndex(AggregatorFactory[] metrics)
+  private IncrementalIndex makeIncIndex(AggregatorFactory[] metrics)
   {
     return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(metrics)

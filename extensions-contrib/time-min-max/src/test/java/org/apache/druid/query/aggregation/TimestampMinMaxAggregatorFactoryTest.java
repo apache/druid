@@ -19,19 +19,71 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TimestampMinMaxAggregatorFactoryTest
 {
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    TimestampMaxAggregatorFactory maxAgg = new TimestampMaxAggregatorFactory("timeMax", "__time", null);
+    TimestampMinAggregatorFactory minAgg = new TimestampMinAggregatorFactory("timeMin", "__time", null);
+
+    Assert.assertEquals(
+        maxAgg,
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(maxAgg), TimestampMaxAggregatorFactory.class)
+    );
+    Assert.assertEquals(
+        maxAgg.getCombiningFactory(),
+        JSON_MAPPER.readValue(
+            JSON_MAPPER.writeValueAsString(maxAgg.getCombiningFactory()),
+            TimestampMaxAggregatorFactory.class
+        )
+    );
+
+    Assert.assertEquals(
+        minAgg,
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(minAgg), TimestampMinAggregatorFactory.class)
+    );
+    Assert.assertEquals(
+        minAgg.getCombiningFactory(),
+        JSON_MAPPER.readValue(
+            JSON_MAPPER.writeValueAsString(minAgg.getCombiningFactory()),
+            TimestampMinAggregatorFactory.class
+        )
+    );
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(TimestampMinAggregatorFactory.class)
+                  .withNonnullFields("name", "comparator", "initValue")
+                  .withIgnoredFields("timestampSpec")
+                  .usingGetClass()
+                  .verify();
+    EqualsVerifier.forClass(TimestampMaxAggregatorFactory.class)
+                  .withNonnullFields("name", "comparator", "initValue")
+                  .withIgnoredFields("timestampSpec")
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void testResultArraySignature()
   {
@@ -56,13 +108,13 @@ public class TimestampMinMaxAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("timeMax", null)
                     .add("timeMin", null)
-                    .add("timeMax-access", ValueType.LONG)
-                    .add("timeMax-finalize", ValueType.COMPLEX)
-                    .add("timeMin-access", ValueType.LONG)
-                    .add("timeMin-finalize", ValueType.COMPLEX)
+                    .add("timeMax-access", ColumnType.LONG)
+                    .add("timeMax-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
+                    .add("timeMin-access", ColumnType.LONG)
+                    .add("timeMin-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

@@ -38,8 +38,8 @@ To use caching, it must be enabled in the settings for the service to perform ca
 ## Enabling query caching on Historicals
 Historicals only support **segment-level** caching, which is enabled by default. To control caching on the Historical, set the `useCache` and `populateCache` runtime properties. For example, to set the Historical to both use and populate the segment cache for queries:
  ```
- druid.broker.cache.useCache=true
- druid.broker.cache.populateCache=true
+ druid.historical.cache.useCache=true
+ druid.historical.cache.populateCache=true
  ```
 See [Historical caching](../configuration/index.md#historical-caching) for a description of all available Historical cache configurations.
  
@@ -51,7 +51,7 @@ druid.realtime.cache.useCache=true
 druid.realtime.cache.populateCache=true
 ```
 
-See [Peon caching](configuration/index.md#peon-caching) and [Indexer caching](configuration/index.md#indexer-caching) for a description of all available task executor service caching options.
+See [Peon caching](../configuration/index.md#peon-caching) and [Indexer caching](../configuration/index.md#indexer-caching) for a description of all available task executor service caching options.
 
 ## Enabling query caching on Brokers
 Brokers support both segment-level and whole-query result level caching.

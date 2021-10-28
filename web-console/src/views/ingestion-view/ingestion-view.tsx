@@ -20,8 +20,7 @@ import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintj
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -44,9 +43,11 @@ import {
   addFilter,
   addFilterRaw,
   booleanCustomTableFilter,
+  Capabilities,
   deepGet,
   formatDuration,
   getDruidErrorMessage,
+  LocalStorageBackedVisibility,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
@@ -54,10 +55,10 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
-import { Capabilities } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './ingestion-view.scss';
 
@@ -142,8 +143,8 @@ export interface IngestionViewState {
   taskTableActionDialogActions: BasicAction[];
   supervisorTableActionDialogId?: string;
   supervisorTableActionDialogActions: BasicAction[];
-  hiddenTaskColumns: LocalStorageBackedArray<string>;
-  hiddenSupervisorColumns: LocalStorageBackedArray<string>;
+  hiddenTaskColumns: LocalStorageBackedVisibility;
+  hiddenSupervisorColumns: LocalStorageBackedVisibility;
 }
 
 function statusToColor(status: string): string {
@@ -183,8 +184,8 @@ function stateToColor(status: string): string {
 }
 
 export class IngestionView extends React.PureComponent<IngestionViewProps, IngestionViewState> {
-  private supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
-  private taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
+  private readonly supervisorQueryManager: QueryManager<Capabilities, SupervisorQueryResultRow[]>;
+  private readonly taskQueryManager: QueryManager<Capabilities, TaskQueryResultRow[]>;
   static statusRanking: Record<string, number> = {
     RUNNING: 4,
     PENDING: 3,
@@ -237,10 +238,10 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       taskTableActionDialogActions: [],
       supervisorTableActionDialogActions: [],
 
-      hiddenTaskColumns: new LocalStorageBackedArray<string>(
+      hiddenTaskColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
       ),
-      hiddenSupervisorColumns: new LocalStorageBackedArray<string>(
+      hiddenSupervisorColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
       ),
     };
@@ -319,7 +320,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     });
   };
 
-  private onSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  private static onSecondaryPaneSizeChange(secondaryPaneSize: number) {
     localStorageSet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE, String(secondaryPaneSize));
   }
 
@@ -335,14 +336,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.taskQueryManager.terminate();
   }
 
-  private closeSpecDialogs = () => {
+  private readonly closeSpecDialogs = () => {
     this.setState({
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
     });
   };
 
-  private submitSupervisor = async (spec: JSON) => {
+  private readonly submitSupervisor = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
@@ -360,7 +361,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.supervisorQueryManager.rerunLastQuery();
   };
 
-  private submitTask = async (spec: JSON) => {
+  private readonly submitTask = async (spec: JSON) => {
     try {
       await Api.instance.post('/druid/indexer/v1/task', spec);
     } catch (e) {
@@ -554,10 +555,11 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   renderSupervisorTable() {
     const { supervisorsState, hiddenSupervisorColumns, taskFilter, supervisorFilter } = this.state;
 
+    const supervisors = supervisorsState.data || [];
     return (
       <>
         <ReactTable
-          data={supervisorsState.data || []}
+          data={supervisors}
           loading={supervisorsState.loading}
           noDataText={
             supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
@@ -576,25 +578,28 @@ ORDER BY "rank" DESC, "created_time" DESC`;
             this.setState({ supervisorFilter: filtered, taskFilter: newTaskFilter });
           }}
           filterable
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Datasource',
               id: 'datasource',
               accessor: 'supervisor_id',
               width: 300,
-              show: hiddenSupervisorColumns.exists('Datasource'),
+              show: hiddenSupervisorColumns.shown('Datasource'),
             },
             {
               Header: 'Type',
               id: 'type',
               accessor: row => row.type,
-              show: hiddenSupervisorColumns.exists('Type'),
+              show: hiddenSupervisorColumns.shown('Type'),
             },
             {
               Header: 'Topic/Stream',
               id: 'source',
               accessor: row => row.source,
-              show: hiddenSupervisorColumns.exists('Topic/Stream'),
+              show: hiddenSupervisorColumns.shown('Topic/Stream'),
             },
             {
               Header: 'Status',
@@ -607,7 +612,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   {row.value}
                 </span>
               ),
-              show: hiddenSupervisorColumns.exists('Status'),
+              show: hiddenSupervisorColumns.shown('Status'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -632,7 +637,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   />
                 );
               },
-              show: hiddenSupervisorColumns.exists(ACTION_COLUMN_LABEL),
+              show: hiddenSupervisorColumns.shown(ACTION_COLUMN_LABEL),
             },
           ]}
         />
@@ -715,10 +720,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       hiddenTaskColumns,
       supervisorFilter,
     } = this.state;
+
+    const tasks = tasksState.data || [];
     return (
       <>
         <ReactTable
-          data={tasksState.data || []}
+          data={tasks}
           loading={tasksState.loading}
           noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
@@ -737,20 +744,35 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           }}
           defaultSorted={[{ id: 'status', desc: true }]}
           pivotBy={groupTasksBy ? [groupTasksBy] : []}
+          defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+          pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={tasks.length > SMALL_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Task ID',
               accessor: 'task_id',
               width: 500,
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Task ID'),
+              show: hiddenTaskColumns.shown('Task ID'),
             },
             {
               Header: 'Group ID',
               accessor: 'group_id',
               width: 300,
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Group ID'),
+              Cell: row => {
+                const value = row.value;
+                return (
+                  <a
+                    onClick={() => {
+                      this.setState({ taskFilter: addFilter(taskFilter, 'group_id', value) });
+                    }}
+                  >
+                    {value}
+                  </a>
+                );
+              },
+              show: hiddenTaskColumns.shown('Group ID'),
             },
             {
               Header: 'Type',
@@ -768,7 +790,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   </a>
                 );
               },
-              show: hiddenTaskColumns.exists('Type'),
+              show: hiddenTaskColumns.shown('Type'),
             },
             {
               Header: 'Datasource',
@@ -785,7 +807,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                   </a>
                 );
               },
-              show: hiddenTaskColumns.exists('Datasource'),
+              show: hiddenTaskColumns.shown('Datasource'),
             },
 
             {
@@ -795,14 +817,14 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.location);
               },
-              show: hiddenTaskColumns.exists('Location'),
+              show: hiddenTaskColumns.shown('Location'),
             },
             {
               Header: 'Created time',
               accessor: 'created_time',
               width: 190,
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Created time'),
+              show: hiddenTaskColumns.shown('Created time'),
             },
             {
               Header: 'Status',
@@ -854,7 +876,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterMethod: (filter: Filter, row: any) => {
                 return booleanCustomTableFilter(filter, row.status.status);
               },
-              show: hiddenTaskColumns.exists('Status'),
+              show: hiddenTaskColumns.shown('Status'),
             },
             {
               Header: 'Duration',
@@ -863,7 +885,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
               filterable: false,
               Cell: row => (row.value > 0 ? formatDuration(row.value) : ''),
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists('Duration'),
+              show: hiddenTaskColumns.shown('Duration'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
@@ -891,7 +913,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 );
               },
               Aggregated: () => '',
-              show: hiddenTaskColumns.exists(ACTION_COLUMN_LABEL),
+              show: hiddenTaskColumns.shown(ACTION_COLUMN_LABEL),
             },
           ]}
         />
@@ -1059,17 +1081,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     return (
       <>
         <SplitterLayout
-          customClassName={'ingestion-view app-view'}
+          customClassName="ingestion-view app-view"
           vertical
           percentage
           secondaryInitialSize={
-            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE) as string) || 60
+            Number(localStorageGet(LocalStorageKeys.INGESTION_VIEW_PANE_SIZE)!) || 60
           }
           primaryMinSize={30}
           secondaryMinSize={30}
-          onSecondaryPaneSizeChange={this.onSecondaryPaneSizeChange}
+          onSecondaryPaneSizeChange={IngestionView.onSecondaryPaneSizeChange}
         >
-          <div className={'top-pane'}>
+          <div className="top-pane">
             <ViewControlBar label="Supervisors">
               <RefreshButton
                 localStorageKey={LocalStorageKeys.SUPERVISORS_REFRESH_RATE}
@@ -1083,12 +1105,12 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                     hiddenSupervisorColumns: prevState.hiddenSupervisorColumns.toggle(column),
                   }))
                 }
-                tableColumnsHidden={hiddenSupervisorColumns.storedArray}
+                tableColumnsHidden={hiddenSupervisorColumns.getHiddenColumns()}
               />
             </ViewControlBar>
             {this.renderSupervisorTable()}
           </div>
-          <div className={'bottom-pane'}>
+          <div className="bottom-pane">
             <ViewControlBar label="Tasks">
               <Label>Group by</Label>
               <ButtonGroup>
@@ -1135,7 +1157,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                     hiddenTaskColumns: prevState.hiddenTaskColumns.toggle(column),
                   }))
                 }
-                tableColumnsHidden={hiddenTaskColumns.storedArray}
+                tableColumnsHidden={hiddenTaskColumns.getHiddenColumns()}
               />
             </ViewControlBar>
             {this.renderTaskTable()}

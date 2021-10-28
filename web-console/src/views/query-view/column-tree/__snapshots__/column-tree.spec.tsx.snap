@@ -36,9 +36,9 @@ exports[`ColumnTree matches snapshot 1`] = `
               Object {
                 "icon": "time",
                 "id": "__time",
-                "label": <Blueprint3.Popover
+                "label": <Blueprint3.Popover2
                   autoFocus={false}
-                  boundary="window"
+                  boundary="clippingParents"
                   captureDismiss={false}
                   content={
                     <Memo(Deferred)
@@ -54,24 +54,22 @@ exports[`ColumnTree matches snapshot 1`] = `
                   inheritDarkTheme={true}
                   interactionKind="click"
                   minimal={false}
-                  modifiers={Object {}}
                   openOnTargetFocus={true}
                   position="right"
-                  targetClassName="bp3-popover-open"
+                  positioningStrategy="absolute"
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
-                  wrapperTagName="span"
                 >
                   __time
-                </Blueprint3.Popover>,
+                </Blueprint3.Popover2>,
               },
               Object {
                 "icon": "numerical",
                 "id": "added",
-                "label": <Blueprint3.Popover
+                "label": <Blueprint3.Popover2
                   autoFocus={false}
-                  boundary="window"
+                  boundary="clippingParents"
                   captureDismiss={false}
                   content={
                     <Memo(Deferred)
@@ -87,24 +85,22 @@ exports[`ColumnTree matches snapshot 1`] = `
                   inheritDarkTheme={true}
                   interactionKind="click"
                   minimal={false}
-                  modifiers={Object {}}
                   openOnTargetFocus={true}
                   position="right"
-                  targetClassName="bp3-popover-open"
+                  positioningStrategy="absolute"
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
-                  wrapperTagName="span"
                 >
                   added
-                </Blueprint3.Popover>,
+                </Blueprint3.Popover2>,
               },
               Object {
                 "icon": "numerical",
                 "id": "addedBy10",
-                "label": <Blueprint3.Popover
+                "label": <Blueprint3.Popover2
                   autoFocus={false}
-                  boundary="window"
+                  boundary="clippingParents"
                   captureDismiss={false}
                   content={
                     <Memo(Deferred)
@@ -120,24 +116,22 @@ exports[`ColumnTree matches snapshot 1`] = `
                   inheritDarkTheme={true}
                   interactionKind="click"
                   minimal={false}
-                  modifiers={Object {}}
                   openOnTargetFocus={true}
                   position="right"
-                  targetClassName="bp3-popover-open"
+                  positioningStrategy="absolute"
                   targetTagName="span"
                   transitionDuration={300}
                   usePortal={true}
-                  wrapperTagName="span"
                 >
                   addedBy10
-                </Blueprint3.Popover>,
+                </Blueprint3.Popover2>,
               },
             ],
             "icon": "th",
             "id": "wikipedia",
             "isExpanded": true,
-            "label": <Blueprint3.Popover
-              boundary="window"
+            "label": <Blueprint3.Popover2
+              boundary="clippingParents"
               captureDismiss={false}
               content={
                 <Memo(Deferred)
@@ -153,16 +147,15 @@ exports[`ColumnTree matches snapshot 1`] = `
               inheritDarkTheme={true}
               interactionKind="click"
               minimal={false}
-              modifiers={Object {}}
               openOnTargetFocus={true}
               position="right"
+              positioningStrategy="absolute"
               targetTagName="span"
               transitionDuration={300}
               usePortal={true}
-              wrapperTagName="span"
             >
               wikipedia
-            </Blueprint3.Popover>,
+            </Blueprint3.Popover2>,
           },
         ]
       }

@@ -282,7 +282,7 @@ public class TimeseriesBenchmark
     @Param({"onheap", "offheap", "oak"})
     private String indexType;
 
-    IncrementalIndex<?> incIndex;
+    IncrementalIndex incIndex;
 
     @Setup
     public void setup(TimeseriesBenchmark global) throws JsonProcessingException
@@ -329,7 +329,7 @@ public class TimeseriesBenchmark
       for (int i = 0; i < numSegments; i++) {
         log.info("Generating rows for segment " + i);
 
-        IncrementalIndex<?> incIndex = global.makeIncIndex();
+        IncrementalIndex incIndex = global.makeIncIndex();
         global.generator.reset(RNG_SEED + i).addToIndex(incIndex, global.rowsPerSegment);
 
         File indexFile = INDEX_MERGER_V9.persist(
@@ -358,7 +358,7 @@ public class TimeseriesBenchmark
     }
   }
 
-  private IncrementalIndex<?> makeIncIndex()
+  private IncrementalIndex makeIncIndex()
   {
     return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())

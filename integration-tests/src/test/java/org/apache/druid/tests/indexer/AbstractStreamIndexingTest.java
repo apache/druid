@@ -98,9 +98,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   @Inject
   private DruidClusterAdminClient druidClusterAdminClient;
 
-  @Inject
-  private IntegrationTestingConfig config;
-
   private StreamAdminClient streamAdminClient;
 
   abstract StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception;
@@ -141,6 +138,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return listResources(DATA_RESOURCE_ROOT)
         .stream()
         .filter(resource -> !SUPERVISOR_SPEC_TEMPLATE_FILE.equals(resource))
+        .filter(resource -> !SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE.equals(resource))
         .collect(Collectors.toList());
   }
 
@@ -170,7 +168,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     return map;
   }
 
-  private Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
+  protected Closeable createResourceCloser(GeneratedTestConfig generatedTestConfig)
   {
     return Closer.create().register(() -> doMethodTeardown(generatedTestConfig));
   }
@@ -362,7 +360,61 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
+  protected void doTestTerminatedSupervisorAutoCleanup(@Nullable Boolean transactionEnabled) throws Exception
+  {
+    final GeneratedTestConfig generatedTestConfig1 = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    final GeneratedTestConfig generatedTestConfig2 = new GeneratedTestConfig(
+        INPUT_FORMAT,
+        getResourceAsString(JSON_INPUT_FORMAT_PATH)
+    );
+    try (
+        final Closeable closer1 = createResourceCloser(generatedTestConfig1);
+        final Closeable closer2 = createResourceCloser(generatedTestConfig2);
+    ) {
+      final String taskSpec1 = generatedTestConfig1.getStreamIngestionPropsTransform()
+                                                 .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec1: [%s]\n", taskSpec1);
+      final String taskSpec2 = generatedTestConfig2.getStreamIngestionPropsTransform()
+                                                   .apply(getResourceAsString(SUPERVISOR_SPEC_TEMPLATE_PATH));
+      LOG.info("supervisorSpec2: [%s]\n", taskSpec2);
+      // Start both supervisors
+      generatedTestConfig1.setSupervisorId(indexer.submitSupervisor(taskSpec1));
+      generatedTestConfig2.setSupervisorId(indexer.submitSupervisor(taskSpec2));
+      LOG.info("Submitted supervisors");
 
+      // Sleep for 10 secs to make sure that at least one cycle of supervisor auto cleanup duty ran
+      Thread.sleep(10000);
+
+      // Verify that supervisor specs exist
+      List<Object> specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
+
+      List<Object> specs2 = indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId());
+      Assert.assertNotNull(specs2);
+      Assert.assertFalse(specs2.isEmpty());
+
+      // Supervisor 1 should still be active while supervisor 2 is now terminated
+      LOG.info("Terminating supervisor 2");
+      indexer.terminateSupervisor(generatedTestConfig2.getSupervisorId());
+
+      // Verify that auto cleanup eventually removes supervisor spec after termination
+      ITRetryUtil.retryUntil(
+          () -> indexer.getSupervisorHistory(generatedTestConfig2.getSupervisorId()) == null,
+          true,
+          10000,
+          30,
+          "Waiting for supervisor spec 2 to be auto clean"
+      );
+      // Verify that supervisor 1 spec was not remove
+      specs1 = indexer.getSupervisorHistory(generatedTestConfig1.getSupervisorId());
+      Assert.assertNotNull(specs1);
+      Assert.assertFalse(specs1.isEmpty());
+    }
+  }
 
   protected void doTestIndexDataWithStreamReshardSplit(@Nullable Boolean transactionEnabled) throws Exception
   {
@@ -646,7 +698,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  private class GeneratedTestConfig
+  protected class GeneratedTestConfig
   {
     private final String streamName;
     private final String fullDatasourceName;
@@ -654,7 +706,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     private Function<String, String> streamIngestionPropsTransform;
     private Function<String, String> streamQueryPropsTransform;
 
-    GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();

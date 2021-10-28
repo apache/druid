@@ -19,26 +19,26 @@
 import * as JSONBig from 'json-bigint-native';
 
 export const LocalStorageKeys = {
-  CAPABILITIES_OVERRIDE: 'capabilities-override' as 'capabilities-override',
-  INGESTION_SPEC: 'ingestion-spec' as 'ingestion-spec',
-  DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
-  SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',
-  SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as 'supervisor-table-column-selection',
-  TASK_TABLE_COLUMN_SELECTION: 'task-table-column-selection' as 'task-table-column-selection',
-  SERVICE_TABLE_COLUMN_SELECTION: 'service-table-column-selection' as 'service-table-column-selection',
-  LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as 'lookup-table-column-selection',
-  QUERY_KEY: 'druid-console-query' as 'druid-console-query',
-  QUERY_CONTEXT: 'query-context' as 'query-context',
-  INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as 'ingestion-view-pane-size',
-  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as 'query-view-pane-size',
-  TASKS_REFRESH_RATE: 'task-refresh-rate' as 'task-refresh-rate',
-  DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as 'datasources-refresh-rate',
-  SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as 'segments-refresh-rate',
-  SERVICES_REFRESH_RATE: 'services-refresh-rate' as 'services-refresh-rate',
-  SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as 'supervisors-refresh-rate',
-  LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as 'lookups-refresh-rate',
-  QUERY_HISTORY: 'query-history' as 'query-history',
-  LIVE_QUERY_MODE: 'live-query-mode' as 'live-query-mode',
+  CAPABILITIES_OVERRIDE: 'capabilities-override' as const,
+  INGESTION_SPEC: 'ingestion-spec' as const,
+  DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as const,
+  SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as const,
+  SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as const,
+  TASK_TABLE_COLUMN_SELECTION: 'task-table-column-selection' as const,
+  SERVICE_TABLE_COLUMN_SELECTION: 'service-table-column-selection' as const,
+  LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as const,
+  QUERY_KEY: 'druid-console-query' as const,
+  QUERY_CONTEXT: 'query-context' as const,
+  INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as const,
+  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as const,
+  TASKS_REFRESH_RATE: 'task-refresh-rate' as const,
+  DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as const,
+  SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as const,
+  SERVICES_REFRESH_RATE: 'services-refresh-rate' as const,
+  SUPERVISORS_REFRESH_RATE: 'supervisors-refresh-rate' as const,
+  LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as const,
+  QUERY_HISTORY: 'query-history' as const,
+  LIVE_QUERY_MODE: 'live-query-mode' as const,
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 
@@ -46,7 +46,11 @@ export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorage
 
 export function localStorageSet(key: LocalStorageKeys, value: string): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.error('Issue setting local storage key', e);
+  }
 }
 
 export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
@@ -55,14 +59,19 @@ export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {
   if (typeof localStorage === 'undefined') return;
-  return localStorage.getItem(key) || undefined;
+  try {
+    return localStorage.getItem(key) || undefined;
+  } catch (e) {
+    console.error('Issue getting local storage key', e);
+    return;
+  }
 }
 
 export function localStorageGetJson(key: LocalStorageKeys): any {
   const value = localStorageGet(key);
   if (!value) return;
   try {
-    return JSON.parse(value);
+    return JSONBig.parse(value);
   } catch {
     return;
   }
@@ -70,5 +79,9 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
 
 export function localStorageRemove(key: LocalStorageKeys): void {
   if (typeof localStorage === 'undefined') return;
-  return localStorage.removeItem(key);
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.error('Issue removing local storage key', e);
+  }
 }

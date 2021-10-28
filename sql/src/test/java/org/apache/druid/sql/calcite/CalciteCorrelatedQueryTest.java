@@ -20,14 +20,12 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -42,58 +40,22 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Before;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 {
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
-      .withMetrics(
-          new CountAggregatorFactory("cnt")
-      )
-      .withRollup(false)
-      .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
-      .build();
-  private static final List<String> DIMENSIONS = ImmutableList.of("user", "country", "city");
-
-  @Before
-  public void setup() throws Exception
-  {
-    final QueryableIndex index1 = IndexBuilder
-        .create()
-        .tmpDir(new File(temporaryFolder.newFolder(), "1"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(INDEX_SCHEMA)
-        .rows(getRawRows())
-        .buildMMappedIndex();
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource("visits")
-                                           .interval(index1.getDataInterval())
-                                           .version("1")
-                                           .shardSpec(new LinearShardSpec(0))
-                                           .size(0)
-                                           .build();
-    walker.add(segment, index1);
-
-  }
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
@@ -115,17 +77,17 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -133,7 +95,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -155,7 +117,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     "a0",
                                                                     "a0:a"
                                                                 )))
-                                                                .setContext(queryContext)
+                                                                .setContext(
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
+                                                                )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
                                                 )
@@ -163,7 +131,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
                                                     new LongSumAggregatorFactory("_a0:sum", "a0"),
-                                                    new CountAggregatorFactory("_a0:count")
+                                                    useDefault
+                                                    ? new CountAggregatorFactory("_a0:count")
+                                                    : new FilteredAggregatorFactory(
+                                                        new CountAggregatorFactory("_a0:count"),
+                                                        not(selector("a0", null, null))
+                                                    )
                                                 )
                                                 .setPostAggregatorSpecs(Collections.singletonList(new ArithmeticPostAggregator(
                                                     "_a0",
@@ -222,17 +195,17 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -240,7 +213,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -248,7 +221,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     )
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
-                                                                .setContext(queryContext)
+                                                                .setContext(
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
+                                                                )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
                                                 )
@@ -304,7 +283,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new QueryDataSource(newScanQueryBuilder().dataSource("visits")
+                                new QueryDataSource(newScanQueryBuilder().dataSource(CalciteTests.USERVISITDATASOURCE)
                                                                          .intervals(querySegmentSpec(Intervals.of(
                                                                              "2021-01-01T01:00:00.000Z/2021-01-02T23:59:59.001Z")))
                                                                          .filters(selector("city", "B", null))
@@ -314,12 +293,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -327,7 +306,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -335,7 +314,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     )
                                                                 )
                                                                 .setAggregatorSpecs(new CountAggregatorFactory("a0"))
-                                                                .setContext(queryContext)
+                                                                .setContext(
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
+                                                                )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
                                                 )
@@ -390,24 +375,24 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -422,7 +407,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     selector("city", "A", null),
                                                                     not(selector("country", null, null))
                                                                 ))
-                                                                .setContext(queryContext)
+                                                                .setContext(
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
+                                                                )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
                                                 )
@@ -477,24 +468,24 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(
                             join(
-                                new TableDataSource("visits"),
+                                new TableDataSource(CalciteTests.USERVISITDATASOURCE),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
                                                 .setDataSource(
                                                     GroupByQuery.builder()
-                                                                .setDataSource("visits")
+                                                                .setDataSource(CalciteTests.USERVISITDATASOURCE)
                                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -509,7 +500,13 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     selector("city", "A", null),
                                                                     not(selector("country", null, null))
                                                                 ))
-                                                                .setContext(queryContext)
+                                                                .setContext(
+                                                                    withTimestampResultContext(
+                                                                        queryContext,
+                                                                        "d0",
+                                                                        Granularities.DAY
+                                                                    )
+                                                                )
                                                                 .setGranularity(new AllGranularity())
                                                                 .build()
                                                 )
@@ -544,26 +541,16 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  private List<InputRow> getRawRows()
+  private Map<String, Object> withTimestampResultContext(
+      Map<String, Object> input,
+      String timestampResultField,
+      Granularity granularity
+  )
   {
-    return ImmutableList.of(
-        toRow("2021-01-01T01:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "A")),
-        toRow("2021-01-01T02:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "B")),
-        toRow("2021-01-01T03:00:00Z", ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
-        toRow("2021-01-01T04:00:00Z", ImmutableMap.of("user", "alice", "country", "India", "city", "Y")),
-        toRow("2021-01-02T01:00:00Z", ImmutableMap.of("user", "alice", "country", "canada", "city", "A")),
-        toRow("2021-01-02T02:00:00Z", ImmutableMap.of("user", "bob", "country", "canada", "city", "A")),
-        toRow("2021-01-02T03:00:00Z", ImmutableMap.of("user", "foo", "country", "canada", "city", "B")),
-        toRow("2021-01-02T04:00:00Z", ImmutableMap.of("user", "bar", "country", "canada", "city", "B")),
-        toRow("2021-01-02T05:00:00Z", ImmutableMap.of("user", "alice", "country", "India", "city", "X")),
-        toRow("2021-01-02T06:00:00Z", ImmutableMap.of("user", "bob", "country", "India", "city", "X")),
-        toRow("2021-01-02T07:00:00Z", ImmutableMap.of("user", "foo", "country", "India", "city", "X")),
-        toRow("2021-01-03T01:00:00Z", ImmutableMap.of("user", "foo", "country", "USA", "city", "M"))
-    );
-  }
-
-  private MapBasedInputRow toRow(String time, Map<String, Object> event)
-  {
-    return new MapBasedInputRow(DateTimes.ISO_DATE_OPTIONAL_TIME.parse(time), DIMENSIONS, event);
+    Map<String, Object> output = new HashMap<>(input);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
+    return output;
   }
 }

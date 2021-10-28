@@ -55,6 +55,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -68,7 +69,9 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -394,8 +397,8 @@ public class DruidQuery
       }
 
       final RelDataType dataType = rexNode.getType();
-      final ValueType outputType = Calcites.getValueTypeForRelDataType(dataType);
-      if (outputType == null || outputType == ValueType.COMPLEX) {
+      final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
@@ -636,7 +639,7 @@ public class DruidQuery
       }
 
       for (Aggregation aggregation : grouping.getAggregations()) {
-        virtualColumns.addAll(aggregation.getVirtualColumns());
+        virtualColumns.addAll(virtualColumnRegistry.findVirtualColumns(aggregation.getRequiredColumns()));
       }
     }
 
@@ -732,15 +735,14 @@ public class DruidQuery
   private Query computeQuery()
   {
     if (dataSource instanceof QueryDataSource) {
-      // If there is a subquery then the outer query must be a groupBy.
+      // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
+      // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
+      // requiring the Broker to inline results.)
       final GroupByQuery outerQuery = toGroupByQuery();
 
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      if (outerQuery != null) {
+        return outerQuery;
       }
-
-      return outerQuery;
     }
 
     final TimeseriesQuery tsQuery = toTimeseriesQuery();
@@ -780,12 +782,15 @@ public class DruidQuery
       return null;
     }
 
+    if (sorting != null && sorting.getOffsetLimit().hasOffset()) {
+      // Timeseries cannot handle offsets.
+      return null;
+    }
+
     final Granularity queryGranularity;
     final boolean descending;
     int timeseriesLimit = 0;
     final Map<String, Object> theContext = new HashMap<>();
-    theContext.put("skipEmptyBuckets", true);
-    theContext.putAll(plannerContext.getQueryContext());
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
@@ -805,11 +810,6 @@ public class DruidQuery
           Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
       );
       if (sorting != null) {
-        if (sorting.getOffsetLimit().hasOffset()) {
-          // Timeseries cannot handle offsets.
-          return null;
-        }
-
         if (sorting.getOffsetLimit().hasLimit()) {
           final long limit = sorting.getOffsetLimit().getLimit();
 
@@ -841,6 +841,14 @@ public class DruidQuery
       // More than one dimension, timeseries cannot handle.
       return null;
     }
+
+    // An aggregation query should return one row per group, with no grouping (e.g. ALL granularity), the entire table
+    // is the group, so we should not skip empty buckets. When there are no results, this means we return the
+    // initialized state for given aggregators instead of nothing.
+    if (!Granularities.ALL.equals(queryGranularity)) {
+      theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
+    }
+    theContext.putAll(plannerContext.getQueryContext());
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
@@ -996,7 +1004,7 @@ public class DruidQuery
       postAggregators.addAll(sorting.getProjection().getPostAggregators());
     }
 
-    return new GroupByQuery(
+    GroupByQuery query = new GroupByQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
         getVirtualColumns(true),
@@ -1010,6 +1018,62 @@ public class DruidQuery
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
+    // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
+    if (query.getLimitSpec() instanceof DefaultLimitSpec && query.isApplyLimitPushDown()) {
+      return query;
+    }
+    Map<String, Object> theContext = new HashMap<>();
+
+    Granularity queryGranularity = null;
+
+    // sql like "group by city_id,time_floor(__time to day)",
+    // the original translated query is granularity=all and dimensions:[d0, d1]
+    // the better plan is granularity=day and dimensions:[d0]
+    // but the ResultRow structure is changed from [d0, d1] to [__time, d0]
+    // this structure should be fixed as [d0, d1] (actually it is [d0, __time]) before postAggs are called.
+    //
+    // the above is the general idea of this optimization.
+    // but from coding perspective, the granularity=all and "d0" dimension are referenced by many places,
+    // eg: subtotals, having, grouping set, post agg,
+    // there would be many many places need to be fixed if "d0" dimension is removed from query.dimensions
+    // and the same to the granularity change.
+    // so from easier coding perspective, this optimization is coded as groupby engine-level inner process change.
+    // the most part of codes are in GroupByStrategyV2 about the process change between broker and compute node.
+    // the basic logic like nested queries and subtotals are kept unchanged,
+    // they will still see the granularity=all and the "d0" dimension.
+    //
+    // the tradeoff is that GroupByStrategyV2 behaviors differently according to the below query contexts.
+    // in another word,
+    // the query generated by "explain plan for select ..." doesn't match to the native query ACTUALLY being executed,
+    // the granularity and dimensions are slightly different.
+    // now, part of the query plan logic is handled in GroupByStrategyV2.
+    if (!grouping.getDimensions().isEmpty()) {
+      for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
+        Granularity granularity = Expressions.toQueryGranularity(
+            dimensionExpression.getDruidExpression(),
+            plannerContext.getExprMacroTable()
+        );
+        if (granularity == null) {
+          continue;
+        }
+        if (queryGranularity != null) {
+          // group by more than one timestamp_floor
+          // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
+          queryGranularity = null;
+          break;
+        }
+        queryGranularity = granularity;
+        int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
+        // these settings will only affect the most inner query sent to the down streaming compute nodes
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
+        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+      }
+    }
+    if (queryGranularity == null) {
+      return query;
+    }
+    return query.withOverriddenContext(theContext);
   }
 
   /**

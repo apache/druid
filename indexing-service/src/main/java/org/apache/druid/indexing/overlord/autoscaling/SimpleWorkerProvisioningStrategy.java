@@ -121,7 +121,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
       final DefaultWorkerBehaviorConfig workerConfig =
-          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, config, "provision", log);
       if (workerConfig == null) {
         return false;
       }
@@ -186,7 +186,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       final DefaultWorkerBehaviorConfig workerConfig =
-          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, config, "terminate", log);
       if (workerConfig == null) {
         return false;
       }

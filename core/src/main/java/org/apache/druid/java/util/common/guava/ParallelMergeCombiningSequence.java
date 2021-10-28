@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -175,6 +176,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
           private boolean shouldCancelOnCleanup = true;
+
           @Override
           public Iterator<T> make()
           {
@@ -463,18 +465,19 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
 
-      LOG.debug("Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
-                + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
-                + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
-                computedNumParallelTasks,
-                parallelism,
-                getPool().getActiveThreadCount(),
-                runningThreadCount,
-                submissionCount,
-                getPool().getQueuedTaskCount(),
-                getPool().getParallelism(),
-                getPool().getPoolSize(),
-                getPool().getStealCount()
+      LOG.debug(
+          "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
+          + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
+          + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
+          computedNumParallelTasks,
+          parallelism,
+          getPool().getActiveThreadCount(),
+          runningThreadCount,
+          submissionCount,
+          getPool().getQueuedTaskCount(),
+          getPool().getParallelism(),
+          getPool().getPoolSize(),
+          getPool().getStealCount()
       );
 
       return computedNumParallelTasks;
@@ -609,7 +612,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           // which we want to target a 10ms task run time. smooth this value with a cumulative moving average in order
           // to prevent normal jitter in processing time from skewing the next yield value too far in any direction
           final long elapsedNanos = System.nanoTime() - start;
-          final double nextYieldAfter = Math.max((double) targetTimeNanos * ((double) yieldAfter / elapsedCpuNanos), 1.0);
+          final double nextYieldAfter = Math.max(
+              (double) targetTimeNanos * ((double) yieldAfter / elapsedCpuNanos),
+              1.0
+          );
           final long recursionDepth = metricsAccumulator.getTaskCount();
           final double cumulativeMovingAverage =
               (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
@@ -1376,6 +1382,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     Closer closer = Closer.create();
     closer.registerAll(cursors);
-    CloseQuietly.close(closer);
+    CloseableUtils.closeAndSuppressExceptions(closer, e -> LOG.warn(e, "Failed to close result cursors"));
   }
 }

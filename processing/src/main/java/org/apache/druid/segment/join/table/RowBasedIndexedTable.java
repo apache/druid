@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -102,7 +102,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
       final Index m;
 
       if (keyColumns.contains(column)) {
-        final ValueType keyType =
+        final ColumnType keyType =
             rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
 
         final RowBasedIndexBuilder builder = new RowBasedIndexBuilder(keyType);

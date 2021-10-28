@@ -21,7 +21,9 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.indexing.IOConfig;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -34,11 +36,16 @@ public class ClientCompactionIOConfig
   private static final String TYPE = "compact";
 
   private final ClientCompactionIntervalSpec inputSpec;
+  private final boolean dropExisting;
 
   @JsonCreator
-  public ClientCompactionIOConfig(@JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec)
+  public ClientCompactionIOConfig(
+      @JsonProperty("inputSpec") ClientCompactionIntervalSpec inputSpec,
+      @JsonProperty("dropExisting") @Nullable Boolean dropExisting
+  )
   {
     this.inputSpec = inputSpec;
+    this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty
@@ -53,6 +60,12 @@ public class ClientCompactionIOConfig
     return inputSpec;
   }
 
+  @JsonProperty
+  public boolean isDropExisting()
+  {
+    return dropExisting;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -63,13 +76,14 @@ public class ClientCompactionIOConfig
       return false;
     }
     ClientCompactionIOConfig that = (ClientCompactionIOConfig) o;
-    return Objects.equals(inputSpec, that.inputSpec);
+    return dropExisting == that.dropExisting &&
+           Objects.equals(inputSpec, that.inputSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec);
+    return Objects.hash(inputSpec, dropExisting);
   }
 
   @Override
@@ -77,6 +91,7 @@ public class ClientCompactionIOConfig
   {
     return "ClientCompactionIOConfig{" +
            "inputSpec=" + inputSpec +
+           ", dropExisting=" + dropExisting +
            '}';
   }
 }

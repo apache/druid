@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import { SqlExpression, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -30,6 +31,7 @@ import {
   BracedText,
   MoreButton,
   RefreshButton,
+  SegmentTimeline,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
@@ -39,27 +41,31 @@ import { Api } from '../../singletons';
 import {
   addFilter,
   booleanCustomTableFilter,
+  Capabilities,
+  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
   formatBytes,
   formatInteger,
   getNeedleAndMode,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   makeBooleanFilter,
+  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
   sqlQueryCustomTableFilter,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
-import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Segment ID',
     'Datasource',
     'Start',
@@ -125,7 +131,7 @@ interface TableState {
 }
 
 interface SegmentsQuery extends TableState {
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
   capabilities: Capabilities;
   groupByInterval: boolean;
 }
@@ -141,7 +147,7 @@ interface SegmentQueryResultRow {
   partitioning: string;
   size: number;
   partition_num: number;
-  num_rows: number;
+  num_rows: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
@@ -157,22 +163,22 @@ export interface SegmentsViewState {
   actions: BasicAction[];
   terminateSegmentId?: string;
   terminateDatasourceId?: string;
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
   groupByInterval: boolean;
+  showSegmentTimeline: boolean;
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
-  static PAGE_SIZE = 25;
-
-  static baseQuery(hiddenColumns: LocalStorageBackedArray<string>) {
+  static baseQuery(visibleColumns: LocalStorageBackedVisibility) {
     const columns = compact([
-      hiddenColumns.exists('Segment ID') && `"segment_id"`,
-      hiddenColumns.exists('Datasource') && `"datasource"`,
-      hiddenColumns.exists('Start') && `"start"`,
-      hiddenColumns.exists('End') && `"end"`,
-      hiddenColumns.exists('Version') && `"version"`,
-      hiddenColumns.exists('Time span') &&
+      visibleColumns.shown('Segment ID') && `"segment_id"`,
+      visibleColumns.shown('Datasource') && `"datasource"`,
+      visibleColumns.shown('Start') && `"start"`,
+      visibleColumns.shown('End') && `"end"`,
+      visibleColumns.shown('Version') && `"version"`,
+      visibleColumns.shown('Time span') &&
         `CASE
+  WHEN "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z' THEN 'All'
   WHEN "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z' THEN 'Year'
   WHEN "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z' THEN 'Month'
   WHEN "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z' THEN 'Day'
@@ -180,7 +186,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
   ELSE 'Sub minute'
 END AS "time_span"`,
-      hiddenColumns.exists('Partitioning') &&
+      visibleColumns.shown('Partitioning') &&
         `CASE
   WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
   WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
@@ -190,14 +196,14 @@ END AS "time_span"`,
   WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
   ELSE '-'
 END AS "partitioning"`,
-      hiddenColumns.exists('Partition') && `"partition_num"`,
-      hiddenColumns.exists('Size') && `"size"`,
-      hiddenColumns.exists('Num rows') && `"num_rows"`,
-      hiddenColumns.exists('Replicas') && `"num_replicas"`,
-      hiddenColumns.exists('Is published') && `"is_published"`,
-      hiddenColumns.exists('Is available') && `"is_available"`,
-      hiddenColumns.exists('Is realtime') && `"is_realtime"`,
-      hiddenColumns.exists('Is overshadowed') && `"is_overshadowed"`,
+      visibleColumns.shown('Partition') && `"partition_num"`,
+      visibleColumns.shown('Size') && `"size"`,
+      visibleColumns.shown('Num rows') && `"num_rows"`,
+      visibleColumns.shown('Replicas') && `"num_replicas"`,
+      visibleColumns.shown('Is published') && `"is_published"`,
+      visibleColumns.shown('Is available') && `"is_available"`,
+      visibleColumns.shown('Is realtime') && `"is_realtime"`,
+      visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
 
     if (!columns.length) {
@@ -231,7 +237,7 @@ END AS "partitioning"`,
     return 'Sub minute';
   }
 
-  private segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
 
   private lastTableState: TableState | undefined;
 
@@ -246,10 +252,12 @@ END AS "partitioning"`,
       actions: [],
       segmentsState: QueryState.INIT,
       segmentFilter,
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
+        ['Time span', 'Partitioning'],
       ),
       groupByInterval: false,
+      showSegmentTimeline: false,
     };
 
     this.segmentsQueryManager = new QueryManager({
@@ -260,7 +268,7 @@ END AS "partitioning"`,
           pageSize,
           filtered,
           sorted,
-          hiddenColumns,
+          visibleColumns,
           capabilities,
           groupByInterval,
         } = query;
@@ -298,7 +306,7 @@ END AS "partitioning"`,
               .join(', ');
 
             queryParts = compact([
-              SegmentsView.baseQuery(hiddenColumns),
+              SegmentsView.baseQuery(visibleColumns),
               `SELECT "start" || '/' || "end" AS "interval", *`,
               `FROM s`,
               `WHERE`,
@@ -317,7 +325,7 @@ END AS "partitioning"`,
 
             queryParts.push(`LIMIT ${pageSize * 1000}`);
           } else {
-            queryParts = [SegmentsView.baseQuery(hiddenColumns), `SELECT *`, `FROM s`];
+            queryParts = [SegmentsView.baseQuery(visibleColumns), `SELECT *`, `FROM s`];
 
             if (whereClause) {
               queryParts.push(`WHERE ${whereClause}`);
@@ -342,9 +350,9 @@ END AS "partitioning"`,
           setIntermediateQuery(sqlQuery);
           return await queryDruidSql({ query: sqlQuery });
         } else if (capabilities.hasCoordinatorAccess()) {
-          let datasourceList: string[] = (await Api.instance.get(
-            '/druid/coordinator/v1/metadata/datasources',
-          )).data;
+          let datasourceList: string[] = (
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+          ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
@@ -364,9 +372,11 @@ END AS "partitioning"`,
 
           const n = Math.min(datasourceList.length, maxResults);
           for (let i = 0; i < n && results.length < maxResults; i++) {
-            const segments = (await Api.instance.get(
-              `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
-            )).data.segments;
+            const segments = (
+              await Api.instance.get(
+                `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+              )
+            ).data?.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
@@ -422,9 +432,9 @@ END AS "partitioning"`,
     this.segmentsQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
-    const { hiddenColumns } = this.state;
+    const { visibleColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
     const { page, pageSize, filtered, sorted } = this.lastTableState!;
     this.segmentsQueryManager.runQuery({
@@ -432,7 +442,7 @@ END AS "partitioning"`,
       pageSize,
       filtered,
       sorted,
-      hiddenColumns,
+      visibleColumns,
       capabilities,
       groupByInterval,
     });
@@ -450,7 +460,7 @@ END AS "partitioning"`,
   }
 
   renderSegmentsTable() {
-    const { segmentsState, segmentFilter, hiddenColumns, groupByInterval } = this.state;
+    const { segmentsState, segmentFilter, visibleColumns, groupByInterval } = this.state;
     const { capabilities } = this.props;
 
     const segments = segmentsState.data || [];
@@ -504,10 +514,13 @@ END AS "partitioning"`,
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={segments.length > STANDARD_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Segment ID',
-            show: hiddenColumns.exists('Segment ID'),
+            show: visibleColumns.shown('Segment ID'),
             accessor: 'segment_id',
             width: 300,
             sortable: hasSql,
@@ -515,7 +528,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Datasource',
-            show: hiddenColumns.exists('Datasource'),
+            show: visibleColumns.shown('Datasource'),
             accessor: 'datasource',
             Cell: renderFilterableCell('datasource'),
           },
@@ -531,7 +544,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Start',
-            show: hiddenColumns.exists('Start'),
+            show: visibleColumns.shown('Start'),
             accessor: 'start',
             width: 120,
             sortable: hasSql,
@@ -541,7 +554,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'End',
-            show: hiddenColumns.exists('End'),
+            show: visibleColumns.shown('End'),
             accessor: 'end',
             width: 120,
             sortable: hasSql,
@@ -551,7 +564,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Version',
-            show: hiddenColumns.exists('Version'),
+            show: visibleColumns.shown('Version'),
             accessor: 'version',
             width: 120,
             sortable: hasSql,
@@ -560,7 +573,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Time span',
-            show: hiddenColumns.exists('Time span'),
+            show: visibleColumns.shown('Time span'),
             accessor: 'time_span',
             width: 100,
             sortable: hasSql,
@@ -569,7 +582,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Partitioning',
-            show: hiddenColumns.exists('Partitioning'),
+            show: visibleColumns.shown('Partitioning'),
             accessor: 'partitioning',
             width: 100,
             sortable: hasSql,
@@ -578,7 +591,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Partition',
-            show: hiddenColumns.exists('Partition'),
+            show: visibleColumns.shown('Partition'),
             accessor: 'partition_num',
             width: 60,
             filterable: false,
@@ -586,7 +599,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Size',
-            show: hiddenColumns.exists('Size'),
+            show: visibleColumns.shown('Size'),
             accessor: 'size',
             filterable: false,
             sortable: hasSql,
@@ -604,7 +617,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Num rows',
-            show: hasSql && hiddenColumns.exists('Num rows'),
+            show: hasSql && visibleColumns.shown('Num rows'),
             accessor: 'num_rows',
             filterable: false,
             defaultSortDesc: true,
@@ -617,7 +630,7 @@ END AS "partitioning"`,
           },
           {
             Header: 'Replicas',
-            show: hasSql && hiddenColumns.exists('Replicas'),
+            show: hasSql && visibleColumns.shown('Replicas'),
             accessor: 'num_replicas',
             width: 60,
             filterable: false,
@@ -625,35 +638,35 @@ END AS "partitioning"`,
           },
           {
             Header: 'Is published',
-            show: hasSql && hiddenColumns.exists('Is published'),
+            show: hasSql && visibleColumns.shown('Is published'),
             id: 'is_published',
             accessor: row => String(Boolean(row.is_published)),
             Filter: makeBooleanFilter(),
           },
           {
             Header: 'Is realtime',
-            show: hasSql && hiddenColumns.exists('Is realtime'),
+            show: hasSql && visibleColumns.shown('Is realtime'),
             id: 'is_realtime',
             accessor: row => String(Boolean(row.is_realtime)),
             Filter: makeBooleanFilter(),
           },
           {
             Header: 'Is available',
-            show: hasSql && hiddenColumns.exists('Is available'),
+            show: hasSql && visibleColumns.shown('Is available'),
             id: 'is_available',
             accessor: row => String(Boolean(row.is_available)),
             Filter: makeBooleanFilter(),
           },
           {
             Header: 'Is overshadowed',
-            show: hasSql && hiddenColumns.exists('Is overshadowed'),
+            show: hasSql && visibleColumns.shown('Is overshadowed'),
             id: 'is_overshadowed',
             accessor: row => String(Boolean(row.is_overshadowed)),
             Filter: makeBooleanFilter(),
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists(ACTION_COLUMN_LABEL),
+            show: capabilities.hasCoordinatorAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             accessor: 'segment_id',
             width: ACTION_COLUMN_WIDTH,
@@ -678,7 +691,6 @@ END AS "partitioning"`,
             Aggregated: () => '',
           },
         ]}
-        defaultPageSize={SegmentsView.PAGE_SIZE}
       />
     );
   }
@@ -741,14 +753,19 @@ END AS "partitioning"`,
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
       actions,
-      hiddenColumns,
+      visibleColumns,
+      showSegmentTimeline,
     } = this.state;
     const { capabilities } = this.props;
     const { groupByInterval } = this.state;
 
     return (
       <>
-        <div className="segments-view app-view">
+        <div
+          className={classNames('segments-view app-view', {
+            'show-segment-timeline': showSegmentTimeline,
+          })}
+        >
           <ViewControlBar label="Segments">
             <RefreshButton
               onRefresh={auto => this.segmentsQueryManager.rerunLastQuery(auto)}
@@ -776,20 +793,27 @@ END AS "partitioning"`,
               </Button>
             </ButtonGroup>
             {this.renderBulkSegmentsActions()}
+            <Switch
+              checked={showSegmentTimeline}
+              label="Show segment timeline"
+              onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+              disabled={!capabilities.hasSqlOrCoordinatorAccess()}
+            />
             <TableColumnSelector
               columns={tableColumns[capabilities.getMode()]}
               onChange={column =>
                 this.setState(prevState => ({
-                  hiddenColumns: prevState.hiddenColumns.toggle(column),
+                  visibleColumns: prevState.visibleColumns.toggle(column),
                 }))
               }
               onClose={added => {
                 if (!added) return;
                 this.fetchData(groupByInterval);
               }}
-              tableColumnsHidden={hiddenColumns.storedArray}
+              tableColumnsHidden={visibleColumns.getHiddenColumns()}
             />
           </ViewControlBar>
+          {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
           {this.renderSegmentsTable()}
         </div>
         {this.renderTerminateSegmentAction()}

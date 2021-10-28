@@ -48,7 +48,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -60,7 +60,9 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class is for testing both timeseries and groupBy queries with the same set of queries.
@@ -111,16 +113,22 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
           final List<VirtualColumn> virtualColumns = new ArrayList<>(
               Arrays.asList(tsQuery.getVirtualColumns().getVirtualColumns())
           );
+          Map<String, Object> theContext = tsQuery.getContext();
           if (timeDimension != null) {
+            theContext = new HashMap<>(tsQuery.getContext());
             final PeriodGranularity granularity = (PeriodGranularity) tsQuery.getGranularity();
             virtualColumns.add(
                 new ExpressionVirtualColumn(
                     "v0",
                     StringUtils.format("timestamp_floor(__time, '%s')", granularity.getPeriod()),
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     TestExprMacroTable.INSTANCE
                 )
             );
+
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timeDimension);
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
           }
 
           GroupByQuery newQuery = GroupByQuery
@@ -132,12 +140,12 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
               .setDimensions(
                   timeDimension == null
                   ? ImmutableList.of()
-                  : ImmutableList.of(new DefaultDimensionSpec("v0", timeDimension, ValueType.LONG))
+                  : ImmutableList.of(new DefaultDimensionSpec("v0", timeDimension, ColumnType.LONG))
               )
               .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
               .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
               .setVirtualColumns(VirtualColumns.create(virtualColumns))
-              .setContext(tsQuery.getContext())
+              .setContext(theContext)
               .build();
 
           return Sequences.map(
@@ -302,33 +310,5 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.
-  }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForArrayResponse();
-    }
-  }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForMapResponse();
-    }
-  }
-
-  @Override
-  @Test
-  public void testTimeseriesWithPostAggregatorReferencingTimestampResultField()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithPostAggregatorReferencingTimestampResultField();
-    }
   }
 }

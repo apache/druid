@@ -323,16 +323,16 @@ spec:
       replicas: 1
       runtime.properties: |
         druid.service=druid/middleManager
-        druid.worker.capacity=10
-        druid.indexer.runner.javaOpts=-server -XX:MaxDirectMemorySize=10240g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -Dlog4j.debug -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=50 -XX:GCLogFileSize=10m -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Xloggc:/druid/data/logs/peon.gc.%t.%p.log -XX:HeapDumpPath=/druid/data/logs/peon.%t.%p.hprof -Xms256m -Xmx256m
+        druid.worker.capacity=2
+        druid.indexer.runner.javaOpts=-server -Xms128m -Xmx128m -XX:MaxDirectMemorySize=256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -XX:+ExitOnOutOfMemoryError -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
         druid.indexer.task.baseTaskDir=/druid/data/baseTaskDir
         druid.server.http.numThreads=10
-        druid.indexer.fork.property.druid.processing.buffer.sizeBytes=268435456
-        druid.indexer.fork.property.druid.processing.numMergeBuffers=1
+        druid.indexer.fork.property.druid.processing.buffer.sizeBytes=25000000
+        druid.indexer.fork.property.druid.processing.numMergeBuffers=2
         druid.indexer.fork.property.druid.processing.numThreads=1
       extra.jvm.options: |-
-        -Xmx256m
-        -Xms256m
+        -Xmx64m
+        -Xms64m
       volumeMounts:
         - mountPath: /druid/data
           name: data-volume
@@ -342,6 +342,6 @@ spec:
             path: REPLACE_VOLUMES/tmp
       resources:
         requests:
-          memory: "3G"
+          memory: "1G"
         limits:
-          memory: "3G"
+          memory: "1G"

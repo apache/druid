@@ -55,12 +55,15 @@ public class CoordinatorDynamicConfig
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
   private final double percentOfSegmentsToConsiderPerMove;
+  private final boolean useBatchedSegmentSampler;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
-  /** If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources. */
+  /**
+   * If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources.
+   */
   private final boolean killUnusedSegmentsInAllDataSources;
 
   /**
@@ -73,7 +76,7 @@ public class CoordinatorDynamicConfig
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@link
    * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
-   *
+   * <p>
    * Pending segments are considered "stale" when their created_time is older than {@link
    * KillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
    */
@@ -88,6 +91,21 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsInNodeLoadingQueue;
   private final boolean pauseCoordination;
 
+  /**
+   * This decides whether additional replication is needed for segments that have failed to load due to a load timeout.
+   * When enabled, the coordinator will attempt to replicate the failed segment on a different historical server.
+   * The historical which failed to load the segment may still load the segment later. Therefore, enabling this setting
+   * works better if there are a few slow historicals in the cluster and segment availability needs to be sped up.
+   */
+  private final boolean replicateAfterLoadTimeout;
+
+  /**
+   * This is the maximum number of non-primary segment replicants to load per Coordination run. This number can
+   * be set to put a hard upper limit on the number of replicants loaded. It is a tool that can help prevent
+   * long delays in new data loads after events such as a Historical server leaving the cluster.
+   */
+  private final int maxNonPrimaryReplicantsToLoad;
+
   private static final Logger log = new Logger(CoordinatorDynamicConfig.class);
 
   @JsonCreator
@@ -100,6 +118,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+      @JsonProperty("useBatchedSegmentSampler") boolean useBatchedSegmentSampler,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -117,10 +136,12 @@ public class CoordinatorDynamicConfig
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killPendingSegmentsSkipList") Object dataSourcesToNotKillStalePendingSegmentsIn,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
-      @JsonProperty("pauseCoordination") boolean pauseCoordination
+      @JsonProperty("pauseCoordination") boolean pauseCoordination,
+      @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
+      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -130,11 +151,12 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsToMove = maxSegmentsToMove;
 
     if (percentOfSegmentsToConsiderPerMove == null) {
-      log.debug("percentOfSegmentsToConsiderPerMove was null! This is likely because your metastore does not "
-               + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
-               + "to the Druid default of %f. It is recommended that you re-submit your dynamic config with your "
-               + "desired value for percentOfSegmentsToConsideredPerMove",
-               Builder.DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
+      log.debug(
+          "percentOfSegmentsToConsiderPerMove was null! This is likely because your metastore does not "
+          + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+          + "to the Druid default of %f. It is recommended that you re-submit your dynamic config with your "
+          + "desired value for percentOfSegmentsToConsideredPerMove",
+          Builder.DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
       );
       percentOfSegmentsToConsiderPerMove = Builder.DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE;
     }
@@ -144,6 +166,7 @@ public class CoordinatorDynamicConfig
     );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
+    this.useBatchedSegmentSampler = useBatchedSegmentSampler;
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -152,7 +175,9 @@ public class CoordinatorDynamicConfig
     this.specificDataSourcesToKillUnusedSegmentsIn = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
     this.dataSourcesToNotKillStalePendingSegmentsIn =
         parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
-    this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+    this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue == null
+                                         ? Builder.DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
+                                         : maxSegmentsInNodeLoadingQueue;
     this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
         decommissioningMaxPercentOfMaxSegmentsToMove >= 0 && decommissioningMaxPercentOfMaxSegmentsToMove <= 100,
@@ -166,6 +191,23 @@ public class CoordinatorDynamicConfig
       );
     }
     this.pauseCoordination = pauseCoordination;
+    this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+
+    if (maxNonPrimaryReplicantsToLoad == null) {
+      log.debug(
+          "maxNonPrimaryReplicantsToLoad was null! This is likely because your metastore does not "
+          + "reflect this configuration being added to Druid in a recent release. Druid is defaulting the value "
+          + "to the Druid default of %d. It is recommended that you re-submit your dynamic config with your "
+          + "desired value for maxNonPrimaryReplicantsToLoad",
+          Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
+      );
+      maxNonPrimaryReplicantsToLoad = Builder.DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD;
+    }
+    Preconditions.checkArgument(
+        maxNonPrimaryReplicantsToLoad >= 0,
+        "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
+    );
+    this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -236,6 +278,12 @@ public class CoordinatorDynamicConfig
   public double getPercentOfSegmentsToConsiderPerMove()
   {
     return percentOfSegmentsToConsiderPerMove;
+  }
+
+  @JsonProperty
+  public boolean useBatchedSegmentSampler()
+  {
+    return useBatchedSegmentSampler;
   }
 
   @JsonProperty
@@ -320,6 +368,19 @@ public class CoordinatorDynamicConfig
     return pauseCoordination;
   }
 
+  @JsonProperty
+  public boolean getReplicateAfterLoadTimeout()
+  {
+    return replicateAfterLoadTimeout;
+  }
+
+  @Min(0)
+  @JsonProperty
+  public int getMaxNonPrimaryReplicantsToLoad()
+  {
+    return maxNonPrimaryReplicantsToLoad;
+  }
+
   @Override
   public String toString()
   {
@@ -330,6 +391,7 @@ public class CoordinatorDynamicConfig
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
            ", percentOfSegmentsToConsiderPerMove=" + percentOfSegmentsToConsiderPerMove +
+           ", useBatchedSegmentSampler=" + useBatchedSegmentSampler +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
@@ -341,6 +403,8 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
            ", pauseCoordination=" + pauseCoordination +
+           ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
+           ", maxNonPrimaryReplicantsToLoad=" + maxNonPrimaryReplicantsToLoad +
            '}';
   }
 
@@ -370,6 +434,9 @@ public class CoordinatorDynamicConfig
       return false;
     }
     if (percentOfSegmentsToConsiderPerMove != that.percentOfSegmentsToConsiderPerMove) {
+      return false;
+    }
+    if (useBatchedSegmentSampler != that.useBatchedSegmentSampler) {
       return false;
     }
     if (replicantLifetime != that.replicantLifetime) {
@@ -402,6 +469,12 @@ public class CoordinatorDynamicConfig
     if (pauseCoordination != that.pauseCoordination) {
       return false;
     }
+    if (replicateAfterLoadTimeout != that.replicateAfterLoadTimeout) {
+      return false;
+    }
+    if (maxNonPrimaryReplicantsToLoad != that.maxNonPrimaryReplicantsToLoad) {
+      return false;
+    }
     return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
@@ -414,6 +487,7 @@ public class CoordinatorDynamicConfig
         mergeSegmentsLimit,
         maxSegmentsToMove,
         percentOfSegmentsToConsiderPerMove,
+        useBatchedSegmentSampler,
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
@@ -424,7 +498,8 @@ public class CoordinatorDynamicConfig
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
-        pauseCoordination
+        pauseCoordination,
+        maxNonPrimaryReplicantsToLoad
     );
   }
 
@@ -445,16 +520,20 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
+    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = false;
     private static final boolean DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES = false;
-    private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+    private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
+    private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
+    private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
     private Double percentOfSegmentsToConsiderPerMove;
+    private Boolean useBatchedSegmentSampler;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
@@ -466,6 +545,8 @@ public class CoordinatorDynamicConfig
     private Object decommissioningNodes;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
     private Boolean pauseCoordination;
+    private Boolean replicateAfterLoadTimeout;
+    private Integer maxNonPrimaryReplicantsToLoad;
 
     public Builder()
     {
@@ -479,6 +560,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+        @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -490,7 +572,9 @@ public class CoordinatorDynamicConfig
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
         @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove")
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
-        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination
+        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
+        @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
+        @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -499,6 +583,7 @@ public class CoordinatorDynamicConfig
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
@@ -510,6 +595,8 @@ public class CoordinatorDynamicConfig
       this.decommissioningNodes = decommissioningNodes;
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
       this.pauseCoordination = pauseCoordination;
+      this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -539,6 +626,12 @@ public class CoordinatorDynamicConfig
     public Builder withPercentOfSegmentsToConsiderPerMove(double percentOfSegmentsToConsiderPerMove)
     {
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
+      return this;
+    }
+
+    public Builder withUseBatchedSegmentSampler(boolean useBatchedSegmentSampler)
+    {
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
       return this;
     }
 
@@ -602,6 +695,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withReplicateAfterLoadTimeout(boolean replicateAfterLoadTimeout)
+    {
+      this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
+      return this;
+    }
+
+    public Builder withMaxNonPrimaryReplicantsToLoad(int maxNonPrimaryReplicantsToLoad)
+    {
+      this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -613,6 +718,7 @@ public class CoordinatorDynamicConfig
           maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
           percentOfSegmentsToConsiderPerMove == null ? DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
                                                      : percentOfSegmentsToConsiderPerMove,
+          useBatchedSegmentSampler == null ? DEFAULT_USE_BATCHED_SEGMENT_SAMPLER : useBatchedSegmentSampler,
           replicantLifetime == null ? DEFAULT_REPLICANT_LIFETIME : replicantLifetime,
           replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
@@ -629,7 +735,10 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination
+          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination,
+          replicateAfterLoadTimeout == null ? DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null ? DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
+                                                : maxNonPrimaryReplicantsToLoad
       );
     }
 
@@ -642,7 +751,10 @@ public class CoordinatorDynamicConfig
           mergeBytesLimit == null ? defaults.getMergeBytesLimit() : mergeBytesLimit,
           mergeSegmentsLimit == null ? defaults.getMergeSegmentsLimit() : mergeSegmentsLimit,
           maxSegmentsToMove == null ? defaults.getMaxSegmentsToMove() : maxSegmentsToMove,
-          percentOfSegmentsToConsiderPerMove == null ? defaults.getPercentOfSegmentsToConsiderPerMove() : percentOfSegmentsToConsiderPerMove,
+          percentOfSegmentsToConsiderPerMove == null
+          ? defaults.getPercentOfSegmentsToConsiderPerMove()
+          : percentOfSegmentsToConsiderPerMove,
+          useBatchedSegmentSampler == null ? defaults.useBatchedSegmentSampler() : useBatchedSegmentSampler,
           replicantLifetime == null ? defaults.getReplicantLifetime() : replicantLifetime,
           replicationThrottleLimit == null ? defaults.getReplicationThrottleLimit() : replicationThrottleLimit,
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,
@@ -663,7 +775,11 @@ public class CoordinatorDynamicConfig
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
           : decommissioningMaxPercentOfMaxSegmentsToMove,
-          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination
+          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination,
+          replicateAfterLoadTimeout == null ? defaults.getReplicateAfterLoadTimeout() : replicateAfterLoadTimeout,
+          maxNonPrimaryReplicantsToLoad == null
+          ? defaults.getMaxNonPrimaryReplicantsToLoad()
+          : maxNonPrimaryReplicantsToLoad
       );
     }
   }

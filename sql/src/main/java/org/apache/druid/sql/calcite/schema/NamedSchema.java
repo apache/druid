@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Schema;
 
+import javax.annotation.Nullable;
+
 /**
  * This interface provides everything that is needed to register a {@link Schema} as a sub schema to the root schema
  * of Druid SQL. The {@link #getSchemaName()} will be used to access the provided {@link Schema} via SQL.
@@ -31,6 +33,17 @@ public interface NamedSchema
    * @return The name that this schema should be registered to.
    */
   String getSchemaName();
+
+  /**
+   * For a given name of a table, function, etc of this schema, return the value most appropriate to use for
+   * {@link org.apache.druid.server.security.Resource#getType()} for the resource, used during authorization. If this
+   * method returns null then the resource does not need any authorization.
+   */
+  @Nullable
+  default String getSchemaResourceType(String resourceName)
+  {
+    return null;
+  }
 
   /**
    * @return The Schema that Calcite should use.

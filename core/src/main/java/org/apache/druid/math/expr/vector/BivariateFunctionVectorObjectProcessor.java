@@ -25,7 +25,10 @@ import org.apache.druid.math.expr.Expr;
 import java.lang.reflect.Array;
 
 /**
- * Base {@link ExprVectorProcessor} for expressions and functions with 2 'object' typed inputs (strings, arrays)
+ * Base {@link ExprVectorProcessor} for expressions and functions with 2 'object' typed inputs (strings, arrays).
+ * 
+ * In SQL compatible null handling mode, for a row with either left or right input as a null value, it will be handled
+ * by {@link #processNull(int)} instead of {@link #processIndex(Object, Object, int)}.
  */
 public abstract class BivariateFunctionVectorObjectProcessor<TLeftInput, TRightInput, TOutput>
     implements ExprVectorProcessor<TOutput>

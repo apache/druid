@@ -34,7 +34,9 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -61,6 +63,9 @@ public class PollingLookupTest extends InitializedNullHandlingTest
   );
 
   private static final long POLL_PERIOD = 1000L;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @JsonTypeName("mock")
   private static class MockDataFetcher implements DataFetcher
@@ -97,6 +102,7 @@ public class PollingLookupTest extends InitializedNullHandlingTest
     }
 
     @Override
+    @SuppressWarnings("EqualsHashCode")
     public boolean equals(Object obj)
     {
       return obj instanceof MockDataFetcher;
@@ -202,6 +208,19 @@ public class PollingLookupTest extends InitializedNullHandlingTest
   {
     PollingLookup pollingLookup2 = new PollingLookup(1L, dataFetcher, pollingCacheFactory);
     Assert.assertFalse(Arrays.equals(pollingLookup2.getCacheKey(), pollingLookup.getCacheKey()));
+  }
+
+  @Test
+  public void testCanGetKeySet()
+  {
+    Assert.assertFalse(pollingLookup.canGetKeySet());
+  }
+
+  @Test
+  public void testKeySet()
+  {
+    expectedException.expect(UnsupportedOperationException.class);
+    pollingLookup.keySet();
   }
 
   private void assertMapLookup(Map<String, String> map, LookupExtractor lookup)

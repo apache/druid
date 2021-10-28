@@ -40,7 +40,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -83,7 +83,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new ClientCompactionIntervalSpec(
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
-            )
+            ),
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             null,
@@ -201,6 +202,10 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
+    Assert.assertEquals(
+        query.getIoConfig().isDropExisting(),
+        task.getIoConfig().isDropExisting()
+    );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
 
@@ -210,11 +215,11 @@ public class ClientCompactionTaskQuerySerdeTest
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
-        new SegmentLoaderFactory(null, mapper),
+        new SegmentCacheManagerFactory(mapper),
         new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
             new ParallelIndexTuningConfig(
                 null,
@@ -255,6 +260,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -268,7 +274,8 @@ public class ClientCompactionTaskQuerySerdeTest
             new ClientCompactionIntervalSpec(
                 Intervals.of("2019/2020"),
                 "testSha256OfSortedSegmentIds"
-            )
+            ),
+            true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
@@ -331,7 +338,7 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                   binder.bind(IndexingServiceClient.class).toInstance(new NoopIndexingServiceClient());
                 }

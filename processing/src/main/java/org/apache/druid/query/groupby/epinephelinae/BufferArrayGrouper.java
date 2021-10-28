@@ -143,7 +143,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       // Slice up the buffer.
       buffer.position(0);
       buffer.limit(usedFlagBufferEnd);
-      usedFlagMemory = WritableMemory.wrap(buffer.slice(), ByteOrder.nativeOrder());
+      usedFlagMemory = WritableMemory.writableWrap(buffer.slice(), ByteOrder.nativeOrder());
 
       buffer.position(usedFlagBufferEnd);
       buffer.limit(buffer.capacity());

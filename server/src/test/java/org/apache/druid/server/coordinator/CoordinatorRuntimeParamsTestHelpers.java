@@ -32,7 +32,7 @@ public class CoordinatorRuntimeParamsTestHelpers
   {
     return newBuilder()
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster));
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false));
   }
 
   private CoordinatorRuntimeParamsTestHelpers()

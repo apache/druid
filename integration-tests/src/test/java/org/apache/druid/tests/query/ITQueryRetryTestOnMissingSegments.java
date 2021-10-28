@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.server.coordination.ServerManagerForQueryRetryTest;
+import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
@@ -53,7 +53,7 @@ import java.util.Map;
  * the historical drops the segment after the broker issues the query to the historical. To mimic this case, this
  * test spawns two historicals, a normal historical and a historical modified for testing. The later historical
  * announces all segments assigned, but doesn't serve all of them. Instead, it can report missing segments for some
- * segments. See {@link ServerManagerForQueryRetryTest} for more details.
+ * segments. See {@link ServerManagerForQueryErrorTest} for more details.
  * <p>
  * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
  */
@@ -237,7 +237,7 @@ public class ITQueryRetryTestOnMissingSegments
     context.put(QueryContexts.USE_CACHE_KEY, false);
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
-    context.put(ServerManagerForQueryRetryTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
+    context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
     return context;
   }
 }

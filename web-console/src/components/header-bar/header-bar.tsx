@@ -27,10 +27,10 @@ import {
   Navbar,
   NavbarDivider,
   NavbarGroup,
-  Popover,
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import {
@@ -175,7 +175,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
   }
 
   return (
-    <Popover
+    <Popover2
       content={
         <PopoverText>
           <p>The console is running in restricted mode.</p>
@@ -192,7 +192,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       position={Position.BOTTOM_RIGHT}
     >
       <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
-    </Popover>
+    </Popover2>
   );
 });
 
@@ -367,12 +367,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <RestrictedMode capabilities={capabilities} />
-        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
+        <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.COG} />
-        </Popover>
-        <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
+        </Popover2>
+        <Popover2 content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.HELP} />
-        </Popover>
+        </Popover2>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
       {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}

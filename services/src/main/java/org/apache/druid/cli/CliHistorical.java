@@ -137,7 +137,7 @@ public class CliHistorical extends ServerRunnable
   }
 
   /**
-   * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryRetryTest}.
+   * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryErrorTest}.
    */
   @VisibleForTesting
   public void bindQuerySegmentWalker(Binder binder)

@@ -17,7 +17,7 @@
  */
 
 export function shallowCopy(v: any): any {
-  return Array.isArray(v) ? v.slice() : Object.assign({}, v);
+  return Array.isArray(v) ? v.slice() : { ...v };
 }
 
 export function isEmpty(v: any): boolean {
@@ -32,14 +32,14 @@ export function parsePath(path: string): string[] {
   const parts: string[] = [];
   let rest = path;
   while (rest) {
-    const escapedMatch = rest.match(/^\{([^{}]*)\}(?:\.(.*))?$/);
+    const escapedMatch = /^\{([^{}]*)\}(?:\.(.*))?$/.exec(rest);
     if (escapedMatch) {
       parts.push(escapedMatch[1]);
       rest = escapedMatch[2];
       continue;
     }
 
-    const normalMatch = rest.match(/^([^.]*)(?:\.(.*))?$/);
+    const normalMatch = /^([^.]*)(?:\.(.*))?$/.exec(rest);
     if (normalMatch) {
       parts.push(normalMatch[1]);
       rest = normalMatch[2];
@@ -70,7 +70,7 @@ export function deepGet<T extends Record<string, any>>(value: T, path: string): 
 
 export function deepSet<T extends Record<string, any>>(value: T, path: string, x: any): T {
   const parts = parsePath(path);
-  let myKey = parts.shift() as string; // Must be defined
+  let myKey = parts.shift()!; // Must be defined
   const valueCopy = shallowCopy(value);
   if (Array.isArray(valueCopy) && isAppend(myKey)) myKey = String(valueCopy.length);
   if (parts.length) {
@@ -102,7 +102,7 @@ export function deepSetMulti<T extends Record<string, any>>(
 export function deepDelete<T extends Record<string, any>>(value: T, path: string): T {
   const valueCopy = shallowCopy(value);
   const parts = parsePath(path);
-  const firstKey = parts.shift() as string; // Must be defined
+  const firstKey = parts.shift()!; // Must be defined
   if (parts.length) {
     const firstKeyValue = value[firstKey];
     if (firstKeyValue) {

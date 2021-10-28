@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -85,6 +84,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -96,8 +96,10 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class provides general utility to test any druid aggregation implementation given raw data,
@@ -116,6 +118,8 @@ public class AggregationTestHelper implements Closeable
   private final TemporaryFolder tempFolder;
   private final Closer resourceCloser;
 
+  private final Map<String, Object> queryContext;
+
   private AggregationTestHelper(
       ObjectMapper mapper,
       IndexMerger indexMerger,
@@ -124,7 +128,8 @@ public class AggregationTestHelper implements Closeable
       QueryRunnerFactory factory,
       TemporaryFolder tempFolder,
       List<? extends Module> jsonModulesToRegister,
-      Closer resourceCloser
+      Closer resourceCloser,
+      Map<String, Object> queryContext
   )
   {
     this.mapper = mapper;
@@ -134,6 +139,7 @@ public class AggregationTestHelper implements Closeable
     this.factory = factory;
     this.tempFolder = tempFolder;
     this.resourceCloser = resourceCloser;
+    this.queryContext = queryContext;
 
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
@@ -174,7 +180,8 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        closer
+        closer,
+        Collections.emptyMap()
     );
   }
 
@@ -213,7 +220,8 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        Closer.create()
+        Closer.create(),
+        Collections.emptyMap()
     );
   }
 
@@ -264,7 +272,8 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        resourceCloser
+        resourceCloser,
+        Collections.emptyMap()
     );
   }
 
@@ -307,7 +316,25 @@ public class AggregationTestHelper implements Closeable
         factory,
         tempFolder,
         jsonModulesToRegister,
-        resourceCloser
+        resourceCloser,
+        Collections.emptyMap()
+    );
+  }
+
+  public AggregationTestHelper withQueryContext(final Map<String, Object> queryContext)
+  {
+    final Map<String, Object> newContext = new HashMap<>(this.queryContext);
+    newContext.putAll(queryContext);
+    return new AggregationTestHelper(
+        mapper,
+        indexMerger,
+        indexIO,
+        toolChest,
+        factory,
+        tempFolder,
+        Collections.emptyList(),
+        resourceCloser,
+        newContext
     );
   }
 
@@ -658,7 +685,7 @@ public class AggregationTestHelper implements Closeable
   //from each segment, later deserialize and merge and finally return the results
   public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final String queryJson)
   {
-    return runQueryOnSegments(segmentDirs, readQuery(queryJson));
+    return runQueryOnSegments(segmentDirs, readQuery(queryJson).withOverriddenContext(queryContext));
   }
 
   public <T> Sequence<T> runQueryOnSegments(final List<File> segmentDirs, final Query<T> query)
@@ -685,7 +712,7 @@ public class AggregationTestHelper implements Closeable
     }
     finally {
       for (Segment segment : segments) {
-        CloseQuietly.close(segment);
+        CloseableUtils.closeAndWrapExceptions(segment);
       }
     }
   }
