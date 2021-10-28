@@ -857,7 +857,7 @@ Specify objects to ingest as either:
 |[`properties`](#s3-input-properties-object)|Properties Object to override the default S3 configuration.|None|No (defaults will be used if not given)
 
 When you supply a list of `prefixes`, Druid lists the contents and then ingests
-*all* objects contained in the `prefixes` you specify.
+all objects contained in the specified prefixes.
 
 > You can view the payload of individual `index_parallel` tasks to see how Druid has divided up the work of ingestion.
 
