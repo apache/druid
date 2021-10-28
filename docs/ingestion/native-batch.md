@@ -940,7 +940,7 @@ The following example uses `objects` to ingest two specific objects, one from th
 ...
 ```
 
-This ingestion specification provides task-specific credentials to ingest two specific objects:
+The following ingestion specification provides task-specific credentials to ingest two specific objects:
 
 ```json
 ...
