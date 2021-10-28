@@ -30,7 +30,13 @@ At ingestion time, you control rollup with the `rollup` setting in the [`granula
 
 When you disable rollup, Druid loads each row as-is without doing any form of pre-aggregation. This mode is similar to databases that do not support a rollup feature. Set `rollup` to `false` if you want Druid to store each record as-is, without any rollup summarization.
 
-Use roll-up to create a table datasource if you want best performance or are working within a strict space constraint, and you don't need raw values from [high-cardinality dimensions](schema-design.md#sketches).  Conversely, disable roll-up when you need a table that returns individual rows or when you need to be able to execute `GROUP BY` or `WHERE` queries on _any_ column.  If there are multiple needs, multiple tables with different roll-up configurations are a possible solution.
+Use roll-up when creating a table datasource if both:
+- You want optimal performance or you have strict space constraints.
+- You don't need raw values from [high-cardinality dimensions](schema-design.md#sketches). 
+Conversely, disable roll-up if either:
+- You need results for individual rows.
+- You need to execute `GROUP BY` or `WHERE` queries on _any_ column.
+If you have conflicting needs for different use cases, you can create multiple tables with different roll-up configurations on each table.
 
 ## Maximizing rollup ratio
 
