@@ -841,7 +841,7 @@ Use the *S3 input source* to read objects directly from S3-like storage.
 
 > To ingest from S3-type storage, you need to [load](../development/extensions.html#loading-extensions) the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension.
 
-> The S3 input source is splittable, meaning it can be used by the [Parallel task](#parallel-task).  Each `index_parallel` task will then read one or multiple objects.
+The S3 input source is splittable, meaning it can be used by the [Parallel task](#parallel-task).  In this case each `index_parallel` task reads one or more objects.
 
 Objects to ingest can be specified as:
 
