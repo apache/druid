@@ -410,7 +410,7 @@ There are several emitters available:
 
 ##### HTTP Emitter Module TLS Overrides
 
-When emitting events to a TLS-enabled receiver, the HTTP Emitter will by default use an SSLContext obtained via the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
+By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
 SSLContext that would be used for internal communications between Druid processes.
 
 In some use cases it may be desirable to have the HTTP Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
