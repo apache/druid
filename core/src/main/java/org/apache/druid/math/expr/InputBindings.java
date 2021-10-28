@@ -20,12 +20,20 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
 public class InputBindings
 {
+  private static final Expr.ObjectBinding NIL_BINDINGS = name -> null;
+
+  public static Expr.ObjectBinding nilBindings()
+  {
+    return NIL_BINDINGS;
+  }
+
   /**
    * Create an {@link Expr.InputBindingInspector} backed by a map of binding identifiers to their {@link ExprType}
    */
@@ -59,6 +67,35 @@ public class InputBindings
     return (String name) -> {
       Supplier<Object> supplier = bindings.get(name);
       return supplier == null ? null : supplier.get();
+    };
+  }
+
+  /**
+   * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
+   * {@link Expr}
+   */
+  public static Expr.ObjectBinding withTypedSuppliers(final Map<String, Pair<ExpressionType, Supplier<Object>>> bindings)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
+        return binding == null || binding.rhs == null ? null : binding.rhs.get();
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        Pair<ExpressionType, Supplier<Object>> binding = bindings.get(name);
+        if (binding == null) {
+          return null;
+        }
+        return binding.lhs;
+      }
     };
   }
 }

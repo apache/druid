@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.InputBindings;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Minutes;
@@ -102,7 +103,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.withPeriodAdded(Months.ONE, step).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -119,7 +120,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.withPeriodAdded(Months.ONE, step).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -136,7 +137,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.withPeriodAdded(Months.ONE, step).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -152,7 +153,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.withPeriodAdded(Minutes.ONE, 1).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -168,7 +169,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.withPeriodAdded(Days.ONE, 1).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -185,7 +186,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
 
     Assert.assertEquals(
         timestamp.toDateTime(DateTimes.inferTzFromString("America/Los_Angeles")).withPeriodAdded(Years.ONE, 1).getMillis(),
-        expr.eval(ExprUtils.nilBindings()).asLong()
+        expr.eval(InputBindings.nilBindings()).asLong()
     );
   }
 
@@ -232,9 +233,9 @@ public class TimestampShiftMacroTest extends MacroTestBase
     );
 
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(2678400000L, expr.eval(ExprUtils.nilBindings()).value());
+      Assert.assertEquals(2678400000L, expr.eval(InputBindings.nilBindings()).value());
     } else {
-      Assert.assertNull(expr.eval(ExprUtils.nilBindings()).value());
+      Assert.assertNull(expr.eval(InputBindings.nilBindings()).value());
     }
   }
 

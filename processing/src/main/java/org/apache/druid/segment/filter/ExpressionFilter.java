@@ -29,8 +29,8 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
@@ -143,7 +143,7 @@ public class ExpressionFilter implements Filter
       // or not.
       return BooleanVectorValueMatcher.of(
           factory.getReadableVectorInspector(),
-          theExpr.eval(ExprUtils.nilBindings()).asBoolean()
+          theExpr.eval(InputBindings.nilBindings()).asBoolean()
       );
     }
 
@@ -248,7 +248,7 @@ public class ExpressionFilter implements Filter
   {
     if (bindingDetails.get().getRequiredBindings().isEmpty()) {
       // Constant expression.
-      if (expr.get().eval(ExprUtils.nilBindings()).asBoolean()) {
+      if (expr.get().eval(InputBindings.nilBindings()).asBoolean()) {
         return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
       } else {
         return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));

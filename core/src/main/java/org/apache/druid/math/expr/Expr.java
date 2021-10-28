@@ -284,13 +284,20 @@ public interface Expr extends Cacheable
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
      */
     @Nullable
     Object get(String name);
+
+    @Nullable
+    @Override
+    default ExpressionType getType(String name)
+    {
+      return null;
+    }
   }
 
   /**

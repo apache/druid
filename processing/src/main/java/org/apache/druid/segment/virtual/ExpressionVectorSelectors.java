@@ -23,9 +23,9 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -52,7 +52,7 @@ public class ExpressionVectorSelectors
     // only constant expressions are currently supported, nothing else should get here
 
     if (plan.isConstant()) {
-      String constant = plan.getExpression().eval(ExprUtils.nilBindings()).asString();
+      String constant = plan.getExpression().eval(InputBindings.nilBindings()).asString();
       return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorInspector(), constant);
     }
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && (plan.getOutputType() != null && plan.getOutputType().is(ExprType.STRING))) {
@@ -75,7 +75,7 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
           factory.getReadableVectorInspector(),
-          (Number) plan.getExpression().eval(ExprUtils.nilBindings()).value()
+          (Number) plan.getExpression().eval(InputBindings.nilBindings()).value()
       );
     }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
@@ -94,7 +94,7 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          plan.getExpression().eval(ExprUtils.nilBindings()).value()
+          plan.getExpression().eval(InputBindings.nilBindings()).value()
       );
     }
 

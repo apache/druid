@@ -20,11 +20,13 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -41,6 +43,12 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   ByteBuffer buffer = ByteBuffer.allocate(1 << 16);
+
+  @BeforeClass
+  public static void setup()
+  {
+    Types.registerStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypesTest.PairObjectByteStrategy());
+  }
 
   @Test
   public void testStringSerde()
@@ -109,10 +117,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.STRING_ARRAY,
-        28,
+        15,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
+    assertExpr(0, ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
   }
 
   @Test
@@ -130,7 +138,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.LONG_ARRAY,
-        30,
+        14,
         10
     ));
     assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
@@ -143,10 +151,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.LONG_ARRAY,
-        NullHandling.sqlCompatible() ? 33 : 30,
+        14,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
+    assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
   }
 
   @Test
@@ -164,7 +172,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.DOUBLE_ARRAY,
-        30,
+        14,
         10
     ));
     assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
@@ -177,10 +185,32 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.DOUBLE_ARRAY,
-        NullHandling.sqlCompatible() ? 33 : 30,
+        14,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
+    assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
+  }
+
+  @Test
+  public void testComplexEval()
+  {
+    final ExpressionType complexType = ExpressionType.fromColumnType(TypesTest.NULLABLE_TEST_PAIR_TYPE);
+    assertExpr(0, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)));
+    assertExpr(1024, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)));
+  }
+
+  @Test
+  public void testComplexEvalTooBig()
+  {
+    final ExpressionType complexType = ExpressionType.fromColumnType(TypesTest.NULLABLE_TEST_PAIR_TYPE);
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage(StringUtils.format(
+        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        complexType.asTypeString(),
+        23,
+        10
+    ));
+    assertExpr(0, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)), 10);
   }
 
   @Test
@@ -299,27 +329,21 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
           expected.asArray(),
-          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).asArray()
+          ExprEval.deserialize(buffer, position, expected.type()).asArray()
       );
       Assert.assertArrayEquals(
           expected.asArray(),
-          ExprEval.deserialize(buffer, position).asArray()
+          ExprEval.deserialize(buffer, position, expected.type()).asArray()
       );
     } else {
       Assert.assertEquals(
           expected.value(),
-          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).value()
+          ExprEval.deserialize(buffer, position, expected.type()).value()
       );
       Assert.assertEquals(
           expected.value(),
-          ExprEval.deserialize(buffer, position).value()
+          ExprEval.deserialize(buffer, position, expected.type()).value()
       );
     }
-    assertEstimatedBytes(expected, maxSizeBytes);
-  }
-
-  private void assertEstimatedBytes(ExprEval eval, int maxSizeBytes)
-  {
-    ExprEval.estimateAndCheckMaxBytes(eval, maxSizeBytes);
   }
 }

@@ -189,7 +189,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("x"),
         null,
         "0",
-        null,
+        "<LONG>[]",
         true,
         "array_set_add(__acc, x)",
         "array_set_add_all(__acc, expr_agg_name)",

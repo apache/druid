@@ -24,11 +24,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -159,7 +160,7 @@ public class ExpressionSelectors
     final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
 
     // Optimization for constant expressions
-    if (bindings.equals(ExprUtils.nilBindings())) {
+    if (bindings.equals(InputBindings.nilBindings())) {
       return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 
@@ -261,11 +262,12 @@ public class ExpressionSelectors
       List<String> columns
   )
   {
-    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
+    final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
+      final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
 
       if (columnCapabilities == null || columnCapabilities.isArray()) {
         // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
@@ -285,30 +287,48 @@ public class ExpressionSelectors
             multiVal
         );
       } else {
-        // Unhandleable ValueType (COMPLEX).
-        supplier = null;
+        // complex type just pass straight through
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
+        if (!(selector instanceof NilColumnValueSelector)) {
+          supplier = selector::getObject;
+        } else {
+          supplier = null;
+        }
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, supplier);
+        suppliers.put(columnName, new Pair<>(expressionType, supplier));
       }
     }
 
     if (suppliers.isEmpty()) {
-      return ExprUtils.nilBindings();
+      return InputBindings.nilBindings();
     } else if (suppliers.size() == 1 && columns.size() == 1) {
       // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
       // asked for something.
       final String column = Iterables.getOnlyElement(suppliers.keySet());
-      final Supplier<Object> supplier = Iterables.getOnlyElement(suppliers.values());
+      final Pair<ExpressionType, Supplier<Object>> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return identifierName -> {
-        // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-        assert column.equals(identifierName);
-        return supplier.get();
+      return new Expr.ObjectBinding()
+      {
+        @Nullable
+        @Override
+        public Object get(String name)
+        {
+          // There's only one binding, and it must be the single column, so it can safely be ignored in production.
+          assert column.equals(name);
+          return supplier.rhs.get();
+        }
+
+        @Nullable
+        @Override
+        public ExpressionType getType(String name)
+        {
+          return supplier.lhs;
+        }
       };
     } else {
-      return InputBindings.withSuppliers(suppliers);
+      return InputBindings.withTypedSuppliers(suppliers);
     }
   }
 

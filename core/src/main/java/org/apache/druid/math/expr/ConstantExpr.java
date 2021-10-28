@@ -489,3 +489,36 @@ class StringArrayExpr extends ConstantExpr<String[]>
     return Arrays.hashCode(value);
   }
 }
+
+class ComplexExpr extends ConstantExpr<Object>
+{
+  protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
+  {
+    super(outputType, value);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofComplex(outputType, value);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ComplexExpr that = (ComplexExpr) o;
+    return Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
+  }
+}
