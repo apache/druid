@@ -72,11 +72,11 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(
-              id,
-              HttpMethod.POST,
-              "stop",
-              publish ? "publish=true" : null,
-              true
+          id,
+          HttpMethod.POST,
+          "stop",
+          publish ? "publish=true" : null,
+          true
       );
       return isSuccess(response);
     }
