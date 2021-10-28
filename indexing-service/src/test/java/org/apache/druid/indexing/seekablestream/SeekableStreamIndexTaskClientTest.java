@@ -48,7 +48,6 @@ import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -153,65 +152,6 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  @Ignore
-  public void testPauseWaiting()
-  {
-    EasyMock.reset(taskInfoProvider);
-    EasyMock.reset(responseHolder);
-    EasyMock.reset(httpClient);
-
-    EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID))
-            .andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
-            .anyTimes();
-    EasyMock.expect(taskInfoProvider.getTaskStatus(TEST_ID))
-            .andReturn(Optional.of(TaskStatus.running(TEST_ID)))
-            .anyTimes();
-
-    StringFullResponseHolder responseHolder1 = createMock(StringFullResponseHolder.class);
-    EasyMock.expect(responseHolder1.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(1);
-    EasyMock.expect(responseHolder1.getContent()).andReturn("{\"0\":1, \"1\":10}").times(1);
-
-    StringFullResponseHolder responseHolder2 = createMock(StringFullResponseHolder.class);
-    EasyMock.expect(responseHolder2.getStatus()).andReturn(HttpResponseStatus.OK).times(1);
-    EasyMock.expect(responseHolder2.getContent()).andReturn("{\"status\":\"PAUSED\"}").times(1);
-
-    StringFullResponseHolder responseHolder3 = createMock(StringFullResponseHolder.class);
-    EasyMock.expect(responseHolder3.getStatus()).andReturn(HttpResponseStatus.OK).times(1);
-    EasyMock.expect(responseHolder3.getContent()).andReturn("{\"0\":1, \"1\":10}").times(1);
-
-    /*
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(1)
-            .andReturn(HttpResponseStatus.OK).times(1)
-            .andReturn(HttpResponseStatus.OK).times(1);
-
-    EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").times(1)
-            .andReturn("{\"status\":\"PAUSED\"}").times(1)
-            .andReturn("{\"0\":1, \"1\":10}").times(1);
-
-     */
-
-    EasyMock.expect(httpClient.go(
-            EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(StringFullResponseHandler.class),
-            EasyMock.eq(TEST_HTTP_TIMEOUT)
-    )).andReturn(
-            Futures.immediateFuture(responseHolder1)
-    ).times(1).andReturn(
-            Futures.immediateFuture(responseHolder2)
-    ).times(1).andReturn(
-          Futures.immediateFuture(responseHolder3)
-    ).times(1);
-
-    replayAll();
-
-    Map<Integer, Long> results = taskClient.pause(TEST_ID);
-
-    verifyAll();
-
-    Assert.assertEquals(results.size(), 1);
-  }
-
-  @Test
   public void testPauseSuccessfully() throws Exception
   {
     EasyMock.reset(taskInfoProvider);
@@ -298,24 +238,13 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testStopTaskOk()
+  public void testStopPauingTaskOk()
   {
     ListenableFuture future = Futures.immediateFuture(Collections.emptyMap());
-    SeekableStreamIndexTaskClient.PauseCallable pauseCallable = taskClient.new PauseCallable(TEST_ID);
-    taskClient.stopTask(future, pauseCallable);
+    SeekableStreamIndexTaskClient.PauseCallable pauseCallable = taskClient.new PauseCallable(TEST_ID, taskClient);
+    taskClient.stopPausingTask(future, pauseCallable);
     Assert.assertEquals(pauseCallable.getTaskId(), TEST_ID);
-    Assert.assertEquals(pauseCallable.isRunning(), false);
-  }
-
-  @Test
-  public void testStopTaskException() throws Exception
-  {
-    ListenableFuture future = createMock(ListenableFuture.class);
-    EasyMock.expect(future.get()).andThrow(new InterruptedException("InterruptedException"));
-    SeekableStreamIndexTaskClient.PauseCallable pauseCallable = taskClient.new PauseCallable(TEST_ID);
-    taskClient.stopTask(future, pauseCallable);
-    Assert.assertEquals(pauseCallable.getTaskId(), TEST_ID);
-    Assert.assertEquals(pauseCallable.isRunning(), false);
+    Assert.assertEquals(taskClient.getWaitPausingTaskFinishedMap().get(TEST_ID), false);
   }
 
   private static class MySeekableStreamIndexTaskClient extends SeekableStreamIndexTaskClient

@@ -396,7 +396,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private boolean changeTaskCount(int desiredActiveTaskCount)
+  private boolean changeTaskCount(int desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
   {
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
@@ -1283,7 +1283,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void gracefulShutdownInternal()
+  public void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
@@ -2527,7 +2527,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void checkTaskDuration()
+  private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
   {
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
@@ -2564,9 +2564,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     try {
       Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-    }
-    catch (Exception e) {
-      log.warn(e, "Pause exception, GroupIds [%s]", Joiner.on(",").join(futureGroupIds));
     }
     finally {
       for (int i = 0; i < futureGroupIds.size(); ++i) {
