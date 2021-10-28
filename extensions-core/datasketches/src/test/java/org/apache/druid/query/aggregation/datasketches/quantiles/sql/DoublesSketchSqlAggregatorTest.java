@@ -67,7 +67,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
@@ -818,6 +820,43 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 "0"
             }
         )
+    );
+  }
+
+  @Test
+  public void testFailWithSmallMaxStreamLength() throws Exception
+  {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(
+        DoublesSketchApproxQuantileSqlAggregator.CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
+        1
+    );
+    testQueryThrows(
+        "SELECT\n"
+        + "APPROX_QUANTILE_DS(m1, 0.01),\n"
+        + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
+        + "FROM foo",
+        context,
+        Collections.singletonList(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new DoublesSketchAggregatorFactory("a0:agg", "m1", null, 1L),
+                      new DoublesSketchAggregatorFactory("a1:agg", "cnt", null, 1L)
+                  ))
+                  .postAggregators(
+                      new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
+                      new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f)
+                  )
+                  .context(context)
+                  .build()
+        ),
+        expectedException -> {
+          expectedException.expect(IllegalStateException.class);
+          expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
+        }
     );
   }
 

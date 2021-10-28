@@ -24,7 +24,7 @@ title: "Apache Ranger Security"
   
 This Apache Druid extension adds an Authorizer which implements access control for Druid, backed by [Apache Ranger](https://ranger.apache.org/). Please see [Authentication and Authorization](../../design/auth.md) for more information on the basic facilities this extension provides.
 
-Make sure to [include](../../development/extensions.md#loading-extensions) `druid-ranger-security` as an extension.
+Make sure to [include](../../development/extensions.md#loading-extensions) `druid-ranger-security` in the extensions load list.
 
 > The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that, it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used by the audit component in Ranger, but is not required. 
 

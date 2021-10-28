@@ -19,8 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
@@ -31,8 +36,73 @@ import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class DoublesSketchAggregatorFactoryTest
 {
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(DoublesSketchAggregatorFactory.class)
+                  .withNonnullFields("name", "fieldName")
+                  .withIgnoredFields("cacheTypeId")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerSubtypes(new NamedType(DoublesSketchAggregatorFactory.class, DoublesSketchModule.DOUBLES_SKETCH));
+    final DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        1024,
+        1000L
+    );
+    final byte[] json = mapper.writeValueAsBytes(factory);
+    final DoublesSketchAggregatorFactory fromJson = (DoublesSketchAggregatorFactory) mapper.readValue(
+        json,
+        AggregatorFactory.class
+    );
+    Assert.assertEquals(factory, fromJson);
+  }
+
+  @Test
+  public void testDefaultParams()
+  {
+    final DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        null,
+        null
+    );
+
+    Assert.assertEquals(DoublesSketchAggregatorFactory.DEFAULT_K, factory.getK());
+    Assert.assertEquals(DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
+  }
+
+  @Test
+  public void testMaxIntermediateSize()
+  {
+    DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        128,
+        null
+    );
+    Assert.assertEquals(24608L, factory.getMaxIntermediateSize());
+
+    factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        128,
+        1_000_000_000_000L
+    );
+    Assert.assertEquals(34848L, factory.getMaxIntermediateSize());
+  }
+
   @Test
   public void testResultArraySignature()
   {

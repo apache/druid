@@ -29,7 +29,7 @@ import './filter-table.scss';
 
 export function filterTableSelectedColumnName(
   sampleData: HeaderAndRows,
-  selectedFilter: DruidFilter | undefined,
+  selectedFilter: Partial<DruidFilter> | undefined,
 ): string | undefined {
   if (!selectedFilter) return;
   const selectedFilterName = selectedFilter.dimension;

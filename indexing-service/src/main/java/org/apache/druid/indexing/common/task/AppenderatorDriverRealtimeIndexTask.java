@@ -174,7 +174,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @MonotonicNonNull
   private String errorMsg;
 
-
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
       @JsonProperty("id") String id,
@@ -599,7 +598,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                0L
             )
         )
     );
@@ -776,7 +776,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getQueryRunnerFactoryConglomerate(),
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
-        toolbox.getQueryExecutorService(),
+        toolbox.getQueryProcessingPool(),
         toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),

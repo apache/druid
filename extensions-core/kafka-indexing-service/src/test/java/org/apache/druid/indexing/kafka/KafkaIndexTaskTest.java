@@ -60,7 +60,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -104,6 +104,7 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -2685,7 +2686,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
-        true,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -2783,7 +2783,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         false,
-        false
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -2884,10 +2885,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         this::makeTimeseriesAndScanConglomerate,
-        Execs.directExecutor(), // queryExecutorService
+        DirectQueryProcessingPool.INSTANCE,
         NoopJoinableFactory.INSTANCE,
         () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
+        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),

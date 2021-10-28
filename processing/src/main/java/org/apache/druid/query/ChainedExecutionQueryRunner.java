@@ -25,8 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,12 +34,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -62,28 +58,18 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
 {
   private static final Logger log = new Logger(ChainedExecutionQueryRunner.class);
 
+  private final QueryProcessingPool queryProcessingPool;
   private final Iterable<QueryRunner<T>> queryables;
-  private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
 
-  public ChainedExecutionQueryRunner(
-      ExecutorService exec,
-      QueryWatcher queryWatcher,
-      QueryRunner<T>... queryables
-  )
-  {
-    this(exec, queryWatcher, Arrays.asList(queryables));
-  }
 
   public ChainedExecutionQueryRunner(
-      ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<T>> queryables
   )
   {
-    // listeningDecorator will leave PrioritizedExecutorService unchanged,
-    // since it already implements ListeningExecutorService
-    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.queryProcessingPool = queryProcessingPool;
     this.queryables = Iterables.unmodifiableIterable(queryables);
     this.queryWatcher = queryWatcher;
   }
@@ -111,8 +97,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                             throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                           }
 
-                          return exec.submit(
-                              new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                          return queryProcessingPool.submitRunnerTask(
+                              new AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T>(priority, input)
                               {
                                 @Override
                                 public Iterable<T> call()
@@ -142,8 +128,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     throw new RuntimeException(e);
                                   }
                                 }
-                              }
-                          );
+                              });
                         }
                     )
                 );

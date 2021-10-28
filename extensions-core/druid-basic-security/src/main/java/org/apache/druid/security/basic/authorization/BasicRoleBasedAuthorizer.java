@@ -36,6 +36,7 @@ import org.apache.druid.server.security.Resource;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -116,7 +117,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     }
 
     Resource permissionResource = permission.getResourceAction().getResource();
-    if (permissionResource.getType() != resource.getType()) {
+    if (!Objects.equals(permissionResource.getType(), resource.getType())) {
       return false;
     }
 

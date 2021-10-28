@@ -31,11 +31,11 @@ The main goal of this cache is to speed up the access to a high latency lookup s
 Thus user can define various caching strategies or and implementation per lookup, even if the source is the same.
 This module can be used side to side with other lookup module like the global cached lookup module.
 
-To use this extension please make sure to  [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-single` as an extension.
+To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
-> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/.
+> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
 > Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
 
 ## Architecture
@@ -139,7 +139,7 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 |Field|Type|Description|Required|default|
 |-----|----|-----------|--------|-------|
-|maxStoreSize|double|maximal size of store in GB, if store is larger entries will start expiring|no |0|
+|maxStoreSize|double|maximal size of store in GiB, if store is larger entries will start expiring|no |0|
 |maxEntriesSize|long| Specifies the maximum number of entries the cache may contain.|no |0 (infinite capacity)|
 |expireAfterAccess|long| Specifies the eviction time after last read in milliseconds.|no |0 (No read-time-based eviction when set to null)|
 |expireAfterWrite|long| Specifies the eviction time after last write in milliseconds.|no |0 (No write-time-based eviction when set to null)|

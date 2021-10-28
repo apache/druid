@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -47,7 +48,7 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_FORMAT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(1)
-      .returnTypeNonNull(SqlTypeName.VARCHAR)
+      .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
@@ -81,7 +82,14 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
     final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
         call.getOperands(),
         2,
-        operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
+        operand -> {
+          try {
+            return DateTimes.inferTzFromString(RexLiteral.stringValue(operand), false);
+          }
+          catch (IllegalArgumentException e) {
+            throw new IAE(e.getMessage());
+          }
+        },
         plannerContext.getTimeZone()
     );
 

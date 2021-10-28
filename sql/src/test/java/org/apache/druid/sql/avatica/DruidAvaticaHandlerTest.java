@@ -30,15 +30,16 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -48,6 +49,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
@@ -61,7 +64,9 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -165,7 +170,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    final SchemaPlus rootSchema =
+    final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, CalciteTests.TEST_AUTHORIZER_MAPPER);
     testRequestLogger = new TestRequestLogger();
 
@@ -184,7 +189,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
                 binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
                 binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-                binder.bind(SchemaPlus.class).toInstance(rootSchema);
+                binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+                for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
+                  Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().toInstance(schema);
+                }
                 binder.bind(QueryLifecycleFactory.class)
                       .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
                 binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
@@ -195,6 +203,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                       .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
                 binder.bind(AvaticaServerConfig.class).toInstance(AVATICA_CONFIG);
                 binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+                binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+                binder.bind(QueryScheduler.class)
+                      .toProvider(QuerySchedulerProvider.class)
+                      .in(LazySingleton.class);
               }
             }
         )
@@ -858,7 +870,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
-    SchemaPlus rootSchema =
+    DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
@@ -947,7 +959,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
-    SchemaPlus rootSchema =
+    DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(

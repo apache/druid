@@ -52,6 +52,7 @@ import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
@@ -108,6 +109,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The RemoteTaskRunner's primary responsibility is to assign tasks to worker nodes.
@@ -540,7 +542,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else if ((completeTask = completeTasks.get(task.getId())) != null) {
       return completeTask.getResult();
     } else {
-      return addPendingTask(task).getResult();
+      RemoteTaskRunnerWorkItem workItem = addPendingTask(task);
+      runPendingTasks();
+      return workItem.getResult();
     }
   }
 
@@ -681,7 +685,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   /**
-   * Adds a task to the pending queue
+   * Adds a task to the pending queue.
+   * {@link #runPendingTasks()} should be called to run the pending task.
    */
   @VisibleForTesting
   RemoteTaskRunnerWorkItem addPendingTask(final Task task)
@@ -696,7 +701,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
-    runPendingTasks();
     return taskRunnerWorkItem;
   }
 
@@ -705,7 +709,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * are successfully assigned to a worker will be moved from pendingTasks to runningTasks. This method is thread-safe.
    * This method should be run each time there is new worker capacity or if new tasks are assigned.
    */
-  private void runPendingTasks()
+  @VisibleForTesting
+  void runPendingTasks()
   {
     runPendingTasksExec.submit(
         (Callable<Void>) () -> {
@@ -716,30 +721,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             sortByInsertionTime(copy);
 
             for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
-              String taskId = taskRunnerWorkItem.getTaskId();
-              if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
-                try {
-                  //this can still be null due to race from explicit task shutdown request
-                  //or if another thread steals and completes this task right after this thread makes copy
-                  //of pending tasks. See https://github.com/apache/druid/issues/2842 .
-                  Task task = pendingTaskPayloads.get(taskId);
-                  if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
-                    pendingTaskPayloads.remove(taskId);
-                  }
-                }
-                catch (Exception e) {
-                  log.makeAlert(e, "Exception while trying to assign task")
-                     .addData("taskId", taskRunnerWorkItem.getTaskId())
-                     .emit();
-                  RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
-                  if (workItem != null) {
-                    taskComplete(workItem, null, TaskStatus.failure(taskId));
-                  }
-                }
-                finally {
-                  tryAssignTasks.remove(taskId);
-                }
-              }
+              runPendingTask(taskRunnerWorkItem);
             }
           }
           catch (Exception e) {
@@ -749,6 +731,45 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           return null;
         }
     );
+  }
+
+  /**
+   * Run one pending task. This method must be called in the same class except for unit tests.
+   */
+  @VisibleForTesting
+  void runPendingTask(RemoteTaskRunnerWorkItem taskRunnerWorkItem)
+  {
+    String taskId = taskRunnerWorkItem.getTaskId();
+    if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
+      try {
+        //this can still be null due to race from explicit task shutdown request
+        //or if another thread steals and completes this task right after this thread makes copy
+        //of pending tasks. See https://github.com/apache/druid/issues/2842 .
+        Task task = pendingTaskPayloads.get(taskId);
+        if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
+          pendingTaskPayloads.remove(taskId);
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Exception while trying to assign task")
+           .addData("taskId", taskRunnerWorkItem.getTaskId())
+           .emit();
+        RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
+        if (workItem != null) {
+          taskComplete(
+              workItem,
+              null,
+              TaskStatus.failure(
+                  taskId,
+                  StringUtils.format("Failed to assign this task. See overlord logs for more details.")
+              )
+          );
+        }
+      }
+      finally {
+        tryAssignTasks.remove(taskId);
+      }
+    }
   }
 
   @VisibleForTesting
@@ -930,7 +951,18 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               elapsed,
               config.getTaskAssignmentTimeout()
           ).emit();
-          taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
+          taskComplete(
+              taskRunnerWorkItem,
+              theZkWorker,
+              TaskStatus.failure(
+                  task.getId(),
+                  StringUtils.format(
+                      "The worker that this task is assigned did not start it in timeout[%s]. "
+                      + "See overlord logs for more details.",
+                      config.getTaskAssignmentTimeout()
+                  )
+              )
+          );
           break;
         }
       }
@@ -1066,9 +1098,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
               taskRunnerWorkItem = runningTasks.remove(taskId);
               if (taskRunnerWorkItem != null) {
-                log.info("Task[%s] just disappeared!", taskId);
-                taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
-                TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
+                log.warn("Task[%s] just disappeared!", taskId);
+                final TaskStatus taskStatus = TaskStatus.failure(
+                    taskId,
+                    "The worker that this task was assigned disappeared. See overlord logs for more details."
+                );
+                taskRunnerWorkItem.setResult(taskStatus);
+                TaskRunnerUtils.notifyStatusChanged(listeners, taskId, taskStatus);
               } else {
                 log.info("Task[%s] went bye bye.", taskId);
               }
@@ -1189,8 +1225,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               log.info("Failing task[%s]", assignedTask);
               RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
               if (taskRunnerWorkItem != null) {
-                taskRunnerWorkItem.setResult(TaskStatus.failure(assignedTask));
-                TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, TaskStatus.failure(assignedTask));
+                final TaskStatus taskStatus = TaskStatus.failure(
+                    assignedTask,
+                    StringUtils.format("Canceled for worker cleanup. See overlord logs for more details.")
+                );
+                taskRunnerWorkItem.setResult(taskStatus);
+                TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, taskStatus);
               } else {
                 log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
               }
@@ -1235,7 +1275,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private void taskComplete(
       RemoteTaskRunnerWorkItem taskRunnerWorkItem,
-      ZkWorker zkWorker,
+      @Nullable ZkWorker zkWorker,
       TaskStatus taskStatus
   )
   {
@@ -1255,41 +1295,76 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     // Move from running -> complete
-    completeTasks.put(taskStatus.getId(), taskRunnerWorkItem);
-    runningTasks.remove(taskStatus.getId());
+    // If the task was running and this is the first complete event,
+    // previousComplete should be null and removedRunning should not.
+    final RemoteTaskRunnerWorkItem previousComplete = completeTasks.put(taskStatus.getId(), taskRunnerWorkItem);
+    final RemoteTaskRunnerWorkItem removedRunning = runningTasks.remove(taskStatus.getId());
 
-    // Update success/failure counters
-    if (zkWorker != null) {
-      if (taskStatus.isSuccess()) {
-        zkWorker.resetContinuouslyFailedTasksCount();
-        if (blackListedWorkers.remove(zkWorker)) {
-          zkWorker.setBlacklistedUntil(null);
-          log.info("[%s] removed from blacklist because a task finished with SUCCESS", zkWorker.getWorker());
+    if (previousComplete != null && removedRunning != null) {
+      log.warn(
+          "This is not the first complete event for task[%s], but it was still known as running. "
+          + "Ignoring the previously known running status.",
+          taskStatus.getId()
+      );
+    }
+
+    if (previousComplete != null) {
+      // This is not the first complete event for the same task.
+      try {
+        // getResult().get() must return immediately.
+        TaskState lastKnownState = previousComplete.getResult().get(1, TimeUnit.MILLISECONDS).getStatusCode();
+        if (taskStatus.getStatusCode() != lastKnownState) {
+          log.warn(
+              "The state of the new task complete event is different from its last known state. "
+              + "New state[%s], last known state[%s]",
+              taskStatus.getStatusCode(),
+              lastKnownState
+          );
         }
-      } else if (taskStatus.isFailure()) {
-        zkWorker.incrementContinuouslyFailedTasksCount();
       }
+      catch (InterruptedException e) {
+        log.warn(e, "Interrupted while getting the last known task status.");
+        Thread.currentThread().interrupt();
+      }
+      catch (ExecutionException | TimeoutException e) {
+        // This case should not really happen.
+        log.warn(e, "Failed to get the last known task status. Ignoring this failure.");
+      }
+    } else {
+      // This is the first complete event for this task.
+      // Update success/failure counters
+      if (zkWorker != null) {
+        if (taskStatus.isSuccess()) {
+          zkWorker.resetContinuouslyFailedTasksCount();
+          if (blackListedWorkers.remove(zkWorker)) {
+            zkWorker.setBlacklistedUntil(null);
+            log.info("[%s] removed from blacklist because a task finished with SUCCESS", zkWorker.getWorker());
+          }
+        } else if (taskStatus.isFailure()) {
+          zkWorker.incrementContinuouslyFailedTasksCount();
+        }
 
-      // Blacklist node if there are too many failures.
-      synchronized (blackListedWorkers) {
-        if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
-            blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
-          zkWorker.setBlacklistedUntil(DateTimes.nowUtc().plus(config.getWorkerBlackListBackoffTime()));
-          if (blackListedWorkers.add(zkWorker)) {
-            log.info(
-                "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
-                zkWorker.getWorker(),
-                zkWorker.getBlacklistedUntil(),
-                zkWorker.getContinuouslyFailedTasksCount()
-            );
+        // Blacklist node if there are too many failures.
+        synchronized (blackListedWorkers) {
+          if (zkWorker.getContinuouslyFailedTasksCount() > config.getMaxRetriesBeforeBlacklist() &&
+              blackListedWorkers.size() <= zkWorkers.size() * (config.getMaxPercentageBlacklistWorkers() / 100.0) - 1) {
+            zkWorker.setBlacklistedUntil(DateTimes.nowUtc().plus(config.getWorkerBlackListBackoffTime()));
+            if (blackListedWorkers.add(zkWorker)) {
+              log.info(
+                  "Blacklisting [%s] until [%s] after [%,d] failed tasks in a row.",
+                  zkWorker.getWorker(),
+                  zkWorker.getBlacklistedUntil(),
+                  zkWorker.getContinuouslyFailedTasksCount()
+              );
+            }
           }
         }
       }
-    }
 
-    // Notify interested parties
-    taskRunnerWorkItem.setResult(taskStatus);
-    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+      // Notify interested parties
+      taskRunnerWorkItem.setResult(taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+    }
   }
 
   @Override

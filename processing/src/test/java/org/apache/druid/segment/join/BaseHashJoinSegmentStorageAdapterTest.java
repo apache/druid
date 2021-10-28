@@ -206,9 +206,14 @@ public class BaseHashJoinSegmentStorageAdapterTest
    */
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
+    return makeFactToCountrySegment(JoinType.LEFT);
+  }
+
+  protected HashJoinSegmentStorageAdapter makeFactToCountrySegment(JoinType joinType)
+  {
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
+        ImmutableList.of(factToCountryOnIsoCode(joinType)),
         null
     );
   }

@@ -286,7 +286,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    return Response.ok(doGetUnparseableEvents(full)).build();
+  }
+
+  public Map<String, Object> doGetUnparseableEvents(String full)
+  {
+    Map<String, Object> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -325,11 +330,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           )
       );
     }
-
-    return Response.ok(events).build();
+    return events;
   }
 
-  private Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(String full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -530,7 +534,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                segmentAvailabilityConfirmationCompleted
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );
@@ -784,6 +789,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return hllCollectors;
   }
 
+  public IngestionState getIngestionState()
+  {
+    return ingestionState;
+  }
+
   /**
    * This method reads input data row by row and adds the read row to a proper segment using {@link BaseAppenderatorDriver}.
    * If there is no segment for the row, a new one is created.  Segments can be published in the middle of reading inputs
@@ -929,7 +939,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
         ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
         ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
-        segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+        waitForSegmentAvailability(
             toolbox,
             segmentsToWaitFor,
             tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
@@ -1481,15 +1491,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxPendingPersists;
     }
 
-    /**
-     * Always returns true, doesn't affect the version being built.
-     */
-    @Deprecated
-    @JsonProperty
-    public boolean isBuildV9Directly()
-    {
-      return true;
-    }
 
     @JsonProperty
     public boolean isForceGuaranteedRollup()
