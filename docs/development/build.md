@@ -76,7 +76,7 @@ mvn clean install -Papache-release,dist,rat -DskipTests
 
 By default, druid ships hadoop 2.x.x jars along with the distribution. Exact version can be found in the
 main [pom](https://github.com/apache/druid/blob/master/pom.xml). To build druid with hadoop 3.x.x jars, hadoop3 profile
-needs to ba activated.
+needs to be activated.
 
 To generate build with hadoop 3 dependencies, run:
 
