@@ -856,7 +856,7 @@ Specify objects to ingest as either:
 |[`objects`](#s3-input-objects)|JSON array of S3 Objects to ingest.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`properties`](#s3-input-properties-object)|Properties Object to override the default S3 configuration.|None|No (defaults will be used if not given)
 
-> When you supply a list of `prefixes`, Druid will list the contents and then ingest
+When you supply a list of `prefixes`, Druid lists the contents and then ingests
 *all* objects contained in the `prefixes` you specify.
 
 > You can view the payload of individual `index_parallel` tasks to see how Druid has divided up the work of ingestion.
