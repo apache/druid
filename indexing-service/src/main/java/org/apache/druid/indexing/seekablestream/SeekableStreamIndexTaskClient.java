@@ -74,11 +74,11 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
 
     try {
       final StringFullResponseHolder response = submitRequestWithEmptyContent(
-              id,
-              HttpMethod.POST,
-              "pause",
-              null,
-              true
+          id,
+          HttpMethod.POST,
+          "pause",
+          null,
+          true
       );
 
       final HttpResponseStatus responseStatus = response.getStatus();
@@ -98,18 +98,18 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
           if (delay == null) {
             throw new ISE(
-                    "Task [%s] failed to change its status from [%s] to [%s], aborting",
-                    id,
-                    status,
-                    SeekableStreamIndexTaskRunner.Status.PAUSED
+                "Task [%s] failed to change its status from [%s] to [%s], aborting",
+                id,
+                status,
+                SeekableStreamIndexTaskRunner.Status.PAUSED
             );
           } else {
             final long sleepTime = delay.getMillis();
             log.info(
-                    "Still waiting for task [%s] to change its status to [%s]; will try again in [%s]",
-                    id,
-                    SeekableStreamIndexTaskRunner.Status.PAUSED,
-                    new Duration(sleepTime).toString()
+                "Still waiting for task [%s] to change its status to [%s]; will try again in [%s]",
+                id,
+                SeekableStreamIndexTaskRunner.Status.PAUSED,
+                new Duration(sleepTime).toString()
             );
             Thread.sleep(sleepTime);
           }
@@ -119,10 +119,10 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
         return ImmutableMap.of();
       } else {
         throw new ISE(
-                "Pause request for task [%s] failed with response [%s] : [%s]",
-                id,
-                responseStatus,
-                responseContent
+            "Pause request for task [%s] failed with response [%s] : [%s]",
+            id,
+            responseStatus,
+            responseContent
         );
       }
     }
