@@ -349,7 +349,7 @@ You can configure Druid processes to emit [metrics](../operations/metrics.md) re
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
 |[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a process.|none (no monitors)|
-|[`druid.emitter`](#metrics-emitters)|Setting this value will initialize one of the emitter modules.|`noop`|
+|[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop`|
 
 #### Metrics monitors
 
