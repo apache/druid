@@ -901,7 +901,7 @@ Using URIs, the following ingestion specification ingests two specific objects:
 ...
 ```
 
-This specification will ingest all the objects in two locations given in `prefixes`:
+The following specification ingests all the objects in two locations given in `prefixes`:
 
 ```json
 ...
