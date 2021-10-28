@@ -938,6 +938,66 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentRollup()
+  {
+    // Same indexSpec as what is set in the auto compaction config
+    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    // Same partitionsSpec as what is set in the auto compaction config
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+
+    // Create segments that were compacted (CompactionState != null) and have
+    // rollup=false for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
+    // rollup=true for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
+    // and rollup=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of("rollup", "false"))
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of("rollup", "true"))
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of())
+        )
+    );
+
+    // Auto compaction config sets rollup=true
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, null, true))),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+    // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
   public void testIteratorReturnsSegmentsSmallerSegmentGranularityCoveringMultipleSegmentsInTimeline()
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(

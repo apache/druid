@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -386,9 +387,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     if (config.getGranularitySpec() != null) {
 
-      final GranularitySpec existingGranularitySpec = lastCompactionState.getGranularitySpec() != null ?
-                                                      objectMapper.convertValue(lastCompactionState.getGranularitySpec(), GranularitySpec.class) :
-                                                      null;
+      final ClientCompactionTaskGranularitySpec existingGranularitySpec = lastCompactionState.getGranularitySpec() != null ?
+                                                                          objectMapper.convertValue(lastCompactionState.getGranularitySpec(), ClientCompactionTaskGranularitySpec.class) :
+                                                                          null;
       // Checks for segmentGranularity
       if (config.getGranularitySpec().getSegmentGranularity() != null) {
         final Granularity existingSegmentGranularity = existingGranularitySpec != null ?

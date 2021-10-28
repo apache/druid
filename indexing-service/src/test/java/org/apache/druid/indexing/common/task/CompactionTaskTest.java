@@ -1495,6 +1495,54 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testGranularitySpecWithNotNullRollup()
+      throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null, true),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY,
+        IOConfig.DEFAULT_DROP_EXISTING
+    );
+
+    Assert.assertEquals(6, ingestionSpecs.size());
+    for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
+      Assert.assertTrue(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+    }
+  }
+
+  @Test
+  public void testGranularitySpecWithNullRollup()
+      throws IOException, SegmentLoadingException
+  {
+    final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        COORDINATOR_CLIENT,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY,
+        IOConfig.DEFAULT_DROP_EXISTING
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
+      //Expect false since rollup value in metadata of existing segments are null
+      Assert.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+    }
+  }
+
+  @Test
   public void testChooseFinestGranularityWithNulls()
   {
     List<Granularity> input = Arrays.asList(

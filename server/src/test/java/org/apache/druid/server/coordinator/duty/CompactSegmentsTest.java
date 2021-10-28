@@ -857,6 +857,64 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testCompactWithRollupInGranularitySpec()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true),
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<List<DataSegment>> segmentsCaptor = ArgumentCaptor.forClass(List.class);
+    ArgumentCaptor<ClientCompactionTaskGranularitySpec> granularitySpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskGranularitySpec.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        segmentsCaptor.capture(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Assert.assertEquals(datasourceToSegments.get(dataSource).size(), segmentsCaptor.getValue().size());
+    ClientCompactionTaskGranularitySpec actual = granularitySpecArgumentCaptor.getValue();
+    Assert.assertNotNull(actual);
+    ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, true);
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
   public void testCompactWithGranularitySpecConflictWithActiveCompactionTask()
   {
     final String dataSource = DATA_SOURCE_PREFIX + 0;

@@ -150,7 +150,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, true),
         null,
         ImmutableMap.of("key", "val")
     );
