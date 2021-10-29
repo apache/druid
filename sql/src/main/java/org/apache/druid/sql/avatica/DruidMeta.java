@@ -38,6 +38,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -157,7 +158,7 @@ public class DruidMeta extends MetaImpl
       druidStatement = getDruidStatement(statement);
     }
     catch (NoSuchStatementException e) {
-      throw errorHandler.logFailureAndSanitize(new IllegalStateException(e));
+      throw errorHandler.logFailureAndSanitize(new ISE(e, e.getMessage()));
     }
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
@@ -183,7 +184,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Avatica doesn't call this.
-    throw new UnsupportedOperationException("Deprecated");
+    throw errorHandler.sanitize(new UOE("Deprecated"));
   }
 
   @Override
@@ -234,7 +235,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
-    throw new UnsupportedOperationException("Batch statements not supported");
+    throw errorHandler.sanitize(new UOE("Batch statements not supported"));
   }
 
   @Override
@@ -244,7 +245,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
-    throw new UnsupportedOperationException("Batch statements not supported");
+    throw errorHandler.sanitize( new UOE("Batch statements not supported"));
   }
 
   @Override
@@ -268,7 +269,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Avatica doesn't call this.
-    throw new UnsupportedOperationException("Deprecated");
+    throw errorHandler.sanitize(new UOE("Deprecated"));
   }
 
   @Override

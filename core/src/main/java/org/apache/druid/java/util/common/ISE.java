@@ -19,9 +19,13 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.common.exception.SanitizableException;
+
+import java.util.function.Function;
+
 /**
  */
-public class ISE extends IllegalStateException
+public class ISE extends IllegalStateException implements SanitizableException
 {
   public ISE(String formatText, Object... arguments)
   {
@@ -31,5 +35,11 @@ public class ISE extends IllegalStateException
   public ISE(Throwable cause, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments), cause);
+  }
+
+  @Override
+  public Exception sanitize(Function<String, String> errorMessageTransformFunction)
+  {
+    return new ISE(this.getMessage());
   }
 }
