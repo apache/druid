@@ -463,7 +463,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         // Set the dropExisting flag to true in the IOConfig of the compaction task
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null), true)
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
@@ -496,7 +496,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
