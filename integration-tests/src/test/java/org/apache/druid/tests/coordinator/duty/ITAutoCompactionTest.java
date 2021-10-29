@@ -19,6 +19,8 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -59,6 +61,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +74,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITAutoCompactionTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_TASK_NO_ROLLUP = "/indexer/wikipedia_index_task_no_rollup.json";
+  private static final String INDEX_ROLLUP_QUERIES_RESOURCE = "/indexer/wikipedia_index_rollup_queries.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
@@ -605,6 +610,38 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test
+  public void testAutoCompactionDutyWithRollup() throws Exception
+  {
+    loadData(INDEX_TASK_NO_ROLLUP);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(null, null, true),
+          false
+      );
+      forceTriggerAutoCompaction(2);
+      expectedResult = ImmutableMap.of(
+          "%%EXPECTED_COUNT_RESULT%%", 1,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify rollup segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
   private void loadData(String indexTask) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
@@ -624,7 +661,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     );
   }
 
-  private void verifyQuery(String queryResource) throws Exception
+  private void verifyQuery(String queryResource) throws Exception {
+    verifyQuery(queryResource, ImmutableMap.of());
+  }
+
+  private void verifyQuery(String queryResource, Map<String, Object> expectedResults) throws Exception
   {
     String queryResponseTemplate;
     try {
@@ -634,13 +675,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", queryResource);
     }
-
     queryResponseTemplate = StringUtils.replace(
         queryResponseTemplate,
         "%%DATASOURCE%%",
         fullDatasourceName
     );
-
+    for (Map.Entry<String, Object> entry : expectedResults.entrySet()) {
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          entry.getKey(),
+          jsonMapper.writeValueAsString(entry.getValue())
+      );
+    }
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 

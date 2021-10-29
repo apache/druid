@@ -192,7 +192,8 @@ You can optionally use the `granularitySpec` object to configure the segment gra
     ,
     "granularitySpec": {
       "segmentGranularity": <time_period>,
-      "queryGranularity": <time_period>
+      "queryGranularity": <time_period>,
+      "rollup": true
     }
     ...
 ```
@@ -203,8 +204,9 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values. Not supported for automatic compaction.|No|
+|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
-For example, to set the segment granularity to "day" and the query granularity to "hour":
+For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
 ```json
 {
   "type" : "compact",
@@ -213,11 +215,12 @@ For example, to set the segment granularity to "day" and the query granularity t
     "type": "compact",
     "inputSpec": {
       "type": "interval",
-      "interval": "2017-01-01/2018-01-01",
+      "interval": "2017-01-01/2018-01-01"
     },
     "granularitySpec": {
       "segmentGranularity":"day",
-      "queryGranularity":"hour"
+      "queryGranularity":"hour",
+      "rollup": true
     }
   }
 }

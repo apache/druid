@@ -309,7 +309,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @VisibleForTesting
-  static PartitionsSpec findPartitinosSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
@@ -332,7 +332,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
     final ClientCompactionTaskQueryTuningConfig tuningConfig =
         ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment());
-    final PartitionsSpec partitionsSpecFromConfig = findPartitinosSpecFromConfig(tuningConfig);
+    final PartitionsSpec partitionsSpecFromConfig = findPartitionsSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
       log.info("Candidate segment[%s] is not compacted yet. Needs compaction.", candidates.segments.get(0).getId());
