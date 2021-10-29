@@ -61,7 +61,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -661,7 +660,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     );
   }
 
-  private void verifyQuery(String queryResource) throws Exception {
+  private void verifyQuery(String queryResource) throws Exception
+  {
     verifyQuery(queryResource, ImmutableMap.of());
   }
 
