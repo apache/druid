@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "com.google.guava:guava"
+      # pin ZooKeeper dependencies to 3.5.x
+      - dependency-name: "org.apache.zookeeper"
+        versions: "[3.6,)"
+      # pin Jetty dependencies to 9.4.x
+      - dependency-name: "org.eclipse.jetty"
+        versions: "[9.5,)"

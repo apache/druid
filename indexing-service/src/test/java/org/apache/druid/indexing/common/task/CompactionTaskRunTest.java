@@ -41,7 +41,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -75,9 +75,9 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
@@ -160,7 +160,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final IndexingServiceClient indexingServiceClient;
   private final CoordinatorClient coordinatorClient;
-  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final LockGranularity lockGranularity;
   private final TestUtils testUtils;
 
@@ -182,7 +182,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
-    segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
     this.lockGranularity = lockGranularity;
   }
 
@@ -230,7 +230,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -279,7 +279,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -368,7 +368,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -446,7 +446,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -543,7 +543,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -598,7 +598,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -653,7 +653,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -698,7 +698,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -731,7 +731,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -775,7 +775,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -837,7 +837,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -925,7 +925,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -994,7 +994,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -1046,7 +1046,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY
     );
 
@@ -1154,7 +1154,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                     null,
                     getIndexIO(),
                     coordinatorClient,
-                    segmentLoaderFactory,
+                    segmentCacheManagerFactory,
                     RETRY_POLICY_FACTORY
                 ),
                 false,
@@ -1285,8 +1285,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
   {
-    final SegmentLoader loader = new SegmentLoaderLocalCacheManager(
-        getIndexIO(),
+    final SegmentCacheManager loader = new SegmentLocalCacheManager(
         new SegmentLoaderConfig() {
           @Override
           public List<StorageLocationConfig> getLocations()
@@ -1342,11 +1341,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(cacheDir);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
 
     List<Cursor> cursors = new ArrayList<>();
     for (DataSegment segment : segments) {
-      final File segmentFile = segmentLoader.getSegmentFiles(segment);
+      final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),

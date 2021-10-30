@@ -210,7 +210,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
-
+      // Auto compaction stats should be deleted as compacation config was deleted
+      Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -234,18 +235,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
       checkCompactionIntervals(intervalsBeforeCompaction);
-      getAndAssertCompactionStatus(
-          fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0);
+      Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
       updateCompactionTaskSlot(1, 1);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)

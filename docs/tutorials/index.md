@@ -32,14 +32,14 @@ Before starting, you may want to read the [general Druid overview](../design/ind
 
 ## Requirements
 
-You can follow these steps on a relatively small machine, such as a laptop with around 4 CPU and 16 GB of RAM. 
+You can follow these steps on a relatively small machine, such as a laptop with around 4 CPU and 16 GiB of RAM. 
 
 Druid comes with several startup configuration profiles for a range of machine sizes. 
 The `micro-quickstart`configuration profile shown here is suitable for evaluating Druid. If you want to 
 try out Druid's performance or scaling capabilities, you'll need a larger machine and configuration profile.
 
-The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GB RAM) 
-to the _X-Large_ configuration (64 CPU, 512GB RAM). For more information, see 
+The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GiB RAM) 
+to the _X-Large_ configuration (64 CPU, 512GiB RAM). For more information, see 
 [Single server deployment](../operations/single-server.md). Alternatively, see [Clustered deployment](./cluster.md) for 
 information on deploying Druid services across clustered machines. 
 

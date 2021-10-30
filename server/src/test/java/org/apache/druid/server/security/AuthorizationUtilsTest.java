@@ -84,4 +84,20 @@ public class AuthorizationUtilsTest
     Assert.assertEquals("hello", itr.next());
     Assert.assertFalse(itr.hasNext());
   }
+
+  @Test
+  public void testMakeSuperuserPermissions()
+  {
+    final List<ResourceAction> permissions = AuthorizationUtils.makeSuperUserPermissions();
+    // every type and action should have a wildcard pattern
+    for (ResourceType type : ResourceType.values()) {
+      for (Action action : Action.values()) {
+        Assert.assertTrue(
+            permissions.stream()
+                       .filter(ra -> type == ra.getResource().getType())
+                       .anyMatch(ra -> action == ra.getAction() && ".*".equals(ra.getResource().getName()))
+        );
+      }
+    }
+  }
 }

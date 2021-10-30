@@ -49,7 +49,7 @@ public class ConfigManagerTest
 {
   private static final String CONFIG_KEY = "configX";
   private static final String TABLE_NAME = "config_table";
-  private static final TestConfig OLD_CONFIG = new TestConfig("1", "x", 1);
+  private static final byte[] OLD_CONFIG = {1, 2, 3};
   private static final TestConfig NEW_CONFIG = new TestConfig("2", "y", 2);
 
   @Mock
@@ -120,6 +120,7 @@ public class ConfigManagerTest
   @Test
   public void testSetOldObjectNotNullShouldSwap()
   {
+    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(true);
     when(mockDbConnector.compareAndSwap(any(List.class))).thenReturn(true);
     final ArgumentCaptor<List<MetadataCASUpdate>> updateCaptor = ArgumentCaptor.forClass(List.class);
     configManager.start();
@@ -134,8 +135,25 @@ public class ConfigManagerTest
     Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN, updateCaptor.getValue().get(0).getKeyColumn());
     Assert.assertEquals(MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN, updateCaptor.getValue().get(0).getValueColumn());
     Assert.assertEquals(CONFIG_KEY, updateCaptor.getValue().get(0).getKey());
-    Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(OLD_CONFIG), updateCaptor.getValue().get(0).getOldValue());
+    Assert.assertArrayEquals(OLD_CONFIG, updateCaptor.getValue().get(0).getOldValue());
     Assert.assertArrayEquals(configConfigSerdeFromClass.serialize(NEW_CONFIG), updateCaptor.getValue().get(0).getNewValue());
+  }
+
+  @Test
+  public void testSetOldObjectNotNullButCompareAndSwapDisabledShouldInsertWithoutSwap()
+  {
+    when(mockConfigManagerConfig.isEnableCompareAndSwap()).thenReturn(false);
+    configManager.start();
+    ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, OLD_CONFIG, NEW_CONFIG);
+    Assert.assertTrue(setResult.isOk());
+    Mockito.verify(mockDbConnector).insertOrUpdate(
+        ArgumentMatchers.eq(TABLE_NAME),
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq(CONFIG_KEY),
+        ArgumentMatchers.any(byte[].class)
+    );
+    Mockito.verifyNoMoreInteractions(mockDbConnector);
   }
 
   static class TestConfig

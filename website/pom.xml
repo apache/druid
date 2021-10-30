@@ -39,6 +39,8 @@
     to stage documentation for an unreleased version
     -->
     <website.version>${project.parent.version}</website.version>
+    <node.version>v10.24.1</node.version>
+    <npm.version>6.14.12</npm.version>
   </properties>
 
   <build>

@@ -46,7 +46,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,27 +60,16 @@ import java.util.stream.Collectors;
 
 public class SegmentManagerTest
 {
+
   private static final SegmentLoader SEGMENT_LOADER = new SegmentLoader()
   {
     @Override
-    public boolean isSegmentLoaded(DataSegment segment)
+    public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
     {
-      return false;
-    }
-
-    @Override
-    public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-    {
-      return new SegmentForTesting(
+      return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
           MapUtils.getString(segment.getLoadSpec(), "version"),
           (Interval) segment.getLoadSpec().get("interval")
-      );
-    }
-
-    @Override
-    public File getSegmentFiles(DataSegment segment)
-    {
-      throw new UnsupportedOperationException();
+      ), segment.getShardSpec());
     }
 
     @Override

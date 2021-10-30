@@ -82,7 +82,7 @@ public class SqlTestUtils
     }
 
     @Override
-    public Set<String> findPropertyKeysFromConnectURL(String connectUri)
+    public Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown)
     {
       return ImmutableSet.of("user", "create");
     }

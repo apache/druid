@@ -526,6 +526,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     };
   }
 
+  @SuppressWarnings("ReturnValueIgnored")
   private static Predicate<String> createStringPredicate(final Set<String> values)
   {
     Preconditions.checkNotNull(values, "values");
@@ -536,8 +537,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       // programmatically as a result of optimizations like rewriting inner joins as filters, the passed-in Set may
       // not be able to accept nulls. We don't want to copy the Sets (since they may be large) so instead we'll wrap
       // it in a null-checking lambda if needed.
-
-      //noinspection ResultOfMethodCallIgnored
       values.contains(null);
 
       // Safe to do values.contains(null).

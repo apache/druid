@@ -88,7 +88,11 @@ public class ExpressionVectorSelectorsTest
       "long2",
       "float2",
       "double2",
-      "string3"
+      "string3",
+      "string1 + string3",
+      "concat(string1, string2, string3)",
+      "concat(string1, 'x')",
+      "concat(string1, nonexistent)"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;

@@ -30,7 +30,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
@@ -155,11 +154,6 @@ public class SegmentManager
     return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
-  public boolean isSegmentCached(final DataSegment segment)
-  {
-    return segmentLoader.isSegmentLoaded(segment);
-  }
-
   /**
    * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
    * datasource of a single table.
@@ -210,6 +204,12 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
   }
 
+  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+      throws SegmentLoadingException
+  {
+    return loadSegment(segment, lazy, loadFailed, null);
+  }
+
   /**
    * Load a single segment.
    *
@@ -228,7 +228,7 @@ public class SegmentManager
   public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed,
                              ExecutorService loadSegmentIntoPageCacheExec) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment, lazy, loadFailed);
+    final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -263,9 +263,7 @@ public class SegmentManager
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(
-                    ReferenceCountingSegment.wrapSegment(adapter, segment.getShardSpec())
-                )
+                segment.getShardSpec().createChunk(adapter)
             );
             dataSourceState.addSegment(segment);
             // Asyncly load segment index files into page cache in a thread pool
@@ -281,38 +279,21 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  /**
-   * Load a single segment.
-   *
-   * @param segment segment to load
-   * @param lazy    whether to lazy load columns metadata
-   * @param loadFailed callBack to execute when segment lazy load failed
-   *
-   * @return true if the segment was newly loaded, false if it was already loaded
-   *
-   * @throws SegmentLoadingException if the segment cannot be loaded
-   */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
+  private ReferenceCountingSegment getSegmentReference(final DataSegment dataSegment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
-    return loadSegment(segment, lazy, loadFailed, null);
-  }
-
-  private Segment getAdapter(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
-  {
-    final Segment adapter;
+    final ReferenceCountingSegment segment;
     try {
-      adapter = segmentLoader.getSegment(segment, lazy, loadFailed);
+      segment = segmentLoader.getSegment(dataSegment, lazy, loadFailed);
     }
     catch (SegmentLoadingException e) {
-      segmentLoader.cleanup(segment);
+      segmentLoader.cleanup(dataSegment);
       throw e;
     }
 
-    if (adapter == null) {
-      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", segment.getLoadSpec());
+    if (segment == null) {
+      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
     }
-    return adapter;
+    return segment;
   }
 
   public void dropSegment(final DataSegment segment)

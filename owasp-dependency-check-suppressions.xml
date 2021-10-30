@@ -57,6 +57,19 @@
     <cve>CVE-2020-12690</cve>
     <cve>CVE-2020-12691</cve>
   </suppress>
+  <suppress>
+    <!--
+      ~ CVE-2021-27568:
+      ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
+      ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
+      ~ jobs which can only be run by admin type users.
+      -->
+    <notes><![CDATA[
+   file name: json-smart-2.3.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
+    <cve>CVE-2021-27568</cve>
+  </suppress>
 
 
   <suppress>

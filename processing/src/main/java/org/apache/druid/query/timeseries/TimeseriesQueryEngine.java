@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -66,7 +67,7 @@ public class TimeseriesQueryEngine
   @VisibleForTesting
   public TimeseriesQueryEngine()
   {
-    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(1000000));
+    this.bufferPool = new StupidPool<>("dummy", () -> ByteBuffer.allocate(10000000));
   }
 
   @Inject
@@ -94,10 +95,12 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
+    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
+
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
+        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-        && adapter.canVectorize(filter, query.getVirtualColumns(), descending)
+        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector))
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;
