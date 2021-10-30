@@ -22,11 +22,14 @@ package org.apache.druid.data.input;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.Parser;
+import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -114,16 +117,7 @@ public class MapPopulator<K, V>
             final Map<K, V> kvMap = parser.parseToMap(line);
             if (null != byteLimit) {
               for (Map.Entry<K, V> e : kvMap.entrySet()) {
-                if ((e.getKey() instanceof String) && (e.getValue() instanceof String)) {
-                  bytes += ((String) (e.getKey())).length()
-                           + ((String) (e.getValue())).length();
-                } else {
-                  LOG.warn(
-                      "cannot bytes when populating map because key and value classes are not "
-                      + "instance of String. Key class: [%s], Value class: [%s]",
-                      e.getKey().getClass().getName(),
-                      e.getValue().getClass().getName());
-                }
+                bytes += getByteLengthOfKeyAndValuePair(e.getKey(), e.getValue());
               }
               if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
                 LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
@@ -147,5 +141,47 @@ public class MapPopulator<K, V>
           }
         }
     );
+  }
+
+  public PopulateResult populateAndWarnAtByteLimit(
+      final Iterator<Pair<K, V>> iterator,
+      final Map<K, V> map,
+      final Long byteLimit,
+      final String name)
+  {
+    int lines = 0;
+    int entries = 0;
+    int bytes = 0;
+    int byteLimitMultiple = 1;
+    while (iterator.hasNext()) {
+      Pair<K,V> pair = iterator.next();
+      if (null != byteLimit) {
+        bytes += getByteLengthOfKeyAndValuePair(pair.lhs, pair.rhs);
+        if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
+          LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
+                   name,
+                   byteLimit,
+                   bytes
+          );
+          byteLimitMultiple++;
+        }
+      }
+      map.put(pair.lhs, pair.rhs);
+      entries++;
+    }
+    return new PopulateResult(lines, entries, bytes);
+  }
+
+  private long getByteLengthOfKeyAndValuePair(K key, V value) {
+    if ((key instanceof String) && (value instanceof String)) {
+      return((String) (key)).length() + ((String) (value)).length();
+    } else {
+      LOG.warn(
+          "cannot bytes when populating map because key and value classes are not "
+          + "instance of String. Key class: [%s], Value class: [%s]",
+          key.getClass().getName(),
+          value.getClass().getName());
+      return 0;
+    }
   }
 }
