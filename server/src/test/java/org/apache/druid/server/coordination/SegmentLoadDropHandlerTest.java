@@ -492,7 +492,8 @@ public class SegmentLoadDropHandlerTest
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
-    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(), ArgumentMatchers.any()))
+    Mockito.when(segmentManager.loadSegment(ArgumentMatchers.any(), ArgumentMatchers.anyBoolean(),
+                                            ArgumentMatchers.any(), ArgumentMatchers.any()))
            .thenThrow(new RuntimeException("segment loading failure test"))
            .thenReturn(true);
     final SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(

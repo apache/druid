@@ -264,13 +264,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     );
   }
 
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
+      throws SegmentLoadingException
+  {
+    loadSegment(segment, callback, lazy, null);
+  }
+
   /**
    * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
    * throw a SegmentLoadingException
    *
    * @throws SegmentLoadingException if it fails to load the given segment
    */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy, ExecutorService exec)
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy, @Nullable
+      ExecutorService loadSegmentIntoPageCacheExec)
       throws SegmentLoadingException
   {
     final boolean loaded;
@@ -278,7 +285,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       loaded = segmentManager.loadSegment(segment,
               lazy,
           () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false),
-              exec
+              loadSegmentIntoPageCacheExec
       );
     }
     catch (Exception e) {
@@ -302,18 +309,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
     }
-  }
-
-  /**
-   * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
-   * throw a SegmentLoadingException
-   *
-   * @throws SegmentLoadingException if it fails to load the given segment
-   */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy)
-      throws SegmentLoadingException
-  {
-    loadSegment(segment, callback, lazy, null);
   }
 
   @Override
