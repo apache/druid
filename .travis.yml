@@ -94,7 +94,7 @@ jobs:
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
-        - pip3 install pyyaml
+        - pip3 install pyyaml==5.4.1
       script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
@@ -725,7 +725,7 @@ jobs:
       stage: cron
       install: skip
       script: |-
-        ${MVN} dependency-check:purge dependency-check:aggregate -pl '!integration-tests' || { echo "
+        ${MVN} dependency-check:purge dependency-check:check || { echo "
 
         The OWASP dependency check has found security vulnerabilities. Please use a newer version
         of the dependency that does not have vulnerabilities. To see a report run

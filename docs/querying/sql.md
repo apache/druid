@@ -328,14 +328,15 @@ Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT k
 |Function|Notes|Default|
 |--------|-----|-------|
 |`COUNT(*)`|Counts the number of rows.|`0`|
-|`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is set to true in query contexts or broker configurations.|`0`|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for APPROX_COUNT_DISTINCT. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can could strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, expr must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
 |`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
 |`AVG(expr)`|Averages numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
-|`APPROX_COUNT_DISTINCT(expr)`|_Usage note:_ consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.<br/><br/>Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|`0`|
-|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.   See also `COUNT(DISTINCT expr)`.  |`0`|
-|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. This is always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context).  The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function. See also `COUNT(DISTINCT expr)`. |`0`|
+|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr using an approximate algorithm. The expr can be a regular column or a prebuilt sketch column.<br><br>The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). By default, this is `APPROX_COUNT_DISTINCT_BUILTIN`. If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be set to `APPROX_COUNT_DISTINCT_DS_HLL` or `APPROX_COUNT_DISTINCT_DS_THETA`.<br><br>When run on prebuilt sketch columns, the sketch column type must match the implementation of this function. For example: when `druid.sql.approxCountDistinct.function` is set to `APPROX_COUNT_DISTINCT_BUILTIN`, this function will be able to run on prebuilt hyperUnique columns, but not on prebuilt HLLSketchBuild columns.|
+|`APPROX_COUNT_DISTINCT_BUILTIN(expr)`|_Usage note:_ consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.<br/><br/>Counts distinct values of expr using Druid's built-in "cardinality" or "hyperUnique" aggregators, which implement a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). The expr can be a string, number, or prebuilt hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct".|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.   See also `COUNT(DISTINCT expr)`.  |`0`|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context).  The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function. See also `COUNT(DISTINCT expr)`. |`0`|
 |`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0'` (STRING)|
 |`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.md) on the values of expr, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0.0'` (STRING)|
 |`APPROX_QUANTILE(expr, probability, [resolution])`|_Deprecated._ Use `APPROX_QUANTILE_DS` instead, which provides a superior distribution-independent algorithm with formal error guarantees.<br/><br/>Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.md#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|`NaN`|
@@ -476,8 +477,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
 |`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
-|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
-|`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
+|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
+|`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
 |`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
 |`TIME_PARSE(<string_expr>, [<pattern>, [<timezone>]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
@@ -613,6 +614,8 @@ All 'array' references in the multi-value string function documentation can refe
 |Function|Notes|
 |--------|-----|
 | `ARRAY[expr1,expr ...]` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `MV_FILTER_ONLY(expr, arr)` | filters multi-value `expr` to include only values contained in array `arr` |
+| `MV_FILTER_NONE(expr, arr)` | filters multi-value `expr` to include no values contained in array `arr` |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
@@ -849,7 +852,6 @@ include:
 
 - [Inline datasources](datasource.md#inline).
 - [Spatial filters](../development/geo.md).
-- [Query cancellation](querying.md#query-cancellation).
 - [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
@@ -860,16 +862,23 @@ the SQL planner.
 
 ### HTTP POST
 
-You can make Druid SQL queries using HTTP via POST to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+To use the SQL API to make Druid SQL queries, POST your query to the following endpoint on either the Router or Broker:
+```
+POST https://ROUTER:8888/druid/v2/sql/`. 
+```  
 
-##### Request
+Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```
+
+##### Request body
       
 |Property|Description|Default|
 |--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header. See [Responses] for details.|`false`|
+|`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
 |`context`|JSON object containing [connection context parameters](#connection-context).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](#data-types) for a list of supported SQL types.|`[]` (empty)|
 
@@ -879,7 +888,7 @@ You can use _curl_ to send SQL queries from the command-line:
 $ cat query.json
 {"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
-$ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
+$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
 [{"TheCount":24433}]
 ```
 
@@ -941,9 +950,13 @@ You can additionally request a header by setting "header" to true in your reques
 }
 ```
 
-In this case, the first result returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
+In this case, the first result of the response body is the header row. For the `csv`, `array`, and `arrayLines` formats, the header
 will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
 keys are column names, and the values are null.
+
+Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
+This query id will be assigned the value of `sqlQueryId` from the [connection context parameters](#connection-context)
+if specified, else Druid will generate a SQL query id for you.
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
@@ -955,6 +968,38 @@ formats, since truncated responses will be invalid JSON. For the line-oriented f
 trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
 through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
 delivered due to an error.
+
+### HTTP DELETE
+You can use the HTTP `DELETE` method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
+
+Druid SQL's HTTP DELETE method uses the following syntax:
+```
+DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
+```
+
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
+
+For example if you issue the following query:
+```bash
+curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
+--header 'Content-Type: application/json' \
+--data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
+"context" : {"sqlQueryId" : "myQuery01"}}'
+```
+You can cancel the query using the query id `myQuery01` as follows:
+```bash
+curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
+```
+
+Cancellation requests require READ permission on all resources used in the sql query. 
+
+Druid returns an HTTP 202 response for successful deletion requests.
+
+Druid returns an HTTP 404 response in the following cases:
+  - `sqlQueryId` is incorrect.
+  - The query completes before your cancellation request is processed.
+  
+Druid returns an HTTP 403 response for authorization failure.
 
 ### JDBC
 
@@ -1064,7 +1109,9 @@ INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
 > Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
@@ -1118,6 +1165,14 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
 
+For example, this query returns [data type](#data-types) information for columns in the `foo` table:
+
+```sql
+SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE"
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_NAME" = 'foo'
+```
+
 ### SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
@@ -1167,6 +1222,26 @@ SELECT
 FROM sys.segments
 GROUP BY 1
 ORDER BY 2 DESC
+```
+
+This query goes a step further and shows the overall profile of available, non-realtime segments across buckets of 1 million rows each for the `foo` datasource:
+
+```sql
+SELECT ABS("num_rows" /  1000000) as "bucket",
+  COUNT(*) as segments,
+  SUM("size") / 1048576 as totalSizeMiB,
+  MIN("size") / 1048576 as minSizeMiB,
+  AVG("size") / 1048576 as averageSizeMiB,
+  MAX("size") / 1048576 as maxSizeMiB,
+  SUM("num_rows") as totalRows,
+  MIN("num_rows") as minRows,
+  AVG("num_rows") as averageRows,
+  MAX("num_rows") as maxRows,
+  (AVG("size") / AVG("num_rows"))  as avgRowSizeB
+FROM sys.segments
+WHERE is_available = 1 AND is_realtime = 0 AND "datasource" = `foo`
+GROUP BY 1
+ORDER BY 1
 ```
 
 If you want to retrieve segment that was compacted (ANY compaction):

@@ -20,7 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import java.util.Arrays;
 
@@ -41,8 +41,8 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.STRING;
+    return ExpressionType.STRING;
   }
 }

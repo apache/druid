@@ -273,7 +273,7 @@ public class HashVectorGrouper implements VectorGrouper
     tableBuffer.limit(tableStart + MemoryOpenHashTable.memoryNeeded(numBuckets, bucketSize));
 
     return new MemoryOpenHashTable(
-        WritableMemory.wrap(tableBuffer.slice(), ByteOrder.nativeOrder()),
+        WritableMemory.writableWrap(tableBuffer.slice(), ByteOrder.nativeOrder()),
         numBuckets,
         Math.max(1, Math.min(bufferGrouperMaxSize, (int) (numBuckets * maxLoadFactor))),
         keySize,

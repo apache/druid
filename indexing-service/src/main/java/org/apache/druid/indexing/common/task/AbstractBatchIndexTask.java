@@ -45,6 +45,7 @@ import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -94,6 +95,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   private static final Logger log = new Logger(AbstractBatchIndexTask.class);
 
   protected boolean segmentAvailabilityConfirmationCompleted = false;
+  protected long segmentAvailabilityWaitTimeMs = 0L;
 
   @GuardedBy("this")
   private final TaskResourceCleaner resourceCloserOnAbnormalExit = new TaskResourceCleaner();
@@ -403,6 +405,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
+      if (lock.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
+      }
     }
     return true;
   }
@@ -614,6 +619,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       return false;
     }
     log.info("Waiting for [%d] segments to be loaded by the cluster...", segmentsToWaitFor.size());
+    final long start = System.nanoTime();
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
@@ -637,12 +643,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             }
         );
       }
-      return doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+      segmentAvailabilityConfirmationCompleted = doneSignal.await(waitTimeout, TimeUnit.MILLISECONDS);
+      return segmentAvailabilityConfirmationCompleted;
     }
     catch (InterruptedException e) {
       log.warn("Interrupted while waiting for segment availablity; Unable to confirm availability!");
       Thread.currentThread().interrupt();
       return false;
+    }
+    finally {
+      segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
     }
   }
 

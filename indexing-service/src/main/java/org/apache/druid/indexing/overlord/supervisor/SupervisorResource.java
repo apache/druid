@@ -393,9 +393,8 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
-          Iterable<VersionedSupervisorSpec> historyForId = supervisorHistory.get(id);
-          if (historyForId != null) {
+          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id);
+          if (!historyForId.isEmpty()) {
             final List<VersionedSupervisorSpec> authorizedHistoryForId =
                 Lists.newArrayList(
                     AuthorizationUtils.filterAuthorizedResources(

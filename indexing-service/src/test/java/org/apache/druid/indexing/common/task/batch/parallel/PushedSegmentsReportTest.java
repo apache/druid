@@ -17,29 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.guava;
+package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.java.util.common.logger.Logger;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.io.Closeable;
-import java.io.IOException;
-
-/**
- */
-public class CloseQuietly
+public class PushedSegmentsReportTest
 {
-  private static final Logger log = new Logger(CloseQuietly.class);
-
-  public static void close(Closeable closeable)
+  @Test
+  public void testEquals()
   {
-    if (closeable == null) {
-      return;
-    }
-    try {
-      closeable.close();
-    }
-    catch (IOException e) {
-      log.error(e, "IOException thrown while closing Closeable.");
-    }
+    EqualsVerifier.forClass(PushedSegmentsReport.class).usingGetClass().verify();
   }
 }

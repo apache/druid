@@ -61,7 +61,6 @@ import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
@@ -70,6 +69,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -123,8 +123,8 @@ public class OverlordTest
 
   private void tearDownServerAndCurator()
   {
-    CloseQuietly.close(curator);
-    CloseQuietly.close(server);
+    CloseableUtils.closeAndWrapExceptions(curator);
+    CloseableUtils.closeAndWrapExceptions(server);
   }
 
   @Before

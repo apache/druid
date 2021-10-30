@@ -49,7 +49,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -315,7 +315,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
                               "a0:agg",
-                              new DefaultDimensionSpec("l1", "a0:l1", ValueType.LONG),
+                              new DefaultDimensionSpec("l1", "a0:l1", ColumnType.LONG),
                               TEST_NUM_ENTRIES
                           )
                       )
@@ -360,7 +360,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"l1\" * 2)",
-                          ValueType.LONG,
+                          ColumnType.LONG,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -414,7 +414,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"f1\" * 2)",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -468,7 +468,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"d1\" * 2)",
-                          ValueType.DOUBLE,
+                          ColumnType.DOUBLE,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -519,7 +519,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           new BloomFilterAggregatorFactory(
                               "a1:agg",
-                              new DefaultDimensionSpec("l1", "a1:l1", ValueType.LONG),
+                              new DefaultDimensionSpec("l1", "a1:l1", ColumnType.LONG),
                               TEST_NUM_ENTRIES
                           )
                       )
@@ -557,8 +557,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -572,7 +572,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new BloomFilterAggregatorFactory(
                                         "a1:agg",
-                                        new DefaultDimensionSpec("l1", "a1:l1", ValueType.LONG),
+                                        new DefaultDimensionSpec("l1", "a1:l1", ColumnType.LONG),
                                         TEST_NUM_ENTRIES
                                     ),
                                     selector("dim1", "nonexistent", null)

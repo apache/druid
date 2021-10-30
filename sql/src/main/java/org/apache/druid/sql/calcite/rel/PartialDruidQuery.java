@@ -404,11 +404,10 @@ public class PartialDruidQuery
   {
     double cost = CostEstimates.COST_BASE;
 
+    // Account for the cost of post-scan expressions.
     if (getSelectProject() != null) {
       for (final RexNode rexNode : getSelectProject().getChildExps()) {
-        if (rexNode.isA(SqlKind.INPUT_REF)) {
-          cost += CostEstimates.COST_COLUMN_READ;
-        } else {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
           cost += CostEstimates.COST_EXPRESSION;
         }
       }
@@ -421,12 +420,6 @@ public class PartialDruidQuery
     }
 
     if (getAggregate() != null) {
-      if (getSelectProject() == null) {
-        // No projection before aggregation, that means the aggregate operator is reading things directly.
-        // Account for the costs.
-        cost += CostEstimates.COST_COLUMN_READ * getAggregate().getGroupSet().size();
-      }
-
       cost += CostEstimates.COST_DIMENSION * getAggregate().getGroupSet().size();
       cost += CostEstimates.COST_AGGREGATION * getAggregate().getAggCallList().size();
     }
@@ -441,13 +434,26 @@ public class PartialDruidQuery
       }
     }
 
+    // Account for the cost of post-aggregation expressions.
     if (getAggregateProject() != null) {
-      cost += CostEstimates.COST_EXPRESSION * getAggregateProject().getChildExps().size();
+      for (final RexNode rexNode : getAggregateProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
     }
 
+    // Account for the cost of post-sort expressions.
     if (getSortProject() != null) {
-      cost += CostEstimates.COST_EXPRESSION * getSortProject().getChildExps().size();
+      for (final RexNode rexNode : getSortProject().getChildExps()) {
+        if (!rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
     }
+
+    // Account for the cost of generating outputs.
+    cost += CostEstimates.COST_OUTPUT_COLUMN * getRowType().getFieldCount();
 
     return cost;
   }

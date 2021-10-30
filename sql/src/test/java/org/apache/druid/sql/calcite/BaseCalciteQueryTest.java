@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -64,7 +63,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryStackTests;
@@ -80,6 +79,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -172,6 +172,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public DateTimeZone getSqlTimeZone()
     {
       return DateTimes.inferTzFromString("America/Los_Angeles");
+    }
+  };
+
+  public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_SYS_TABLES = new PlannerConfig()
+  {
+    @Override
+    public boolean isAuthorizeSystemTablesDirectly()
+    {
+      return true;
     }
   };
 
@@ -391,7 +400,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static ExpressionVirtualColumn expressionVirtualColumn(
       final String name,
       final String expression,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
@@ -896,7 +905,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     final InProcessViewManager viewManager =
         new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
-    SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+    DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
         plannerConfig,

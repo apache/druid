@@ -186,7 +186,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (col instanceof ComplexColumn) {
         return ((ComplexColumn) col).getTypeName();
       } else {
-        return columnHolder.getCapabilities().getType().toString();
+        return columnHolder.getCapabilities().asTypeString();
       }
     }
     catch (IOException e) {

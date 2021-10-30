@@ -23,11 +23,16 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SqlAggregationModuleTest
 {
@@ -42,10 +47,17 @@ public class SqlAggregationModuleTest
   }
 
   @Test
-  public void testEmptySqlAggregatorsAreBound()
+  public void testDefaultSqlAggregatorsAreBound()
   {
-    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<Set<SqlAggregator>>(){}));
+    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<Set<SqlAggregator>>() {}));
     Assert.assertNotNull(sqlAggregators);
-    Assert.assertTrue(sqlAggregators.isEmpty());
+    Assert.assertEquals(2, sqlAggregators.size());
+
+    final List<SqlAggregator> aggregators = sqlAggregators.stream()
+                                                          .sorted(Comparator.comparing(o -> o.getClass().getName()))
+                                                          .collect(Collectors.toList());
+
+    Assert.assertThat(aggregators.get(0), CoreMatchers.instanceOf(ApproxCountDistinctSqlAggregator.class));
+    Assert.assertThat(aggregators.get(1), CoreMatchers.instanceOf(CountSqlAggregator.class));
   }
 }

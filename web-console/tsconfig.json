@@ -19,6 +19,7 @@
     "rootDirs": ["lib", "src"],
     "skipLibCheck": true,
     "strict": true,
+    "useUnknownInCatchVariables": false,
     "target": "es2016"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "e2e-tests/**/*.ts"]

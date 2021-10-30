@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -265,7 +266,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, 0L));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -408,6 +409,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     Throwable caughtExceptionOuter = null;
+
+    //milliseconds waited for created segments to be handed off
+    long handoffWaitMs = 0L;
+
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
 
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
@@ -432,13 +437,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
@@ -811,6 +823,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
+        final long start = System.nanoTime();
         try {
           handedOffList = Futures.allAsList(handOffWaitList)
                                  .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
@@ -822,6 +835,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              .addData("taskId", task.getId())
              .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
              .emit();
+        }
+        finally {
+          handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         }
       }
 
@@ -898,7 +914,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null));
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }
 
@@ -1060,9 +1076,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * was not successful.
    *
    * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -1072,7 +1089,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                handoffWaitMs
             )
         )
     );
