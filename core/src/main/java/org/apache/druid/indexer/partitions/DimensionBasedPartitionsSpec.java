@@ -27,6 +27,8 @@ import java.util.List;
  */
 public interface DimensionBasedPartitionsSpec extends PartitionsSpec
 {
+  String PARTITION_DIMENSIONS = "partitionDimensions";
+
   String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
   String MAX_PARTITION_SIZE = "maxPartitionSize";
   String ASSUME_GROUPED = "assumeGrouped";

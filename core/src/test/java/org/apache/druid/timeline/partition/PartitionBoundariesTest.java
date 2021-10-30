@@ -31,8 +31,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
-
 
 public class PartitionBoundariesTest
 {
@@ -43,8 +41,13 @@ public class PartitionBoundariesTest
   @Before
   public void setup()
   {
-    values = new StringTuple[]{tupleOf("a"), tupleOf("dup"), tupleOf("dup"), tupleOf("z")};
-    expected = Arrays.asList(null, tupleOf("dup"), null);
+    values = new StringTuple[]{
+        StringTuple.create("a"),
+        StringTuple.create("dup"),
+        StringTuple.create("dup"),
+        StringTuple.create("z")
+    };
+    expected = Arrays.asList(null, StringTuple.create("dup"), null);
     target = new PartitionBoundaries(values);
   }
 
@@ -57,13 +60,13 @@ public class PartitionBoundariesTest
   @Test(expected = UnsupportedOperationException.class)
   public void isImmutable()
   {
-    target.add(tupleOf("should fail"));
+    target.add(StringTuple.create("should fail"));
   }
 
   @Test
   public void cannotBeIndirectlyModified()
   {
-    values[1] = tupleOf("changed");
+    values[1] = StringTuple.create("changed");
     Assert.assertEquals(expected, target);
   }
 
@@ -76,7 +79,7 @@ public class PartitionBoundariesTest
   @Test
   public void handlesRepeatedValue()
   {
-    Assert.assertEquals(Arrays.asList(null, null), new PartitionBoundaries(tupleOf("a"), tupleOf("a"), tupleOf("a")));
+    Assert.assertEquals(Arrays.asList(null, null), new PartitionBoundaries(StringTuple.create("a"), StringTuple.create("a"), StringTuple.create("a")));
   }
 
   @Test

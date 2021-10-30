@@ -166,7 +166,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .targetPartitionSize(0)
-        .testIllegalArgumentException("targetPartitionSize must be greater than 0");
+        .testIllegalArgumentException("targetRowsPerSegment must be greater than 0");
   }
 
   @Test
@@ -182,7 +182,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .targetPartitionSize(Integer.MAX_VALUE)
-        .testIllegalArgumentException("targetPartitionSize is too large");
+        .testIllegalArgumentException("targetRowsPerSegment is too large");
   }
 
   @Test
@@ -206,7 +206,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .maxPartitionSize(0)
-        .testIllegalArgumentException("maxPartitionSize must be greater than 0");
+        .testIllegalArgumentException("maxRowsPerSegment must be greater than 0");
   }
 
   @Test

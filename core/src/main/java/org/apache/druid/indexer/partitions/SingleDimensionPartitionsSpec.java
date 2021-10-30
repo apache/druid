@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.indexer.Checks;
+import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -39,8 +41,6 @@ public class SingleDimensionPartitionsSpec extends MultiDimensionPartitionsSpec
   static final String OLD_NAME = "dimension";  // for backward compatibility
 
   private static final String PARTITION_DIMENSION = "partitionDimension";
-
-  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
   private final String partitionDimension;
 
@@ -59,14 +59,42 @@ public class SingleDimensionPartitionsSpec extends MultiDimensionPartitionsSpec
   )
   {
     super(
-        targetRowsPerSegment,
-        maxRowsPerSegment,
+        computeTargetRows(targetRowsPerSegment, targetPartitionSize),
+        computeMaxRows(maxRowsPerSegment, maxPartitionSize),
         partitionDimension == null ? Collections.emptyList() : Collections.singletonList(partitionDimension),
-        assumeGrouped,
-        targetPartitionSize,
-        maxPartitionSize
+        assumeGrouped
     );
     this.partitionDimension = partitionDimension;
+  }
+
+  private static Integer computeTargetRows(Integer targetRows, Integer targetPartitionSize)
+  {
+    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRows);
+    Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
+
+    Property<Integer> target = Checks.checkAtMostOneNotNull(
+        TARGET_ROWS_PER_SEGMENT,
+        adjustedTargetRowsPerSegment,
+        TARGET_PARTITION_SIZE,
+        adjustedTargetPartitionSize
+    );
+
+    return target.getValue();
+  }
+
+  private static Integer computeMaxRows(Integer maxRows, Integer maxPartitionSize)
+  {
+    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRows);
+    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
+
+    Property<Integer> max = Checks.checkAtMostOneNotNull(
+        MAX_ROWS_PER_SEGMENT,
+        adjustedMaxRowsPerSegment,
+        MAX_PARTITION_SIZE,
+        adjustedMaxPartitionSize
+    );
+
+    return max.getValue();
   }
 
   @VisibleForTesting

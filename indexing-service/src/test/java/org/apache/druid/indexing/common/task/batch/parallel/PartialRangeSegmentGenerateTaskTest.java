@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -37,8 +38,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
-
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
 
 public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
@@ -146,7 +145,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries(tupleOf("a")))
+          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries(StringTuple.create("a")))
       );
     }
   }

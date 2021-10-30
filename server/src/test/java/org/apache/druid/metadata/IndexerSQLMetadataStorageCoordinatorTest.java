@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -38,6 +39,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.MultiDimensionShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
@@ -45,7 +47,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -1805,7 +1806,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testAddNumberedShardSpecAfterSingleDimensionsShardSpecWithUnknownCorePartitionSize() throws IOException
+  public void testAddNumberedShardSpecAfterMultiDimensionsShardSpecWithUnknownCorePartitionSize() throws IOException
   {
     final String datasource = "datasource";
     final Interval interval = Intervals.of("2020-01-01/P1D");
@@ -1814,8 +1815,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<String> metrics = ImmutableList.of("met");
     final Set<DataSegment> originalSegments = new HashSet<>();
     for (int i = 0; i < 6; i++) {
-      final String start = i == 0 ? null : String.valueOf(i - 1);
-      final String end = i == 5 ? null : String.valueOf(i);
       originalSegments.add(
           new DataSegment(
               datasource,
@@ -1824,10 +1823,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               ImmutableMap.of(),
               dimensions,
               metrics,
-              new SingleDimensionShardSpec(
-                  "dim",
-                  start,
-                  end,
+              new MultiDimensionShardSpec(
+                  Collections.singletonList("dim"),
+                  i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
+                  i == 5 ? null : StringTuple.create(String.valueOf(i)),
                   i,
                   null // emulate shardSpecs created in older versions of Druid
               ),

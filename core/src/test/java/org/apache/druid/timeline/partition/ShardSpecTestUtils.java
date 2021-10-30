@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.apache.druid.data.input.StringTuple;
 
 public class ShardSpecTestUtils
 {
@@ -50,11 +49,4 @@ public class ShardSpecTestUtils
   {
   }
 
-  /**
-   * Converts the given String values to an array.
-   */
-  public static StringTuple tupleOf(String... values)
-  {
-    return StringTuple.create(values);
-  }
 }

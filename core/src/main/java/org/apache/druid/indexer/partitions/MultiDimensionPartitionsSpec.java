@@ -23,9 +23,7 @@ package org.apache.druid.indexer.partitions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
@@ -40,10 +38,6 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
 {
   public static final String NAME = "multi_dim";
 
-  private static final String PARITION_DIMENSIONS = "partitionDimensions";
-
-  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
-
   private final Integer targetRowsPerSegment;
   private final Integer maxRowsPerSegment;
   private final List<String> partitionDimensions;
@@ -56,37 +50,21 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
   public MultiDimensionPartitionsSpec(
       @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
-      @JsonProperty(PARITION_DIMENSIONS) List<String> partitionDimensions,
-      @JsonProperty("assumeGrouped") boolean assumeGrouped,  // false by default
-
-      // Deprecated properties preserved for backward compatibility:
-      @Deprecated @JsonProperty(TARGET_PARTITION_SIZE) @Nullable
-          Integer targetPartitionSize,  // prefer targetRowsPerSegment
-      @Deprecated @JsonProperty(MAX_PARTITION_SIZE) @Nullable
-          Integer maxPartitionSize  // prefer maxRowsPerSegment
+      @JsonProperty(PARTITION_DIMENSIONS) List<String> partitionDimensions,
+      @JsonProperty(ASSUME_GROUPED) boolean assumeGrouped  // false by default
   )
   {
     Preconditions.checkArgument(partitionDimensions != null, "partitionDimensions must be specified");
     this.partitionDimensions = partitionDimensions;
     this.assumeGrouped = assumeGrouped;
 
-    Integer adjustedTargetRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment);
-    Integer adjustedMaxRowsPerSegment = PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment);
-    Integer adjustedTargetPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(targetPartitionSize);
-    Integer adjustedMaxPartitionSize = PartitionsSpec.resolveHistoricalNullIfNeeded(maxPartitionSize);
-
-    Property<Integer> target = Checks.checkAtMostOneNotNull(
-        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
-        adjustedTargetRowsPerSegment,
-        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
-        adjustedTargetPartitionSize
+    final Property<Integer> target = new Property<>(
+        TARGET_ROWS_PER_SEGMENT,
+        PartitionsSpec.resolveHistoricalNullIfNeeded(targetRowsPerSegment)
     );
-
-    Property<Integer> max = Checks.checkAtMostOneNotNull(
-        PartitionsSpec.MAX_ROWS_PER_SEGMENT,
-        adjustedMaxRowsPerSegment,
-        MAX_PARTITION_SIZE,
-        adjustedMaxPartitionSize
+    final Property<Integer> max = new Property<>(
+        MAX_ROWS_PER_SEGMENT,
+        PartitionsSpec.resolveHistoricalNullIfNeeded(maxRowsPerSegment)
     );
 
     Preconditions.checkArgument(
@@ -99,32 +77,21 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
     this.maxRowsPerSegment = max.getValue();
   }
 
-  @VisibleForTesting
-  public MultiDimensionPartitionsSpec(
-      @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
-      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
-      @JsonProperty(PARITION_DIMENSIONS) List<String> partitionDimensions,
-      @JsonProperty("assumeGrouped") boolean assumeGrouped  // false by default
-  )
-  {
-    this(targetRowsPerSegment, maxRowsPerSegment, partitionDimensions, assumeGrouped, null, null);
-  }
-
-  private static int resolveMaxRowsPerSegment(Property<Integer> target, Property<Integer> max)
+  private static int resolveMaxRowsPerSegment(Property<Integer> targetRows, Property<Integer> maxRows)
   {
     final int resolvedValue;
 
-    if (target.getValue() != null) {
-      Preconditions.checkArgument(target.getValue() > 0, target.getName() + " must be greater than 0");
+    if (targetRows.getValue() != null) {
+      Preconditions.checkArgument(targetRows.getValue() > 0, targetRows.getName() + " must be greater than 0");
       try {
-        resolvedValue = Math.addExact(target.getValue(), (target.getValue() / 2));
+        resolvedValue = Math.addExact(targetRows.getValue(), (targetRows.getValue() / 2));
       }
       catch (ArithmeticException e) {
-        throw new IllegalArgumentException(target.getName() + " is too large");
+        throw new IllegalArgumentException(targetRows.getName() + " is too large");
       }
     } else {
-      Preconditions.checkArgument(max.getValue() > 0, max.getName() + " must be greater than 0");
-      resolvedValue = max.getValue();
+      Preconditions.checkArgument(maxRows.getValue() > 0, maxRows.getName() + " must be greater than 0");
+      resolvedValue = maxRows.getValue();
     }
     return resolvedValue;
   }
@@ -177,7 +144,7 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
   public String getForceGuaranteedRollupIncompatiblityReason()
   {
     if (getPartitionDimensions() == null || getPartitionDimensions().isEmpty()) {
-      return PARITION_DIMENSIONS + " must be specified";
+      return PARTITION_DIMENSIONS + " must be specified";
     }
 
     return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;

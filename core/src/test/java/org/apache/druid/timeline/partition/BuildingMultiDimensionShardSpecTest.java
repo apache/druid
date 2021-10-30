@@ -24,12 +24,11 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.StringTuple;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
 
 public class BuildingMultiDimensionShardSpecTest
 {
@@ -39,16 +38,16 @@ public class BuildingMultiDimensionShardSpecTest
     Assert.assertEquals(
         new MultiDimensionShardSpec(
             Arrays.asList("dim1", "dim2"),
-            tupleOf("start1", "start2"),
-            tupleOf("end1", "end2"),
+            StringTuple.create("start1", "start2"),
+            StringTuple.create("end1", "end2"),
             5,
             10
         ),
         new BuildingMultiDimensionShardSpec(
             1,
             Arrays.asList("dim1", "dim2"),
-            tupleOf("start1", "start2"),
-            tupleOf("end1", "end2"),
+            StringTuple.create("start1", "start2"),
+            StringTuple.create("end1", "end2"),
             5
         ).convert(10)
     );
@@ -62,8 +61,8 @@ public class BuildingMultiDimensionShardSpecTest
         new BuildingMultiDimensionShardSpec(
             1,
             Arrays.asList("dim1", "dim2"),
-            tupleOf("start1", "start2"),
-            tupleOf("end1", "end2"),
+            StringTuple.create("start1", "start2"),
+            StringTuple.create("end1", "end2"),
             5
         ).createChunk("test")
     );
@@ -80,8 +79,8 @@ public class BuildingMultiDimensionShardSpecTest
     final BuildingMultiDimensionShardSpec original = new BuildingMultiDimensionShardSpec(
         1,
         Arrays.asList("dim1", "dim2"),
-        tupleOf("start1", "start2"),
-        tupleOf("end1", "end2"),
+        StringTuple.create("start1", "start2"),
+        StringTuple.create("end1", "end2"),
         5
     );
     final String json = mapper.writeValueAsString(original);

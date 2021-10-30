@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Test;
 
@@ -30,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -46,33 +46,40 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        tupleOf("India", "Delhi"),
-        tupleOf("Spain", "Valencia"),
+        StringTuple.create("India", "Delhi"),
+        StringTuple.create("Spain", "Valencia"),
         10,
         null
     );
 
     // Verify that entries starting from (India, Delhi) until (Spain, Valencia) are in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Delhi")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Kolkata")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Japan", "Tokyo")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Spain", "Barcelona")
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Bengaluru")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("Spain", "Valencia")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("United Kingdom", "London")
     ));
   }
@@ -85,35 +92,43 @@ public class MultiDimensionShardSpecTest
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
         null,
-        tupleOf("Spain", "Valencia"),
+        StringTuple.create("Spain", "Valencia"),
         10,
         null
     );
 
     // Verify that anything before (Spain, Valencia) is in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow(null, null)
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow(null, "Kolkata")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", null)
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Kolkata")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Japan", "Tokyo")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Spain", "Barcelona")
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("Spain", "Valencia")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("United Kingdom", "London")
     ));
   }
@@ -125,30 +140,36 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        tupleOf("India", "Delhi"),
+        StringTuple.create("India", "Delhi"),
         null,
         10,
         null
     );
 
     // Verify that anything starting from (India, Delhi) is in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Kolkata")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Japan", "Tokyo")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Spain", null)
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow(null, null)
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", null)
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Bengaluru")
     ));
   }
@@ -160,27 +181,32 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        tupleOf("India", "Bengaluru"),
-        tupleOf("India", "Patna"),
+        StringTuple.create("India", "Bengaluru"),
+        StringTuple.create("India", "Patna"),
         10,
         null
     );
 
     // Verify that entries starting from (India, Bengaluru) until (India, Patna) are in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Bengaluru")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Kolkata")
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Patna")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Ahmedabad")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Raipur")
     ));
   }
@@ -192,30 +218,36 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        tupleOf("India"),
-        tupleOf("Spain"),
+        StringTuple.create("India"),
+        StringTuple.create("Spain"),
         10,
         null
     );
 
     // Verify that entries starting from (India) until (Spain) are in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Japan")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Malaysia")
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("Belgium")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("Spain")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("United Kingdom")
     ));
   }
@@ -227,35 +259,55 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        tupleOf("India", "Delhi"),
-        tupleOf("Spain", "Valencia"),
+        StringTuple.create("India", "Delhi"),
+        StringTuple.create("Spain", "Valencia"),
         10,
         null
     );
 
     // Verify that entries starting from (India, Delhi) until (Spain, Valencia) are in chunk
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Delhi")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("India", "Kolkata")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Japan", "Tokyo")
     ));
-    assertTrue(shardSpec.isInChunk(
+    assertTrue(isInChunk(
+        shardSpec,
         createRow("Spain", "Barcelona")
     ));
 
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("India", "Bengaluru")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("Spain", "Valencia")
     ));
-    assertFalse(shardSpec.isInChunk(
+    assertFalse(isInChunk(
+        shardSpec,
         createRow("United Kingdom", "London")
     ));
+  }
+
+  /**
+   * Checks if the given InputRow is in the chunk represented by the given shard spec.
+   */
+  private boolean isInChunk(MultiDimensionShardSpec shardSpec, InputRow row)
+  {
+    return MultiDimensionShardSpec.isInChunk(
+        shardSpec.getDimensions(),
+        shardSpec.getStart(),
+        shardSpec.getEnd(),
+        row
+    );
   }
 
   private void setDimensions(String... dimensionNames)

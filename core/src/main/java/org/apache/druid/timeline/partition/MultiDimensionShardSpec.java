@@ -21,7 +21,6 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -176,8 +175,7 @@ public class MultiDimensionShardSpec implements ShardSpec
     }
   }
 
-  @VisibleForTesting
-  boolean isInChunk(InputRow inputRow)
+  private boolean isInChunk(InputRow inputRow)
   {
     return isInChunk(dimensions, start, end, inputRow);
   }

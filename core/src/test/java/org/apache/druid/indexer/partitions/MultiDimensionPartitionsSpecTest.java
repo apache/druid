@@ -57,40 +57,6 @@ public class MultiDimensionPartitionsSpecTest
   }
 
   @Test
-  public void deserializeWithBackwardCompatibility()
-  {
-    String serialized = "{"
-                        + "\"type\":\"" + MultiDimensionPartitionsSpec.NAME + "\""
-                        + ",\"targetPartitionSize\":" + TARGET_ROWS_PER_SEGMENT  // test backward-compatible for this
-                        + ",\"maxPartitionSize\":" + MAX_ROWS_PER_SEGMENT  // test backward-compatible for this
-                        + ",\"partitionDimensions\":" + serialize(PARTITION_DIMENSIONS)
-                        + ",\"assumeGrouped\":" + ASSUME_GROUPED
-                        + "}";
-    MultiDimensionPartitionsSpec spec = deserialize(serialized);
-    Assert.assertEquals(SPEC, spec);
-  }
-
-  @Test
-  public void havingBothTargetForbidden()
-  {
-    new TestSpecBuilder()
-        .targetRowsPerSegment(1)
-        .targetPartitionSize(1)
-        .testIllegalArgumentException(
-            "At most one of [Property{name='targetRowsPerSegment', value=1}] or [Property{name='targetPartitionSize', value=1}] must be present");
-  }
-
-  @Test
-  public void havingBothMaxForbidden()
-  {
-    new TestSpecBuilder()
-        .maxRowsPerSegment(1)
-        .maxPartitionSize(1)
-        .testIllegalArgumentException(
-            "At most one of [Property{name='maxRowsPerSegment', value=1}] or [Property{name='maxPartitionSize', value=1}] must be present");
-  }
-
-  @Test
   public void havingNeitherTargetNorMaxForbidden()
   {
     new TestSpecBuilder()
@@ -114,27 +80,11 @@ public class MultiDimensionPartitionsSpecTest
   }
 
   @Test
-  public void targetPartitionSizeMustBePositive()
-  {
-    new TestSpecBuilder()
-        .targetPartitionSize(0)
-        .testIllegalArgumentException("targetPartitionSize must be greater than 0");
-  }
-
-  @Test
   public void targetMaxRowsPerSegmentOverflows()
   {
     new TestSpecBuilder()
         .targetRowsPerSegment(Integer.MAX_VALUE)
         .testIllegalArgumentException("targetRowsPerSegment is too large");
-  }
-
-  @Test
-  public void targetPartitionSizeOverflows()
-  {
-    new TestSpecBuilder()
-        .targetPartitionSize(Integer.MAX_VALUE)
-        .testIllegalArgumentException("targetPartitionSize is too large");
   }
 
   @Test
@@ -154,37 +104,12 @@ public class MultiDimensionPartitionsSpecTest
   }
 
   @Test
-  public void maxPartitionSizeMustBePositive()
-  {
-    new TestSpecBuilder()
-        .maxPartitionSize(0)
-        .testIllegalArgumentException("maxPartitionSize must be greater than 0");
-  }
-
-  @Test
-  public void maxPartitionHistoricalNull()
-  {
-    new TestSpecBuilder()
-        .maxPartitionSize(HISTORICAL_NULL)
-        .testIllegalArgumentException("Exactly one of targetRowsPerSegment or maxRowsPerSegment must be present");
-  }
-
-  @Test
   public void resolvesMaxFromTargetRowsPerSegment()
   {
     MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
         .targetRowsPerSegment(123)
         .build();
     Assert.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
-  }
-
-  @Test
-  public void resolvesMaxFromTargetPartitionSize()
-  {
-    MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
-        .targetPartitionSize(123)
-        .build();
-    Assert.assertEquals(Integer.valueOf(184), spec.getMaxRowsPerSegment());
   }
 
   @Test
@@ -197,20 +122,10 @@ public class MultiDimensionPartitionsSpecTest
   }
 
   @Test
-  public void resolvesMaxFromMaxPartitionSize()
-  {
-    MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
-        .maxPartitionSize(123)
-        .build();
-    Assert.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
-  }
-
-  @Test
   public void getPartitionDimensionFromNull()
   {
     // Verify that partitionDimensions must be non-null
     new TestSpecBuilder()
-        .targetPartitionSize(1)
         .partitionDimensions(null)
         .testIllegalArgumentException("partitionDimensions must be specified");
   }
@@ -220,7 +135,7 @@ public class MultiDimensionPartitionsSpecTest
   {
     List<String> partitionDimensions = Collections.singletonList("a");
     MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
-        .targetPartitionSize(1)
+        .targetRowsPerSegment(10)
         .partitionDimensions(partitionDimensions)
         .build();
     Assert.assertEquals(partitionDimensions, spec.getPartitionDimensions());
@@ -254,8 +169,6 @@ public class MultiDimensionPartitionsSpecTest
     private Integer targetRowsPerSegment;
     private Integer maxRowsPerSegment;
     private List<String> partitionDimensions = Collections.emptyList();
-    private Integer targetPartitionSize;
-    private Integer maxPartitionSize;
 
     TestSpecBuilder targetRowsPerSegment(Integer targetRowsPerSegment)
     {
@@ -275,18 +188,6 @@ public class MultiDimensionPartitionsSpecTest
       return this;
     }
 
-    TestSpecBuilder targetPartitionSize(Integer targetPartitionSize)
-    {
-      this.targetPartitionSize = targetPartitionSize;
-      return this;
-    }
-
-    TestSpecBuilder maxPartitionSize(Integer maxPartitionSize)
-    {
-      this.maxPartitionSize = maxPartitionSize;
-      return this;
-    }
-
     void testIllegalArgumentException(String exceptionExpectedMessage)
     {
       exception.expect(IllegalArgumentException.class);
@@ -300,9 +201,7 @@ public class MultiDimensionPartitionsSpecTest
           targetRowsPerSegment,
           maxRowsPerSegment,
           partitionDimensions,
-          MultiDimensionPartitionsSpecTest.ASSUME_GROUPED,
-          targetPartitionSize,
-          maxPartitionSize
+          ASSUME_GROUPED
       );
     }
   }

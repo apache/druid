@@ -55,9 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
-
-
 public class RangePartitionCachingLocalSegmentAllocatorTest
 {
   private static final String DATASOURCE = "datasource";
@@ -73,9 +70,9 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       INTERVAL_SINGLETON, "version-singleton",
       INTERVAL_NORMAL, "version-normal"
   );
-  private static final StringTuple PARTITION0 = tupleOf("0");
-  private static final StringTuple PARTITION5 = tupleOf("5");
-  private static final StringTuple PARTITION9 = tupleOf("9");
+  private static final StringTuple PARTITION0 = StringTuple.create("0");
+  private static final StringTuple PARTITION5 = StringTuple.create("5");
+  private static final StringTuple PARTITION9 = StringTuple.create("9");
   private static final PartitionBoundaries EMPTY_PARTITIONS = new PartitionBoundaries();
   private static final PartitionBoundaries SINGLETON_PARTITIONS = new PartitionBoundaries(PARTITION0, PARTITION0);
   private static final PartitionBoundaries NORMAL_PARTITIONS = new PartitionBoundaries(

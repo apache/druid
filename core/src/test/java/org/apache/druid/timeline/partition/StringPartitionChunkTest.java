@@ -19,10 +19,9 @@
 
 package org.apache.druid.timeline.partition;
 
+import org.apache.druid.data.input.StringTuple;
 import org.junit.Assert;
 import org.junit.Test;
-
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
 
 
 public class StringPartitionChunkTest
@@ -30,10 +29,10 @@ public class StringPartitionChunkTest
   @Test
   public void testAbuts()
   {
-    StringPartitionChunk<Integer> lhs = StringPartitionChunk.make(null, tupleOf("10"), 0, 1);
+    StringPartitionChunk<Integer> lhs = StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1);
 
-    Assert.assertTrue(lhs.abuts(StringPartitionChunk.make(tupleOf("10"), null, 1, 2)));
-    Assert.assertFalse(lhs.abuts(StringPartitionChunk.make(tupleOf("11"), null, 2, 3)));
+    Assert.assertTrue(lhs.abuts(StringPartitionChunk.make(StringTuple.create("10"), null, 1, 2)));
+    Assert.assertFalse(lhs.abuts(StringPartitionChunk.make(StringTuple.create("11"), null, 2, 3)));
     Assert.assertFalse(lhs.abuts(StringPartitionChunk.make(null, null, 3, 4)));
 
     Assert.assertFalse(StringPartitionChunk.make(null, null, 0, 1).abuts(StringPartitionChunk.make(null, null, 1, 2)));
@@ -42,18 +41,18 @@ public class StringPartitionChunkTest
   @Test
   public void testIsStart()
   {
-    Assert.assertTrue(StringPartitionChunk.make(null, tupleOf("10"), 0, 1).isStart());
-    Assert.assertFalse(StringPartitionChunk.make(tupleOf("10"), null, 0, 1).isStart());
-    Assert.assertFalse(StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 0, 1).isStart());
+    Assert.assertTrue(StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1).isStart());
+    Assert.assertFalse(StringPartitionChunk.make(StringTuple.create("10"), null, 0, 1).isStart());
+    Assert.assertFalse(StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 0, 1).isStart());
     Assert.assertTrue(StringPartitionChunk.make(null, null, 0, 1).isStart());
   }
 
   @Test
   public void testIsEnd()
   {
-    Assert.assertFalse(StringPartitionChunk.make(null, tupleOf("10"), 0, 1).isEnd());
-    Assert.assertTrue(StringPartitionChunk.make(tupleOf("10"), null, 0, 1).isEnd());
-    Assert.assertFalse(StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 0, 1).isEnd());
+    Assert.assertFalse(StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1).isEnd());
+    Assert.assertTrue(StringPartitionChunk.make(StringTuple.create("10"), null, 0, 1).isEnd());
+    Assert.assertFalse(StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 0, 1).isEnd());
     Assert.assertTrue(StringPartitionChunk.make(null, null, 0, 1).isEnd());
   }
 
@@ -67,38 +66,38 @@ public class StringPartitionChunkTest
     );
     Assert.assertEquals(
         0,
-        StringPartitionChunk.make(tupleOf("10"), null, 0, 1)
-                            .compareTo(StringPartitionChunk.make(tupleOf("10"), null, 0, 2))
+        StringPartitionChunk.make(StringTuple.create("10"), null, 0, 1)
+                            .compareTo(StringPartitionChunk.make(StringTuple.create("10"), null, 0, 2))
     );
     Assert.assertEquals(
         0,
-        StringPartitionChunk.make(null, tupleOf("10"), 1, 1)
-                            .compareTo(StringPartitionChunk.make(null, tupleOf("10"), 1, 2))
+        StringPartitionChunk.make(null, StringTuple.create("10"), 1, 1)
+                            .compareTo(StringPartitionChunk.make(null, StringTuple.create("10"), 1, 2))
     );
     Assert.assertEquals(
         0,
-        StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 1, 1)
-                            .compareTo(StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 1, 2))
+        StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 1, 1)
+                            .compareTo(StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 1, 2))
     );
     Assert.assertEquals(
         -1,
-        StringPartitionChunk.make(null, tupleOf("10"), 0, 1)
-                            .compareTo(StringPartitionChunk.make(tupleOf("10"), null, 1, 2))
+        StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1)
+                            .compareTo(StringPartitionChunk.make(StringTuple.create("10"), null, 1, 2))
     );
     Assert.assertEquals(
         -1,
-        StringPartitionChunk.make(tupleOf("11"), tupleOf("20"), 0, 1)
-                            .compareTo(StringPartitionChunk.make(tupleOf("20"), tupleOf("33"), 1, 1))
+        StringPartitionChunk.make(StringTuple.create("11"), StringTuple.create("20"), 0, 1)
+                            .compareTo(StringPartitionChunk.make(StringTuple.create("20"), StringTuple.create("33"), 1, 1))
     );
     Assert.assertEquals(
         1,
-        StringPartitionChunk.make(tupleOf("20"), tupleOf("33"), 1, 1)
-                            .compareTo(StringPartitionChunk.make(tupleOf("11"), tupleOf("20"), 0, 1))
+        StringPartitionChunk.make(StringTuple.create("20"), StringTuple.create("33"), 1, 1)
+                            .compareTo(StringPartitionChunk.make(StringTuple.create("11"), StringTuple.create("20"), 0, 1))
     );
     Assert.assertEquals(
         1,
-        StringPartitionChunk.make(tupleOf("10"), null, 1, 1)
-                            .compareTo(StringPartitionChunk.make(null, tupleOf("10"), 0, 1))
+        StringPartitionChunk.make(StringTuple.create("10"), null, 1, 1)
+                            .compareTo(StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1))
     );
   }
 
@@ -106,8 +105,8 @@ public class StringPartitionChunkTest
   public void testEquals()
   {
     Assert.assertEquals(StringPartitionChunk.make(null, null, 0, 1), StringPartitionChunk.make(null, null, 0, 1));
-    Assert.assertEquals(StringPartitionChunk.make(null, tupleOf("10"), 0, 1), StringPartitionChunk.make(null, tupleOf("10"), 0, 1));
-    Assert.assertEquals(StringPartitionChunk.make(tupleOf("10"), null, 0, 1), StringPartitionChunk.make(tupleOf("10"), null, 0, 1));
-    Assert.assertEquals(StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 0, 1), StringPartitionChunk.make(tupleOf("10"), tupleOf("11"), 0, 1));
+    Assert.assertEquals(StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1), StringPartitionChunk.make(null, StringTuple.create("10"), 0, 1));
+    Assert.assertEquals(StringPartitionChunk.make(StringTuple.create("10"), null, 0, 1), StringPartitionChunk.make(StringTuple.create("10"), null, 0, 1));
+    Assert.assertEquals(StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 0, 1), StringPartitionChunk.make(StringTuple.create("10"), StringTuple.create("11"), 0, 1));
   }
 }

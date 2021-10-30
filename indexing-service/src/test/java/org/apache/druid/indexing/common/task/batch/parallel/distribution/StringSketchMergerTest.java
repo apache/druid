@@ -28,8 +28,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static org.apache.druid.timeline.partition.ShardSpecTestUtils.tupleOf;
-
 public class StringSketchMergerTest
 {
   private StringSketchMerger target;
@@ -57,15 +55,15 @@ public class StringSketchMergerTest
   @Test
   public void mergesCorrectly()
   {
-    StringTuple string1 = tupleOf("a");
+    StringTuple string1 = StringTuple.create("a");
     StringSketch sketch1 = new StringSketch();
     sketch1.put(string1);
 
-    StringTuple string2 = tupleOf("mn");
+    StringTuple string2 = StringTuple.create("mn");
     StringSketch sketch2 = new StringSketch();
     sketch2.put(string2);
 
-    StringTuple string3 = tupleOf("z");
+    StringTuple string3 = StringTuple.create("z");
     StringSketch sketch3 = new StringSketch();
     sketch3.put(string3);
 
