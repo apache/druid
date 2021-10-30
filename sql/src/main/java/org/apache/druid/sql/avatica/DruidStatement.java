@@ -28,6 +28,7 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -57,6 +58,7 @@ public class DruidStatement implements Closeable
   private final String connectionId;
   private final int statementId;
   private final Map<String, Object> queryContext;
+  @GuardedBy("lock")
   private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
   private final Object lock = new Object();
@@ -114,12 +116,29 @@ public class DruidStatement implements Closeable
 
     for (int i = 0; i < fieldList.size(); i++) {
       RelDataTypeField field = fieldList.get(i);
-      final ColumnMetaData.Rep rep = QueryMaker.rep(field.getType().getSqlTypeName());
-      final ColumnMetaData.ScalarType columnType = ColumnMetaData.scalar(
-          field.getType().getSqlTypeName().getJdbcOrdinal(),
-          field.getType().getSqlTypeName().getName(),
-          rep
-      );
+
+      final ColumnMetaData.AvaticaType columnType;
+      if (field.getType().getSqlTypeName() == SqlTypeName.ARRAY) {
+        final ColumnMetaData.Rep elementRep = QueryMaker.rep(field.getType().getComponentType().getSqlTypeName());
+        final ColumnMetaData.ScalarType elementType = ColumnMetaData.scalar(
+            field.getType().getComponentType().getSqlTypeName().getJdbcOrdinal(),
+            field.getType().getComponentType().getSqlTypeName().getName(),
+            elementRep
+        );
+        final ColumnMetaData.Rep arrayRep = QueryMaker.rep(field.getType().getSqlTypeName());
+        columnType = ColumnMetaData.array(
+            elementType,
+            field.getType().getSqlTypeName().getName(),
+            arrayRep
+        );
+      } else {
+        final ColumnMetaData.Rep rep = QueryMaker.rep(field.getType().getSqlTypeName());
+        columnType = ColumnMetaData.scalar(
+            field.getType().getSqlTypeName().getJdbcOrdinal(),
+            field.getType().getSqlTypeName().getName(),
+            rep
+        );
+      }
       columns.add(
           new ColumnMetaData(
               i, // ordinal
@@ -161,9 +180,9 @@ public class DruidStatement implements Closeable
       try {
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
-
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
         this.authenticationResult = authenticationResult;
-        PrepareResult prepareResult = sqlLifecycle.prepare(authenticationResult);
+        PrepareResult prepareResult = sqlLifecycle.prepare();
         this.maxRowCount = maxRowCount;
         this.query = query;
         List<AvaticaParameter> params = new ArrayList<>();
@@ -196,7 +215,8 @@ public class DruidStatement implements Closeable
       ensure(State.PREPARED);
       try {
         sqlLifecycle.setParameters(parameters);
-        sqlLifecycle.planAndAuthorize(authenticationResult);
+        sqlLifecycle.validateAndAuthorize(authenticationResult);
+        sqlLifecycle.plan();
         final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
@@ -239,14 +259,6 @@ public class DruidStatement implements Closeable
     synchronized (lock) {
       ensure(State.PREPARED, State.RUNNING, State.DONE);
       return signature;
-    }
-  }
-
-  public RelDataType getRowType()
-  {
-    synchronized (lock) {
-      ensure(State.PREPARED, State.RUNNING, State.DONE);
-      return sqlLifecycle.rowType();
     }
   }
 
@@ -329,7 +341,9 @@ public class DruidStatement implements Closeable
         // First close. Run the onClose function.
         try {
           onClose.run();
-          sqlLifecycle.emitLogsAndMetrics(t, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(t, null, -1);
+          }
         }
         catch (Throwable t1) {
           t.addSuppressed(t1);
@@ -343,7 +357,11 @@ public class DruidStatement implements Closeable
       // First close. Run the onClose function.
       try {
         if (!(this.throwable instanceof ForbiddenException)) {
-          sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+          synchronized (lock) {
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
+          }
+        } else {
+          DruidMeta.logFailure(this.throwable);
         }
         onClose.run();
       }
@@ -372,6 +390,7 @@ public class DruidStatement implements Closeable
   private DruidStatement closeAndPropagateThrowable(Throwable t)
   {
     this.throwable = t;
+    DruidMeta.logFailure(t);
     try {
       close();
     }

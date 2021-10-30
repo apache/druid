@@ -47,10 +47,22 @@ public class TestUtils
         cgroupDir,
         "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
     ).mkdirs());
+
+    Assert.assertTrue(new File(
+        cgroupDir,
+        "cpuset/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
+    ).mkdirs());
     copyResource("/proc.pid.cgroup", new File(procDir, "cgroup"));
   }
 
   public static void copyResource(String resource, File out) throws IOException
+  {
+    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
+    Assert.assertTrue(out.exists());
+    Assert.assertNotEquals(0, out.length());
+  }
+
+  public static void copyOrReplaceResource(String resource, File out) throws IOException
   {
     Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
     Assert.assertTrue(out.exists());

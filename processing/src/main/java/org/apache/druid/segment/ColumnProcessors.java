@@ -28,7 +28,15 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.NilVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
@@ -38,11 +46,20 @@ import javax.annotation.Nullable;
  * top of it.
  *
  * @see DimensionHandlerUtils#createColumnSelectorPlus which this may eventually replace
- * @see DimensionHandlerUtils#makeVectorProcessor which creates similar, vectorized processors; may eventually be moved
- * into this class.
  */
 public class ColumnProcessors
 {
+  /**
+   * Capabilites that are used when we return a nil selector for a nonexistent column.
+   */
+  public static final ColumnCapabilities NIL_COLUMN_CAPABILITIES =
+      new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
+                                  .setDictionaryEncoded(true)
+                                  .setDictionaryValuesUnique(true)
+                                  .setDictionaryValuesSorted(true)
+                                  .setHasBitmapIndexes(false)
+                                  .setHasMultipleValues(false);
+
   /**
    * Make a processor for a particular named column.
    *
@@ -81,25 +98,10 @@ public class ColumnProcessors
   )
   {
     return makeProcessorInternal(
-        factory -> {
-          // Capabilities of the column that the dimensionSpec is reading. We can't return these straight-up, because
-          // the _result_ of the dimensionSpec might have different capabilities. But what we return will generally be
-          // based on them.
-          final ColumnCapabilities dimensionCapabilities = factory.getColumnCapabilities(dimensionSpec.getDimension());
-
-          if (dimensionSpec.getExtractionFn() != null || dimensionSpec.mustDecorate()) {
-            // DimensionSpec is doing some sort of transformation. The result is always a string.
-
-            return new ColumnCapabilitiesImpl()
-                .setType(ValueType.STRING)
-                .setDictionaryValuesSorted(dimensionSpec.getExtractionFn().preservesOrdering())
-                .setDictionaryValuesUnique(dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE)
-                .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(dimensionCapabilities));
-          } else {
-            // No transformation. Pass through.
-            return dimensionCapabilities;
-          }
-        },
+        factory -> computeDimensionSpecCapabilities(
+            dimensionSpec,
+            factory.getColumnCapabilities(dimensionSpec.getDimension())
+        ),
         factory -> factory.makeDimensionSelector(dimensionSpec),
         factory -> factory.makeColumnValueSelector(dimensionSpec.getDimension()),
         processorFactory,
@@ -120,7 +122,7 @@ public class ColumnProcessors
    */
   public static <T> T makeProcessor(
       final Expr expr,
-      final ValueType exprTypeHint,
+      final ColumnType exprTypeHint,
       final ColumnProcessorFactory<T> processorFactory,
       final ColumnSelectorFactory selectorFactory
   )
@@ -145,6 +147,108 @@ public class ColumnProcessors
   }
 
   /**
+   * Make a processor for a particular named column.
+   *
+   * @param column           the column
+   * @param processorFactory the processor factory
+   * @param selectorFactory  the column selector factory
+   * @param <T>              processor type
+   */
+  public static <T> T makeVectorProcessor(
+      final String column,
+      final VectorColumnProcessorFactory<T> processorFactory,
+      final VectorColumnSelectorFactory selectorFactory
+  )
+  {
+    return makeVectorProcessorInternal(
+        factory -> factory.getColumnCapabilities(column),
+        factory -> factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(column)),
+        factory -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(column)),
+        factory -> factory.makeValueSelector(column),
+        factory -> factory.makeObjectSelector(column),
+        processorFactory,
+        selectorFactory
+    );
+  }
+
+  /**
+   * Make a processor for a particular {@link DimensionSpec}.
+   *
+   * @param dimensionSpec    the dimension spec
+   * @param processorFactory the processor factory
+   * @param selectorFactory  the column selector factory
+   * @param <T>              processor type
+   */
+  public static <T> T makeVectorProcessor(
+      final DimensionSpec dimensionSpec,
+      final VectorColumnProcessorFactory<T> processorFactory,
+      final VectorColumnSelectorFactory selectorFactory
+  )
+  {
+    return makeVectorProcessorInternal(
+        factory -> computeDimensionSpecCapabilities(
+            dimensionSpec,
+            factory.getColumnCapabilities(dimensionSpec.getDimension())
+        ),
+        factory -> factory.makeSingleValueDimensionSelector(dimensionSpec),
+        factory -> factory.makeMultiValueDimensionSelector(dimensionSpec),
+        factory -> factory.makeValueSelector(dimensionSpec.getDimension()),
+        factory -> factory.makeObjectSelector(dimensionSpec.getDimension()),
+        processorFactory,
+        selectorFactory
+    );
+  }
+
+  /**
+   * Returns the capabilities of selectors derived from a particular {@link DimensionSpec}.
+   *
+   * Will only return non-STRING types if the DimensionSpec passes through inputs unchanged. (i.e., it's a
+   * {@link DefaultDimensionSpec}, or something that behaves like one.)
+   *
+   * @param dimensionSpec      The dimensionSpec.
+   * @param columnCapabilities Capabilities of the column that the dimensionSpec is reading, i.e.
+   *                           {@link DimensionSpec#getDimension()}.
+   */
+  @Nullable
+  private static ColumnCapabilities computeDimensionSpecCapabilities(
+      final DimensionSpec dimensionSpec,
+      @Nullable final ColumnCapabilities columnCapabilities
+  )
+  {
+    if (dimensionSpec.mustDecorate()) {
+      // Decorating DimensionSpecs could do anything. We can't pass along any useful info other than the type.
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
+    } else if (dimensionSpec.getExtractionFn() != null) {
+      // DimensionSpec is applying an extractionFn but *not* decorating. We have some insight into how the
+      // extractionFn will behave, so let's use it.
+      final boolean dictionaryEncoded;
+      final boolean unique;
+      final boolean sorted;
+      if (columnCapabilities != null) {
+        dictionaryEncoded = columnCapabilities.isDictionaryEncoded().isTrue();
+        unique = columnCapabilities.areDictionaryValuesUnique().isTrue();
+        sorted = columnCapabilities.areDictionaryValuesSorted().isTrue();
+      } else {
+        dictionaryEncoded = false;
+        unique = false;
+        sorted = false;
+      }
+
+      return new ColumnCapabilitiesImpl()
+          .setType(ColumnType.STRING)
+          .setDictionaryEncoded(dictionaryEncoded)
+          .setDictionaryValuesSorted(sorted && dimensionSpec.getExtractionFn().preservesOrdering())
+          .setDictionaryValuesUnique(
+              unique && dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
+          )
+          .setHasMultipleValues(mayBeMultiValue(columnCapabilities));
+    } else {
+      // No transformation. Pass through underlying types.
+      return columnCapabilities;
+    }
+  }
+
+  /**
    * Creates "column processors", which are objects that wrap a single input column and provide some
    * functionality on top of it.
    *
@@ -158,8 +262,6 @@ public class ColumnProcessors
    *                              called if the column type is long, float, double, or complex.
    * @param processorFactory      object that encapsulates the knowledge about how to create processors
    * @param selectorFactory       column selector factory used for creating the vector processor
-   *
-   * @see DimensionHandlerUtils#makeVectorProcessor the vectorized version
    */
   private static <T> T makeProcessorInternal(
       final Function<ColumnSelectorFactory, ColumnCapabilities> inputCapabilitiesFn,
@@ -170,9 +272,9 @@ public class ColumnProcessors
   )
   {
     final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
-    final ValueType effectiveType = capabilities != null ? capabilities.getType() : processorFactory.defaultType();
+    final TypeSignature<ValueType> effectiveType = capabilities != null ? capabilities : processorFactory.defaultType();
 
-    switch (effectiveType) {
+    switch (effectiveType.getType()) {
       case STRING:
         return processorFactory.makeDimensionProcessor(
             dimensionSelectorFn.apply(selectorFactory),
@@ -187,7 +289,80 @@ public class ColumnProcessors
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:
-        throw new ISE("Unsupported type[%s]", effectiveType);
+        throw new ISE("Unsupported type[%s]", effectiveType.asTypeString());
+    }
+  }
+
+  /**
+   * Creates "column processors", which are objects that wrap a single input column and provide some
+   * functionality on top of it.
+   *
+   * @param inputCapabilitiesFn            function that returns capabilities of the column being processed. The type provided
+   *                                       by these capabilities will be used to determine what kind of selector to create. If
+   *                                       this function returns null, then it is assumed that the column does not exist.
+   *                                       Note: this is different behavior from the non-vectorized version.
+   * @param singleValueDimensionSelectorFn function that creates a singly-valued dimension selector for the column being
+   *                                       processed. Will be called if the column is singly-valued string.
+   * @param multiValueDimensionSelectorFn  function that creates a multi-valued dimension selector for the column being
+   *                                       processed. Will be called if the column is multi-valued string.
+   * @param valueSelectorFn                function that creates a value selector for the column being processed. Will be
+   *                                       called if the column type is long, float, or double.
+   * @param objectSelectorFn               function that creates an object selector for the column being processed. Will
+   *                                       be called if the column type is complex.
+   * @param processorFactory               object that encapsulates the knowledge about how to create processors
+   * @param selectorFactory                column selector factory used for creating the vector processor
+   */
+  private static <T> T makeVectorProcessorInternal(
+      final Function<VectorColumnSelectorFactory, ColumnCapabilities> inputCapabilitiesFn,
+      final Function<VectorColumnSelectorFactory, SingleValueDimensionVectorSelector> singleValueDimensionSelectorFn,
+      final Function<VectorColumnSelectorFactory, MultiValueDimensionVectorSelector> multiValueDimensionSelectorFn,
+      final Function<VectorColumnSelectorFactory, VectorValueSelector> valueSelectorFn,
+      final Function<VectorColumnSelectorFactory, VectorObjectSelector> objectSelectorFn,
+      final VectorColumnProcessorFactory<T> processorFactory,
+      final VectorColumnSelectorFactory selectorFactory
+  )
+  {
+    final ColumnCapabilities capabilities = inputCapabilitiesFn.apply(selectorFactory);
+
+    if (capabilities == null) {
+      // Column does not exist.
+      return processorFactory.makeSingleValueDimensionProcessor(
+          NIL_COLUMN_CAPABILITIES,
+          NilVectorSelector.create(selectorFactory.getReadableVectorInspector())
+      );
+    }
+
+    switch (capabilities.getType()) {
+      case STRING:
+        // let the processor factory decide if it prefers to use an object selector or dictionary encoded selector
+        if (!processorFactory.useDictionaryEncodedSelector(capabilities)) {
+          return processorFactory.makeObjectProcessor(
+              capabilities,
+              objectSelectorFn.apply(selectorFactory)
+          );
+        }
+
+        if (mayBeMultiValue(capabilities)) {
+          return processorFactory.makeMultiValueDimensionProcessor(
+              capabilities,
+              multiValueDimensionSelectorFn.apply(selectorFactory)
+          );
+        } else {
+          return processorFactory.makeSingleValueDimensionProcessor(
+              capabilities,
+              singleValueDimensionSelectorFn.apply(selectorFactory)
+          );
+        }
+      case LONG:
+        return processorFactory.makeLongProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
+      case FLOAT:
+        return processorFactory.makeFloatProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
+      case DOUBLE:
+        return processorFactory.makeDoubleProcessor(capabilities, valueSelectorFn.apply(selectorFactory));
+      case COMPLEX:
+        return processorFactory.makeObjectProcessor(capabilities, objectSelectorFn.apply(selectorFactory));
+      default:
+        throw new ISE("Unsupported type[%s]", capabilities.getType());
     }
   }
 

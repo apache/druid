@@ -33,6 +33,7 @@ import java.util.Objects;
  * Note: all concrete subclass of this should have constructor with the form of <init>(String, Expr, Expr)
  * if it's not possible, just be sure Evals.binaryOp() can handle that
  */
+@SuppressWarnings("ClassName")
 abstract class BinaryOpExprBase implements Expr
 {
   protected final String op;
@@ -81,15 +82,9 @@ abstract class BinaryOpExprBase implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (left.isNullLiteral()) {
-      return right.getOutputType(inspector);
-    }
-    if (right.isNullLiteral()) {
-      return left.getOutputType(inspector);
-    }
-    return ExprTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
+    return ExpressionTypeConversion.operator(left.getOutputType(inspector), right.getOutputType(inspector));
   }
 
   @Override
@@ -118,6 +113,7 @@ abstract class BinaryOpExprBase implements Expr
  * Base class for numerical binary operators, with additional methods defined to evaluate primitive values directly
  * instead of wrapped with {@link ExprEval}
  */
+@SuppressWarnings("ClassName")
 abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 {
   BinaryEvalOpExprBase(String op, Expr left, Expr right)
@@ -137,8 +133,8 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    switch (type) {
+    ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+    switch (type.getType()) {
       case STRING:
         return evalString(leftVal.asString(), rightVal.asString());
       case LONG:

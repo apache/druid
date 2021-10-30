@@ -22,8 +22,6 @@ package org.apache.druid.data.input;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
-import java.util.List;
-
 /**
  * Schema of {@link InputRow}.
  */
@@ -31,13 +29,17 @@ public class InputRowSchema
 {
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
-  private final List<String> metricNames;
+  private final ColumnsFilter columnsFilter;
 
-  public InputRowSchema(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec, List<String> metricNames)
+  public InputRowSchema(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter
+  )
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
-    this.metricNames = metricNames;
+    this.columnsFilter = columnsFilter;
   }
 
   public TimestampSpec getTimestampSpec()
@@ -50,8 +52,17 @@ public class InputRowSchema
     return dimensionsSpec;
   }
 
-  public List<String> getMetricNames()
+  /**
+   * A {@link ColumnsFilter} that can filter down the list of columns that must be read after flattening.
+   *
+   * Logically, Druid applies ingestion spec components in a particular order: first flattenSpec (if any), then
+   * timestampSpec, then transformSpec, and finally dimensionsSpec and metricsSpec.
+   *
+   * If a flattenSpec is provided, this method returns a filter that should be applied after flattening. So, it will
+   * be based on what needs to pass between the flattenSpec and everything beyond it.
+   */
+  public ColumnsFilter getColumnsFilter()
   {
-    return metricNames;
+    return columnsFilter;
   }
 }

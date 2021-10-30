@@ -19,9 +19,12 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.Assert;
+import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -34,6 +37,8 @@ public class DimensionsSpecSerdeTest
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   static {
+    AnnotationIntrospector introspector = new GuiceAnnotationIntrospector();
+    DruidSecondaryModule.setupAnnotationIntrospector(OBJECT_MAPPER, introspector);
     OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 

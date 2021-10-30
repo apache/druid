@@ -65,14 +65,15 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -88,6 +89,9 @@ import java.util.stream.Collectors;
 public class GroupByQuery extends BaseQuery<ResultRow>
 {
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
   private static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
 
   private static final Comparator<ResultRow> NON_GRANULAR_TIME_COMP =
@@ -345,6 +349,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   /**
    * If this query has a single universal timestamp, return it. Otherwise return null.
    *
+   * If {@link #getIntervals()} is empty, there are no results (or timestamps) so this method returns null.
+   *
    * This method will return a nonnull timestamp in the following two cases:
    *
    * 1) CTX_KEY_FUDGE_TIMESTAMP is set (in which case this timestamp will be returned).
@@ -543,7 +549,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final IntList orderedFieldNumbers = new IntArrayList();
     final Set<Integer> dimsInOrderBy = new HashSet<>();
     final List<Boolean> needsReverseList = new ArrayList<>();
-    final List<ValueType> dimensionTypes = new ArrayList<>();
+    final List<ColumnType> dimensionTypes = new ArrayList<>();
     final List<StringComparator> comparators = new ArrayList<>();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
@@ -554,7 +560,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         orderedFieldNumbers.add(resultRowSignature.indexOf(dim.getOutputName()));
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
-        final ValueType type = dimensions.get(dimIndex).getOutputType();
+        final ColumnType type = dimensions.get(dimIndex).getOutputType();
         dimensionTypes.add(type);
         comparators.add(orderSpec.getDimensionComparator());
       }
@@ -564,7 +570,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       if (!dimsInOrderBy.contains(i)) {
         orderedFieldNumbers.add(resultRowSignature.indexOf(dimensions.get(i).getOutputName()));
         needsReverseList.add(false);
-        final ValueType type = dimensions.get(i).getOutputType();
+        final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
         comparators.add(StringComparators.LEXICOGRAPHIC);
       }
@@ -675,8 +681,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
       if (granular) {
         return (lhs, rhs) -> Longs.compare(
-            getGranularity().bucketStart(DateTimes.utc(lhs.getLong(0))).getMillis(),
-            getGranularity().bucketStart(DateTimes.utc(rhs.getLong(0))).getMillis()
+            getGranularity().bucketStart(lhs.getLong(0)),
+            getGranularity().bucketStart(rhs.getLong(0))
         );
       } else {
         return NON_GRANULAR_TIME_COMP;
@@ -715,7 +721,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     if (!timestampStringFromContext.isEmpty()) {
       return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(granularity)) {
-      final DateTime timeStart = getIntervals().get(0).getStart();
+      final List<Interval> intervals = getIntervals();
+      if (intervals.isEmpty()) {
+        // null, the "universal timestamp" of nothing
+        return null;
+      }
+      final DateTime timeStart = intervals.get(0).getStart();
       return granularity.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
@@ -725,7 +736,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   private static int compareDimsForLimitPushDown(
       final IntList fields,
       final List<Boolean> needsReverseList,
-      final List<ValueType> dimensionTypes,
+      final List<ColumnType> dimensionTypes,
       final List<StringComparator> comparators,
       final ResultRow lhs,
       final ResultRow rhs
@@ -734,13 +745,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     for (int i = 0; i < fields.size(); i++) {
       final int fieldNumber = fields.getInt(i);
       final StringComparator comparator = comparators.get(i);
-      final ValueType dimensionType = dimensionTypes.get(i);
+      final ColumnType dimensionType = dimensionTypes.get(i);
 
       final int dimCompare;
       final Object lhsObj = lhs.get(fieldNumber);
       final Object rhsObj = rhs.get(fieldNumber);
 
-      if (ValueType.isNumeric(dimensionType)) {
+      if (dimensionType.isNumeric()) {
         if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
         } else {
@@ -769,6 +780,19 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public Sequence<ResultRow> postProcess(Sequence<ResultRow> results)
   {
     return postProcessingFn.apply(results);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        dimensions,
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

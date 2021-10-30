@@ -390,14 +390,20 @@ public class WorkerHolder
                 announcement.getStatus(),
                 worker.getHost()
             );
-            delta.add(TaskAnnouncement.create(
-                announcement.getTaskId(),
-                announcement.getTaskType(),
-                announcement.getTaskResource(),
-                TaskStatus.failure(announcement.getTaskId()),
-                announcement.getTaskLocation(),
-                announcement.getTaskDataSource()
-            ));
+            delta.add(
+                TaskAnnouncement.create(
+                    announcement.getTaskId(),
+                    announcement.getTaskType(),
+                    announcement.getTaskResource(),
+                    TaskStatus.failure(
+                        announcement.getTaskId(),
+                        "This task disappeared on the worker where it was assigned. "
+                        + "See overlord logs for more details."
+                    ),
+                    announcement.getTaskLocation(),
+                    announcement.getTaskDataSource()
+                )
+            );
           }
         }
 
@@ -427,14 +433,20 @@ public class WorkerHolder
                   announcement.getStatus(),
                   worker.getHost()
               );
-              delta.add(TaskAnnouncement.create(
-                  announcement.getTaskId(),
-                  announcement.getTaskType(),
-                  announcement.getTaskResource(),
-                  TaskStatus.failure(announcement.getTaskId()),
-                  announcement.getTaskLocation(),
-                  announcement.getTaskDataSource()
-              ));
+              delta.add(
+                  TaskAnnouncement.create(
+                      announcement.getTaskId(),
+                      announcement.getTaskType(),
+                      announcement.getTaskResource(),
+                      TaskStatus.failure(
+                          announcement.getTaskId(),
+                          "This task disappeared on the worker where it was assigned. "
+                          + "See overlord logs for more details."
+                      ),
+                      announcement.getTaskLocation(),
+                      announcement.getTaskDataSource()
+                  )
+              );
             }
           } else if (change instanceof WorkerHistoryItem.Metadata) {
             isWorkerDisabled = ((WorkerHistoryItem.Metadata) change).isDisabled();

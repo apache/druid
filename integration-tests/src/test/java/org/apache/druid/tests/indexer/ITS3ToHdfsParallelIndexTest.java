@@ -46,6 +46,6 @@ public class ITS3ToHdfsParallelIndexTest extends AbstractS3InputSourceParallelIn
   @Test(dataProvider = "resources")
   public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
   {
-    doTest(s3InputSource);
+    doTest(s3InputSource, new Pair<>(false, false));
   }
 }

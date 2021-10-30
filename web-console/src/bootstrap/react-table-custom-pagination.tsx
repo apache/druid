@@ -41,7 +41,7 @@ interface ReactTableCustomPaginationProps {
 }
 
 interface ReactTableCustomPaginationState {
-  page: string | number;
+  tempPage?: string;
 }
 
 export class ReactTableCustomPagination extends React.PureComponent<
@@ -51,36 +51,24 @@ export class ReactTableCustomPagination extends React.PureComponent<
   constructor(props: ReactTableCustomPaginationProps) {
     super(props);
 
-    this.state = {
-      page: props.page,
-    };
+    this.state = {};
   }
 
-  componentWillReceiveProps(nextProps: ReactTableCustomPaginationProps) {
-    this.setState({ page: nextProps.page });
-  }
-
-  getSafePage = (page: any) => {
-    if (Number.isNaN(page)) {
-      page = this.props.page;
-    }
-    return Math.min(Math.max(page, 0), this.props.pages - 1);
-  };
-
-  changePage = (page: any) => {
-    page = this.getSafePage(page);
-    this.setState({ page });
+  private readonly changePage = (page: number) => {
+    page = Math.min(Math.max(page, 0), this.props.pages - 1);
     if (this.props.page !== page) {
       this.props.onPageChange(page);
     }
   };
 
-  applyPage = (e: any) => {
+  private readonly applyTempPage = (e: any) => {
     if (e) {
       e.preventDefault();
     }
-    const page = this.state.page;
-    this.changePage(page === '' ? this.props.page : page);
+    const { tempPage } = this.state;
+    if (!tempPage) return;
+    this.setState({ tempPage: undefined });
+    this.changePage(parseInt(tempPage, 10) - 1);
   };
 
   render(): JSX.Element {
@@ -101,6 +89,7 @@ export class ReactTableCustomPagination extends React.PureComponent<
       pageText,
       rowsText,
     } = this.props;
+    const { tempPage } = this.state;
 
     return (
       <div className="-pagination" style={style}>
@@ -123,20 +112,19 @@ export class ReactTableCustomPagination extends React.PureComponent<
               <div className="-pageJump">
                 <input
                   className={Classes.INPUT}
-                  type={this.state.page === '' ? 'text' : 'number'}
+                  type="number"
+                  min="1"
                   onChange={e => {
                     const val: string = e.target.value;
-                    const page: number = parseInt(val, 10) - 1;
-                    if (val === '') {
-                      return this.setState({ page: val });
-                    }
-                    this.setState({ page: this.getSafePage(page) });
+                    this.setState({
+                      tempPage: val,
+                    });
                   }}
-                  value={this.state.page === '' ? '' : (this.state.page as number) + 1}
-                  onBlur={this.applyPage}
+                  value={tempPage || String(page + 1)}
+                  onBlur={this.applyTempPage}
                   onKeyPress={e => {
                     if (e.which === 13 || e.keyCode === 13) {
-                      this.applyPage(e);
+                      this.applyTempPage(e);
                     }
                   }}
                 />

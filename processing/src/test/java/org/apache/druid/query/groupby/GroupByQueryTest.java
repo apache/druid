@@ -21,11 +21,13 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -39,7 +41,8 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -81,15 +84,42 @@ public class GroupByQueryTest
   }
 
   @Test
+  public void testGetRequiredColumns()
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn("v", "\"other\"", ColumnType.STRING, ExprMacroTable.nil()))
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"), DefaultDimensionSpec.of("v"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(new OrderByColumnSpec(
+                    "alias",
+                    OrderByColumnSpec.Direction.ASCENDING,
+                    StringComparators.LEXICOGRAPHIC
+                )),
+                100
+            )
+        )
+        .build();
+
+    Assert.assertEquals(ImmutableSet.of("__time", "quality", "other", "index"), query.getRequiredColumns());
+  }
+
+  @Test
   public void testRowOrderingMixTypes()
   {
     final GroupByQuery query = GroupByQuery.builder()
                                            .setDataSource("dummy")
                                            .setGranularity(Granularities.ALL)
                                            .setInterval("2000/2001")
-                                           .addDimension(new DefaultDimensionSpec("foo", "foo", ValueType.LONG))
-                                           .addDimension(new DefaultDimensionSpec("bar", "bar", ValueType.FLOAT))
-                                           .addDimension(new DefaultDimensionSpec("baz", "baz", ValueType.STRING))
+                                           .addDimension(new DefaultDimensionSpec("foo", "foo", ColumnType.LONG))
+                                           .addDimension(new DefaultDimensionSpec("bar", "bar", ColumnType.FLOAT))
+                                           .addDimension(new DefaultDimensionSpec("baz", "baz", ColumnType.STRING))
                                            .build();
 
     final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);

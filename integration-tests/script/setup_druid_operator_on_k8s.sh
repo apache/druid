@@ -21,6 +21,7 @@ export KUBECTL="sudo /usr/local/bin/kubectl"
 
 
 # Prepare For Druid-Operator
+rm -rf druid-operator
 git clone https://github.com/druid-io/druid-operator.git
 cd druid-operator
 git checkout -b druid-operator-$DRUID_OPERATOR_VERSION druid-operator-$DRUID_OPERATOR_VERSION

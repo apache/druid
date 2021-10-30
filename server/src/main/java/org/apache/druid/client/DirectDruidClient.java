@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,6 +57,7 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.server.QueryResource;
+import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -159,8 +159,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
-    final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
-    final String cancelUrl = StringUtils.format("%s://%s/druid/v2/%s", scheme, host, query.getId());
+    final String url = scheme + "://" + host + "/druid/v2/";
+    final String cancelUrl = url + query.getId();
 
     try {
       log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
@@ -518,7 +518,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public void cleanup(JsonParserIterator<T> iterFromMake)
           {
-            CloseQuietly.close(iterFromMake);
+            CloseableUtils.closeAndWrapExceptions(iterFromMake);
           }
         }
     );

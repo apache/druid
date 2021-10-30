@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnInspector;
@@ -102,7 +103,7 @@ public class ExpressionVectorSelectorBenchmark
   private Closer closer;
 
   @Nullable
-  private ExprType outputType;
+  private ExpressionType outputType;
 
   @Setup(Level.Trial)
   public void setup()
@@ -155,7 +156,7 @@ public class ExpressionVectorSelectorBenchmark
             new ExpressionVirtualColumn(
                 "v",
                 expression,
-                ExprType.toValueType(outputType),
+                ExpressionType.toColumnType(outputType),
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -171,7 +172,7 @@ public class ExpressionVectorSelectorBenchmark
       );
       if (outputType.isNumeric()) {
         VectorValueSelector selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
-        if (outputType.equals(ExprType.DOUBLE)) {
+        if (outputType.is(ExprType.DOUBLE)) {
           while (!cursor.isDone()) {
             blackhole.consume(selector.getDoubleVector());
             blackhole.consume(selector.getNullVector());

@@ -86,6 +86,8 @@ Coordinator of the cluster. In addition, returns HTTP 200 if the server is the c
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
 
+
+<a name="coordinator-segment-loading"></a>
 #### Segment Loading
 
 ##### GET
@@ -101,6 +103,14 @@ Returns the number of segments left to load until segments that should be loaded
 * `/druid/coordinator/v1/loadstatus?full`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
+
+* `/druid/coordinator/v1/loadstatus?full&computeUsingClusterView`
+
+Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
+The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
+A segment is considered fully loaded when:
+- Druid has replicated it the number of times configured in the corresponding load rule.
+- Or the number of replicas for the segment in each tier where it is configured to be replicated equals the available nodes of a service type that are currently allowed to load the segment in the tier.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -151,25 +161,48 @@ Setting `forceMetadataRefresh` to true will force the coordinator to poll latest
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
 of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+You can pass the optional query parameter `computeUsingClusterView` to factor in the available cluster services when calculating
+the segments left to load. See [Coordinator Segment Loading](#coordinator-segment-loading) for details.
 If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`sys.segments`](../querying/sql.md#segments-table) table.
+
 ##### GET
+
+* `/druid/coordinator/v1/metadata/segments`
+
+Returns a list of all segments for each datasource enabled in the cluster.
+
+* `/druid/coordinator/v1/metadata/segments?datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all segments for one or more specific datasources enabled in the cluster.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus`
+
+Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
+
+* `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all segments for one or more specific datasources with the full segment metadata and an extra field `overshadowed`.
 
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of data sources with at least one used segment in the cluster.
+Returns a list of the names of datasources with at least one used segment in the cluster, retrieved from the metadata database. Users should call this API to get the eventual state that the system will be in.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
-Returns a list of the names of data sources, regardless of whether there are used segments belonging to those data
-sources in the cluster or not.
+Returns a list of the names of datasources, regardless of whether there are used segments belonging to those datasources in the cluster or not.
+
+* `/druid/coordinator/v1/metadata/datasources?includeDisabled`
+
+Returns a list of the names of datasources, regardless of whether the datasource is disabled or not.
 
 * `/druid/coordinator/v1/metadata/datasources?full`
 
-Returns a list of all data sources with at least one used segment in the cluster. Returns all metadata about those data
-sources as stored in the metadata store.
+Returns a list of all datasources with at least one used segment in the cluster. Returns all metadata about those datasources as stored in the metadata store.
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}`
 
@@ -209,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster.
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
@@ -280,13 +313,13 @@ Caution : Avoid using indexing or kill tasks and these API's at the same time fo
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as used all segments belonging to a data source. Returns a JSON object of the form
+Marks as used all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as used) as the result of this API call.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as used a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
 result of this API call.
 
@@ -314,7 +347,7 @@ JSON Request Payload:
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as unused all segments belonging to a data source. Returns a JSON object of the form
+Marks as unused all segments belonging to a datasource. Returns a JSON object of the form
 `{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
 the segments were marked as unused) as the result of this API call.
 
@@ -325,7 +358,7 @@ Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
+Marks as unused a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
 the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
 result of this API call.
 
@@ -401,6 +434,30 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
+#### Dynamic configuration
+
+See [Coordinator Dynamic Configuration](../configuration/index.md#dynamic-configuration) for details.
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
+(e.g., 2016-06-27_2016-06-28).
+
+##### GET
+
+* `/druid/coordinator/v1/config`
+
+Retrieves current coordinator dynamic configuration.
+
+* `/druid/coordinator/v1/config/history?interval={interval}&count={count}`
+
+Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
+to filter by interval and limit the number of results respectively.
+
+##### POST
+
+* `/druid/coordinator/v1/config`
+
+Update overlord dynamic worker configuration.
+
 #### Compaction Status
 
 ##### GET
@@ -414,7 +471,7 @@ This is only valid for dataSource which has compaction enabled.
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+Returns the status and statistics from the auto compaction run of all dataSources which have auto compaction enabled in the latest run.
 The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
@@ -689,7 +746,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 Retrieves current overlord dynamic configuration.
 
-* `/druid/indexer/v1/worker/history?interval={interval}&counter={count}`
+* `/druid/indexer/v1/worker/history?interval={interval}&count={count}`
 
 Retrieves history of changes to overlord dynamic configuration. Accepts `interval` and  `count` query string parameters
 to filter by interval and limit the number of results respectively.
@@ -813,6 +870,11 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 ##### GET
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
+
 * `/druid/v2/datasources`
 
 Returns a list of queryable datasources.
@@ -872,6 +934,11 @@ Returns segment information lists including server locations for the given query
 ### Router
 
 #### GET
+
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

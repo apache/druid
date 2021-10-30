@@ -22,11 +22,14 @@ package org.apache.druid.testing.clients;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.Query;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+
+import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
 
 public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
 {
@@ -34,20 +37,42 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
   @Inject
   QueryResourceTestClient(
       ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    this(jsonMapper, smileMapper, httpClient, config.getRouterUrl(), MediaType.APPLICATION_JSON, null);
   }
 
-  @Override
-  public String getBrokerURL()
+  private QueryResourceTestClient(
+      ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
+      @TestClient HttpClient httpClient,
+      String routerUrl,
+      String contentType,
+      String accept
+  )
   {
-    return StringUtils.format(
-        "%s/druid/v2/",
-        routerUrl
+    super(jsonMapper, smileMapper, httpClient, routerUrl, contentType, accept);
+  }
+
+  /**
+   * clone a new instance of current object with given encoding.
+   * Note: For {@link AbstractQueryResourceTestClient#queryAsync(String, Object)} operation, contentType could only be application/json
+   *
+   * @param contentType Content-Type header of request. Cannot be NULL. Both application/json and application/x-jackson-smile are allowed
+   * @param accept      Accept header of request. Both application/json and application/x-jackson-smile are allowed
+   */
+  public QueryResourceTestClient withEncoding(String contentType, @Nullable String accept)
+  {
+    return new QueryResourceTestClient(
+        this.jsonMapper,
+        this.smileMapper,
+        this.httpClient,
+        this.routerUrl,
+        contentType,
+        accept
     );
   }
-
 }

@@ -27,12 +27,12 @@ import org.apache.calcite.schema.Schema;
  */
 public class NamedLookupSchema implements NamedSchema
 {
-  private static final String NAME = "lookup";
+  public static final String NAME = "lookup";
 
   private final LookupSchema lookupSchema;
 
   @Inject
-  NamedLookupSchema(LookupSchema lookupSchema)
+  public NamedLookupSchema(LookupSchema lookupSchema)
   {
     this.lookupSchema = lookupSchema;
   }

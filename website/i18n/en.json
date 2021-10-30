@@ -134,6 +134,9 @@
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
       },
+      "development/extensions-contrib/prometheus": {
+        "title": "Prometheus Emitter"
+      },
       "development/extensions-contrib/redis-cache": {
         "title": "Druid Redis Cache"
       },
@@ -179,6 +182,9 @@
       "development/extensions-core/datasketches-tuple": {
         "title": "DataSketches Tuple Sketch module"
       },
+      "development/extensions-core/druid-aws-rds": {
+        "title": "Druid AWS RDS Module"
+      },
       "development/extensions-core/druid-basic-security": {
         "title": "Basic Security"
       },
@@ -213,6 +219,9 @@
       "development/extensions-core/kinesis-ingestion": {
         "title": "Amazon Kinesis ingestion",
         "sidebar_label": "Amazon Kinesis"
+      },
+      "development/extensions-core/kubernetes": {
+        "title": "Kubernetes"
       },
       "development/extensions-core/lookups-cached-global": {
         "title": "Globally Cached Lookups"
@@ -264,11 +273,18 @@
       "development/versioning": {
         "title": "Versioning"
       },
+      "ingestion/compaction": {
+        "title": "Compaction"
+      },
       "ingestion/data-formats": {
         "title": "Data formats"
       },
       "ingestion/data-management": {
         "title": "Data management"
+      },
+      "ingestion/data-model": {
+        "title": "Druid data model",
+        "sidebar_label": "Data model"
       },
       "ingestion/faq": {
         "title": "Ingestion troubleshooting FAQ",
@@ -281,9 +297,21 @@
       "ingestion/index": {
         "title": "Ingestion"
       },
+      "ingestion/ingestion-spec": {
+        "title": "Ingestion spec reference",
+        "sidebar_label": "Ingestion spec"
+      },
       "ingestion/native-batch": {
         "title": "Native batch ingestion",
         "sidebar_label": "Native batch"
+      },
+      "ingestion/partitioning": {
+        "title": "Partitioning",
+        "sidebar_label": "Partitioning"
+      },
+      "ingestion/rollup": {
+        "title": "Data rollup",
+        "sidebar_label": "Data rollup"
       },
       "ingestion/schema-design": {
         "title": "Schema design tips"
@@ -315,6 +343,10 @@
       "operations/basic-cluster-tuning": {
         "title": "Basic cluster tuning"
       },
+      "operations/clean-metadata-store": {
+        "title": "Automated cleanup for metadata records",
+        "sidebar_label": "Automated metadata cleanup"
+      },
       "operations/deep-storage-migration": {
         "title": "Deep storage migration"
       },
@@ -323,6 +355,9 @@
       },
       "operations/dump-segment": {
         "title": "dump-segment tool"
+      },
+      "operations/dynamic-config-provider": {
+        "title": "Dynamic Config Providers"
       },
       "operations/export-metadata": {
         "title": "Export Metadata Tool"
@@ -488,6 +523,9 @@
       "querying/topnquery": {
         "title": "TopN queries",
         "sidebar_label": "TopN"
+      },
+      "querying/using-caching": {
+        "title": "Using query caching"
       },
       "querying/virtual-columns": {
         "title": "Virtual columns"

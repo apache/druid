@@ -72,7 +72,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   {
     return new DruidOuterQueryRel(
         sourceRel.getCluster(),
-        sourceRel.getTraitSet(),
+        sourceRel.getTraitSet().plusAll(partialQuery.getRelTraits()),
         sourceRel,
         partialQuery,
         sourceRel.getQueryMaker()
@@ -217,6 +217,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   {
     return planner.getCostFactory()
                   .makeCost(partialQuery.estimateCost(), 0, 0)
-                  .multiplyBy(CostEstimates.MULTIPLIER_OUTER_QUERY);
+                  .multiplyBy(CostEstimates.MULTIPLIER_OUTER_QUERY)
+                  .plus(planner.getCostFactory().makeCost(CostEstimates.COST_SUBQUERY, 0, 0));
   }
 }

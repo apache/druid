@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.aggregation;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 
 import java.util.Objects;
@@ -35,7 +35,7 @@ public class DimensionExpression
   public static DimensionExpression ofSimpleColumn(
       final String outputName,
       final DruidExpression expression,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     return new DimensionExpression(outputName, outputName, expression, outputType);
@@ -48,7 +48,7 @@ public class DimensionExpression
       final String virtualColumn,
       final String outputName,
       final DruidExpression expression,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     return new DimensionExpression(virtualColumn, outputName, expression, outputType);
@@ -57,13 +57,13 @@ public class DimensionExpression
   private final String virtualColumn;
   private final String outputName;
   private final DruidExpression expression;
-  private final ValueType outputType;
+  private final ColumnType outputType;
 
   private DimensionExpression(
       final String virtualColumn,
       final String outputName,
       final DruidExpression expression,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     Preconditions.checkArgument(!expression.isSimpleExtraction() || outputName.equals(virtualColumn));

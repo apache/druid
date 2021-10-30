@@ -35,7 +35,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -208,21 +207,6 @@ public class CostBalancerStrategy implements BalancerStrategy
       totalCost += computeJointSegmentsCost(segment, s);
     }
     return totalCost;
-  }
-
-
-  @Override
-  public BalancerSegmentHolder pickSegmentToMove(
-      final List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources,
-      double percentOfSegmentsToConsider
-  )
-  {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
-        serverHolders,
-        broadcastDatasources,
-        percentOfSegmentsToConsider
-    );
   }
 
   @Override

@@ -194,7 +194,7 @@ public class ObjectStorageIteratorTest
    * Makes a mock Google Storage client that handles enough of "List" to test the functionality of the
    * {@link ObjectStorageIterator} class.
    */
-  private static GoogleStorage makeMockClient(final List<StorageObject> storageObjects)
+  static GoogleStorage makeMockClient(final List<StorageObject> storageObjects)
   {
     return new GoogleStorage(null)
     {
@@ -286,7 +286,7 @@ public class ObjectStorageIteratorTest
     return new MockStorage().mockList(bucket, storageObjects);
   }
 
-  private static StorageObject makeStorageObject(final String bucket, final String key, final long size)
+  static StorageObject makeStorageObject(final String bucket, final String key, final long size)
   {
     final StorageObject summary = new StorageObject();
     summary.setBucket(bucket);

@@ -22,7 +22,12 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import { Transform } from '../../../druid-models';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
@@ -30,11 +35,11 @@ import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
   sampleData: HeaderAndRows,
-  selectedTransform: Transform | undefined,
+  selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
   const selectedTransformName = selectedTransform.name;
-  if (!sampleData.header.includes(selectedTransformName)) return;
+  if (selectedTransformName && !sampleData.header.includes(selectedTransformName)) return;
   return selectedTransformName;
 }
 
@@ -61,6 +66,10 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
     <ReactTable
       className="transform-table -striped -highlight"
       data={sampleData.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={sampleData.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(sampleData.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
         const timestamp = columnName === '__time';
@@ -101,12 +110,11 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-          Cell: row => <TableCell value={timestamp ? new Date(row.value) : row.value} />,
+          Cell: function TransformTableCell(row) {
+            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+          },
         };
       })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

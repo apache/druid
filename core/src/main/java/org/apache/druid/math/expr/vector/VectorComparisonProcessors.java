@@ -19,21 +19,84 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.segment.column.Types;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 public class VectorComparisonProcessors
 {
+  public static <T> ExprVectorProcessor<T> makeComparisonProcessor(
+      Expr.VectorInputBindingInspector inspector,
+      Expr left,
+      Expr right,
+      Supplier<LongOutStringsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
+      Supplier<LongOutLongsInFunctionVectorProcessor> longOutLongsInProcessor,
+      Supplier<DoubleOutLongDoubleInFunctionVectorProcessor> doubleOutLongDoubleInProcessor,
+      Supplier<DoubleOutDoubleLongInFunctionVectorProcessor> doubleOutDoubleLongInProcessor,
+      Supplier<DoubleOutDoublesInFunctionVectorProcessor> doubleOutDoublesInProcessor
+  )
+  {
+    final ExpressionType leftType = left.getOutputType(inspector);
+    final ExpressionType rightType = right.getOutputType(inspector);
+    ExprVectorProcessor<?> processor = null;
+    if (Types.is(leftType, ExprType.STRING)) {
+      if (Types.isNullOr(rightType, ExprType.STRING)) {
+        processor = longOutStringsInFunctionVectorProcessor.get();
+      } else {
+        processor = doubleOutDoublesInProcessor.get();
+      }
+    } else if (leftType == null) {
+      if (Types.isNullOr(rightType, ExprType.STRING)) {
+        processor = longOutStringsInFunctionVectorProcessor.get();
+      }
+    } else if (leftType.is(ExprType.DOUBLE) || Types.is(rightType, ExprType.DOUBLE)) {
+      processor = doubleOutDoublesInProcessor.get();
+    }
+    if (processor != null) {
+      return (ExprVectorProcessor<T>) processor;
+    }
+    // fall through to normal math processor logic
+    return VectorMathProcessors.makeMathProcessor(
+        inspector,
+        left,
+        right,
+        longOutLongsInProcessor,
+        doubleOutLongDoubleInProcessor,
+        doubleOutDoubleLongInProcessor,
+        doubleOutDoublesInProcessor
+    );
+  }
+
   public static <T> ExprVectorProcessor<T> equal(
       Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(Objects.equals(leftVal, rightVal));
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
@@ -91,10 +154,23 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(!Objects.equals(leftVal, rightVal));
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
@@ -152,10 +228,23 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) >= 0);
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
@@ -213,10 +302,23 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) > 0);
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
@@ -274,10 +376,23 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) <= 0);
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),
@@ -335,10 +450,23 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    return VectorMathProcessors.makeMathProcessor(
+    return makeComparisonProcessor(
         inspector,
         left,
         right,
+        () -> new LongOutStringsInFunctionVectorProcessor(
+            left.buildVectorized(inspector),
+            right.buildVectorized(inspector),
+            inspector.getMaxVectorSize()
+        )
+        {
+          @Nullable
+          @Override
+          Long processValue(@Nullable String leftVal, @Nullable String rightVal)
+          {
+            return Evals.asLong(Comparators.<String>naturalNullsFirst().compare(leftVal, rightVal) < 0);
+          }
+        },
         () -> new LongOutLongsInFunctionVectorProcessor(
             left.buildVectorized(inspector),
             right.buildVectorized(inspector),

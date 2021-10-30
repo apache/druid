@@ -44,13 +44,11 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -68,7 +66,6 @@ import java.util.function.Supplier;
 public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_distribution";
-  private static final Logger LOG = new Logger(PartialDimensionDistributionTask.class);
 
   // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
   private static final boolean SKIP_NULL = true;
@@ -76,6 +73,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final String subtaskSpecId;
 
   // For testing
   private final Supplier<DedupInputRowFilter> dedupInputRowFilterSupplier;
@@ -87,6 +85,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      // subtaskSpecId can be null only for old task versions.
+      @JsonProperty("subtaskSpecId") @Nullable final String subtaskSpecId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
@@ -97,6 +97,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         groupId,
         taskResource,
         supervisorTaskId,
+        subtaskSpecId,
         numAttempts,
         ingestionSchema,
         context,
@@ -106,12 +107,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
   }
 
-  @VisibleForTesting  // Only for testing
+  @VisibleForTesting
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
       final TaskResource taskResource,
       final String supervisorTaskId,
+      @Nullable final String subtaskSpecId,
       final int numAttempts,
       final ParallelIndexIngestionSpec ingestionSchema,
       final Map<String, Object> context,
@@ -133,6 +135,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         SingleDimensionPartitionsSpec.NAME
     );
 
+    this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
@@ -155,6 +158,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private String getSupervisorTaskId()
   {
     return supervisorTaskId;
+  }
+
+  @JsonProperty
+  @Override
+  public String getSubtaskSpecId()
+  {
+    return subtaskSpecId;
   }
 
   @Override
@@ -334,7 +344,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
-    @VisibleForTesting  // to allow controlling false positive rate of bloom filter
+    @VisibleForTesting
+      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,
@@ -368,8 +379,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
     private long getBucketTimestamp(InputRow inputRow)
     {
-      DateTime timestamp = inputRow.getTimestamp();
-      return queryGranularity.bucketStart(timestamp).getMillis();
+      final long timestamp = inputRow.getTimestampFromEpoch();
+      return queryGranularity.bucketStart(timestamp);
     }
 
     @Override

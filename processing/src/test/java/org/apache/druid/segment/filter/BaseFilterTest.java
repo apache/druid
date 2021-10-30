@@ -45,6 +45,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -57,6 +61,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -70,8 +75,8 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
@@ -82,6 +87,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -111,9 +118,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("exprLong", "1 + 2", ValueType.LONG, TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprLong", "1 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim0", "dim0", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim1", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -139,13 +151,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   // missing 'dim3' because makeDefaultSchemaRow does not expect to set it...
   static final RowSignature DEFAULT_ROW_SIGNATURE =
       RowSignature.builder()
-                  .add("dim0", ValueType.STRING)
-                  .add("dim1", ValueType.STRING)
-                  .add("dim2", ValueType.STRING)
-                  .add("timeDim", ValueType.STRING)
-                  .add("d0", ValueType.DOUBLE)
-                  .add("f0", ValueType.FLOAT)
-                  .add("l0", ValueType.LONG)
+                  .add("dim0", ColumnType.STRING)
+                  .add("dim1", ColumnType.STRING)
+                  .add("dim2", ColumnType.STRING)
+                  .add("timeDim", ColumnType.STRING)
+                  .add("d0", ColumnType.DOUBLE)
+                  .add("f0", ColumnType.FLOAT)
+                  .add("l0", ColumnType.LONG)
                   .build();
 
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
@@ -382,12 +394,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   private VectorCursor makeVectorCursor(final Filter filter)
   {
+
     return adapter.makeVectorCursor(
         filter,
         Intervals.ETERNITY,
-        // VirtualColumns do not support vectorization yet. Avoid passing them in, and any tests that need virtual
-        // columns should skip vectorization tests.
-        VirtualColumns.EMPTY,
+        VIRTUAL_COLUMNS,
         false,
         3, // Vector size smaller than the number of rows, to ensure we use more than one.
         null
@@ -445,7 +456,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
   {
-    Preconditions.checkState(makeFilter(dimFilter).canVectorizeMatcher(), "Cannot vectorize filter: %s", dimFilter);
+    Preconditions.checkState(
+        makeFilter(dimFilter).canVectorizeMatcher(adapter),
+        "Cannot vectorize filter: %s",
+        dimFilter
+    );
 
     try (final VectorCursor cursor = makeVectorCursor(null)) {
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
@@ -597,9 +612,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean canVectorizeMatcher()
+      public boolean canVectorizeMatcher(ColumnInspector inspector)
       {
-        return theFilter.canVectorizeMatcher();
+        return theFilter.canVectorizeMatcher(inspector);
       }
 
       @Override
@@ -664,6 +679,63 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     }
   }
 
+  private List<String> selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(
+      final DimFilter filter,
+      final String virtualColumn,
+      final String selectColumn
+  )
+  {
+    final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
+    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+
+      final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
+      final List<String> values = new ArrayList<>();
+
+      if (outputType.is(ExprType.STRING)) {
+        final VectorObjectSelector objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector(
+            virtualColumn
+        );
+        while (!cursor.isDone()) {
+          final Object[] rowVector = objectSelector.getObjectVector();
+          for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+            values.add((String) rowVector[i]);
+          }
+          cursor.advance();
+        }
+      } else {
+        final VectorValueSelector valueSelector = cursor.getColumnSelectorFactory().makeValueSelector(virtualColumn);
+        while (!cursor.isDone()) {
+          final boolean[] nulls = valueSelector.getNullVector();
+          if (outputType.is(ExprType.DOUBLE)) {
+            final double[] doubles = valueSelector.getDoubleVector();
+            for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+              if (nulls != null && nulls[i]) {
+                values.add(null);
+              } else {
+                values.add(String.valueOf(doubles[i]));
+              }
+            }
+          } else {
+            final long[] longs = valueSelector.getLongVector();
+            for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
+              if (nulls != null && nulls[i]) {
+                values.add(null);
+              } else {
+                values.add(String.valueOf(longs[i]));
+              }
+            }
+          }
+
+          cursor.advance();
+        }
+      }
+
+
+
+      return values;
+    }
+  }
+
   private List<String> selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(
       final DimFilter filter,
       final String selectColumn
@@ -672,7 +744,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // Generate rowSignature
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).getType());
+      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).toColumnType());
     }
 
     // Perform test
@@ -733,6 +805,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "Cursor (vectorized): " + filter,
           expectedRows,
           selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+      );
+
+      Assert.assertEquals(
+          "Cursor Virtual Column (vectorized): " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
       );
     }
 

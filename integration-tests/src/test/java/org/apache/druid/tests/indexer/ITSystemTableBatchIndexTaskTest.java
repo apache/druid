@@ -19,6 +19,8 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
@@ -26,6 +28,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
+import java.util.function.Function;
 
 @Test(groups = TestNGGroup.BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -43,10 +46,25 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
     try (
         final Closeable ignored = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
+
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
       doIndexTestSqlTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          SYSTEM_QUERIES_RESOURCE
+          SYSTEM_QUERIES_RESOURCE,
+          transform
       );
     }
   }

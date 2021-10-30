@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-@import '/blueprint-overrides/common/colors';
-@import '/blueprint-overrides/common/variables';
+@import './blueprint-overrides/common/colors';
+@import './blueprint-overrides/common/variables';
 
 $header-bar-height: 50px;
 $view-control-bar-height: 30px;

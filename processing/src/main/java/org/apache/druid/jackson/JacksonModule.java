@@ -19,6 +19,7 @@
 
 package org.apache.druid.jackson;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
@@ -28,6 +29,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
 
 /**
@@ -44,6 +46,15 @@ public class JacksonModule implements Module
   public ObjectMapper jsonMapper()
   {
     return new DefaultObjectMapper();
+  }
+
+  /**
+   * Provides ObjectMapper that suppress serializing properties with null values
+   */
+  @Provides @LazySingleton @JsonNonNull
+  public ObjectMapper jsonMapperOnlyNonNullValue()
+  {
+    return new DefaultObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
   @Provides @LazySingleton @Smile

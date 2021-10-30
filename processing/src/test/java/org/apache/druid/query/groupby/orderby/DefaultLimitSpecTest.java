@@ -34,7 +34,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -190,7 +190,7 @@ public class DefaultLimitSpecTest
         GroupByQuery.builder()
                     .setDataSource("dummy")
                     .setInterval("1000/3000")
-                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
                     .setGranularity(Granularities.ALL)
                     .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
                     .build()
@@ -214,7 +214,7 @@ public class DefaultLimitSpecTest
         GroupByQuery.builder()
                     .setDataSource("dummy")
                     .setInterval("1000/3000")
-                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
                     .setGranularity(Granularities.NONE)
                     .overrideContext(ImmutableMap.of(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true))
                     .build()
@@ -238,7 +238,7 @@ public class DefaultLimitSpecTest
         GroupByQuery.builder()
                     .setDataSource("dummy")
                     .setInterval("1000/3000")
-                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE))
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1", ColumnType.DOUBLE))
                     .setGranularity(Granularities.ALL)
                     .build()
     );

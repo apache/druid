@@ -22,14 +22,15 @@ import {
   Button,
   Intent,
   Menu,
+  MenuDivider,
   MenuItem,
   Navbar,
   NavbarDivider,
   NavbarGroup,
-  Popover,
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import {
@@ -39,11 +40,19 @@ import {
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
 import { getLink } from '../../links';
-import { Capabilities } from '../../utils';
+import {
+  Capabilities,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageRemove,
+  localStorageSetJson,
+} from '../../utils';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
 
 import './header-bar.scss';
+
+const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
   | null
@@ -121,6 +130,17 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       );
       break;
 
+    case 'coordinator-overlord':
+      label = 'Coordinator/Overlord mode';
+      message = (
+        <p>
+          It appears that you are accessing the console on the Coordinator/Overlord shared service.
+          Due to the lack of access to some APIs on this service the console will operate in a
+          limited mode. The full version of the console can be accessed on the Router service.
+        </p>
+      );
+      break;
+
     case 'coordinator':
       label = 'Coordinator mode';
       message = (
@@ -155,7 +175,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
   }
 
   return (
-    <Popover
+    <Popover2
       content={
         <PopoverText>
           <p>The console is running in restricted mode.</p>
@@ -172,7 +192,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       position={Position.BOTTOM_RIGHT}
     >
       <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
-    </Popover>
+    </Popover2>
   );
 });
 
@@ -216,6 +236,16 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     </Menu>
   );
 
+  function setForcedMode(capabilities: Capabilities | undefined): void {
+    if (capabilities) {
+      localStorageSetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE, capabilities);
+    } else {
+      localStorageRemove(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+    }
+    location.reload();
+  }
+
+  const capabilitiesMode = capabilities.getModeExtended();
   const configMenu = (
     <Menu>
       <MenuItem
@@ -243,6 +273,33 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         href="#lookups"
         disabled={!capabilities.hasCoordinatorAccess()}
       />
+      <MenuDivider />
+      <MenuItem icon={IconNames.COG} text="Console options">
+        {capabilitiesOverride ? (
+          <MenuItem text="Clear forced mode" onClick={() => setForcedMode(undefined)} />
+        ) : (
+          <>
+            {capabilitiesMode !== 'coordinator-overlord' && (
+              <MenuItem
+                text="Force Coordinator/Overlord mode"
+                onClick={() => setForcedMode(Capabilities.COORDINATOR_OVERLORD)}
+              />
+            )}
+            {capabilitiesMode !== 'coordinator' && (
+              <MenuItem
+                text="Force Coordinator mode"
+                onClick={() => setForcedMode(Capabilities.COORDINATOR)}
+              />
+            )}
+            {capabilitiesMode !== 'overlord' && (
+              <MenuItem
+                text="Force Overlord mode"
+                onClick={() => setForcedMode(Capabilities.OVERLORD)}
+              />
+            )}
+          </>
+        )}
+      </MenuItem>
     </Menu>
   );
 
@@ -310,12 +367,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <RestrictedMode capabilities={capabilities} />
-        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
+        <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.COG} />
-        </Popover>
-        <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
+        </Popover2>
+        <Popover2 content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button minimal icon={IconNames.HELP} />
-        </Popover>
+        </Popover2>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
       {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}

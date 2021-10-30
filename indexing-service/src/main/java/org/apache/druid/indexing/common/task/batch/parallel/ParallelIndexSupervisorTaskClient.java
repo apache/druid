@@ -31,6 +31,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
@@ -47,6 +48,10 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
     super(httpClient, objectMapper, taskInfoProvider, httpTimeout, callerId, 1, numRetries);
   }
 
+  /**
+   * See {@link SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime)}.
+   */
+  @Deprecated
   public SegmentIdWithShardSpec allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
   {
     final StringFullResponseHolder response = submitSmileRequest(
@@ -55,6 +60,41 @@ public class ParallelIndexSupervisorTaskClient extends IndexTaskClient
         "segment/allocate",
         null,
         serialize(timestamp),
+        true
+    );
+    if (!isSuccess(response)) {
+      throw new ISE(
+          "task[%s] failed to allocate a new segment identifier with the HTTP code[%d] and content[%s]",
+          supervisorTaskId,
+          response.getStatus().getCode(),
+          response.getContent()
+      );
+    } else {
+      return deserialize(
+          response.getContent(),
+          new TypeReference<SegmentIdWithShardSpec>()
+          {
+          }
+      );
+    }
+  }
+
+  /**
+   * See {@link SinglePhaseParallelIndexTaskRunner#allocateNewSegment(String, DateTime, String, String)}.
+   */
+  public SegmentIdWithShardSpec allocateSegment(
+      String supervisorTaskId,
+      DateTime timestamp,
+      String sequenceName,
+      @Nullable String prevSegmentId
+  ) throws IOException
+  {
+    final StringFullResponseHolder response = submitSmileRequest(
+        supervisorTaskId,
+        HttpMethod.POST,
+        "segment/allocate",
+        null,
+        serialize(new SegmentAllocationRequest(timestamp, sequenceName, prevSegmentId)),
         true
     );
     if (!isSuccess(response)) {

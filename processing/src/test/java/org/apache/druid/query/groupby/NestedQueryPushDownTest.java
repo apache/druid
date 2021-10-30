@@ -148,7 +148,6 @@ public class NestedQueryPushDownTest
 
   @Before
   public void setup() throws Exception
-
   {
     tmpDir = FileUtils.createTempDir();
 
@@ -316,8 +315,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
@@ -334,8 +332,7 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,

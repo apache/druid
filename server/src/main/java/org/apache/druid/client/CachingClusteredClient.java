@@ -26,6 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.RangeSet;
@@ -54,6 +55,7 @@ import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -84,8 +86,8 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.VersionedIntervalTimeline.PartitionChunkEntry;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -98,6 +100,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -127,6 +130,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final JoinableFactoryWrapper joinableFactoryWrapper;
+  private final ServiceEmitter emitter;
 
   @Inject
   public CachingClusteredClient(
@@ -140,7 +144,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       DruidProcessingConfig processingConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      JoinableFactory joinableFactory
+      JoinableFactory joinableFactory,
+      ServiceEmitter emitter
   )
   {
     this.warehouse = warehouse;
@@ -154,6 +159,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
+    this.emitter = emitter;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -229,20 +235,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return CachingClusteredClient.this.run(
             queryPlus,
             responseContext,
-            timeline -> {
-              final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-                  new VersionedIntervalTimeline<>(Ordering.natural());
-              for (SegmentDescriptor spec : specs) {
-                final PartitionHolder<ServerSelector> entry = timeline.findEntry(spec.getInterval(), spec.getVersion());
-                if (entry != null) {
-                  final PartitionChunk<ServerSelector> chunk = entry.getChunk(spec.getPartitionNumber());
-                  if (chunk != null) {
-                    timeline2.add(spec.getInterval(), spec.getVersion(), chunk);
-                  }
-                }
-              }
-              return timeline2;
-            },
+            new TimelineConverter(specs),
             true
         );
       }
@@ -327,7 +320,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
         contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
-        contextBuilder.put("bySegment", true);
+        contextBuilder.put(QueryContexts.BY_SEGMENT_KEY, true);
       }
       return contextBuilder.build();
     }
@@ -380,6 +373,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       query = scheduler.prioritizeAndLaneQuery(queryPlus, segmentServers);
       queryPlus = queryPlus.withQuery(query);
+      queryPlus = queryPlus.withQueryMetrics(toolChest);
+      queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
@@ -854,6 +849,51 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
       }
       return strategy.computeCacheKey(query);
+    }
+  }
+
+  private static class TimelineConverter implements UnaryOperator<TimelineLookup<String, ServerSelector>>
+  {
+    private final Iterable<SegmentDescriptor> specs;
+
+    TimelineConverter(final Iterable<SegmentDescriptor> specs)
+    {
+      this.specs = specs;
+    }
+
+    @Override
+    public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
+    {
+      final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+          new VersionedIntervalTimeline<>(Ordering.natural());
+      Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
+          Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
+      Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(
+          unfilteredIterator,
+          Objects::nonNull
+      );
+      // VersionedIntervalTimeline#addAll implementation is much more efficient than calling VersionedIntervalTimeline#add
+      // in a loop when there are lot of segments to be added for same interval and version.
+      timeline2.addAll(iterator);
+      return timeline2;
+    }
+
+    @Nullable
+    private PartitionChunkEntry<String, ServerSelector> toChunkEntry(
+        TimelineLookup<String, ServerSelector> timeline,
+        SegmentDescriptor spec
+    )
+    {
+      PartitionChunk<ServerSelector> chunk = timeline.findChunk(
+          spec.getInterval(),
+          spec.getVersion(),
+          spec.getPartitionNumber()
+      );
+      if (null == chunk) {
+        return null;
+      }
+      return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
+
     }
   }
 }

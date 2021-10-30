@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
@@ -85,22 +86,16 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
               "%%PATH%%",
               config.getCloudPath()
           );
-
           spec = StringUtils.replace(
               spec,
-              "%%ACCESS_KEY_PROPERTY_VALUE%%",
+              "%%INPUT_SOURCE_CONFIG%%",
               jsonMapper.writeValueAsString(
-                  ImmutableMap.of("type", "environment", "variable", "OVERRIDE_S3_ACCESS_KEY")
+                  ImmutableMap.of(
+                      "accessKeyId", ImmutableMap.of("type", "environment", "variable", "OVERRIDE_S3_ACCESS_KEY"),
+                      "secretAccessKey", ImmutableMap.of("type", "environment", "variable", "OVERRIDE_S3_SECRET_KEY")
+                  )
               )
           );
-          spec = StringUtils.replace(
-              spec,
-              "%%SECRET_KEY_PROPERTY_VALUE%%",
-              jsonMapper.writeValueAsString(
-                  ImmutableMap.of("type", "environment", "variable", "OVERRIDE_S3_SECRET_KEY")
-              )
-          );
-
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
@@ -129,7 +124,8 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE,
           false,
           true,
-          true
+          true,
+          new Pair<>(false, false)
       );
     }
   }
@@ -217,22 +213,16 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
               "%%PATH%%",
               config.getCloudPath()
           );
-
           spec = StringUtils.replace(
               spec,
-              "%%ACCESS_KEY_PROPERTY_VALUE%%",
+              "%%INPUT_SOURCE_CONFIG%%",
               jsonMapper.writeValueAsString(
-                  ImmutableMap.of("type", "environment", "variable", "NON_EXISTENT_INVALID_ENV_VAR")
+                  ImmutableMap.of(
+                      "accessKeyId", ImmutableMap.of("type", "environment", "variable", "INVALID_ACCESS_KEY"),
+                      "secretAccessKey", ImmutableMap.of("type", "environment", "variable", "INVALID_SECRET_KEY")
+                  )
               )
           );
-          spec = StringUtils.replace(
-              spec,
-              "%%SECRET_KEY_PROPERTY_VALUE%%",
-              jsonMapper.writeValueAsString(
-                  ImmutableMap.of("type", "environment", "variable", "NON_EXISTENT_INVALID_ENV_VAR")
-              )
-          );
-
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",

@@ -1,5 +1,5 @@
 Apache Druid
-Copyright 2018-2020 The Apache Software Foundation
+Copyright 2018-2021 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -85,6 +85,14 @@ Copyright 2011-2017 Metamarkets Group Inc.
 ================= Metamarkets extendedset 1.3.10 =================
 extendedset
 Copyright 2012 Metamarkets Group Inc.
+
+================= Apache Commons DBCP2 2.0.1 =================
+
+Apache Commons DBCP
+Copyright 2001-2020 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
 
 -------------------------------------------------------------------------------
 

@@ -80,8 +80,8 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
           @JsonProperty("envConfig") GceEnvironmentConfig envConfig
   )
   {
-    Preconditions.checkArgument(minNumWorkers > 0,
-                                "minNumWorkers must be greater than 0");
+    Preconditions.checkArgument(minNumWorkers >= 0,
+                                "minNumWorkers must be greater than or equal to 0");
     this.minNumWorkers = minNumWorkers;
     Preconditions.checkArgument(maxNumWorkers > 0,
                                 "maxNumWorkers must be greater than 0");

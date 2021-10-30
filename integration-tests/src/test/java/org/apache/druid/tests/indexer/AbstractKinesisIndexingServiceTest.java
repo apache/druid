@@ -117,6 +117,11 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
             "%%STREAM_PROPERTIES_KEY%%",
             "endpoint"
         );
+        spec = StringUtils.replace(
+                spec,
+                "%%SCHEMA_REGISTRY_HOST%%",
+                StringUtils.format("http://%s", config.getSchemaRegistryInternalHost())
+        );
         return StringUtils.replace(
             spec,
             "%%STREAM_PROPERTIES_VALUE%%",

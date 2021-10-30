@@ -35,7 +35,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.List;
 
@@ -52,11 +52,11 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   }
 
   @Override
-  public ValueType defaultType()
+  public ColumnType defaultType()
   {
     // Set default type to COMPLEX, so when the underlying type is unknown, we go into "makeComplexProcessor", which
     // uses per-row type detection.
-    return ValueType.COMPLEX;
+    return ColumnType.UNKNOWN_COMPLEX;
   }
 
   @Override
@@ -86,9 +86,27 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   @Override
   public ValueMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
   {
-    if (selector instanceof NilColumnValueSelector || !mayBeFilterable(selector.classOfObject())) {
+    if (selector instanceof NilColumnValueSelector) {
       // Column does not exist, or is unfilterable. Treat it as all nulls.
       return BooleanValueMatcher.of(predicateFactory.makeStringPredicate().apply(null));
+    } else if (!isNumberOrString(selector.classOfObject())) {
+      // if column is definitely not a number of string, use the object predicate
+      final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return predicate.apply(selector.getObject());
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+          inspector.visit("predicate", predicate);
+        }
+      };
     } else {
       // Column exists but the type of value is unknown (we might have got here because "defaultType" is COMPLEX).
       // Return a ValueMatcher that inspects the object and does type-based comparison.
@@ -140,7 +158,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("selector", selector);
-          inspector.visit("value", predicateFactory);
+          inspector.visit("factory", predicateFactory);
         }
 
         private Predicate<String> getStringPredicate()
@@ -188,7 +206,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
    *
    * @param clazz class of object
    */
-  private static <T> boolean mayBeFilterable(final Class<T> clazz)
+  private static <T> boolean isNumberOrString(final Class<T> clazz)
   {
     if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
       // clazz is a Number or String.

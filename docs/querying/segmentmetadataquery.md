@@ -144,16 +144,27 @@ Types of column analyses are described below:
 
 ### cardinality
 
-* `cardinality` in the result will return the size of the bitmap index or dictionary encoding for string dimensions, or null for other dimension types.
- If `merge` was set, the result will be the max of this value across segments. Only relevant for dimension columns.
+* `cardinality` is the number of unique values present in string columns. It is null for other column types.
+
+Druid examines the size of string column dictionaries to compute the cardinality value. There is one dictionary per column per
+segment. If `merge` is off (false), this reports the cardinality of each column of each segment individually. If
+`merge` is on (true), this reports the highest cardinality encountered for a particular column across all relevant
+segments.
 
 ### minmax
 
-* Estimated min/max values for each column. Only relevant for dimension columns.
+* Estimated min/max values for each column. Only reported for string columns.
 
 ### size
 
-* `size` in the result will contain the estimated total segment byte size as if the data were stored in text format
+* `size` is the estimated total byte size as if the data were stored in text format. This is _not_ the actual storage
+size of the column in Druid. If you want the actual storage size in bytes of a segment, look elsewhere. Some pointers:
+
+- To get the storage size in bytes of an entire segment, check the `size` field in the
+[`sys.segments` table](sql.md#segments-table). This is the size of the memory-mappable content.
+- To get the storage size in bytes of a particular column in a particular segment, unpack the segment and look at the
+`meta.smoosh` file inside the archive. The difference between the third and fourth columns is the size in bytes.
+Currently, there is no API for retrieving this information.
 
 ### interval
 

@@ -26,7 +26,6 @@ import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.guice.annotations.Processing;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -44,6 +43,7 @@ import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -59,6 +59,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
@@ -67,12 +68,10 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -86,7 +85,7 @@ public class ServerManager implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(ServerManager.class);
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final ServiceEmitter emitter;
-  private final ExecutorService exec;
+  private final QueryProcessingPool queryProcessingPool;
   private final CachePopulator cachePopulator;
   private final Cache cache;
   private final ObjectMapper objectMapper;
@@ -99,7 +98,7 @@ public class ServerManager implements QuerySegmentWalker
   public ServerManager(
       QueryRunnerFactoryConglomerate conglomerate,
       ServiceEmitter emitter,
-      @Processing ExecutorService exec,
+      QueryProcessingPool queryProcessingPool,
       CachePopulator cachePopulator,
       @Smile ObjectMapper objectMapper,
       Cache cache,
@@ -112,7 +111,7 @@ public class ServerManager implements QuerySegmentWalker
     this.conglomerate = conglomerate;
     this.emitter = emitter;
 
-    this.exec = exec;
+    this.queryProcessingPool = queryProcessingPool;
     this.cachePopulator = cachePopulator;
     this.cache = cache;
     this.objectMapper = objectMapper;
@@ -200,6 +199,7 @@ public class ServerManager implements QuerySegmentWalker
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
         cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
@@ -228,7 +228,7 @@ public class ServerManager implements QuerySegmentWalker
 
     return CPUTimeMetricQueryRunner.safeBuild(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
+            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners)),
             toolChest
         ),
         toolChest,
@@ -238,7 +238,7 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  <T> QueryRunner<T> buildQueryRunnerForSegment(
+  protected <T> QueryRunner<T> buildQueryRunnerForSegment(
       final Query<T> query,
       final SegmentDescriptor descriptor,
       final QueryRunnerFactory<T, Query<T>> factory,
@@ -249,16 +249,12 @@ public class ServerManager implements QuerySegmentWalker
       Optional<byte[]> cacheKeyPrefix
   )
   {
-    final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+    final PartitionChunk<ReferenceCountingSegment> chunk = timeline.findChunk(
         descriptor.getInterval(),
-        descriptor.getVersion()
+        descriptor.getVersion(),
+        descriptor.getPartitionNumber()
     );
 
-    if (entry == null) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-    }
-
-    final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
     if (chunk == null) {
       return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
     }

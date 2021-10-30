@@ -35,6 +35,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
@@ -43,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -2020,6 +2022,215 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
+  public void test_makeCursors_factToCountryLeftWithBaseFilter()
+  {
+    final Filter baseFilter = Filters.or(Arrays.asList(
+        new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+        new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+    ));
+
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        baseFilter,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            baseFilter,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NULL_COUNTRY}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryInnerWithBaseFilter()
+  {
+    final Filter baseFilter = Filters.or(Arrays.asList(
+        new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+        new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+    ));
+
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        baseFilter,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            baseFilter,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryRightWithBaseFilter()
+  {
+    final Filter baseFilter = Filters.or(Arrays.asList(
+        new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+        new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+    ));
+
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        baseFilter,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            baseFilter,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{null, null, "AU", "Australia", 0L},
+            new Object[]{null, null, "CL", "Chile", 2L},
+            new Object[]{null, null, "DE", "Germany", 3L},
+            new Object[]{null, null, "EC", "Ecuador", 4L},
+            new Object[]{null, null, "FR", "France", 5L},
+            new Object[]{null, null, "GB", "United Kingdom", 6L},
+            new Object[]{null, null, "IT", "Italy", 7L},
+            new Object[]{null, null, "JP", "Japan", 8L},
+            new Object[]{null, null, "KR", "Republic of Korea", 9L},
+            new Object[]{null, null, "MX", "Mexico", 10L},
+            new Object[]{null, null, "NO", "Norway", 11L},
+            new Object[]{null, null, "SV", "El Salvador", 12L},
+            new Object[]{null, null, "US", "United States", 13L},
+            new Object[]{null, null, "AX", "Atlantis", 14L},
+            new Object[]{null, null, "SU", "States United", 15L},
+            new Object[]{null, null, "USCA", "Usca", 16L},
+            new Object[]{null, null, "MMMM", "Fourems", 205L}
+        )
+    );
+  }
+
+  @Test
+  public void test_makeCursors_factToCountryFullWithBaseFilter()
+  {
+    final Filter baseFilter = Filters.or(Arrays.asList(
+        new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
+        new SelectorDimFilter("countryIsoCode", "MatchNothing", null).toFilter()
+    ));
+
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
+        baseFilter,
+        joinableClauses,
+        VirtualColumns.EMPTY
+    );
+    JoinTestHelper.verifyCursors(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            baseFilter,
+            joinableClauses,
+            joinFilterPreAnalysis
+        ).makeCursors(
+            null,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of(
+            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
+            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
+            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
+            new Object[]{"Orange Soda", "MatchNothing", null, null, NullHandling.sqlCompatible() ? null : 0L},
+            new Object[]{null, null, "AU", "Australia", 0L},
+            new Object[]{null, null, "CL", "Chile", 2L},
+            new Object[]{null, null, "DE", "Germany", 3L},
+            new Object[]{null, null, "EC", "Ecuador", 4L},
+            new Object[]{null, null, "FR", "France", 5L},
+            new Object[]{null, null, "GB", "United Kingdom", 6L},
+            new Object[]{null, null, "IT", "Italy", 7L},
+            new Object[]{null, null, "JP", "Japan", 8L},
+            new Object[]{null, null, "KR", "Republic of Korea", 9L},
+            new Object[]{null, null, "MX", "Mexico", 10L},
+            new Object[]{null, null, "NO", "Norway", 11L},
+            new Object[]{null, null, "SV", "El Salvador", 12L},
+            new Object[]{null, null, "US", "United States", 13L},
+            new Object[]{null, null, "AX", "Atlantis", 14L},
+            new Object[]{null, null, "SU", "States United", 15L},
+            new Object[]{null, null, "USCA", "Usca", 16L},
+            new Object[]{null, null, "MMMM", "Fourems", 205L}
+        )
+    );
+  }
+
+  @Test
   public void test_determineBaseColumnsWithPreAndPostJoinVirtualColumns()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
@@ -2055,4 +2266,101 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertEquals(expectedPostJoin, actualPostJoin);
   }
 
+  @Test
+  public void test_hasBuiltInFiltersForSingleJoinableClauseWithVariousJoinTypes()
+  {
+    Assert.assertTrue(makeFactToCountrySegment(JoinType.INNER).hasBuiltInFilters());
+    Assert.assertFalse(makeFactToCountrySegment(JoinType.LEFT).hasBuiltInFilters());
+    Assert.assertFalse(makeFactToCountrySegment(JoinType.RIGHT).hasBuiltInFilters());
+    Assert.assertFalse(makeFactToCountrySegment(JoinType.FULL).hasBuiltInFilters());
+    // cross join
+    Assert.assertFalse(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                new JoinableClause(
+                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                    new IndexedTableJoinable(countriesTable),
+                    JoinType.INNER,
+                    JoinConditionAnalysis.forExpression(
+                        "'true'",
+                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                        ExprMacroTable.nil()
+                    )
+                )
+            ),
+            null
+        ).hasBuiltInFilters()
+    );
+  }
+
+  @Test
+  public void test_hasBuiltInFiltersForEmptyJoinableClause()
+  {
+    Assert.assertFalse(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(),
+            null
+        ).hasBuiltInFilters()
+    );
+  }
+
+  @Test
+  public void test_hasBuiltInFiltersForMultipleJoinableClausesWithVariousJoinTypes()
+  {
+    Assert.assertTrue(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.INNER),
+                regionToCountry(JoinType.LEFT)
+            ),
+            null
+        ).hasBuiltInFilters()
+    );
+
+    Assert.assertTrue(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.RIGHT),
+                regionToCountry(JoinType.INNER),
+                factToCountryOnNumber(JoinType.FULL)
+            ),
+            null
+        ).hasBuiltInFilters()
+    );
+
+    Assert.assertFalse(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.LEFT),
+                regionToCountry(JoinType.LEFT)
+            ),
+            null
+        ).hasBuiltInFilters()
+    );
+
+    Assert.assertFalse(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            ImmutableList.of(
+                factToRegion(JoinType.LEFT),
+                new JoinableClause(
+                    FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                    new IndexedTableJoinable(countriesTable),
+                    JoinType.INNER,
+                    JoinConditionAnalysis.forExpression(
+                        "'true'",
+                        FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
+                        ExprMacroTable.nil()
+                    )
+                )
+            ),
+            null
+        ).hasBuiltInFilters()
+    );
+  }
 }

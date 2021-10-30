@@ -41,12 +41,40 @@ public class ParserTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  VectorExprSanityTest.SettableVectorInputBinding emptyBinding = new VectorExprSanityTest.SettableVectorInputBinding(8);
+
   @Test
   public void testSimple()
   {
     String actual = Parser.parse("1", ExprMacroTable.nil()).toString();
     String expected = "1";
     Assert.assertEquals(expected, actual);
+  }
+
+
+  @Test
+  public void testParseConstants()
+  {
+    validateLiteral("null", null, null);
+    validateLiteral("'hello'", ExpressionType.STRING, "hello");
+    validateLiteral("'hello \\uD83E\\uDD18'", ExpressionType.STRING, "hello \uD83E\uDD18");
+    validateLiteral("1", ExpressionType.LONG, 1L);
+    validateLiteral("1.", ExpressionType.DOUBLE, 1.0, false);
+    validateLiteral("1.234", ExpressionType.DOUBLE, 1.234);
+    validateLiteral("1e10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1e-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1E10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1E-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.E10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.E-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.e10", ExpressionType.DOUBLE, 1.0E10, false);
+    validateLiteral("1.e-10", ExpressionType.DOUBLE, 1.0E-10, false);
+    validateLiteral("1.1e10", ExpressionType.DOUBLE, 1.1E10, false);
+    validateLiteral("1.1e-10", ExpressionType.DOUBLE, 1.1E-10, false);
+    validateLiteral("1.1E10", ExpressionType.DOUBLE, 1.1E10);
+    validateLiteral("1.1E-10", ExpressionType.DOUBLE, 1.1E-10);
+    validateLiteral("Infinity", ExpressionType.DOUBLE, Double.POSITIVE_INFINITY);
+    validateLiteral("NaN", ExpressionType.DOUBLE, Double.NaN);
   }
 
   @Test
@@ -501,6 +529,48 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFoldUnapplied()
+  {
+    validateFoldUnapplied("x + __acc", "(+ x __acc)", "(+ x __acc)", ImmutableList.of(), "__acc");
+    validateFoldUnapplied("x + __acc", "(+ x __acc)", "(+ x __acc)", ImmutableList.of("z"), "__acc");
+    validateFoldUnapplied(
+        "x + __acc",
+        "(+ x __acc)",
+        "(fold ([x, __acc] -> (+ x __acc)), [x, __acc])",
+        ImmutableList.of("x"),
+        "__acc"
+    );
+    validateFoldUnapplied(
+        "x + y + __acc",
+        "(+ (+ x y) __acc)",
+        "(cartesian_fold ([x, y, __acc] -> (+ (+ x y) __acc)), [x, y, __acc])",
+        ImmutableList.of("x", "y"),
+        "__acc"
+    );
+    validateFoldUnapplied(
+        "__acc + z + fold((x, acc) -> acc + x + y, x, 0)",
+        "(+ (+ __acc z) (fold ([x, acc] -> (+ (+ acc x) y)), [x, 0]))",
+        "(fold ([z, __acc] -> (+ (+ __acc z) (fold ([x, acc] -> (+ (+ acc x) y)), [x, 0]))), [z, __acc])",
+        ImmutableList.of("z"),
+        "__acc"
+    );
+    validateFoldUnapplied(
+        "__acc + z + fold((x, acc) -> acc + x + y, x, 0)",
+        "(+ (+ __acc z) (fold ([x, acc] -> (+ (+ acc x) y)), [x, 0]))",
+        "(fold ([z, __acc] -> (+ (+ __acc z) (cartesian_fold ([x, y, acc] -> (+ (+ acc x) y)), [x, y, 0]))), [z, __acc])",
+        ImmutableList.of("y", "z"),
+        "__acc"
+    );
+    validateFoldUnapplied(
+        "__acc + fold((x, acc) -> x + y + acc, x, __acc)",
+        "(+ __acc (fold ([x, acc] -> (+ (+ x y) acc)), [x, __acc]))",
+        "(+ __acc (cartesian_fold ([x, y, acc] -> (+ (+ x y) acc)), [x, y, __acc]))",
+        ImmutableList.of("y"),
+        "__acc"
+    );
+  }
+
+  @Test
   public void testUniquify()
   {
     validateParser("x-x", "(- x x)", ImmutableList.of("x"), ImmutableSet.of("x", "x_0"));
@@ -542,6 +612,26 @@ public class ParserTest extends InitializedNullHandlingTest
     );
   }
 
+  private void validateLiteral(String expr, ExpressionType type, Object expected)
+  {
+    validateLiteral(expr, type, expected, true);
+  }
+
+  private void validateLiteral(String expr, ExpressionType type, Object expected, boolean roundTrip)
+  {
+    Expr parsed = Parser.parse(expr, ExprMacroTable.nil(), false);
+    Expr parsedFlat = Parser.parse(expr, ExprMacroTable.nil(), true);
+    Assert.assertTrue(parsed.isLiteral());
+    Assert.assertTrue(parsedFlat.isLiteral());
+    Assert.assertEquals(type, parsed.getOutputType(emptyBinding));
+    Assert.assertEquals(type, parsedFlat.getOutputType(emptyBinding));
+    Assert.assertEquals(expected, parsed.getLiteralValue());
+    Assert.assertEquals(expected, parsedFlat.getLiteralValue());
+    if (roundTrip) {
+      Assert.assertEquals(expr, parsed.stringify());
+      Assert.assertEquals(expr, parsedFlat.stringify());
+    }
+  }
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
@@ -618,13 +708,40 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(transformed.stringify(), transformedRoundTrip.stringify());
   }
 
+  private void validateFoldUnapplied(
+      String expression,
+      String unapplied,
+      String applied,
+      List<String> identifiers,
+      String accumulator
+  )
+  {
+    final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    Expr.BindingAnalysis deets = parsed.analyzeInputs();
+    Parser.validateExpr(parsed, deets);
+    final Expr transformed = Parser.foldUnappliedBindings(parsed, deets, identifiers, accumulator);
+    Assert.assertEquals(expression, unapplied, parsed.toString());
+    Assert.assertEquals(applied, applied, transformed.toString());
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Expr.BindingAnalysis roundTripDeets = parsedRoundTrip.analyzeInputs();
+    Parser.validateExpr(parsedRoundTrip, roundTripDeets);
+    final Expr transformedRoundTrip = Parser.foldUnappliedBindings(parsedRoundTrip, roundTripDeets, identifiers, accumulator);
+    Assert.assertEquals(expression, unapplied, parsedRoundTrip.toString());
+    Assert.assertEquals(applied, applied, transformedRoundTrip.toString());
+
+    Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
+    Assert.assertEquals(transformed.stringify(), transformedRoundTrip.stringify());
+  }
+
   private void validateConstantExpression(String expression, Object expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(
         expression,
         expected,
-        parsed.eval(Parser.withMap(ImmutableMap.of())).value()
+        parsed.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
 
     final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
@@ -632,7 +749,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         expression,
         expected,
-        parsedRoundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+        parsedRoundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
@@ -640,7 +757,7 @@ public class ParserTest extends InitializedNullHandlingTest
   private void validateConstantExpression(String expression, Object[] expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    Object evaluated = parsed.eval(Parser.withMap(ImmutableMap.of())).value();
+    Object evaluated = parsed.eval(InputBindings.withMap(ImmutableMap.of())).value();
     Assert.assertArrayEquals(
         expression,
         expected,
@@ -653,7 +770,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) roundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+        (Object[]) roundTrip.eval(InputBindings.withMap(ImmutableMap.of())).value()
     );
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }

@@ -186,7 +186,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (col instanceof ComplexColumn) {
         return ((ComplexColumn) col).getTypeName();
       } else {
-        return columnHolder.getCapabilities().getType().toString();
+        return columnHolder.getCapabilities().asTypeString();
       }
     }
     catch (IOException e) {
@@ -210,8 +210,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     if (filter != null) {
       final boolean filterCanVectorize =
-          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns))
-          || filter.canVectorizeMatcher();
+          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns)) || filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;
@@ -316,15 +315,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
   {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
-      }
-    };
+    return column -> getColumnCapabilities(index, column);
   }
 
   @Override

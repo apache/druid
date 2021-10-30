@@ -102,8 +102,7 @@ public class GroupByQueryRunnerFailureTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, BUFFER_POOL),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            BUFFER_POOL
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,

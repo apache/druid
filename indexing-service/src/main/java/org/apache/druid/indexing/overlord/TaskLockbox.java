@@ -351,7 +351,7 @@ public class TaskLockbox
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
           newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
           if (newSegmentId == null) {
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
           convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
         } else {
@@ -400,7 +400,7 @@ public class TaskLockbox
                 ? ((SegmentLock) posseToUse.taskLock).getPartitionId()
                 : null
             );
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
         } else {
           log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
@@ -408,7 +408,10 @@ public class TaskLockbox
         }
       } else {
         final boolean lockRevoked = posseToUse != null && posseToUse.getTaskLock().isRevoked();
-        return LockResult.fail(lockRevoked);
+        if (lockRevoked) {
+          return LockResult.revoked(posseToUse.getTaskLock());
+        }
+        return LockResult.fail();
       }
     }
     finally {
@@ -608,7 +611,8 @@ public class TaskLockbox
    * @param taskId an id of the task holding the lock
    * @param lock   lock to be revoked
    */
-  private void revokeLock(String taskId, TaskLock lock)
+  @VisibleForTesting
+  protected void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
@@ -672,6 +676,67 @@ public class TaskLockbox
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   * Here, Segment Locks are being treated the same as Time Chunk Locks i.e.
+   * a Task with a Segment Lock is assumed to lock a whole Interval and not just
+   * the corresponding Segment.
+   *
+   * @param minTaskPriority Minimum task priority for each datasource. Only the
+   *                        Intervals that are locked by Tasks with equal or
+   *                        higher priority than this are returned. Locked intervals
+   *                        for datasources that are not present in this Map are
+   *                        not returned.
+   * @return Map from Datasource to List of Intervals locked by Tasks that have
+   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
+   */
+  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  {
+    final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
+
+    // Take a lock and populate the maps
+    giant.lock();
+    try {
+      running.forEach(
+          (datasource, datasourceLocks) -> {
+            // If this datasource is not requested, do not proceed
+            if (!minTaskPriority.containsKey(datasource)) {
+              return;
+            }
+
+            datasourceLocks.forEach(
+                (startTime, startTimeLocks) -> startTimeLocks.forEach(
+                    (interval, taskLockPosses) -> taskLockPosses.forEach(
+                        taskLockPosse -> {
+                          if (taskLockPosse.getTaskLock().isRevoked()) {
+                            // Do not proceed if the lock is revoked
+                            return;
+                          } else if (taskLockPosse.getTaskLock().getPriority() == null
+                                     || taskLockPosse.getTaskLock().getPriority() < minTaskPriority.get(datasource)) {
+                            // Do not proceed if the lock has a priority strictly less than the minimum
+                            return;
+                          }
+
+                          datasourceToIntervals
+                              .computeIfAbsent(datasource, k -> new HashSet<>())
+                              .add(interval);
+                        })
+                )
+            );
+          }
+      );
+    }
+    finally {
+      giant.unlock();
+    }
+
+    return datasourceToIntervals.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entry -> new ArrayList<>(entry.getValue())
+                                ));
   }
 
   public void unlock(final Task task, final Interval interval)

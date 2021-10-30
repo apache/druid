@@ -21,7 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -42,9 +42,9 @@ public class VectorProcessors
       }
 
       @Override
-      public ExprType getOutputType()
+      public ExpressionType getOutputType()
       {
-        return ExprType.STRING;
+        return ExpressionType.STRING;
       }
     };
   }
@@ -70,9 +70,9 @@ public class VectorProcessors
       }
 
       @Override
-      public ExprType getOutputType()
+      public ExpressionType getOutputType()
       {
-        return ExprType.DOUBLE;
+        return ExpressionType.DOUBLE;
       }
     };
   }
@@ -98,9 +98,9 @@ public class VectorProcessors
       }
 
       @Override
-      public ExprType getOutputType()
+      public ExpressionType getOutputType()
       {
-        return ExprType.LONG;
+        return ExpressionType.LONG;
       }
     };
   }
@@ -108,7 +108,7 @@ public class VectorProcessors
   public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingInspector inspector, Expr arg, int radix)
   {
     final ExprVectorProcessor<?> processor = new LongOutStringInFunctionVectorProcessor(
-        CastToTypeVectorProcessor.cast(arg.buildVectorized(inspector), ExprType.STRING),
+        CastToTypeVectorProcessor.cast(arg.buildVectorized(inspector), ExpressionType.STRING),
         inspector.getMaxVectorSize()
     )
     {

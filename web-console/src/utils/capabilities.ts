@@ -27,6 +27,7 @@ export type CapabilitiesModeExtended =
   | 'no-sql'
   | 'no-proxy'
   | 'no-sql-no-proxy'
+  | 'coordinator-overlord'
   | 'coordinator'
   | 'overlord';
 
@@ -41,12 +42,13 @@ export interface CapabilitiesOptions {
 export class Capabilities {
   static STATUS_TIMEOUT = 2000;
   static FULL: Capabilities;
+  static COORDINATOR_OVERLORD: Capabilities;
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
 
-  private queryType: QueryType;
-  private coordinator: boolean;
-  private overlord: boolean;
+  private readonly queryType: QueryType;
+  private readonly coordinator: boolean;
+  private readonly overlord: boolean;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
@@ -106,7 +108,7 @@ export class Capabilities {
 
   static async detectCapabilities(): Promise<Capabilities | undefined> {
     const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride as any);
+    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride);
 
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;
@@ -154,6 +156,9 @@ export class Capabilities {
         return 'no-sql-no-proxy';
       }
     } else {
+      if (coordinator && overlord) {
+        return 'coordinator-overlord';
+      }
       if (coordinator) {
         return 'coordinator';
       }
@@ -195,6 +200,11 @@ export class Capabilities {
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
+  coordinator: true,
+  overlord: true,
+});
+Capabilities.COORDINATOR_OVERLORD = new Capabilities({
+  queryType: 'none',
   coordinator: true,
   overlord: true,
 });
