@@ -161,6 +161,13 @@ public class ExprMacroTable
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
     }
+
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
+    }
   }
 
   /**
@@ -232,6 +239,12 @@ public class ExprMacroTable
         argSet.add(arg);
       }
       return accumulator.withScalarArguments(argSet);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("(%s %s)", name, getArgs());
     }
   }
 }

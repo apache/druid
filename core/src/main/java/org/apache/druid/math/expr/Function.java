@@ -3186,7 +3186,7 @@ public interface Function
       final int position = scalarExpr.asInt();
 
       if (array.length > position) {
-        return ExprEval.bestEffortOf(array[position]);
+        return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
     }
@@ -3214,7 +3214,7 @@ public interface Function
       final int position = scalarExpr.asInt() - 1;
 
       if (array.length > position) {
-        return ExprEval.bestEffortOf(array[position]);
+        return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
       return ExprEval.of(null);
     }

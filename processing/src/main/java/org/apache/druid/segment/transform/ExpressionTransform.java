@@ -28,6 +28,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -96,7 +97,9 @@ public class ExpressionTransform implements Transform
     @Override
     public Object eval(final Row row)
     {
-      return ExpressionSelectors.coerceEvalToSelectorObject(expr.eval(name -> getValueFromRow(row, name)));
+      return ExpressionSelectors.coerceEvalToSelectorObject(
+          expr.eval(InputBindings.forFunction(name -> getValueFromRow(row, name)))
+      );
     }
   }
 

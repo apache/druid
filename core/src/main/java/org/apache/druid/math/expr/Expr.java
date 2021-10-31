@@ -291,13 +291,6 @@ public interface Expr extends Cacheable
      */
     @Nullable
     Object get(String name);
-
-    @Nullable
-    @Override
-    default ExpressionType getType(String name)
-    {
-      return null;
-    }
   }
 
   /**
@@ -371,13 +364,15 @@ public interface Expr extends Cacheable
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

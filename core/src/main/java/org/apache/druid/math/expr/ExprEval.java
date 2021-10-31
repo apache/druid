@@ -326,6 +326,9 @@ public abstract class ExprEval<T>
     if (val instanceof ExprEval) {
       return (ExprEval) val;
     }
+    if (val instanceof String) {
+      return new StringExprEval((String) val);
+    }
     if (val instanceof Number) {
       if (val instanceof Float || val instanceof Double) {
         return new DoubleExprEval((Number) val);
@@ -352,7 +355,12 @@ public abstract class ExprEval<T>
       return bestEffortOf(coerceListToArray((List<?>) val, false));
     }
 
-    return new StringExprEval(val == null ? null : String.valueOf(val));
+    if (val != null) {
+      // is this cool?
+      return new ComplexExprEval(ExpressionType.UNKNOWN_COMPLEX, val);
+    }
+
+    return new StringExprEval(null);
   }
 
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
@@ -378,13 +386,20 @@ public abstract class ExprEval<T>
       case DOUBLE:
         return ofDouble((Number) value);
       case COMPLEX:
-        if (value instanceof byte[]) {
+        byte[] bytes = null;
+        if (value instanceof String) {
+          bytes = StringUtils.decodeBase64String((String) value);
+        } else if (value instanceof byte[]) {
+          bytes = (byte[]) value;
+        }
+
+        if (bytes != null) {
           ObjectByteStrategy<?> strategy = Types.getStrategy(type.getComplexTypeName());
           assert strategy != null;
-          final byte[] bytes = (byte[]) value;
           ByteBuffer bb = ByteBuffer.wrap(bytes);
           return ofComplex(type, strategy.fromByteBuffer(bb, bytes.length));
         }
+
         return ofComplex(type, value);
       case ARRAY:
         // in a better world, we might get an object that matches the type signature for arrays and could do a switch

@@ -402,12 +402,10 @@ public class ExpressionSelectors
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
-        if (val instanceof Number || val instanceof String || (val != null && val.getClass().isArray())) {
-          return val;
-        } else if (val instanceof List) {
+        if (val instanceof List) {
           return ExprEval.coerceListToArray((List) val, true);
         } else {
-          return null;
+          return val;
         }
       };
     } else if (clazz.isAssignableFrom(List.class)) {
@@ -419,8 +417,8 @@ public class ExpressionSelectors
         return null;
       };
     } else {
-      // No numbers or strings.
-      return null;
+      // No numbers or strings, just pass it through
+      return selector::getObject;
     }
   }
 

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
 
 public class BloomFilterExpressions
 {
-  public static ExpressionType BLOOM_FILTER_TYPE = ExpressionType.fromColumnTypeStrict(
+  public static final ExpressionType BLOOM_FILTER_TYPE = ExpressionType.fromColumnTypeStrict(
       BloomFilterAggregatorFactory.TYPE
   );
 
@@ -130,7 +131,10 @@ public class BloomFilterExpressions
         public ExprEval eval(final ObjectBinding bindings)
         {
           ExprEval bloomy = args.get(1).eval(bindings);
-          if (!bloomy.type().equals(BLOOM_FILTER_TYPE)) {
+          // be permissive for now, we can count more on this later when we are better at retaining complete complex
+          // type information everywhere
+          if (!bloomy.type().equals(BLOOM_FILTER_TYPE) ||
+              !bloomy.type().is(ExprType.COMPLEX) && bloomy.value() instanceof BloomKFilter) {
             throw new IAE("Function[%s] must take a bloom filter as input", FN_NAME);
           }
           BloomKFilter filter = (BloomKFilter) bloomy.value();
@@ -151,7 +155,7 @@ public class BloomFilterExpressions
                 filter.addLong(input.asLong());
                 break;
               case COMPLEX:
-                if (BLOOM_FILTER_TYPE.equals(input.type())) {
+                if (BLOOM_FILTER_TYPE.equals(input.type()) || (bloomy.type().is(ExprType.COMPLEX) && bloomy.value() instanceof BloomKFilter)) {
                   filter.merge((BloomKFilter) input.value());
                   break;
                 }
@@ -278,7 +282,10 @@ public class BloomFilterExpressions
         public ExprEval eval(final ObjectBinding bindings)
         {
           ExprEval bloomy = args.get(1).eval(bindings);
-          if (!bloomy.type().equals(BLOOM_FILTER_TYPE)) {
+          // be permissive for now, we can count more on this later when we are better at retaining complete complex
+          // type information everywhere
+          if (!bloomy.type().equals(BLOOM_FILTER_TYPE) ||
+              !bloomy.type().is(ExprType.COMPLEX) && bloomy.value() instanceof BloomKFilter) {
             throw new IAE("Function[%s] must take a bloom filter as input", FN_NAME);
           }
           BloomKFilter filter = (BloomKFilter) bloomy.value();

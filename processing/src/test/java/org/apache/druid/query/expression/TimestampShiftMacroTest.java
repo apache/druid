@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
@@ -207,6 +208,13 @@ public class TimestampShiftMacroTest extends MacroTestBase
         timestamp.toDateTime(DateTimes.inferTzFromString("America/Los_Angeles")).withPeriodAdded(Years.ONE, step).getMillis(),
         expr.eval(new Expr.ObjectBinding()
         {
+          @Nullable
+          @Override
+          public ExpressionType getType(String name)
+          {
+            return null;
+          }
+
           @Nullable
           @Override
           public Object get(String name)

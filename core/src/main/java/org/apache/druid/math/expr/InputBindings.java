@@ -24,10 +24,26 @@ import org.apache.druid.java.util.common.Pair;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.function.Function;
 
 public class InputBindings
 {
-  private static final Expr.ObjectBinding NIL_BINDINGS = name -> null;
+  private static final Expr.ObjectBinding NIL_BINDINGS = new Expr.ObjectBinding()
+  {
+    @Nullable
+    @Override
+    public Object get(String name)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getType(String name)
+    {
+      return null;
+    }
+  };
 
   public static Expr.ObjectBinding nilBindings()
   {
@@ -50,23 +66,66 @@ public class InputBindings
     };
   }
 
+  public static Expr.ObjectBinding singleProvider(ExpressionType type, final Function<String, ?> valueFn)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return valueFn.apply(name);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return type;
+      }
+    };
+  }
+
+  public static Expr.ObjectBinding forFunction(final Function<String, ?> valueFn)
+  {
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return valueFn.apply(name);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExprEval.bestEffortOf(valueFn.apply(name)).type();
+      }
+    };
+  }
+
   /**
    * Create {@link Expr.ObjectBinding} backed by {@link Map} to provide values for identifiers to evaluate {@link Expr}
    */
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)
   {
-    return bindings::get;
-  }
+    return new Expr.ObjectBinding()
+    {
+      @Nullable
+      @Override
+      public Object get(String name)
+      {
+        return bindings.get(name);
+      }
 
-  /**
-   * Create {@link Expr.ObjectBinding} backed by map of {@link Supplier} to provide values for identifiers to evaluate
-   * {@link Expr}
-   */
-  public static Expr.ObjectBinding withSuppliers(final Map<String, Supplier<Object>> bindings)
-  {
-    return (String name) -> {
-      Supplier<Object> supplier = bindings.get(name);
-      return supplier == null ? null : supplier.get();
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExprEval.bestEffortOf(bindings.get(name)).type();
+      }
     };
   }
 

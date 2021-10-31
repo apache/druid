@@ -51,6 +51,8 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
       new ExpressionType(ExprType.ARRAY, null, LONG);
   public static final ExpressionType DOUBLE_ARRAY =
       new ExpressionType(ExprType.ARRAY, null, DOUBLE);
+  public static final ExpressionType UNKNOWN_COMPLEX =
+      new ExpressionType(ExprType.COMPLEX, null, null);
 
   @JsonCreator
   public ExpressionType(

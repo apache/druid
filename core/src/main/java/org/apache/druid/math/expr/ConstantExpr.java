@@ -82,7 +82,7 @@ abstract class ConstantExpr<T> implements Expr
   @Override
   public BindingAnalysis analyzeInputs()
   {
-    return new BindingAnalysis();
+    return BindingAnalysis.EMTPY;
   }
 
   @Override

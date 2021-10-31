@@ -263,12 +263,12 @@ public class ExpressionFilter implements Filter
           column,
           selector,
           bitmapResultFactory,
-          value -> expr.get().eval(identifierName -> {
+          value -> expr.get().eval(InputBindings.forFunction(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
             // convert null to Empty before passing to expressions if needed.
             return NullHandling.nullToEmptyIfNeeded(value);
-          }).asBoolean()
+          })).asBoolean()
       );
     }
   }

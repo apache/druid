@@ -66,7 +66,7 @@ public class RowBasedCursor<RowType> implements Cursor
         RowBasedColumnSelectorFactory.create(
             rowAdapter,
             rowWalker::currentRow,
-            rowSignature,
+            () -> rowSignature,
             false
         )
     );
