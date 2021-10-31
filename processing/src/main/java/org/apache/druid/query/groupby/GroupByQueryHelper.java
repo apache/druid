@@ -205,7 +205,7 @@ public class GroupByQueryHelper
   }
 
   // Used by GroupByStrategyV1
-  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex<?> index)
+  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),

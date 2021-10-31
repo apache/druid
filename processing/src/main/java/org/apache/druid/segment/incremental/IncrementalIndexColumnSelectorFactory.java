@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final IncrementalIndexStorageAdapter adapter;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
   private final boolean descending;
   private final IncrementalIndexRowHolder rowHolder;

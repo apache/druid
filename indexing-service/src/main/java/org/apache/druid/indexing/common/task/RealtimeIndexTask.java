@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
@@ -238,13 +239,16 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        Preconditions.checkNotNull(
+        final TaskLock lock = Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
                 new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
             ),
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
         );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
+        }
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -264,13 +268,16 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
-          Preconditions.checkNotNull(
+          final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
                   new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
               ),
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
           );
+          if (lock.isRevoked()) {
+            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segment.getInterval()));
+          }
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -312,7 +319,9 @@ public class RealtimeIndexTask extends AbstractTask
               "Cannot acquire a lock for interval[%s]",
               interval
           );
-
+          if (lock.isRevoked()) {
+            throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+          }
           return lock.getVersion();
         }
         catch (IOException e) {
