@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
@@ -53,6 +54,16 @@ public class MultiDimensionRangeBucketShardSpec implements BucketNumberedShardSp
       @JsonProperty("end") @Nullable StringTuple end
   )
   {
+    // Verify that the tuple sizes and number of dimensions are the same
+    Preconditions.checkArgument(
+        start == null || start.size() == dimensions.size(),
+        "Start tuple must either be null or of the same size as the number of partition dimensions"
+    );
+    Preconditions.checkArgument(
+        end == null || end.size() == dimensions.size(),
+        "End tuple must either be null or of the same size as the number of partition dimensions"
+    );
+
     this.bucketId = bucketId;
     this.dimensions = dimensions;
     this.start = start;

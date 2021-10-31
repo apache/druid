@@ -56,8 +56,8 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   public HashedPartitionsSpec(
       @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(NUM_SHARDS) @Nullable Integer numShards,
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
-      @JsonProperty(PARTITION_DIMENSIONS) @Nullable HashPartitionFunction partitionFunction,
+      @JsonProperty(PARTITION_DIMENSIONS) @Nullable List<String> partitionDimensions,
+      @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction,
 
       // Deprecated properties preserved for backward compatibility:
       @Deprecated @JsonProperty(TARGET_PARTITION_SIZE) @Nullable

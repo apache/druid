@@ -37,8 +37,8 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.MultiDimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.apache.druid.timeline.partition.RangeBucketShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -81,7 +81,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       PARTITION9
   );
 
-  private static final Map<Interval, PartitionBoundaries> INTERVAL_TO_PARTITONS = ImmutableMap.of(
+  private static final Map<Interval, PartitionBoundaries> INTERVAL_TO_PARTITIONS = ImmutableMap.of(
       INTERVAL_EMPTY, EMPTY_PARTITIONS,
       INTERVAL_SINGLETON, SINGLETON_PARTITIONS,
       INTERVAL_NORMAL, NORMAL_PARTITIONS
@@ -105,7 +105,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
         new MultiDimensionPartitionsSpec(null, 1, PARTITION_DIMENSIONS, false)
     );
-    INTERVAL_TO_PARTITONS.forEach(partitionAnalysis::updateBucket);
+    INTERVAL_TO_PARTITIONS.forEach(partitionAnalysis::updateBucket);
     target = SegmentAllocators.forNonLinearPartitioning(
         toolbox,
         DATASOURCE,
@@ -152,7 +152,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   {
     Interval interval = INTERVAL_NORMAL;
     InputRow row = createInputRow(interval, PARTITION9);
-    int partitionNum = INTERVAL_TO_PARTITONS.get(interval).size() - 2;
+    int partitionNum = INTERVAL_TO_PARTITIONS.get(interval).size() - 2;
     testAllocate(row, interval, partitionNum, null);
   }
 
@@ -170,37 +170,37 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   @SuppressWarnings("SameParameterValue")
   private void testAllocate(InputRow row, Interval interval, int bucketId)
   {
-    String partitionEnd = getPartitionEnd(interval, bucketId);
+    StringTuple partitionEnd = getPartitionEnd(interval, bucketId);
     testAllocate(row, interval, bucketId, partitionEnd);
   }
 
   @Nullable
-  private static String getPartitionEnd(Interval interval, int bucketId)
+  private static StringTuple getPartitionEnd(Interval interval, int bucketId)
   {
-    PartitionBoundaries partitions = INTERVAL_TO_PARTITONS.get(interval);
+    PartitionBoundaries partitions = INTERVAL_TO_PARTITIONS.get(interval);
     boolean isLastPartition = (bucketId + 1) == partitions.size();
-    return isLastPartition ? null : partitions.get(bucketId + 1).get(0);
+    return isLastPartition ? null : partitions.get(bucketId + 1);
   }
 
-  private void testAllocate(InputRow row, Interval interval, int bucketId, @Nullable String partitionEnd)
+  private void testAllocate(InputRow row, Interval interval, int bucketId, @Nullable StringTuple partitionEnd)
   {
-    String partitionStart = getPartitionStart(interval, bucketId);
+    StringTuple partitionStart = getPartitionStart(interval, bucketId);
     testAllocate(row, interval, bucketId, partitionStart, partitionEnd);
   }
 
   @Nullable
-  private static String getPartitionStart(Interval interval, int bucketId)
+  private static StringTuple getPartitionStart(Interval interval, int bucketId)
   {
     boolean isFirstPartition = bucketId == 0;
-    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(bucketId).get(0);
+    return isFirstPartition ? null : INTERVAL_TO_PARTITIONS.get(interval).get(bucketId);
   }
 
   private void testAllocate(
       InputRow row,
       Interval interval,
       int bucketId,
-      @Nullable String partitionStart,
-      @Nullable String partitionEnd
+      @Nullable StringTuple partitionStart,
+      @Nullable StringTuple partitionEnd
   )
   {
     String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
@@ -210,8 +210,8 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
         SegmentId.of(DATASOURCE, interval, INTERVAL_TO_VERSION.get(interval), bucketId),
         segmentIdWithShardSpec.asSegmentId()
     );
-    RangeBucketShardSpec shardSpec = (RangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
-    Assert.assertEquals(PARTITION_DIMENSION, shardSpec.getDimension());
+    MultiDimensionRangeBucketShardSpec shardSpec = (MultiDimensionRangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
+    Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getDimensions());
     Assert.assertEquals(bucketId, shardSpec.getBucketId());
     Assert.assertEquals(partitionStart, shardSpec.getStart());
     Assert.assertEquals(partitionEnd, shardSpec.getEnd());
