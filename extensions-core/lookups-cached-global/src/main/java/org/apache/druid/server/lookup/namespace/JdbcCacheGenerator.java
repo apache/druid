@@ -47,6 +47,9 @@ import java.util.concurrent.ConcurrentMap;
 public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNamespace>
 {
   private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
+  private static final String NO_SUITABLE_DRIVER_FOUND_ERROR = "No suitable driver found";
+  private static final String JDBC_DRIVER_JAR_FILES_MISSING_ERROR =
+      "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory";
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
 
@@ -63,9 +66,21 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final Long lastDBUpdate;
     final long dbQueryStart;
 
-    lastDBUpdate = lastUpdates(entryId, namespace);
-    if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
-      return null;
+    try {
+      lastDBUpdate = lastUpdates(entryId, namespace);
+      if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
+        return null;
+      }
+    }
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
+        throw new ISE(
+            e,
+            JDBC_DRIVER_JAR_FILES_MISSING_ERROR
+        );
+      } else {
+        throw e;
+      }
     }
     dbQueryStart = System.currentTimeMillis();
 
@@ -78,37 +93,35 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       newVersion = StringUtils.format("%d", dbQueryStart);
     }
     final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
-    try {
-      final Map<String, String> cache = versionedCache.getCache();
 
-      final long startNs = System.nanoTime();
-      try (
-          Handle handle = getHandle(entryId, namespace);
-          ResultIterator<Pair<String, String>> pairs = getLookupPairs(handle, namespace)) {
-        final MapPopulator.PopulateResult populateResult = new MapPopulator<String, String>(
-            null
-        ).populateAndWarnAtByteLimit(
-            pairs,
-            versionedCache.getCache(),
-            namespace.getMaxSize(),
-            entryId.toString()
-        );
-        final long duration = System.nanoTime() - startNs;
-        LOG.info(
-            "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
-            populateResult.getEntries(),
-            populateResult.getBytes(),
-            entryId,
-            duration
-        );
-      }
+    final long startNs = System.nanoTime();
+    try (
+        Handle handle = getHandle(entryId, namespace);
+        ResultIterator<Pair<String, String>> pairs = getLookupPairs(handle, namespace)) {
+      final Map<String, String> cache = versionedCache.getCache();
+      final MapPopulator.PopulateResult populateResult = new MapPopulator<String, String>(
+          null
+      ).populateAndWarnAtByteLimit(
+          pairs,
+          cache,
+          namespace.getMaxSize(),
+          null == entryId ? null : entryId.toString()
+      );
+      final long duration = System.nanoTime() - startNs;
+      LOG.info(
+          "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
+          populateResult.getEntries(),
+          populateResult.getBytes(),
+          entryId,
+          duration
+      );
       return versionedCache;
     }
     catch (UnableToObtainConnectionException e) {
-      if (e.getMessage().contains("No suitable driver found")) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
         throw new ISE(
             e,
-            "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory"
+            JDBC_DRIVER_JAR_FILES_MISSING_ERROR
         );
       } else {
         throw e;
@@ -128,7 +141,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   private Handle getHandle(
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
       final JdbcExtractionNamespace namespace
-  ) {
+  )
+  {
     final DBI dbi = ensureDBI(key, namespace);
     return dbi.open();
   }

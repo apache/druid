@@ -150,7 +150,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
                 source,
                 versionedCache.getCache(),
                 extractionNamespace.getMaxSize(),
-                entryId.toString()
+                null == entryId ? null : entryId.toString()
             );
             final long duration = System.nanoTime() - startNs;
             log.info(

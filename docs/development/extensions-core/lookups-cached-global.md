@@ -204,7 +204,8 @@ The remapping values for each globally cached lookup can be specified by a JSON 
         "\"value\"]"
       ]
   },
-  "pollPeriod":"PT5M"
+  "pollPeriod":"PT5M",
+  "maxSize": 5242880
 }
 ```
 
@@ -215,6 +216,7 @@ The remapping values for each globally cached lookup can be specified by a JSON 
 |`uriPrefix`|A URI that specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
 |`fileRegex`|Optional regex for matching the file name under `uriPrefix`. Only used if `uriPrefix` is used|No|`".*"`|
 |`namespaceParseSpec`|How to interpret the data at the URI|Yes||
+|`maxSize`|The maximum size in the lookup in bytes. If the lookup grows beyond this size, warning messages will be logged|No|The maximum of (10% of JVM heap size) or (5242880 (i. e. 5 MiB))|
 
 One of either `uri` or `uriPrefix` must be specified, as either a local file system (file://), HDFS (hdfs://), S3 (s3://) or GCS (gs://) location. HTTP location is not currently supported.
 
@@ -351,6 +353,8 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
+|`maxSize`|The maximum size in the lookup in bytes. If the lookup grows beyond this size, warning messages will be logged|No|The maximum of (10% of JVM heap size) or (5242880 (i. e. 5 MiB))|
+
 
 ```json
 {
@@ -364,7 +368,8 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "keyColumn":"the_old_dim_value",
   "valueColumn":"the_new_dim_value",
   "tsColumn":"timestamp_column",
-  "pollPeriod":600000
+  "pollPeriod":600000,
+  "maxSize": 5242880
 }
 ```
 

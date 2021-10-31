@@ -155,7 +155,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  public long getMaxSize() {
+  public long getMaxSize()
+  {
     return maxSize;
   }
 

@@ -47,5 +47,8 @@ public interface ExtractionNamespace
 
   long getPollMs();
 
-  long getMaxSize();
+  default long getMaxSize()
+  {
+    return -1;
+  }
 }

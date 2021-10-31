@@ -28,6 +28,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -294,6 +295,7 @@ public class UriCacheGeneratorTest
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
+        null,
         null
     );
   }
@@ -324,6 +326,7 @@ public class UriCacheGeneratorTest
         Pattern.quote(Paths.get(this.namespace.getUri()).getFileName().toString()),
         this.namespace.getNamespaceParseSpec(),
         Period.millis((int) this.namespace.getPollMs()),
+        null,
         null
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
@@ -347,6 +350,7 @@ public class UriCacheGeneratorTest
               UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
           new Period(0),
+          null,
           null
       );
 
@@ -388,6 +392,7 @@ public class UriCacheGeneratorTest
         null, null,
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
@@ -403,6 +408,7 @@ public class UriCacheGeneratorTest
         Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
@@ -418,6 +424,7 @@ public class UriCacheGeneratorTest
         null,
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
   }
@@ -431,6 +438,7 @@ public class UriCacheGeneratorTest
         "",
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
   }
@@ -444,7 +452,8 @@ public class UriCacheGeneratorTest
         null,
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
-        ""
+        "",
+        null
     );
   }
 
@@ -457,10 +466,25 @@ public class UriCacheGeneratorTest
         "",
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
-        ""
+        "",
+        null
     );
   }
 
+
+  @Test(expected = IAE.class)
+  public void testMaxSizeToSmall()
+  {
+    new UriExtractionNamespace(
+        namespace.getUri(),
+        null,
+        "",
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int) namespace.getPollMs()),
+        null,
+        ExtractionNamespace.MIN_SIZE - 1
+    );
+  }
 
   @Test(expected = IAE.class)
   public void testBadPattern()
@@ -471,6 +495,7 @@ public class UriCacheGeneratorTest
         "[",
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
   }
@@ -492,6 +517,7 @@ public class UriCacheGeneratorTest
         null,
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
+        null,
         null
     );
     Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, scheduler));
@@ -511,6 +537,7 @@ public class UriCacheGeneratorTest
                 "val"
             ),
             Period.millis(10000),
+            null,
             null
         ),
         500

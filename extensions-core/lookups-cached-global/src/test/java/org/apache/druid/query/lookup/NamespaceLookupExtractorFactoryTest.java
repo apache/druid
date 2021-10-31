@@ -75,6 +75,8 @@ import java.util.Map;
 @PowerMockIgnore({"javax.net.ssl.*", "javax.xml.*", "com.sun.xml.*"})
 public class NamespaceLookupExtractorFactoryTest
 {
+  private static final long MAX_SIZE = ExtractionNamespace.MIN_SIZE;
+
   static {
     NullHandling.initializeForTests();
   }
@@ -125,7 +127,8 @@ public class NamespaceLookupExtractorFactoryTest
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
-        null
+        null,
+        MAX_SIZE
     );
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         uriExtractionNamespace,

@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.Parser;
-import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -73,7 +72,8 @@ public class MapPopulator<K, V>
       return entries;
     }
 
-    public int getBytes() {
+    public int getBytes()
+    {
       return bytes;
     }
   }
@@ -90,13 +90,28 @@ public class MapPopulator<K, V>
    */
   public PopulateResult populate(final ByteSource source, final Map<K, V> map) throws IOException
   {
-    return populateAndWarnAtByteLimit(source, map, null, null);
+    return populateAndWarnAtByteLimit(source, map, -1, null);
   }
 
+  /**
+   * Read through the `source` line by line and populate `map` with the data returned from the `parser`. Warning
+   * messages will be logged if the `byteLimit` > 0, and the number of bytes read into the map exceed the byte limit.
+   * Note: in order to compute the byte length properly, the key and value types of map must both be instances of
+   * String, otherwise no byte length is computed.
+   *
+   * @param source    The ByteSource to read lines from
+   * @param map       The map to populate
+   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log
+   * @param name      The name of the map that is being populated. Used to identify the map in log messages written.
+   *
+   * @return number of lines read and entries parsed
+   *
+   * @throws IOException
+   */
   public PopulateResult populateAndWarnAtByteLimit(
       final ByteSource source,
       final Map<K, V> map,
-      final Long byteLimit,
+      final long byteLimit,
       final String name)
       throws IOException
   {
@@ -115,9 +130,9 @@ public class MapPopulator<K, V>
               throw new ISE("Cannot read more than %,d lines", Integer.MAX_VALUE);
             }
             final Map<K, V> kvMap = parser.parseToMap(line);
-            if (null != byteLimit) {
+            if (0 < byteLimit) {
               for (Map.Entry<K, V> e : kvMap.entrySet()) {
-                bytes += getByteLengthOfKeyAndValuePair(e.getKey(), e.getValue());
+                bytes += getByteLengthOfKeyAndValue(e.getKey(), e.getValue());
               }
               if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
                 LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
@@ -143,10 +158,23 @@ public class MapPopulator<K, V>
     );
   }
 
+  /**
+   * Read through the `iterator` and populate `map` with the data iterated over. Warning
+   * messages will be logged if the `byteLimit` > 0, and the number of bytes read into the map exceed the byte limit.
+   * Note: in order to compute the byte length properly, the key and value types of map must both be instances of
+   * String, otherwise no byte length is computed.
+   *
+   * @param iterator  The iterator to iterate over
+   * @param map       The map to populate
+   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log
+   * @param name      The name of the map that is being populated. Used to identify the map in log messages written.
+   *
+   * @return number of entries parsed and bytes stored in the map.
+   */
   public PopulateResult populateAndWarnAtByteLimit(
       final Iterator<Pair<K, V>> iterator,
       final Map<K, V> map,
-      final Long byteLimit,
+      final long byteLimit,
       final String name)
   {
     int lines = 0;
@@ -154,9 +182,9 @@ public class MapPopulator<K, V>
     int bytes = 0;
     int byteLimitMultiple = 1;
     while (iterator.hasNext()) {
-      Pair<K,V> pair = iterator.next();
-      if (null != byteLimit) {
-        bytes += getByteLengthOfKeyAndValuePair(pair.lhs, pair.rhs);
+      Pair<K, V> pair = iterator.next();
+      if (0 < byteLimit) {
+        bytes += getByteLengthOfKeyAndValue(pair.lhs, pair.rhs);
         if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
           LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
                    name,
@@ -172,12 +200,13 @@ public class MapPopulator<K, V>
     return new PopulateResult(lines, entries, bytes);
   }
 
-  private long getByteLengthOfKeyAndValuePair(K key, V value) {
+  private long getByteLengthOfKeyAndValue(K key, V value)
+  {
     if ((key instanceof String) && (value instanceof String)) {
-      return((String) (key)).length() + ((String) (value)).length();
+      return ((String) (key)).length() + ((String) (value)).length();
     } else {
       LOG.warn(
-          "cannot bytes when populating map because key and value classes are not "
+          "cannot compute number of bytes when populating map because key and value classes are not "
           + "instance of String. Key class: [%s], Value class: [%s]",
           key.getClass().getName(),
           value.getClass().getName());
