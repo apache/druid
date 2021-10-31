@@ -53,41 +53,41 @@ description: Admin users
 uniqueMember: uid=admin,ou=Users,dc=example,dc=org
 uniqueMember: uid=druid_system,ou=Users,dc=example,dc=org
 
-dn: uid=datasourceReadOnlyUser,ou=Users,dc=example,dc=org
-uid: datasourceReadOnlyUser
-cn: datasourceReadOnlyUser
-sn: datasourceReadOnlyUser
+dn: uid=datasourceOnlyUser,ou=Users,dc=example,dc=org
+uid: datasourceOnlyUser
+cn: datasourceOnlyUser
+sn: datasourceOnlyUser
 objectClass: top
 objectClass: posixAccount
 objectClass: inetOrgPerson
-homeDirectory: /home/datasourceReadOnlyUser
+homeDirectory: /home/datasourceOnlyUser
 uidNumber: 3
 gidNumber: 3
 userPassword: helloworld
 
-dn: cn=datasourceReadOnlyGroup,ou=Groups,dc=example,dc=org
+dn: cn=datasourceOnlyGroup,ou=Groups,dc=example,dc=org
 objectClass: groupOfUniqueNames
-cn: datasourceReadOnlyGroup
-description: datasourceReadOnlyGroup users
-uniqueMember: uid=datasourceReadOnlyUser,ou=Users,dc=example,dc=org
+cn: datasourceOnlyGroup
+description: datasourceOnlyGroup users
+uniqueMember: uid=datasourceOnlyUser,ou=Users,dc=example,dc=org
 
-dn: uid=datasourceReadWithStateUser,ou=Users,dc=example,dc=org
-uid: datasourceReadWithStateUser
-cn: datasourceReadWithStateUser
-sn: datasourceReadWithStateUser
+dn: uid=datasourceWithStateUser,ou=Users,dc=example,dc=org
+uid: datasourceWithStateUser
+cn: datasourceWithStateUser
+sn: datasourceWithStateUser
 objectClass: top
 objectClass: posixAccount
 objectClass: inetOrgPerson
-homeDirectory: /home/datasourceReadWithStateUser
+homeDirectory: /home/datasourceWithStateUser
 uidNumber: 4
 gidNumber: 4
 userPassword: helloworld
 
-dn: cn=datasourceReadWithStateGroup,ou=Groups,dc=example,dc=org
+dn: cn=datasourceWithStateGroup,ou=Groups,dc=example,dc=org
 objectClass: groupOfUniqueNames
-cn: datasourceReadWithStateGroup
-description: datasourceReadWithStateGroup users
-uniqueMember: uid=datasourceReadWithStateUser,ou=Users,dc=example,dc=org
+cn: datasourceWithStateGroup
+description: datasourceWithStateGroup users
+uniqueMember: uid=datasourceWithStateUser,ou=Users,dc=example,dc=org
 
 dn: uid=stateOnlyUser,ou=Users,dc=example,dc=org
 uid: stateOnlyUser
@@ -137,38 +137,20 @@ uidNumber: 7
 gidNumber: 7
 userPassword: helloworld
 
-dn: uid=datasourceReadAndSysUser,ou=Users,dc=example,dc=org
-uid: datasourceReadAndSysUser
-cn: datasourceReadAndSysUser
-sn: datasourceReadAndSysUser
+dn: uid=datasourceAndSysUser,ou=Users,dc=example,dc=org
+uid: datasourceAndSysUser
+cn: datasourceAndSysUser
+sn: datasourceAndSysUser
 objectClass: top
 objectClass: posixAccount
 objectClass: inetOrgPerson
-homeDirectory: /home/datasourceReadAndSysUser
+homeDirectory: /home/datasourceAndSysUser
 uidNumber: 8
 gidNumber: 8
 userPassword: helloworld
 
-dn: cn=datasourceReadWithSysGroup,ou=Groups,dc=example,dc=org
+dn: cn=datasourceWithSysGroup,ou=Groups,dc=example,dc=org
 objectClass: groupOfUniqueNames
-cn: datasourceReadWithSysGroup
-description: datasourceReadWithSysGroup users
-uniqueMember: uid=datasourceReadAndSysUser,ou=Users,dc=example,dc=org
-
-dn: uid=datasourceWriteAndSysUser,ou=Users,dc=example,dc=org
-uid: datasourceWriteAndSysUser
-cn: datasourceWriteAndSysUser
-sn: datasourceWriteAndSysUser
-objectClass: top
-objectClass: posixAccount
-objectClass: inetOrgPerson
-homeDirectory: /home/datasourceWriteAndSysUser
-uidNumber: 8
-gidNumber: 8
-userPassword: helloworld
-
-dn: cn=datasourceWriteWithSysGroup,ou=Groups,dc=example,dc=org
-objectClass: groupOfUniqueNames
-cn: datasourceWriteWithSysGroup
-description: datasourceWriteWithSysGroup users
-uniqueMember: uid=datasourceWriteAndSysUser,ou=Users,dc=example,dc=org
+cn: datasourceWithSysGroup
+description: datasourceWithSysGroup users
+uniqueMember: uid=datasourceAndSysUser,ou=Users,dc=example,dc=org

@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -35,6 +34,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -96,7 +96,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       return false;
     }
     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-      CloseQuietly.close(jp);
+      CloseableUtils.closeAndWrapExceptions(jp);
       return false;
     }
 

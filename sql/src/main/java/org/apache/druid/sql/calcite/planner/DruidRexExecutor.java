@@ -119,7 +119,7 @@ public class DruidRexExecutor implements RexExecutor
           if (exprResult.isNumericNull()) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
-            if (exprResult.type() == ExprType.LONG) {
+            if (exprResult.type().is(ExprType.LONG)) {
               bigDecimal = BigDecimal.valueOf(exprResult.asLong());
 
             } else {

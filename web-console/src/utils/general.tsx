@@ -29,6 +29,12 @@ import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
 
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];

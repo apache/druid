@@ -43,7 +43,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -119,7 +119,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchAggregator();
@@ -137,7 +137,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final BaseDoubleColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchBufferAggregator();
@@ -350,25 +350,19 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     return object == null ? null : ((DoublesSketch) object).getN();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return DoublesSketchModule.DOUBLES_SKETCH;
-  }
-
   /**
    * actual type is {@link DoublesSketch}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return DoublesSketchModule.TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override

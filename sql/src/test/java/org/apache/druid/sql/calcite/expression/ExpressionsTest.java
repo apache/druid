@@ -37,8 +37,8 @@ import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
@@ -74,26 +74,26 @@ public class ExpressionsTest extends ExpressionTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
-      .add("t", ValueType.LONG)
-      .add("a", ValueType.LONG)
-      .add("b", ValueType.LONG)
-      .add("p", ValueType.LONG)
-      .add("x", ValueType.FLOAT)
-      .add("y", ValueType.LONG)
-      .add("z", ValueType.FLOAT)
-      .add("s", ValueType.STRING)
-      .add("nan", ValueType.DOUBLE)
-      .add("inf", ValueType.DOUBLE)
-      .add("-inf", ValueType.DOUBLE)
-      .add("fnan", ValueType.FLOAT)
-      .add("finf", ValueType.FLOAT)
-      .add("-finf", ValueType.FLOAT)
-      .add("hexstr", ValueType.STRING)
-      .add("intstr", ValueType.STRING)
-      .add("spacey", ValueType.STRING)
-      .add("newliney", ValueType.STRING)
-      .add("tstr", ValueType.STRING)
-      .add("dstr", ValueType.STRING)
+      .add("t", ColumnType.LONG)
+      .add("a", ColumnType.LONG)
+      .add("b", ColumnType.LONG)
+      .add("p", ColumnType.LONG)
+      .add("x", ColumnType.FLOAT)
+      .add("y", ColumnType.LONG)
+      .add("z", ColumnType.FLOAT)
+      .add("s", ColumnType.STRING)
+      .add("nan", ColumnType.DOUBLE)
+      .add("inf", ColumnType.DOUBLE)
+      .add("-inf", ColumnType.DOUBLE)
+      .add("fnan", ColumnType.FLOAT)
+      .add("finf", ColumnType.FLOAT)
+      .add("-finf", ColumnType.FLOAT)
+      .add("hexstr", ColumnType.STRING)
+      .add("intstr", ColumnType.STRING)
+      .add("spacey", ColumnType.STRING)
+      .add("newliney", ColumnType.STRING)
+      .add("tstr", ColumnType.STRING)
+      .add("dstr", ColumnType.STRING)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
@@ -521,7 +521,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('Z',\"s\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1242,7 +1242,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1264,7 +1264,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),
@@ -1286,7 +1286,7 @@ public class ExpressionsTest extends ExpressionTestBase
             new ExpressionVirtualColumn(
                 "v0",
                 "concat('what is',\"spacey\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         ),

@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.easymock.EasyMock;
@@ -64,13 +64,13 @@ public class ApproximateHistogramFoldingVectorAggregatorTest
     expect(vectorColumnSelectorFactory.makeObjectSelector("field"))
         .andReturn(vectorObjectSelector).anyTimes();
     expect(vectorColumnSelectorFactory.getColumnCapabilities("field")).andReturn(
-        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX)
+        new ColumnCapabilitiesImpl().setType(ApproximateHistogramAggregatorFactory.TYPE)
     );
     expect(vectorColumnSelectorFactory.getColumnCapabilities("string_field")).andReturn(
-        new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+        new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
     );
     expect(vectorColumnSelectorFactory.getColumnCapabilities("double_field")).andReturn(
-        new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+        new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
     );
     EasyMock.replay(vectorColumnSelectorFactory);
   }

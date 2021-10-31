@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -85,6 +84,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -712,7 +712,7 @@ public class AggregationTestHelper implements Closeable
     }
     finally {
       for (Segment segment : segments) {
-        CloseQuietly.close(segment);
+        CloseableUtils.closeAndWrapExceptions(segment);
       }
     }
   }

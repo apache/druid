@@ -135,7 +135,7 @@ public interface Expr extends Cacheable
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression.
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
    *
    * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
    * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
@@ -148,7 +148,7 @@ public interface Expr extends Cacheable
    * transform expressions at ingestion time
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inspector)
+  default ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -188,14 +188,14 @@ public interface Expr extends Cacheable
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but could be other
      * things depending on the backing adapter)
      */
     @Nullable
-    ExprType getType(String name);
+    ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -203,7 +203,7 @@ public interface Expr extends Cacheable
     {
       boolean numeric = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
@@ -213,7 +213,7 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -223,7 +223,7 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -232,17 +232,17 @@ public interface Expr extends Cacheable
     {
       boolean scalar = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isScalar();
+        scalar &= argType.isPrimitive();
       }
       return scalar;
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -295,7 +295,7 @@ public interface Expr extends Cacheable
 
   /**
    * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
-   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * the vectorized column selector interfaces, and includes {@link ExpressionType} information about all input bindings
    * which exist
    */
   interface VectorInputBinding extends VectorInputBindingInspector
