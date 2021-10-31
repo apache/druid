@@ -328,11 +328,26 @@
      <cve>CVE-2020-9492</cve>
   </suppress>
   <suppress>
+    <notes><![CDATA[
+     file name: hadoop-*-3.3.1.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-.*@.*$</packageUrl>
+    <cve>CVE-2018-11765</cve>
+    <cve>CVE-2020-9492</cve>
+  </suppress>
+  <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
     <notes><![CDATA[
      file name: kafka-clients-2.8.0.jar
      ]]></notes>
     <cve>CVE-2021-26291</cve>
+  </suppress>
+  <suppress until="2021-12-30">
+    <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
+    <notes><![CDATA[
+     This vulnerability should be fixed soon and the suppression should be removed.
+     ]]></notes>
+    <cve>CVE-2020-13949</cve>
   </suppress>
 
   <suppress>
@@ -401,5 +416,50 @@
     because it seems nearly impossible for us to be affected by this
      -->
     <cve>CVE-2021-40531</cve>
+  </suppress>
+  <suppress>
+    <!-- These are for wildfly-openssl. -->
+    <notes><![CDATA[
+    file name: wildfly-openssl-1.0.7.Final.jar
+    ]]></notes>
+    <cve>CVE-2020-10740</cve>
+    <cve>CVE-2020-25644</cve>
+    <cve>CVE-2020-10718</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Suppress aws-java-sdk-bundle cves -->
+    <notes><![CDATA[
+    file name: aws-java-sdk-bundle-1.11.901.jar
+    ]]></notes>
+    <cve>CVE-2020-8570</cve>
+    <cve>CVE-2015-8559</cve>
+    <cve>CVE-2021-20291</cve>
+    <cve>CVE-2017-17485</cve>
+    <cve>CVE-2018-5968</cve>
+    <cve>CVE-2017-15095</cve>
+    <cve>CVE-2019-16942</cve>
+    <cve>CVE-2020-25649</cve>
+    <cve>CVE-2020-35491</cve>
+    <cve>CVE-2019-16943</cve>
+    <cve>CVE-2020-35490</cve>
+    <cve>CVE-2019-20330</cve>
+    <cve>CVE-2020-10673</cve>
+    <cve>CVE-2018-11307</cve>
+    <cve>CVE-2018-7489</cve>
+    <cve>CVE-2019-17267</cve>
+    <cve>CVE-2019-17531</cve>
+    <cve>CVE-2019-16335</cve>
+    <cve>CVE-2019-14893</cve>
+    <cve>CVE-2019-14540</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Suppress hadoop-shaded-guava cves -->
+    <notes><![CDATA[
+    file name: hadoop-shaded-guava-1.1.1.jar
+    ]]></notes>
+    <cve>CVE-2015-7430</cve>
+    <cve>CVE-2017-3162</cve>
   </suppress>
 </suppressions>
