@@ -53,9 +53,9 @@ public class MapPopulator<K, V>
   {
     private final int lines;
     private final int entries;
-    private final int bytes;
+    private final long bytes;
 
-    public PopulateResult(int lines, int entries, int bytes)
+    public PopulateResult(int lines, int entries, long bytes)
     {
       this.lines = lines;
       this.entries = entries;
@@ -72,7 +72,7 @@ public class MapPopulator<K, V>
       return entries;
     }
 
-    public int getBytes()
+    public long getBytes()
     {
       return bytes;
     }
@@ -90,7 +90,7 @@ public class MapPopulator<K, V>
    */
   public PopulateResult populate(final ByteSource source, final Map<K, V> map) throws IOException
   {
-    return populateAndWarnAtByteLimit(source, map, -1, null);
+    return populateAndWarnAtByteLimit(source, map, -1L, null);
   }
 
   /**
@@ -120,8 +120,8 @@ public class MapPopulator<K, V>
         {
           private int lines = 0;
           private int entries = 0;
-          private int bytes = 0;
-          int byteLimitMultiple = 1;
+          private long bytes = 0L;
+          long byteLimitMultiple = 1L;
 
           @Override
           public boolean processLine(String line)
@@ -179,8 +179,8 @@ public class MapPopulator<K, V>
   {
     int lines = 0;
     int entries = 0;
-    int bytes = 0;
-    int byteLimitMultiple = 1;
+    long bytes = 0L;
+    long byteLimitMultiple = 1L;
     while (iterator.hasNext()) {
       Pair<K, V> pair = iterator.next();
       if (0 < byteLimit) {
