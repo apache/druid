@@ -1859,6 +1859,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<String> metrics = ImmutableList.of("met");
     final Set<DataSegment> originalSegments = new HashSet<>();
     for (int i = 0; i < 6; i++) {
+      final String start = i == 0 ? null : String.valueOf(i - 1);
+      final String end = i == 5 ? null : String.valueOf(i);
       originalSegments.add(
           new DataSegment(
               datasource,
@@ -1869,8 +1871,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               metrics,
               new SingleDimensionShardSpec(
                   "dim",
-                  i == 0 ? null : String.valueOf(i - 1),
-                  i == 5 ? null : String.valueOf(i),
+                  start,
+                  end,
                   i,
                   null // emulate shardSpecs created in older versions of Druid
               ),

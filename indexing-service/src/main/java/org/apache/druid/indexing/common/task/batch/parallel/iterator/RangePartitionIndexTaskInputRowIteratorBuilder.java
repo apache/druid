@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
@@ -106,8 +107,14 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
   )
   {
     for (String dimension : partitionDimensions) {
-      List<String> dimensionValues = inputRow.getDimension(dimension);
-      if (valueCountPredicate.test(dimensionValues.size())) {
+      int dimensionValueCount = inputRow.getDimension(dimension).size();
+      if (dimensionValueCount > 1) {
+        throw new IAE(
+            "Cannot partition on multi-value dimension [%s] for input row [%s]",
+            dimension,
+            inputRow
+        );
+      } else if (valueCountPredicate.test(dimensionValueCount)) {
         return true;
       }
     }

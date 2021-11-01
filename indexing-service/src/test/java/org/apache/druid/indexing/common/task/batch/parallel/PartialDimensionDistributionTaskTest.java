@@ -258,8 +258,8 @@ public class PartialDimensionDistributionTaskTest
       PartialDimensionDistributionTaskBuilder taskBuilder = new PartialDimensionDistributionTaskBuilder()
           .inputSource(inlineInputSource);
 
-      /*exception.expect(RuntimeException.class);
-      exception.expectMessage("Cannot partition on multi-value dimension [dim]");*/
+      exception.expect(RuntimeException.class);
+      exception.expectMessage("Cannot partition on multi-value dimension [dim]");
 
       runTask(taskBuilder);
     }
