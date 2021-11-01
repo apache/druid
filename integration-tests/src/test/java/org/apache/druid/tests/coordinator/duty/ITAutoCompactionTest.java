@@ -28,6 +28,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -613,7 +614,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithRollup() throws Exception
   {
-    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02"))));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
@@ -646,7 +648,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithQueryGranularity() throws Exception
   {
-    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, true, ImmutableList.of(new Interval("2013-08-31/2013-09-02"))));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, true, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
