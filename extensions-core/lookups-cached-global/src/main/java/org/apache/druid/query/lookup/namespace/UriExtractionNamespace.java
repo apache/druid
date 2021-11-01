@@ -78,7 +78,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final Period pollPeriod;
   @JsonProperty
-  private final long maxSize;
+  private final Long maxSize;
 
   @JsonCreator
   public UriExtractionNamespace(
@@ -131,7 +131,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
-    this.maxSize = maxSize == null ? ExtractionNamespace.DEFAULT_MAX_SIZE : maxSize;
+    this.maxSize = maxSize;
   }
 
   public String getFileRegex()
@@ -161,7 +161,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  public long getMaxSize()
+  @Nullable
+  public Long getMaxSize()
   {
     return maxSize;
   }

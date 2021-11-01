@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
+import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.skife.jdbi.v2.DBI;
@@ -104,7 +105,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       ).populateAndWarnAtByteLimit(
           pairs,
           cache,
-          namespace.getMaxSize(),
+          namespace.getMaxSize() == null ? ExtractionNamespace.getDefaultMaxSizeAndLimit() : namespace.getMaxSize(),
           null == entryId ? null : entryId.toString()
       );
       final long duration = System.nanoTime() - startNs;

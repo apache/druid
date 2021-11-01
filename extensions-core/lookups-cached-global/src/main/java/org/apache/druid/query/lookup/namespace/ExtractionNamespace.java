@@ -37,18 +37,19 @@ import org.apache.druid.utils.JvmUtils;
 public interface ExtractionNamespace
 {
   long MIN_SIZE = 5 * 1024 * 1024;
-  long DEFAULT_MAX_SIZE = getDefaultMaxSizeAndLimit(JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes());
+  long DEFAULT_MAX_SIZE = getDefaultMaxSizeAndLimit();
 
-  static long getDefaultMaxSizeAndLimit(long maxMemory)
+  static long getDefaultMaxSizeAndLimit()
   {
+    long maxMemory = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
     long memoryLimit = maxMemory / 10;
     return MIN_SIZE > memoryLimit ? MIN_SIZE : memoryLimit;
   }
 
   long getPollMs();
 
-  default long getMaxSize()
+  default Long getMaxSize()
   {
-    return -1;
+    return -1L;
   }
 }

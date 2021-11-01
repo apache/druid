@@ -58,7 +58,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final Period pollPeriod;
   @JsonProperty
-  private final long maxSize;
+  private final Long maxSize;
 
   @JsonCreator
   public JdbcExtractionNamespace(
@@ -93,7 +93,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     } else {
       this.pollPeriod = pollPeriod;
     }
-    this.maxSize = maxSize == null ? ExtractionNamespace.DEFAULT_MAX_SIZE : maxSize;
+    this.maxSize = maxSize;
   }
 
   /**
@@ -155,7 +155,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  public long getMaxSize()
+  @Nullable
+  public Long getMaxSize()
   {
     return maxSize;
   }

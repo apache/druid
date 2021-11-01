@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
+import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
@@ -149,7 +150,9 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
             ).populateAndWarnAtByteLimit(
                 source,
                 versionedCache.getCache(),
-                extractionNamespace.getMaxSize(),
+                extractionNamespace.getMaxSize() == null
+                ? ExtractionNamespace.getDefaultMaxSizeAndLimit()
+                : extractionNamespace.getMaxSize(),
                 null == entryId ? null : entryId.toString()
             );
             final long duration = System.nanoTime() - startNs;
