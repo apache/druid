@@ -34,7 +34,12 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
 
   public static <T> StringPartitionChunk<T> makeForSingleDimension(String start, String end, int chunkNumber, T obj)
   {
-    return new StringPartitionChunk<>(StringTuple.create(start), StringTuple.create(end), chunkNumber, obj);
+    return new StringPartitionChunk<>(
+        start == null ? null : StringTuple.create(start),
+        end == null ? null : StringTuple.create(end),
+        chunkNumber,
+        obj
+    );
   }
 
   public static <T> StringPartitionChunk<T> make(StringTuple start, StringTuple end, int chunkNumber, T obj)
@@ -42,7 +47,7 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     return new StringPartitionChunk<>(start, end, chunkNumber, obj);
   }
 
-  public StringPartitionChunk(
+  private StringPartitionChunk(
       StringTuple start,
       StringTuple end,
       int chunkNumber,

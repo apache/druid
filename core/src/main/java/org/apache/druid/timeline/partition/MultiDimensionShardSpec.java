@@ -169,7 +169,7 @@ public class MultiDimensionShardSpec implements ShardSpec
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     if (numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS) {
-      return new StringPartitionChunk<>(start, end, partitionNum, obj);
+      return StringPartitionChunk.make(start, end, partitionNum, obj);
     } else {
       return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
     }
