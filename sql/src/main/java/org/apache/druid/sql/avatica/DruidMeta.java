@@ -589,7 +589,7 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw errorHandler.logFailureAndSanitize((new ISE("Connection[%s] already open.", connectionId)));
+      throw errorHandler.logFailureAndSanitize(new ISE("Connection[%s] already open.", connectionId));
     }
 
     LOG.debug("Connection[%s] opened.", connectionId);
@@ -613,7 +613,12 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = connections.get(connectionId);
 
     if (connection == null) {
-      throw errorHandler.logFailureAndSanitize(new NoSuchConnectionException(connectionId));
+      NoSuchConnectionException noSuchConnectionException = new NoSuchConnectionException(connectionId);
+      // this is to avoid an unecessary cast of NoSuchConnectionException to a runtime exception.
+      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
+        throw errorHandler.logFailureAndSanitize(noSuchConnectionException);
+      }
+      throw errorHandler.logFailure(noSuchConnectionException);
     }
 
     return connection.sync(
@@ -634,7 +639,11 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = getDruidConnection(statement.connectionId);
     final DruidStatement druidStatement = connection.getStatement(statement.id);
     if (druidStatement == null) {
-      throw errorHandler.logFailureAndSanitize(new NoSuchStatementException(statement));
+      NoSuchStatementException noSuchStatementException = new NoSuchStatementException(statement);
+      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
+        throw errorHandler.logFailureAndSanitize(noSuchStatementException);
+      }
+      throw errorHandler.logFailure(noSuchStatementException);
     }
     return druidStatement;
   }

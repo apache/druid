@@ -21,10 +21,14 @@ package org.apache.druid.sql.avatica;
 
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nonnull;
 
@@ -67,21 +71,48 @@ class ErrorHandler
    */
   public <T extends Throwable> RuntimeException logFailureAndSanitize(T error, String message, Object... format)
   {
-    LOG.error(error, message, format);
+    logFailure(error, message, format);
     return sanitize(error);
+  }
+
+  public <T extends Throwable> T logFailure(T error, String message, Object... format) {
+    LOG.error(error, message, format);
+    return error;
+  }
+
+  public <T extends Throwable> T logFailure(T error) {
+    logFailure(error, error.getMessage());
+    return error;
   }
 
   public <T extends Throwable> RuntimeException sanitize(T error)
   {
+    if (error instanceof QueryInterruptedException) {
+      return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded((QueryInterruptedException) error);
+    }
+    if (error instanceof QueryException) {
+      return (QueryException) errorResponseTransformStrategy.transformIfNeeded((QueryException) error);
+    }
+    if (error instanceof ForbiddenException) {
+      return (ForbiddenException)  errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
+    }
+    if (error instanceof ISE) {
+      return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
+    }
+    // catch any non explicit sanitizable exceptions
     if (error instanceof SanitizableException) {
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error));
     }
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
+      // could do `throw sanitize(error);` but to avoid unnecessary going down multiple levels this is avoided here.
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
-    return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded(QueryInterruptedException.wrapIfNeeded(
-        error)));
+    return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded(QueryInterruptedException.wrapIfNeeded(
+        error));
+  }
+  public boolean hasAffectingErrorResponseTransformStrategy() {
+    return !errorResponseTransformStrategy.equals(NoErrorResponseTransformStrategy.INSTANCE);
   }
 }

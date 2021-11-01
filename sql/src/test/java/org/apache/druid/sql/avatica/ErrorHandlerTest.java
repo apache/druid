@@ -30,9 +30,6 @@ import org.mockito.Mockito;
 public class ErrorHandlerTest
 {
 
-  // cannot be placed inside test method because it needs to be thrown.
-  QueryException input = new QueryException("error", "error message", "error class", "host");
-
   @Test
   public void testErrorHandlerSanitizesErrorAsExpected()
   {
@@ -43,8 +40,39 @@ public class ErrorHandlerTest
     Mockito.when(serverConfig.getErrorResponseTransformStrategy())
            .thenReturn(emptyAllowedRegexErrorResponseTransformStrategy);
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
+    QueryException input = new QueryException("error", "error message", "error class", "host");
 
-    QueryException output = errorHandler.logFailureAndSanitize(input);
-    Assert.assertNotEquals(input.getMessage(), output.getMessage());
+    RuntimeException output = errorHandler.logFailureAndSanitize(input);
+    Assert.assertEquals("org.apache.druid.query.QueryException", output.getMessage());
+  }
+
+  @Test
+  public void testErrorHandlerDefaultErrorResponseTransformStrategySanitizesErrorAsExpected()
+  {
+    ServerConfig serverConfig = new ServerConfig();
+    ErrorHandler errorHandler = new ErrorHandler(serverConfig);
+    QueryException input = new QueryException("error", "error messagez", "error class", "host");
+
+    RuntimeException output = errorHandler.logFailureAndSanitize(input);
+    Assert.assertEquals("error messagez", output.getMessage());
+  }
+
+  @Test
+  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsTrueWhenNotUsingNoErrorResponseTransformStrategy() {
+    ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
+    AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
+        ImmutableList.of());
+
+    Mockito.when(serverConfig.getErrorResponseTransformStrategy())
+           .thenReturn(emptyAllowedRegexErrorResponseTransformStrategy);
+    ErrorHandler errorHandler = new ErrorHandler(serverConfig);
+    Assert.assertTrue(errorHandler.hasAffectingErrorResponseTransformStrategy());
+  }
+
+  @Test
+  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsFalseWhenUsingNoErrorResponseTransformStrategy() {
+    ServerConfig serverConfig = new ServerConfig();
+    ErrorHandler errorHandler = new ErrorHandler(serverConfig);
+    Assert.assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
   }
 }
