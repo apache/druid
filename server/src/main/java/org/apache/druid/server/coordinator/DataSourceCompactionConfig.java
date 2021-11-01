@@ -74,11 +74,6 @@ public class DataSourceCompactionConfig
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
-    if (granularitySpec != null) {
-      Preconditions.checkArgument(
-          granularitySpec.getQueryGranularity() == null,
-          "Auto compaction granularitySpec does not support query granularity value");
-    }
     this.granularitySpec = granularitySpec;
     this.taskContext = taskContext;
   }
