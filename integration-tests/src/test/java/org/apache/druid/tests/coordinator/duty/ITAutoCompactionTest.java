@@ -19,6 +19,8 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -71,6 +73,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITAutoCompactionTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_TASK_NO_ROLLUP = "/indexer/wikipedia_index_task_no_rollup.json";
+  private static final String INDEX_ROLLUP_QUERIES_RESOURCE = "/indexer/wikipedia_index_rollup_queries.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
@@ -290,7 +294,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to true
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), true);
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -307,7 +311,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.DAY;
       // Set dropExisting to true
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), true);
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
@@ -340,7 +344,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to false
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), false);
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -357,7 +361,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.DAY;
       // Set dropExisting to false
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), false);
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
@@ -397,7 +401,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -439,7 +443,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
       // Now set auto compaction with DAY granularity in the granularitySpec
       Granularity newGranularity = Granularities.DAY;
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -471,7 +475,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Segments were compacted and already has DAY granularity since it was initially ingested with DAY granularity.
       // Now set auto compaction with DAY granularity in the granularitySpec
       Granularity newGranularity = Granularities.YEAR;
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null));
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null));
       forceTriggerAutoCompaction(1);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
@@ -495,7 +499,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to true
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), true);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
@@ -521,7 +525,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.MONTH;
       // Set dropExisting to true
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), true);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
       expectedIntervalAfterCompaction = new ArrayList<>();
@@ -553,7 +557,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to false
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), false);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
@@ -579,7 +583,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.MONTH;
       // Set dropExisting to false
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null), false);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
       expectedIntervalAfterCompaction = new ArrayList<>();
@@ -605,6 +609,38 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test
+  public void testAutoCompactionDutyWithRollup() throws Exception
+  {
+    loadData(INDEX_TASK_NO_ROLLUP);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(null, null, true),
+          false
+      );
+      forceTriggerAutoCompaction(2);
+      expectedResult = ImmutableMap.of(
+          "%%EXPECTED_COUNT_RESULT%%", 1,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify rollup segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
   private void loadData(String indexTask) throws Exception
   {
     String taskSpec = getResourceAsString(indexTask);
@@ -626,6 +662,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void verifyQuery(String queryResource) throws Exception
   {
+    verifyQuery(queryResource, ImmutableMap.of());
+  }
+
+  private void verifyQuery(String queryResource, Map<String, Object> expectedResults) throws Exception
+  {
     String queryResponseTemplate;
     try {
       InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryResource);
@@ -634,13 +675,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", queryResource);
     }
-
     queryResponseTemplate = StringUtils.replace(
         queryResponseTemplate,
         "%%DATASOURCE%%",
         fullDatasourceName
     );
-
+    for (Map.Entry<String, Object> entry : expectedResults.entrySet()) {
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          entry.getKey(),
+          jsonMapper.writeValueAsString(entry.getValue())
+      );
+    }
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 

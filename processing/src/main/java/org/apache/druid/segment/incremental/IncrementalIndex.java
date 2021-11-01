@@ -33,7 +33,6 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -98,7 +97,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
+public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable
 {
   /**
    * Column selector used at ingestion time for inputs to aggregators.
@@ -219,7 +218,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] metrics;
-  private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
   private final Metadata metadata;
 
@@ -274,7 +272,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.rollup
     );
 
-    this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
+    initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
@@ -328,7 +326,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public abstract String getOutOfRowsReason();
 
-  protected abstract AggregatorType[] initAggs(
+  protected abstract void initAggs(
       AggregatorFactory[] metrics,
       Supplier<InputRow> rowSupplier,
       boolean deserializeComplexMetrics,
@@ -345,20 +343,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   ) throws IndexSizeExceededException;
 
   public abstract int getLastRowIndex();
-
-  protected abstract AggregatorType[] getAggsForRow(int rowOffset);
-
-  /**
-   * Return the current aggregated value for a particular aggregator, row number, and aggregator number.
-   *
-   * Note: rowOffset and aggPosition are unused today, but may be used in the future by
-   * https://github.com/apache/druid/pull/10001.
-   */
-  protected abstract Object getAggVal(
-      AggregatorType agg,
-      @SuppressWarnings("unused") int rowOffset,
-      @SuppressWarnings("unused") int aggPosition
-  );
 
   protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
 
@@ -701,12 +685,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return getFacts().getMaxTimeMillis();
   }
 
-  @SuppressWarnings("unused") // Unused today, but may be used in the future by https://github.com/apache/druid/pull/10001
-  public AggregatorType[] getAggs()
-  {
-    return aggs;
-  }
-
   public AggregatorFactory[] getMetricAggs()
   {
     return metrics;
@@ -897,55 +875,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return iterableWithPostAggregations(null, false).iterator();
   }
 
-  public Iterable<Row> iterableWithPostAggregations(
-      @Nullable final List<PostAggregator> postAggs,
-      final boolean descending
-  )
-  {
-    return () -> {
-      final List<DimensionDesc> dimensions = getDimensions();
-
-      return Iterators.transform(
-          getFacts().iterator(descending),
-          incrementalIndexRow -> {
-            final int rowOffset = incrementalIndexRow.getRowIndex();
-
-            Object[] theDims = incrementalIndexRow.getDims();
-
-            Map<String, Object> theVals = Maps.newLinkedHashMap();
-            for (int i = 0; i < theDims.length; ++i) {
-              Object dim = theDims[i];
-              DimensionDesc dimensionDesc = dimensions.get(i);
-              if (dimensionDesc == null) {
-                continue;
-              }
-              String dimensionName = dimensionDesc.getName();
-              DimensionHandler handler = dimensionDesc.getHandler();
-              if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
-                theVals.put(dimensionName, null);
-                continue;
-              }
-              final DimensionIndexer indexer = dimensionDesc.getIndexer();
-              Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
-              theVals.put(dimensionName, rowVals);
-            }
-
-            AggregatorType[] aggs = getAggsForRow(rowOffset);
-            for (int i = 0; i < aggs.length; ++i) {
-              theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
-            }
-
-            if (postAggs != null) {
-              for (PostAggregator postAgg : postAggs) {
-                theVals.put(postAgg.getName(), postAgg.compute(theVals));
-              }
-            }
-
-            return new MapBasedRow(incrementalIndexRow.getTimestamp(), theVals);
-          }
-      );
-    };
-  }
+  public abstract Iterable<Row> iterableWithPostAggregations(
+      @Nullable List<PostAggregator> postAggs,
+      boolean descending
+  );
 
   public DateTime getMaxIngestedEventTime()
   {

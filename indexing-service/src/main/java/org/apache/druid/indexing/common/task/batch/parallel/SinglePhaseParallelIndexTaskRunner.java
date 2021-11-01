@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskC
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -350,6 +351,9 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
             "Cannot acquire a lock for interval[%s]",
             interval
         );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+        }
         version = lock.getVersion();
       }
     }
