@@ -104,7 +104,7 @@ public class MultiDimensionShardSpecTest
     ));
     assertTrue(isInChunk(
         shardSpec,
-        createRow(null, "Kolkata")
+        createRow(null, "Lyon")
     ));
     assertTrue(isInChunk(
         shardSpec,
@@ -140,16 +140,16 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        StringTuple.create("India", "Delhi"),
+        StringTuple.create("France", "Lyon"),
         null,
         10,
         null
     );
 
-    // Verify that anything starting from (India, Delhi) is in chunk
+    // Verify that anything starting from (France, Lyon) is in chunk
     assertTrue(isInChunk(
         shardSpec,
-        createRow("India", "Kolkata")
+        createRow("France", "Paris")
     ));
     assertTrue(isInChunk(
         shardSpec,
@@ -166,11 +166,11 @@ public class MultiDimensionShardSpecTest
     ));
     assertFalse(isInChunk(
         shardSpec,
-        createRow("India", null)
+        createRow("France", null)
     ));
     assertFalse(isInChunk(
         shardSpec,
-        createRow("India", "Bengaluru")
+        createRow("France", "Bordeaux")
     ));
   }
 
@@ -181,8 +181,8 @@ public class MultiDimensionShardSpecTest
 
     final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
         dimensions,
-        StringTuple.create("India", "Bengaluru"),
-        StringTuple.create("India", "Patna"),
+        StringTuple.create("France", "Bordeaux"),
+        StringTuple.create("France", "Paris"),
         10,
         null
     );
@@ -190,24 +190,24 @@ public class MultiDimensionShardSpecTest
     // Verify that entries starting from (India, Bengaluru) until (India, Patna) are in chunk
     assertTrue(isInChunk(
         shardSpec,
-        createRow("India", "Bengaluru")
+        createRow("France", "Bordeaux")
     ));
     assertTrue(isInChunk(
         shardSpec,
-        createRow("India", "Kolkata")
+        createRow("France", "Lyon")
     ));
 
     assertFalse(isInChunk(
         shardSpec,
-        createRow("India", "Patna")
+        createRow("France", "Paris")
     ));
     assertFalse(isInChunk(
         shardSpec,
-        createRow("India", "Ahmedabad")
+        createRow("France", "Avignon")
     ));
     assertFalse(isInChunk(
         shardSpec,
-        createRow("India", "Raipur")
+        createRow("France", "Toulouse")
     ));
   }
 
