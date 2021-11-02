@@ -35,7 +35,7 @@ else
 fi
 
 set -e
-if [ -n "${HADOOP_VERSION}" ] && [ ${HADOOP_VERSION:0:1)} == "3" ]; then
+if [ -n "${HADOOP_VERSION}" ] && [ "${HADOOP_VERSION:0:1}" == "3" ]; then
   docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -mkdir -p /user/root"
   docker exec -t druid-it-hadoop sh -c "./usr/local/hadoop/bin/hdfs dfs -put /usr/local/hadoop/etc/hadoop/ input"
 fi
