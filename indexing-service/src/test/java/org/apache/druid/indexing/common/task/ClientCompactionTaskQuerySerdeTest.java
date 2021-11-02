@@ -116,7 +116,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         ImmutableMap.of("key", "value")
     );
 
@@ -203,6 +203,10 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getGranularitySpec().getSegmentGranularity()
     );
     Assert.assertEquals(
+        query.getGranularitySpec().isRollup(),
+        task.getGranularitySpec().isRollup()
+    );
+    Assert.assertEquals(
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
@@ -264,7 +268,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 null
             )
         )
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -307,7 +311,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000,
             100
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR),
+        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new HashMap<>()
     );
 

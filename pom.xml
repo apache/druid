@@ -112,6 +112,8 @@
         <aws.sdk.version>1.12.37</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
+        <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
+        <httpclient.version>4.5.10</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
@@ -460,7 +462,7 @@
             <dependency>
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-validator</artifactId>
-                <version>5.2.5.Final</version>
+                <version>${hibernate-validator.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.validation</groupId>
@@ -728,59 +730,12 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.10</version>
+                <version>${httpclient.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.11</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-auth</artifactId>
-                <version>${hadoop.compile.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.apache.avro</groupId>
-                        <artifactId>avro</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-hdfs-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-yarn-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-mapreduce-client-core</artifactId>
-              <version>${hadoop.compile.version}</version>
-              <scope>provided</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-              </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -1177,16 +1132,46 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.stefanbirkner</groupId>
-                <artifactId>system-rules</artifactId>
-                <version>1.19.0</version>
-                <scope>test</scope>
+              <groupId>com.github.stefanbirkner</groupId>
+              <artifactId>system-rules</artifactId>
+              <version>1.19.0</version>
+              <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.timeandspace</groupId>
-                <artifactId>cron-scheduler</artifactId>
-                <version>0.1</version>
-            </dependency>
+          <dependency>
+            <groupId>io.timeandspace</groupId>
+            <artifactId>cron-scheduler</artifactId>
+            <version>0.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1561,11 +1546,6 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-help-plugin</artifactId>
-                    <version>2.1.1</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
                     <version>2.3.1</version>
                     <executions>
@@ -1638,15 +1618,15 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
-                <plugin>
-                    <groupId>com.github.eirslett</groupId>
-                    <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.11.3</version>
-                    <configuration>
-                        <nodeVersion>${node.version}</nodeVersion>
-                        <npmVersion>${npm.version}</npmVersion>
-                    </configuration>
-                </plugin>
+              <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <configuration>
+                  <nodeVersion>${node.version}</nodeVersion>
+                  <npmVersion>${npm.version}</npmVersion>
+                </configuration>
+              </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1903,6 +1883,7 @@
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>.editorconfig</exclude>
+                                <exclude>**/hadoop.indexer.libs.version</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -1964,5 +1945,19 @@
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
+      <profile>
+        <id>hadoop3</id>
+        <activation>
+          <property>
+            <name>hadoop3.enabled</name>
+            <value>true</value>
+          </property>
+        </activation>
+        <properties>
+          <hadoop.compile.version>3.3.1</hadoop.compile.version>
+          <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
+          <httpclient.version>4.5.13</httpclient.version>
+        </properties>
+      </profile>
     </profiles>
 </project>
