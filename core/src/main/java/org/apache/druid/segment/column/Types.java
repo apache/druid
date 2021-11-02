@@ -164,9 +164,10 @@ public class Types
 
   /**
    * Clear and set the 'null' byte of a nullable value to {@link NullHandling#IS_NULL_BYTE} to a {@link ByteBuffer} at
-   * the supplied position. This method does not change the buffer position, limit, or mark.
+   * the supplied position. This method does not change the buffer position, limit, or mark, because it does not expect
+   * to own the buffer given to it (i.e. buffer aggs)
    *
-   * Nullable types are stored with a leading byte to indicate if the value is null, followed by teh value bytes
+   * Nullable types are stored with a leading byte to indicate if the value is null, followed by the value bytes
    * (if not null)
    *
    * layout: | null (byte) | value |
@@ -201,7 +202,8 @@ public class Types
    *
    * layout: | null (byte) | long |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (always 9)
    */
@@ -218,7 +220,8 @@ public class Types
    *
    * layout: | null (byte) | long |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect  to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   public static long readNullableLong(ByteBuffer buffer, int offset)
   {
@@ -232,7 +235,8 @@ public class Types
    *
    * layout: | null (byte) | double |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (always 9)
    */
@@ -249,7 +253,8 @@ public class Types
    *
    * layout: | null (byte) | double |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   public static double readNullableDouble(ByteBuffer buffer, int offset)
   {
@@ -263,7 +268,8 @@ public class Types
    *
    * layout: | null (byte) | float |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (always 5)
    */
@@ -280,7 +286,8 @@ public class Types
    *
    * layout: | null (byte) | float |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   public static float readNullableFloat(ByteBuffer buffer, int offset)
   {
@@ -295,7 +302,50 @@ public class Types
    *
    * layout: | null (byte) | size (int) | byte[] |
    *
-   * This method does not permanently change the buffer position, limit, or mark.
+   * This method checks that no more than the specified maximum number of bytes can be written to the buffer, and the
+   * proper function of this method requires that the buffer contains at least that many bytes free from the starting
+   * offset. See {@link #writeNullableVariableBlob(ByteBuffer, int, byte[])} if you do not need to check the length
+   * of the byte array, or wish to perform the check externally.
+   *
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
+   *
+   * @return number of bytes written (1 if null, or 5 + size of byte[] if not)
+   */
+  public static int writeNullableVariableBlob(
+      ByteBuffer buffer,
+      int offset,
+      @Nullable byte[] value,
+      TypeSignature<?> type,
+      int maxSizeBytes
+  )
+  {
+    // | null (byte) | length (int) | bytes |
+    if (value != null) {
+      checkMaxBytes(
+          type,
+          1 + Integer.BYTES + value.length,
+          maxSizeBytes
+      );
+      return writeNullableVariableBlob(buffer, offset, value);
+    } else {
+      return writeNull(buffer, offset);
+    }
+  }
+
+  /**
+   * Write a variably lengthed byte[] value to a {@link ByteBuffer} at the supplied offset. The first byte is set to
+   * {@link NullHandling#IS_NULL_BYTE} or {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate, and if the byte[] value
+   * is not null, the size in bytes is written as an integer in the next 4 bytes, followed by the byte[] value itself.
+   *
+   * layout: | null (byte) | size (int) | byte[] |
+   *
+   * This method does not constrain the number of bytes written to the buffer, so either use
+   * {@link #writeNullableVariableBlob(ByteBuffer, int, byte[], TypeSignature, int)} or first check that the size
+   * of the byte array plus 5 bytes is available in the buffer before using this method.
+   *
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (1 if null, or 5 + size of byte[] if not)
    */
@@ -325,7 +375,8 @@ public class Types
    *
    * layout: | null (byte) | size (int) | byte[] |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   @Nullable
   public static byte[] readNullableVariableBlob(ByteBuffer buffer, int offset)
@@ -350,8 +401,12 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | long |, | null (byte) |, ... |null (byte) | long |} |
    *
+   * This method checks that no more than the specified maximum number of bytes can be written to the buffer, and the
+   * proper function of this method requires that the buffer contains at least that many bytes free from the starting
+   * offset.
    *
-   * This method does not permanently change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (1 if null, or 5 + size of Long[] if not)
    */
@@ -393,7 +448,8 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | long |, | null (byte) |, ... |null (byte) | long |} |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   @Nullable
   public static Long[] readNullableLongArray(ByteBuffer buffer, int offset)
@@ -427,8 +483,12 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | double |, | null (byte) |, ... |null (byte) | double |} |
    *
+   * This method checks that no more than the specified maximum number of bytes can be written to the buffer, and the
+   * proper function of this method requires that the buffer contains at least that many bytes free from the starting
+   * offset.
    *
-   * This method does not permanently change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (1 if null, or 5 + size of Double[] if not)
    */
@@ -470,7 +530,8 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | double |, | null (byte) |, ... |null (byte) | double |} |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   @Nullable
   public static Double[] readNullableDoubleArray(ByteBuffer buffer, int offset)
@@ -505,8 +566,12 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | size (int) | byte[] |, | null (byte) |, ... } |
    *
+   * This method checks that no more than the specified maximum number of bytes can be written to the buffer, and the
+   * proper function of this method requires that the buffer contains at least that many bytes free from the starting
+   * offset.
    *
-   * This method does not permanently change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (1 if null, or 5 + size of String[] if not)
    */
@@ -549,7 +614,8 @@ public class Types
    *
    * layout: | null (byte) | size (int) | {| null (byte) | size (int) | byte[] |, | null (byte) |, ... } |
    *
-   * This method does not change the buffer position, limit, or mark.
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    */
   @Nullable
   public static String[] readNullableStringArray(ByteBuffer buffer, int offset)
@@ -586,11 +652,22 @@ public class Types
    * Note that the {@link TypeSignature#getComplexTypeName()} MUST have registered an {@link ObjectByteStrategy} with
    * {@link #registerStrategy} for this method to work, else a null pointer exception will be thrown.
    *
-   * This method does not permanently change the buffer position, limit, or mark.
+   * This method checks that no more than the specified maximum number of bytes can be written to the buffer, and the
+   * proper function of this method requires that the buffer contains at least that many bytes free from the starting
+   * offset.
+   *
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
    *
    * @return number of bytes written (1 if null, or 5 + size of byte[] if not)
    */
-  public static <T> int writeNullableComplexType(ByteBuffer buffer, int offset, TypeSignature<?> type, @Nullable T value, int maxSizeBytes)
+  public static <T> int writeNullableComplexType(
+      ByteBuffer buffer,
+      int offset,
+      TypeSignature<?> type,
+      @Nullable T value,
+      int maxSizeBytes
+  )
   {
     final ObjectByteStrategy strategy = Preconditions.checkNotNull(
         getStrategy(type.getComplexTypeName()),
@@ -600,17 +677,28 @@ public class Types
         )
     );
     if (value != null) {
-      // | null (byte) | length (int) | complex type bytes |
       final byte[] complexBytes = strategy.toBytes(value);
-      final int size = 1 + Integer.BYTES + complexBytes.length;
-      checkMaxBytes(type, size, maxSizeBytes);
-      writeNullableVariableBlob(buffer, offset, complexBytes);
-      return size;
+      return writeNullableVariableBlob(buffer, offset, complexBytes, type, maxSizeBytes);
     } else {
       return writeNull(buffer, offset);
     }
   }
 
+  /**
+   * Read a possibly null, variably lengthed byte[] value derived from some {@link ObjectByteStrategy} for a complex
+   * {@link TypeSignature} from a {@link ByteBuffer} at the supplied offset. If the first byte is set to
+   * {@link NullHandling#IS_NULL_BYTE}, this method will return null, and if the value is not null, the size in bytes
+   * is read as an integer from the next 4 bytes, followed by the byte[] value itself from
+   * {@link ObjectByteStrategy#fromByteBuffer}.
+   *
+   * layout: | null (byte) | size (int) | byte[] |
+   *
+   * Note that the {@link TypeSignature#getComplexTypeName()} MUST have registered an {@link ObjectByteStrategy} with
+   * {@link #registerStrategy} for this method to work, else a null pointer exception will be thrown.
+   *
+   * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
+   * given to it (i.e. buffer aggs)
+   */
   @Nullable
   public static Object readNullableComplexType(ByteBuffer buffer, int offset, TypeSignature<?> type)
   {

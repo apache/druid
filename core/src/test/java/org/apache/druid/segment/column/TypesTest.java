@@ -235,6 +235,17 @@ public class TypesTest
   }
 
   @Test
+  public void testNullableVariableBlobTooBig()
+  {
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage("Unable to serialize [STRING], size [10] is larger than max [5]");
+    String someString = "hello";
+    byte[] stringBytes = StringUtils.toUtf8(someString);
+    int offset = 0;
+    Types.writeNullableVariableBlob(buffer, offset, stringBytes, ColumnType.STRING, stringBytes.length);
+  }
+
+  @Test
   public void testArrays()
   {
     final Long[] longArray = new Long[]{1L, 1234567L, null, 10L};

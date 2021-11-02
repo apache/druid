@@ -111,9 +111,7 @@ public abstract class ExprEval<T>
       case STRING:
         final byte[] stringBytes = StringUtils.toUtf8Nullable(eval.asString());
         if (stringBytes != null) {
-          // | null (byte) | string length (int) | string bytes |
-          Types.checkMaxBytes(eval.type(), 1 + Integer.BYTES + stringBytes.length, maxSizeBytes);
-          Types.writeNullableVariableBlob(buffer, offset, stringBytes);
+          Types.writeNullableVariableBlob(buffer, offset, stringBytes, eval.type(), maxSizeBytes);
         } else {
           Types.writeNull(buffer, offset);
         }
