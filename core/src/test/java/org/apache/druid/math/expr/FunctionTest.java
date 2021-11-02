@@ -856,7 +856,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testComplexDecodeBaseArg0Unknown()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[%s] first argument must be a valid complex type name, unknown complex type [%s]; COMPLEX<unknown>");
+    expectedException.expectMessage("Function[complex_decode_base64] first argument must be a valid complex type name, unknown complex type [COMPLEX<unknown>]");
     assertExpr(
         "complex_decode_base64('unknown', string)",
         null

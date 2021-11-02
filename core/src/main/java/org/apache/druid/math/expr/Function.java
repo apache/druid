@@ -3596,6 +3596,7 @@ public interface Function
       if (strategy == null) {
         throw new IAE(
             "Function[%s] first argument must be a valid complex type name, unknown complex type [%s]",
+            name(),
             complexType.asTypeString()
         );
       }
