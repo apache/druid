@@ -469,7 +469,7 @@ public interface ApplyFunction
         return ExprEval.of(null);
       }
 
-      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
+      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
       Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
       return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
@@ -525,7 +525,7 @@ public interface ApplyFunction
         return ExprEval.ofLongBoolean(false);
       }
 
-      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
+      SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(arrayEval.elementType(), lambdaExpr, bindings);
       return match(array, lambdaExpr, lambdaBinding);
     }
 
@@ -614,9 +614,11 @@ public interface ApplyFunction
   {
     private final Expr.ObjectBinding bindings;
     private final Map<String, Object> lambdaBindings;
+    private final ExpressionType elementType;
 
-    SettableLambdaBinding(LambdaExpr expr, Expr.ObjectBinding bindings)
+    SettableLambdaBinding(ExpressionType elementType, LambdaExpr expr, Expr.ObjectBinding bindings)
     {
+      this.elementType = elementType;
       this.lambdaBindings = new HashMap<>();
       for (String lambdaIdentifier : expr.getIdentifiers()) {
         lambdaBindings.put(lambdaIdentifier, null);
@@ -644,7 +646,10 @@ public interface ApplyFunction
     @Override
     public ExpressionType getType(String name)
     {
-      return null;
+      if (lambdaBindings.containsKey(name)) {
+        return elementType;
+      }
+      return bindings.getType(name);
     }
   }
 
