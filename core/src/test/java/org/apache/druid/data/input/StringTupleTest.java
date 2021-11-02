@@ -25,7 +25,9 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class StringTupleTest
 {
@@ -78,5 +80,69 @@ public class StringTupleTest
 
     StringTuple deserialized = mapper.readValue(json, StringTuple.class);
     assertEquals(original, deserialized);
+  }
+
+  @Test
+  public void testCompareTo()
+  {
+    StringTuple lhs = StringTuple.create("c", "10");
+
+    // Objects equal to lhs
+    assertEquals(
+        0,
+        lhs.compareTo(StringTuple.create("c", "10"))
+    );
+
+    // Objects smaller than lhs
+    assertTrue(lhs.compareTo(null) > 0);
+    assertTrue(lhs.compareTo(StringTuple.create(null, null)) > 0);
+    assertTrue(lhs.compareTo(StringTuple.create("c", "09")) > 0);
+    assertTrue(lhs.compareTo(StringTuple.create("b", "01")) > 0);
+
+    // Objects bigger than lhs
+    assertTrue(lhs.compareTo(StringTuple.create("c", "11")) < 0);
+    assertTrue(lhs.compareTo(StringTuple.create("d", "01")) < 0);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    assertEquals(
+        StringTuple.create((String) null),
+        StringTuple.create((String) null)
+    );
+    assertEquals(
+        StringTuple.create("a"),
+        StringTuple.create("a")
+    );
+    assertEquals(
+        StringTuple.create(null, null, null),
+        StringTuple.create(null, null, null)
+    );
+    assertEquals(
+        StringTuple.create("a", "10", "z"),
+        StringTuple.create("a", "10", "z")
+    );
+    assertEquals(
+        new StringTuple(new String[]{"a", "10", "z"}),
+        StringTuple.create("a", "10", "z")
+    );
+
+    assertNotEquals(
+        StringTuple.create(null, null, null),
+        StringTuple.create(null, null)
+    );
+    assertNotEquals(
+        StringTuple.create("a"),
+        StringTuple.create((String) null)
+    );
+    assertNotEquals(
+        StringTuple.create("a", "b"),
+        StringTuple.create("a", "c")
+    );
+    assertNotEquals(
+        StringTuple.create("a", "b"),
+        StringTuple.create("c", "b")
+    );
   }
 }

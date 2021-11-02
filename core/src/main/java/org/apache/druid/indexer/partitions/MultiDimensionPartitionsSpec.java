@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Partition a segment by multiple dimensions.
+ * Range partition a segment by multiple dimensions.
  */
 public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
