@@ -320,17 +320,16 @@ public class Types
       int maxSizeBytes
   )
   {
-    // | null (byte) | length (int) | bytes |
-    if (value != null) {
-      checkMaxBytes(
-          type,
-          1 + Integer.BYTES + value.length,
-          maxSizeBytes
-      );
-      return writeNullableVariableBlob(buffer, offset, value);
-    } else {
+    if (value == null) {
       return writeNull(buffer, offset);
     }
+    // | null (byte) | length (int) | bytes |
+    checkMaxBytes(
+        type,
+        1 + Integer.BYTES + value.length,
+        maxSizeBytes
+    );
+    return writeNullableVariableBlob(buffer, offset, value);
   }
 
   /**
@@ -353,18 +352,16 @@ public class Types
   {
     // | null (byte) | length (int) | bytes |
     final int size;
-    if (value != null) {
-      buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
-      buffer.putInt(offset, value.length);
-      offset += Integer.BYTES;
-      final int oldPosition = buffer.position();
-      buffer.position(offset);
-      buffer.put(value, 0, value.length);
-      buffer.position(oldPosition);
-      size = 1 + Integer.BYTES + value.length;
-    } else {
-      size = writeNull(buffer, offset);
+    if (value == null) {
+      return writeNull(buffer, offset);
     }
+    final int oldPosition = buffer.position();
+    buffer.position(offset);
+    buffer.put(NullHandling.IS_NOT_NULL_BYTE);
+    buffer.putInt(value.length);
+    buffer.put(value, 0, value.length);
+    size = buffer.position() - offset;
+    buffer.position(oldPosition);
     return size;
   }
 
@@ -415,30 +412,29 @@ public class Types
     // | null (byte) | array length (int) | array bytes |
     if (array == null) {
       return writeNull(buffer, offset);
-    } else {
-      int sizeBytes = 1 + Integer.BYTES;
-
-      buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-      buffer.putInt(offset + 1, array.length);
-      for (Long element : array) {
-        if (element != null) {
-          checkMaxBytes(
-              ColumnType.LONG_ARRAY,
-              sizeBytes + 1 + Long.BYTES,
-              maxSizeBytes
-          );
-          sizeBytes += writeNullableLong(buffer, offset + sizeBytes, element);
-        } else {
-          checkMaxBytes(
-              ColumnType.LONG_ARRAY,
-              sizeBytes + 1,
-              maxSizeBytes
-          );
-          sizeBytes += writeNull(buffer, offset + sizeBytes);
-        }
-      }
-      return sizeBytes;
     }
+    int sizeBytes = 1 + Integer.BYTES;
+
+    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.putInt(offset + 1, array.length);
+    for (Long element : array) {
+      if (element != null) {
+        checkMaxBytes(
+            ColumnType.LONG_ARRAY,
+            sizeBytes + 1 + Long.BYTES,
+            maxSizeBytes
+        );
+        sizeBytes += writeNullableLong(buffer, offset + sizeBytes, element);
+      } else {
+        checkMaxBytes(
+            ColumnType.LONG_ARRAY,
+            sizeBytes + 1,
+            maxSizeBytes
+        );
+        sizeBytes += writeNull(buffer, offset + sizeBytes);
+      }
+    }
+    return sizeBytes;
   }
 
   /**
@@ -497,29 +493,28 @@ public class Types
     // | null (byte) | array length (int) | array bytes |
     if (array == null) {
       return writeNull(buffer, offset);
-    } else {
-      int sizeBytes = 1 + Integer.BYTES;
-      buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-      buffer.putInt(offset + 1, array.length);
-      for (Double element : array) {
-        if (element != null) {
-          checkMaxBytes(
-              ColumnType.DOUBLE_ARRAY,
-              sizeBytes + 1 + Double.BYTES,
-              maxSizeBytes
-          );
-          sizeBytes += writeNullableDouble(buffer, offset + sizeBytes, element);
-        } else {
-          checkMaxBytes(
-              ColumnType.DOUBLE_ARRAY,
-              sizeBytes + 1,
-              maxSizeBytes
-          );
-          sizeBytes += writeNull(buffer, offset + sizeBytes);
-        }
-      }
-      return sizeBytes;
     }
+    int sizeBytes = 1 + Integer.BYTES;
+    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.putInt(offset + 1, array.length);
+    for (Double element : array) {
+      if (element != null) {
+        checkMaxBytes(
+            ColumnType.DOUBLE_ARRAY,
+            sizeBytes + 1 + Double.BYTES,
+            maxSizeBytes
+        );
+        sizeBytes += writeNullableDouble(buffer, offset + sizeBytes, element);
+      } else {
+        checkMaxBytes(
+            ColumnType.DOUBLE_ARRAY,
+            sizeBytes + 1,
+            maxSizeBytes
+        );
+        sizeBytes += writeNull(buffer, offset + sizeBytes);
+      }
+    }
+    return sizeBytes;
   }
 
   /**
@@ -580,30 +575,29 @@ public class Types
     // | null (byte) | array length (int) | array bytes |
     if (array == null) {
       return writeNull(buffer, offset);
-    } else {
-      int sizeBytes = 1 + Integer.BYTES;
-      buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-      buffer.putInt(offset + 1, array.length);
-      for (String element : array) {
-        if (element != null) {
-          final byte[] stringElementBytes = StringUtils.toUtf8(element);
-          checkMaxBytes(
-              ColumnType.STRING_ARRAY,
-              sizeBytes + 1 + Integer.BYTES + stringElementBytes.length,
-              maxSizeBytes
-          );
-          sizeBytes += writeNullableVariableBlob(buffer, offset + sizeBytes, stringElementBytes);
-        } else {
-          checkMaxBytes(
-              ColumnType.STRING_ARRAY,
-              sizeBytes + 1,
-              maxSizeBytes
-          );
-          sizeBytes += writeNull(buffer, offset + sizeBytes);
-        }
-      }
-      return sizeBytes;
     }
+    int sizeBytes = 1 + Integer.BYTES;
+    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.putInt(offset + 1, array.length);
+    for (String element : array) {
+      if (element != null) {
+        final byte[] stringElementBytes = StringUtils.toUtf8(element);
+        checkMaxBytes(
+            ColumnType.STRING_ARRAY,
+            sizeBytes + 1 + Integer.BYTES + stringElementBytes.length,
+            maxSizeBytes
+        );
+        sizeBytes += writeNullableVariableBlob(buffer, offset + sizeBytes, stringElementBytes);
+      } else {
+        checkMaxBytes(
+            ColumnType.STRING_ARRAY,
+            sizeBytes + 1,
+            maxSizeBytes
+        );
+        sizeBytes += writeNull(buffer, offset + sizeBytes);
+      }
+    }
+    return sizeBytes;
   }
 
   /**
@@ -676,12 +670,11 @@ public class Types
             type.asTypeString()
         )
     );
-    if (value != null) {
-      final byte[] complexBytes = strategy.toBytes(value);
-      return writeNullableVariableBlob(buffer, offset, complexBytes, type, maxSizeBytes);
-    } else {
+    if (value == null) {
       return writeNull(buffer, offset);
     }
+    final byte[] complexBytes = strategy.toBytes(value);
+    return writeNullableVariableBlob(buffer, offset, complexBytes, type, maxSizeBytes);
   }
 
   /**
