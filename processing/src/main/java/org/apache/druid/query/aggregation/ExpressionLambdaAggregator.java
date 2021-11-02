@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
@@ -101,7 +102,8 @@ public class ExpressionLambdaAggregator implements Aggregator
    * {@link ExpressionLambdaBufferAggregator} in an attempt to provide consistent size limits when using the heap
    * based algorithm.
    */
-  private static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
+  @VisibleForTesting
+  public static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
   {
     final int estimated;
     switch (eval.type().getType()) {
