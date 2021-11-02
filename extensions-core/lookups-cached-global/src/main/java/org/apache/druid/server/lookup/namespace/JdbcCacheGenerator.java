@@ -27,9 +27,9 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
-import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.utils.JvmUtils;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.ResultIterator;
@@ -51,6 +51,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   private static final String NO_SUITABLE_DRIVER_FOUND_ERROR = "No suitable driver found";
   private static final String JDBC_DRIVER_JAR_FILES_MISSING_ERROR =
       "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory";
+  private static final long MAX_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
 
@@ -105,7 +106,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       ).populateAndWarnAtByteLimit(
           pairs,
           cache,
-          namespace.getMaxSize() == null ? ExtractionNamespace.getDefaultMaxSizeAndLimit() : namespace.getMaxSize(),
+          (long) (MAX_MEMORY * namespace.getMaxHeapPercentage() / 100.0),
           null == entryId ? null : entryId.toString()
       );
       final long duration = System.nanoTime() - startNs;

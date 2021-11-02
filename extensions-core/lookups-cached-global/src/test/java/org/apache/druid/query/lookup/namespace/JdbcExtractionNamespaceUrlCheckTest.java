@@ -38,7 +38,6 @@ public class JdbcExtractionNamespaceUrlCheckTest
   private static final String KEY_NAME = "keyName";
   private static final String VAL_NAME = "valName";
   private static final String TS_COLUMN = "tsColumn";
-  private static final long MAX_SIZE = ExtractionNamespace.MIN_SIZE;
 
   public static class MySqlTest
   {
@@ -63,7 +62,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -101,7 +100,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -137,7 +136,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -175,7 +174,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -217,7 +216,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -255,7 +254,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          10L,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -291,7 +290,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -329,7 +328,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -373,7 +372,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -415,7 +414,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
-          MAX_SIZE,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override

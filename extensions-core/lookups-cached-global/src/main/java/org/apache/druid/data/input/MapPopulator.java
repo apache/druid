@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.Parser;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
@@ -40,6 +41,11 @@ import java.util.Map;
 public class MapPopulator<K, V>
 {
   private static final Logger LOG = new Logger(MapPopulator.class);
+  private static final String DOUBLE_CLASS_NAME = Double.class.getName();
+  private static final String FLOAT_CLASS_NAME = Float.class.getName();
+  private static final String INTEGER_CLASS_NAME = Integer.class.getName();
+  private static final String LONG_CLASS_NAME = Long.class.getName();
+  private static final String STRING_CLASS_NAME = String.class.getName();
   private final Parser<K, V> parser;
 
   public MapPopulator(
@@ -101,7 +107,8 @@ public class MapPopulator<K, V>
    *
    * @param source    The ByteSource to read lines from
    * @param map       The map to populate
-   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log
+   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log. if < 0, indicates
+   *                  no limit.
    * @param name      The name of the map that is being populated. Used to identify the map in log messages written.
    *
    * @return number of lines read and entries parsed
@@ -112,8 +119,8 @@ public class MapPopulator<K, V>
       final ByteSource source,
       final Map<K, V> map,
       final long byteLimit,
-      final String name)
-      throws IOException
+      final String name
+  ) throws IOException
   {
     return source.asCharSource(StandardCharsets.UTF_8).readLines(
         new LineProcessor<PopulateResult>()
@@ -121,7 +128,8 @@ public class MapPopulator<K, V>
           private int lines = 0;
           private int entries = 0;
           private long bytes = 0L;
-          long byteLimitMultiple = 1L;
+          private long byteLimitMultiple = 1L;
+          private boolean keyAndValueByteSizesCanBeDetermined = true;
 
           @Override
           public boolean processLine(String line)
@@ -130,22 +138,35 @@ public class MapPopulator<K, V>
               throw new ISE("Cannot read more than %,d lines", Integer.MAX_VALUE);
             }
             final Map<K, V> kvMap = parser.parseToMap(line);
-            if (0 < byteLimit) {
-              for (Map.Entry<K, V> e : kvMap.entrySet()) {
-                bytes += getByteLengthOfKeyAndValue(e.getKey(), e.getValue());
-              }
-              if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
-                LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
-                         name,
-                         byteLimit,
-                         bytes
-                );
-                byteLimitMultiple++;
-              }
+            if (kvMap == null) {
+              return true;
             }
             map.putAll(kvMap);
             lines++;
             entries += kvMap.size();
+            // this top level check so that we dont keep logging inability to determine
+            // byte length for all (key, value) pairs.
+            if (0 < byteLimit && keyAndValueByteSizesCanBeDetermined) {
+              for (Map.Entry<K, V> e : kvMap.entrySet()) {
+                keyAndValueByteSizesCanBeDetermined = canKeyAndValueTypesByteSizesBeDetermined(
+                    e.getKey(),
+                    e.getValue()
+                );
+                if (keyAndValueByteSizesCanBeDetermined) {
+                  bytes += getByteLengthOfObject(e.getKey());
+                  bytes += getByteLengthOfObject(e.getValue());
+                  if (bytes > byteLimit * byteLimitMultiple) {
+                    LOG.warn(
+                        "[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
+                        name,
+                        byteLimit,
+                        bytes
+                    );
+                    byteLimitMultiple++;
+                  }
+                }
+              }
+            }
             return true;
           }
 
@@ -166,7 +187,8 @@ public class MapPopulator<K, V>
    *
    * @param iterator  The iterator to iterate over
    * @param map       The map to populate
-   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log
+   * @param byteLimit The limit of number of bytes after which a warning should be shown in the log. if < 0, indicates
+   *                  no limit.
    * @param name      The name of the map that is being populated. Used to identify the map in log messages written.
    *
    * @return number of entries parsed and bytes stored in the map.
@@ -175,42 +197,86 @@ public class MapPopulator<K, V>
       final Iterator<Pair<K, V>> iterator,
       final Map<K, V> map,
       final long byteLimit,
-      final String name)
+      final String name
+  )
   {
     int lines = 0;
     int entries = 0;
     long bytes = 0L;
     long byteLimitMultiple = 1L;
+    boolean keyAndValueByteSizesCanBeDetermined = true;
     while (iterator.hasNext()) {
       Pair<K, V> pair = iterator.next();
-      if (0 < byteLimit) {
-        bytes += getByteLengthOfKeyAndValue(pair.lhs, pair.rhs);
-        if (bytes != 0 && (bytes > byteLimit * byteLimitMultiple)) {
-          LOG.warn("[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
-                   name,
-                   byteLimit,
-                   bytes
-          );
-          byteLimitMultiple++;
+      K lhs = null != pair ? pair.lhs : null;
+      V rhs = null != pair ? pair.rhs : null;
+      map.put(lhs, rhs);
+      entries++;
+      // this top level check so that we dont keep logging inability to determine
+      // byte length for all pairs.
+      if (keyAndValueByteSizesCanBeDetermined) {
+        keyAndValueByteSizesCanBeDetermined = canKeyAndValueTypesByteSizesBeDetermined(lhs, rhs);
+        if (0 < byteLimit && keyAndValueByteSizesCanBeDetermined) {
+          bytes += getByteLengthOfObject(lhs);
+          bytes += getByteLengthOfObject(rhs);
+          if (bytes > byteLimit * byteLimitMultiple) {
+            LOG.warn(
+                "[%s] exceeded the byteLimit of [%,d]. Current bytes [%,d]",
+                name,
+                byteLimit,
+                bytes
+            );
+            byteLimitMultiple++;
+          }
         }
       }
-      map.put(pair.lhs, pair.rhs);
-      entries++;
     }
     return new PopulateResult(lines, entries, bytes);
   }
 
-  private long getByteLengthOfKeyAndValue(K key, V value)
+  /**
+   * only works for objects of type String, Double, Float, Integer, or Long.
+   * @param o the object to get the number of bytes of.
+   * @return the number of bytes of the object.
+   */
+  private long getByteLengthOfObject(@Nullable Object o)
   {
-    if ((key instanceof String) && (value instanceof String)) {
-      return ((String) (key)).length() + ((String) (value)).length();
-    } else {
-      LOG.warn(
-          "cannot compute number of bytes when populating map because key and value classes are not "
-          + "instance of String. Key class: [%s], Value class: [%s]",
-          key.getClass().getName(),
-          value.getClass().getName());
-      return 0;
+    if (null != o) {
+      if (o.getClass().getName().equals(STRING_CLASS_NAME)) {
+        return ((String) (o)).length();
+      } else if (o.getClass().getName().equals(DOUBLE_CLASS_NAME)) {
+        return 8;
+      } else if (o.getClass().getName().equals(FLOAT_CLASS_NAME)) {
+        return 4;
+      } else if (o.getClass().getName().equals(INTEGER_CLASS_NAME)) {
+        return 4;
+      } else if (o.getClass().getName().equals(LONG_CLASS_NAME)) {
+        return 8;
+      }
     }
+    return 0;
+  }
+
+  private boolean canKeyAndValueTypesByteSizesBeDetermined(@Nullable K key, @Nullable V value)
+  {
+    boolean canBeDetermined = (null == key
+                               || key.getClass().getName().equals(STRING_CLASS_NAME)
+                               || key.getClass().getName().equals(DOUBLE_CLASS_NAME)
+                               || key.getClass().getName().equals(FLOAT_CLASS_NAME)
+                               || key.getClass().getName().equals(INTEGER_CLASS_NAME)
+                               || key.getClass().getName().equals(LONG_CLASS_NAME))
+                              && (null == value
+                                  || value.getClass().getName().equals(STRING_CLASS_NAME)
+                                  || value.getClass().getName().equals(DOUBLE_CLASS_NAME)
+                                  || value.getClass().getName().equals(FLOAT_CLASS_NAME)
+                                  || value.getClass().getName().equals(INTEGER_CLASS_NAME)
+                                  || value.getClass().getName().equals(LONG_CLASS_NAME));
+    if (!canBeDetermined) {
+      LOG.warn(
+          "cannot compute number of bytes when populating map because key and value classes are neither "
+          + "Double, Float, Integer, Long, or String. Key class: [%s], Value class: [%s]",
+          null != key ? key.getClass().getName() : null,
+          null != value ? value.getClass().getName() : null);
+    }
+    return canBeDetermined;
   }
 }

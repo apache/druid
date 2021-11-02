@@ -67,6 +67,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
 {
   private static final Logger LOG = new Logger(UriExtractionNamespace.class);
 
+  long DEFAULT_MAX_HEAP_PERCENTAGE = 10;
+
   @JsonProperty
   private final URI uri;
   @JsonProperty
@@ -78,7 +80,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final Period pollPeriod;
   @JsonProperty
-  private final Long maxSize;
+  private final Long maxHeapPercentage;
 
   @JsonCreator
   public UriExtractionNamespace(
@@ -95,8 +97,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
       @Deprecated
       @JsonProperty(value = "versionRegex", required = false)
           String versionRegex,
-      @Min(ExtractionNamespace.MIN_SIZE) @JsonProperty(value = "maxSize") @Nullable
-          Long maxSize
+      @JsonProperty(value = "maxHeapPercentage") @Nullable
+          Long maxHeapPercentage
   )
   {
     this.uri = uri;
@@ -131,7 +133,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
-    this.maxSize = maxSize;
+    this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
   }
 
   public String getFileRegex()
@@ -161,10 +163,9 @@ public class UriExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  @Nullable
-  public Long getMaxSize()
+  public long getMaxHeapPercentage()
   {
-    return maxSize;
+    return maxHeapPercentage;
   }
 
   @Override
@@ -176,7 +177,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
            ", namespaceParseSpec=" + namespaceParseSpec +
            ", fileRegex='" + fileRegex + '\'' +
            ", pollPeriod=" + pollPeriod +
-           ", maxSize=" + maxSize +
+           ", maxHeapPercentage=" + maxHeapPercentage +
            '}';
   }
 
@@ -205,7 +206,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       return false;
     }
     return pollPeriod.equals(that.pollPeriod) &&
-           Objects.equals(maxSize, that.maxSize);
+           Objects.equals(maxHeapPercentage, that.maxHeapPercentage);
 
   }
 
@@ -217,7 +218,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
     result = 31 * result + getNamespaceParseSpec().hashCode();
     result = 31 * result + (getFileRegex() != null ? getFileRegex().hashCode() : 0);
     result = 31 * result + pollPeriod.hashCode();
-    result = 31 * result * Objects.hashCode(maxSize);
+    result = 31 * result * Objects.hashCode(maxHeapPercentage);
     return result;
   }
 

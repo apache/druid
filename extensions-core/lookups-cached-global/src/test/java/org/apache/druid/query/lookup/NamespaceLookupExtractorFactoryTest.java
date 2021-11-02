@@ -75,8 +75,6 @@ import java.util.Map;
 @PowerMockIgnore({"javax.net.ssl.*", "javax.xml.*", "com.sun.xml.*"})
 public class NamespaceLookupExtractorFactoryTest
 {
-  private static final long MAX_SIZE = ExtractionNamespace.MIN_SIZE;
-
   static {
     NullHandling.initializeForTests();
   }
@@ -128,7 +126,7 @@ public class NamespaceLookupExtractorFactoryTest
 
         Period.millis(0),
         null,
-        MAX_SIZE
+        null
     );
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         uriExtractionNamespace,
@@ -460,7 +458,7 @@ public class NamespaceLookupExtractorFactoryTest
     final Injector injector = makeInjector();
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\", \"maxHeapPercentage\": 10 } } }";
     final LookupExtractorFactory factory = mapper.readValue(str, LookupExtractorFactory.class);
     Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = (NamespaceLookupExtractorFactory) factory;

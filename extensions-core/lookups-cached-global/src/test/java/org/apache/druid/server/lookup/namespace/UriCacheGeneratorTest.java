@@ -28,7 +28,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -468,21 +467,6 @@ public class UriCacheGeneratorTest
         Period.millis((int) namespace.getPollMs()),
         "",
         null
-    );
-  }
-
-
-  @Test(expected = IAE.class)
-  public void testMaxSizeToSmall()
-  {
-    new UriExtractionNamespace(
-        namespace.getUri(),
-        null,
-        "",
-        namespace.getNamespaceParseSpec(),
-        Period.millis((int) namespace.getPollMs()),
-        null,
-        ExtractionNamespace.MIN_SIZE - 1
     );
   }
 

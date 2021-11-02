@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup.namespace;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.utils.JvmUtils;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -36,19 +35,9 @@ import org.apache.druid.utils.JvmUtils;
  */
 public interface ExtractionNamespace
 {
-  long MIN_SIZE = 5 * 1024 * 1024;
-  long DEFAULT_MAX_SIZE = getDefaultMaxSizeAndLimit();
-
-  static long getDefaultMaxSizeAndLimit()
-  {
-    long maxMemory = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
-    long memoryLimit = maxMemory / 10;
-    return MIN_SIZE > memoryLimit ? MIN_SIZE : memoryLimit;
-  }
-
   long getPollMs();
 
-  default Long getMaxSize()
+  default long getMaxHeapPercentage()
   {
     return -1L;
   }
