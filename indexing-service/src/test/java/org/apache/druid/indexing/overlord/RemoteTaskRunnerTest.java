@@ -52,6 +52,7 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -525,7 +526,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
-  //@Test
+  @Ignore
   public void testRunPendingTaskFailToAssignTask() throws Exception
   {
     doSetup();
