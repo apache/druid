@@ -427,6 +427,17 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           return true;
         }
       }
+
+      // Checks for queryGranularity
+      if (config.getGranularitySpec().getQueryGranularity() != null) {
+
+        final Granularity existingQueryGranularity = existingGranularitySpec != null ?
+                                                     existingGranularitySpec.getQueryGranularity() :
+                                                     null;
+        if (!config.getGranularitySpec().getQueryGranularity().equals(existingQueryGranularity)) {
+          return true;
+        }
+      }
     }
 
     return false;

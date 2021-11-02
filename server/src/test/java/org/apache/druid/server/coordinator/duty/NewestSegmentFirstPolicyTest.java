@@ -948,7 +948,7 @@ public class NewestSegmentFirstPolicyTest
     // Create segments that were compacted (CompactionState != null) and have
     // rollup=false for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
     // rollup=true for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
-    // and rollup=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00
+    // and rollup=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
     final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
@@ -973,6 +973,66 @@ public class NewestSegmentFirstPolicyTest
     // Auto compaction config sets rollup=true
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, null, true))),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+    // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentQueryGranularity()
+  {
+    // Same indexSpec as what is set in the auto compaction config
+    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    // Same partitionsSpec as what is set in the auto compaction config
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+
+    // Create segments that were compacted (CompactionState != null) and have
+    // queryGranularity=DAY for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
+    // queryGranularity=MINUTE for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
+    // and queryGranularity=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of("queryGranularity", "day"))
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of("queryGranularity", "minute"))
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, indexSpec, ImmutableMap.of())
+        )
+    );
+
+    // Auto compaction config sets queryGranularity=MINUTE
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, Granularities.MINUTE, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
