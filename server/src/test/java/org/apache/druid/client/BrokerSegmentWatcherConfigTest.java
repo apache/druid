@@ -34,7 +34,7 @@ public class BrokerSegmentWatcherConfigTest
   @Test
   public void testSerde() throws Exception
   {
-    //defaults
+    // defaults
     String json = "{}";
 
     BrokerSegmentWatcherConfig config = MAPPER.readValue(
