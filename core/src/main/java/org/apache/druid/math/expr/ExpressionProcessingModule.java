@@ -17,15 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.math.expr;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.math.expr.ExpressionProcessing;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.JsonConfigProvider;
 
-public class InitializedNullHandlingTest
+public class ExpressionProcessingModule implements Module
 {
-  static {
-    NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+  @Override
+  public void configure(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.expressions", ExpressionProcessingConfig.class);
+    binder.requestStaticInjection(ExpressionProcessing.class);
   }
 }

@@ -135,7 +135,7 @@ public class BloomFilterExpressions
           // type information everywhere
           if (!bloomy.type().equals(BLOOM_FILTER_TYPE) ||
               !bloomy.type().is(ExprType.COMPLEX) && bloomy.value() instanceof BloomKFilter) {
-            throw new IAE("Function[%s] must take a bloom filter as input", FN_NAME);
+            throw new IAE("Function[%s] must take a bloom filter as the second argument", FN_NAME);
           }
           BloomKFilter filter = (BloomKFilter) bloomy.value();
           assert filter != null;
@@ -286,7 +286,7 @@ public class BloomFilterExpressions
           // type information everywhere
           if (!bloomy.type().equals(BLOOM_FILTER_TYPE) ||
               !bloomy.type().is(ExprType.COMPLEX) && bloomy.value() instanceof BloomKFilter) {
-            throw new IAE("Function[%s] must take a bloom filter as input", FN_NAME);
+            throw new IAE("Function[%s] must take a bloom filter as the second argument", FN_NAME);
           }
           BloomKFilter filter = (BloomKFilter) bloomy.value();
           assert filter != null;
@@ -347,8 +347,8 @@ public class BloomFilterExpressions
       final Expr arg = args.get(0);
       final Expr filterExpr = args.get(1);
 
-      if (filterExpr.isLiteral()) {
-        final String serializedFilter = filterExpr.getLiteralValue().toString();
+      if (filterExpr.isLiteral() && filterExpr.getLiteralValue() instanceof String) {
+        final String serializedFilter = (String) filterExpr.getLiteralValue();
         final byte[] decoded = StringUtils.decodeBase64String(serializedFilter);
         BloomKFilter filter;
         try {

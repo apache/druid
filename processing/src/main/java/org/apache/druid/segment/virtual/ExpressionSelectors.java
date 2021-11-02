@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -370,9 +371,9 @@ public class ExpressionSelectors
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
         if (row.size() == 0) {
-          return new String[]{null};
+          return new Object[]{null};
         }
-        final String[] strings = new String[row.size()];
+        final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection
         for (int i = 0; i < row.size(); i++) {
           strings[i] = selector.lookupName(row.get(i));
@@ -403,7 +404,11 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          return ExprEval.coerceListToArray((List) val, true);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         } else {
           return val;
         }
@@ -412,7 +417,11 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return ExprEval.coerceListToArray((List) val, true);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         }
         return null;
       };
@@ -430,16 +439,7 @@ public class ExpressionSelectors
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
     if (eval.type().isArray()) {
-      switch (eval.type().getElementType().getType()) {
-        case STRING:
-          return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
-        case DOUBLE:
-          return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
-        case LONG:
-          return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
-        default:
-
-      }
+      return Arrays.stream(eval.asArray()).collect(Collectors.toList());
     }
     return eval.value();
   }

@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -138,54 +137,16 @@ public interface ApplyFunction
     /**
      * Evaluate {@link LambdaExpr} against every index position of an {@link IndexableMapLambdaObjectBinding}
      */
-    ExprEval applyMap(LambdaExpr expr, IndexableMapLambdaObjectBinding bindings)
+    ExprEval applyMap(@Nullable ExpressionType arrayType, LambdaExpr expr, IndexableMapLambdaObjectBinding bindings)
     {
       final int length = bindings.getLength();
-      String[] stringsOut = null;
-      Long[] longsOut = null;
-      Double[] doublesOut = null;
-
-      ExpressionType elementType = null;
+      Object[] out = new Object[length];
       for (int i = 0; i < length; i++) {
 
         ExprEval evaluated = expr.eval(bindings.withIndex(i));
-        if (elementType == null) {
-          elementType = evaluated.type();
-          switch (elementType.getType()) {
-            case STRING:
-              stringsOut = new String[length];
-              break;
-            case LONG:
-              longsOut = new Long[length];
-              break;
-            case DOUBLE:
-              doublesOut = new Double[length];
-              break;
-            default:
-              throw new RE("Unhandled map function output type [%s]", elementType);
-          }
-        }
-
-        Function.ArrayConstructorFunction.setArrayOutputElement(
-            stringsOut,
-            longsOut,
-            doublesOut,
-            elementType,
-            i,
-            evaluated
-        );
+        arrayType = Function.ArrayConstructorFunction.setArrayOutput(arrayType, out, i, evaluated);
       }
-
-      switch (elementType.getType()) {
-        case STRING:
-          return ExprEval.ofStringArray(stringsOut);
-        case LONG:
-          return ExprEval.ofLongArray(longsOut);
-        case DOUBLE:
-          return ExprEval.ofDoubleArray(doublesOut);
-        default:
-          throw new RE("Unhandled map function output type [%s]", elementType);
-      }
+      return ExprEval.ofArray(arrayType, out);
     }
   }
 
@@ -217,7 +178,8 @@ public interface ApplyFunction
       }
 
       MapLambdaBinding lambdaBinding = new MapLambdaBinding(arrayEval.elementType(), array, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, lambdaBinding);
+      ExpressionType lambdaType = lambdaExpr.getOutputType(lambdaBinding);
+      return applyMap(lambdaType == null ? null : ExpressionTypeFactory.getInstance().ofArray(lambdaType), lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -285,7 +247,8 @@ public interface ApplyFunction
 
       List<List<Object>> product = CartesianList.create(arrayInputs);
       CartesianMapLambdaBinding lambdaBinding = new CartesianMapLambdaBinding(elementType, product, lambdaExpr, bindings);
-      return applyMap(lambdaExpr, lambdaBinding);
+      ExpressionType lambdaType = lambdaExpr.getOutputType(lambdaBinding);
+      return applyMap(ExpressionType.asArrayType(lambdaType), lambdaExpr, lambdaBinding);
     }
 
     @Override
@@ -507,22 +470,8 @@ public interface ApplyFunction
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
-      switch (arrayEval.elementType().getType()) {
-        case STRING:
-          String[] filteredString =
-              this.filter(arrayEval.asStringArray(), lambdaExpr, lambdaBinding).toArray(String[]::new);
-          return ExprEval.ofStringArray(filteredString);
-        case LONG:
-          Long[] filteredLong =
-              this.filter(arrayEval.asLongArray(), lambdaExpr, lambdaBinding).toArray(Long[]::new);
-          return ExprEval.ofLongArray(filteredLong);
-        case DOUBLE:
-          Double[] filteredDouble =
-              this.filter(arrayEval.asDoubleArray(), lambdaExpr, lambdaBinding).toArray(Double[]::new);
-          return ExprEval.ofDoubleArray(filteredDouble);
-        default:
-          throw new RE("Unhandled filter function input type [%s]", arrayEval.type());
-      }
+      Object[] filtered = filter(arrayEval.asArray(), lambdaExpr, lambdaBinding).toArray();
+      return ExprEval.ofArray(arrayEval.asArrayType(), filtered);
     }
 
     @Override

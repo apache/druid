@@ -17,15 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.math.expr;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.math.expr.ExpressionProcessing;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class InitializedNullHandlingTest
+import javax.annotation.Nullable;
+
+public class ExpressionProcessingConfig
 {
-  static {
-    NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests(null);
+  public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
+
+  @JsonProperty("allowNestedArrays")
+  private final boolean allowNestedArrays;
+
+  @JsonCreator
+  public ExpressionProcessingConfig(@JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays)
+  {
+    this.allowNestedArrays = allowNestedArrays == null
+                             ? Boolean.valueOf(System.getProperty(NESTED_ARRAYS_CONFIG_STRING, "false"))
+                             : allowNestedArrays;
+  }
+
+  public boolean allowNestedArrays()
+  {
+    return allowNestedArrays;
   }
 }

@@ -160,34 +160,27 @@ public class ExprTest
   }
 
   @Test
-  public void testEqualsContractForStringArrayExpr()
+  public void testEqualsContractForArrayExpr()
   {
-    EqualsVerifier.forClass(StringArrayExpr.class)
-                  .withIgnoredFields("outputType")
-                  .withPrefabValues(Object.class, new String[]{"foo"}, new String[0])
-                  .withPrefabValues(ExpressionType.class, ExpressionType.STRING_ARRAY, ExpressionType.LONG_ARRAY)
-                  .usingGetClass()
-                  .verify();
-  }
-
-  @Test
-  public void testEqualsContractForLongArrayExpr()
-  {
-    EqualsVerifier.forClass(LongArrayExpr.class)
-                  .withIgnoredFields("outputType")
-                  .withPrefabValues(Object.class, new Long[]{1L}, new Long[0])
+    EqualsVerifier.forClass(ArrayExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
                   .withPrefabValues(ExpressionType.class, ExpressionType.LONG_ARRAY, ExpressionType.DOUBLE_ARRAY)
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testEqualsContractForDoubleArrayExpr()
+  public void testEqualsContractForComplexExpr()
   {
-    EqualsVerifier.forClass(DoubleArrayExpr.class)
-                  .withIgnoredFields("outputType")
-                  .withPrefabValues(Object.class, new Double[]{1.0}, new Double[0])
-                  .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE_ARRAY, ExpressionType.STRING_ARRAY)
+    EqualsVerifier.forClass(ComplexExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
+                  .withPrefabValues(
+                      ExpressionType.class,
+                      ExpressionTypeFactory.getInstance().ofComplex("foo"),
+                      ExpressionTypeFactory.getInstance().ofComplex("bar")
+                  )
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }

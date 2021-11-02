@@ -181,14 +181,14 @@ public class ExpressionFilter implements Filter
         final ExprEval eval = selector.getObject();
 
         if (eval.type().isArray()) {
-          switch (eval.type().getElementType().getType()) {
+          switch (eval.elementType().getType()) {
             case LONG:
               final Long[] lResult = eval.asLongArray();
               if (lResult == null) {
                 return false;
               }
 
-              return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
             case STRING:
               final String[] sResult = eval.asStringArray();
               if (sResult == null) {
@@ -202,7 +202,7 @@ public class ExpressionFilter implements Filter
                 return false;
               }
 
-              return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
           }
         }
         return eval.asBoolean();

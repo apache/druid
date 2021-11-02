@@ -22,6 +22,7 @@ package org.apache.druid.query.expressions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -32,22 +33,24 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 
 public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
 {
-  BloomFilterExpressions.CreateExprMacro createMacro = new BloomFilterExpressions.CreateExprMacro();
-  BloomFilterExpressions.AddExprMacro addMacro = new BloomFilterExpressions.AddExprMacro();
-  BloomFilterExpressions.TestExprMacro testMacro = new BloomFilterExpressions.TestExprMacro();
-  ExprMacroTable macroTable = new ExprMacroTable(ImmutableList.of(createMacro, addMacro, testMacro));
-
   private static final String SOME_STRING = "foo";
   private static final long SOME_LONG = 1234L;
   private static final double SOME_DOUBLE = 1.234;
   private static final String[] SOME_STRING_ARRAY = new String[]{"hello", "world"};
   private static final Long[] SOME_LONG_ARRAY = new Long[]{1L, 2L, 3L, 4L};
   private static final Double[] SOME_DOUBLE_ARRAY = new Double[]{1.2, 3.4};
+
+  BloomFilterExpressions.CreateExprMacro createMacro = new BloomFilterExpressions.CreateExprMacro();
+  BloomFilterExpressions.AddExprMacro addMacro = new BloomFilterExpressions.AddExprMacro();
+  BloomFilterExpressions.TestExprMacro testMacro = new BloomFilterExpressions.TestExprMacro();
+  ExprMacroTable macroTable = new ExprMacroTable(ImmutableList.of(createMacro, addMacro, testMacro));
 
   Expr.ObjectBinding inputBindings = InputBindings.withTypedSuppliers(
       new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
@@ -60,6 +63,9 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
           .put("double_array", new Pair<>(ExpressionType.DOUBLE_ARRAY, () -> SOME_DOUBLE_ARRAY))
           .build()
   );
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testCreate()
@@ -166,5 +172,55 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
     expr = Parser.parse("bloom_filter_test(4321, bloom_filter_add(bloom_filter_add(1234, bloom_filter(100)), bloom_filter_add(4321, bloom_filter(100))))", macroTable);
     eval = expr.eval(inputBindings);
     Assert.assertTrue(eval.asBoolean());
+  }
+
+
+  @Test
+  public void testCreateWrongArgsCount()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter] must have 1 argument");
+    Parser.parse("bloom_filter()", macroTable);
+  }
+
+  @Test
+  public void testAddWrongArgsCount()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter_add] must have 2 arguments");
+    Parser.parse("bloom_filter_add(1)", macroTable);
+  }
+
+  @Test
+  public void testAddWrongArgType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter_add] must take a bloom filter as the second argument");
+    Parser.parse("bloom_filter_add(1, 2)", macroTable);
+  }
+
+  @Test
+  public void testAddWrongArgType2()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter_add] cannot add [ARRAY<LONG>] to a bloom filter");
+    Expr expr = Parser.parse("bloom_filter_add(ARRAY<LONG>[], bloomy)", macroTable);
+    expr.eval(inputBindings);
+  }
+
+  @Test
+  public void testTestWrongArgsCount()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter_test] must have 2 arguments");
+    Parser.parse("bloom_filter_test(1)", macroTable);
+  }
+
+  @Test
+  public void testTestWrongArgsType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[bloom_filter_test] must take a bloom filter as the second argument");
+    Parser.parse("bloom_filter_test(1, 2)", macroTable);
   }
 }
