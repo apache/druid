@@ -24,6 +24,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
@@ -33,7 +34,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import javax.annotation.Nonnull;
 
 /**
- * ErrorHandler is a utilty class that is used to sanitize and log exceptions.
+ * ErrorHandler is a utilty class that is used to sanitize and log exceptions at the error level.
  */
 class ErrorHandler
 {
@@ -75,16 +76,45 @@ class ErrorHandler
     return sanitize(error);
   }
 
-  public <T extends Throwable> T logFailure(T error, String message, Object... format) {
+  /**
+   * Logs any throwable and string format message with args at the error level.
+   *
+   * @param error   the Throwable to be logged
+   * @param message the message to be logged. Can be in string format structure
+   * @param format  the format arguments for the format message string
+   * @param <T>     any type that extends throwable
+   * @return the original Throwable
+   */
+  public <T extends Throwable> T logFailure(T error, String message, Object... format)
+  {
     LOG.error(error, message, format);
     return error;
   }
 
-  public <T extends Throwable> T logFailure(T error) {
+  /**
+   * Logs any throwable at the error level with the throwables message.
+   *
+   * @param error the throwable to be logged
+   * @param <T>   any type that extends throwable
+   * @return the original Throwable
+   */
+  public <T extends Throwable> T logFailure(T error)
+  {
     logFailure(error, error.getMessage());
     return error;
   }
 
+  /**
+   * Sanitizes a Throwable. If it's a runtime exception and it's cause is sanitizable it will sanitize that cause and
+   * return that cause as a sanitized RuntimeException.  This will do best effort to keep original exception type. If
+   * it's a checked exception that will be turned into a QueryInterruptedException.
+   * <p>
+   * This was created to sanitize some exceptions that do not need to be logged.
+   *
+   * @param error The Throwable to be sanitized
+   * @param <T>   Any class that extends Throwable
+   * @return The sanitized Throwable
+   */
   public <T extends Throwable> RuntimeException sanitize(T error)
   {
     if (error instanceof QueryInterruptedException) {
@@ -94,10 +124,13 @@ class ErrorHandler
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded((QueryException) error);
     }
     if (error instanceof ForbiddenException) {
-      return (ForbiddenException)  errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
+      return (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
     }
     if (error instanceof ISE) {
       return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
+    }
+    if (error instanceof UOE) {
+      return (UOE) errorResponseTransformStrategy.transformIfNeeded((UOE) error);
     }
     // catch any non explicit sanitizable exceptions
     if (error instanceof SanitizableException) {
@@ -112,7 +145,17 @@ class ErrorHandler
     return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded(QueryInterruptedException.wrapIfNeeded(
         error));
   }
-  public boolean hasAffectingErrorResponseTransformStrategy() {
+
+  /**
+   * Check to see if something needs to be sanitized.
+   * <p>
+   * This does this by checking to see if the ErrorResponse is different than a NoOp Error response transform strategy.
+   *
+   * @return a boolean that returns true if error handler has an error response strategy other than the NoOp error
+   * response strategy
+   */
+  public boolean hasAffectingErrorResponseTransformStrategy()
+  {
     return !errorResponseTransformStrategy.equals(NoErrorResponseTransformStrategy.INSTANCE);
   }
 }

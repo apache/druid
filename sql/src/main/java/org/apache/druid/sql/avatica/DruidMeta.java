@@ -245,7 +245,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
-    throw errorHandler.sanitize( new UOE("Batch statements not supported"));
+    throw errorHandler.sanitize(new UOE("Batch statements not supported"));
   }
 
   @Override

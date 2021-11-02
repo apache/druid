@@ -68,7 +68,7 @@ public class DruidConnection
       final String connectionId,
       final int maxStatements,
       final Map<String, Object> context,
-      ErrorHandler errorHandler
+      final ErrorHandler errorHandler
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
