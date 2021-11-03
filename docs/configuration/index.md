@@ -945,7 +945,8 @@ A description of the compaction config is:
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../ingestion/compaction.md#data-handling-with-compaction)|no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
-|`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` for the compacted segments. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
+|`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
+|`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensionsSpec)|No|
 |`ioConfig`|IO config for compaction tasks. See below [Compaction Task IOConfig](#automatic-compaction-ioconfig).|no|
 
 An example of compaction config is:
@@ -988,7 +989,7 @@ The below is a list of the supported configurations for auto compaction.
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|no (default = 5)|
 
 ###### Automatic compaction granularitySpec
-You can optionally use the `granularitySpec` object to configure the segment granularity of the compacted segments.
+You can optionally use the `granularitySpec` object to configure the granularity and rollup of the compacted segments.
 
 `granularitySpec` takes the following keys:
 
@@ -997,6 +998,16 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
+
+###### Automatic compaction dimensionsSpec
+You can optionally use the `dimensionsSpec` object to configure the dimensions of the compacted segments.
+
+`dimensionsSpec` takes the following keys:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`dimensions`| A list of dimension names or objects. Cannot have the same column in both dimensions and dimensionExclusions. Defaults to 'null', which preserves the original dimensions.|No|
+|`dimensionExclusions`| The names of dimensions to exclude from compaction. Only names are supported here, not objects. This list is only used if the dimensions list is null or empty; otherwise it is ignored. Defaults to `[]`.|No|
 
 ###### Automatic compaction IOConfig
 

@@ -26,6 +26,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -435,6 +437,30 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                      existingGranularitySpec.getQueryGranularity() :
                                                      null;
         if (!config.getGranularitySpec().getQueryGranularity().equals(existingQueryGranularity)) {
+          return true;
+        }
+      }
+    }
+
+    if (config.getDimensionsSpec() != null) {
+      final DimensionsSpec existingDimensionsSpec = lastCompactionState.getDimensionsSpec();
+
+      // Checks for list of dimensions
+      if (config.getDimensionsSpec().getDimensions() != null) {
+        final List<DimensionSchema> existingDimensions = existingDimensionsSpec != null ?
+                                                         existingDimensionsSpec.getDimensions() :
+                                                         null;
+        if (!config.getDimensionsSpec().getDimensions().equals(existingDimensions)) {
+          return true;
+        }
+      }
+
+      // Checks for dimension exclusions
+      if (config.getDimensionsSpec().getDimensionExclusions() != null) {
+        final Set<String> existingDimensionExclusions = existingDimensionsSpec != null ?
+                                                                  existingDimensionsSpec.getDimensionExclusions() :
+                                                                  null;
+        if (!config.getDimensionsSpec().getDimensionExclusions().equals(existingDimensionExclusions)) {
           return true;
         }
       }

@@ -1051,8 +1051,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
         storeCompactionState,
         toolbox,
-        ingestionSchema.getTuningConfig(),
-        ingestionSchema.getDataSchema().getGranularitySpec()
+        ingestionSchema
     );
 
     Set<DataSegment> segmentsFoundForDrop = null;

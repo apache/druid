@@ -56,6 +56,8 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -479,14 +481,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig,
-      GranularitySpec granularitySpec
+      IngestionSpec ingestionSpec
   )
   {
     if (storeCompactionState) {
-      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final Map<String, Object> granularitySpecMap = granularitySpec.asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap, granularitySpecMap);
+      TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
+      GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+      final CompactionState compactionState = new CompactionState(
+          tuningConfig.getPartitionsSpec(),
+          ingestionSpec.getDataSchema().getDimensionsSpec(),
+          tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
+          granularitySpec.asMap(toolbox.getJsonMapper())
+      );
       return segments -> segments
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))

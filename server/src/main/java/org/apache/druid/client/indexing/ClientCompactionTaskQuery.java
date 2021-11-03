@@ -39,6 +39,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final ClientCompactionIOConfig ioConfig;
   private final ClientCompactionTaskQueryTuningConfig tuningConfig;
   private final ClientCompactionTaskGranularitySpec granularitySpec;
+  private final ClientCompactionTaskDimensionsSpec dimensionsSpec;
   private final Map<String, Object> context;
 
   @JsonCreator
@@ -48,6 +49,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") ClientCompactionTaskGranularitySpec granularitySpec,
+      @JsonProperty("dimensionsSpec") ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -56,6 +58,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig;
     this.granularitySpec = granularitySpec;
+    this.dimensionsSpec = dimensionsSpec;
     this.context = context;
   }
 
@@ -99,11 +102,16 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
+  public ClientCompactionTaskDimensionsSpec getDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  @JsonProperty
   public Map<String, Object> getContext()
   {
     return context;
   }
-
 
   @Override
   public boolean equals(Object o)
@@ -120,13 +128,14 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
            Objects.equals(context, that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, ioConfig, tuningConfig, granularitySpec, context);
+    return Objects.hash(id, dataSource, ioConfig, tuningConfig, granularitySpec, dimensionsSpec, context);
   }
 
   @Override
@@ -138,6 +147,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", ioConfig=" + ioConfig +
            ", tuningConfig=" + tuningConfig +
            ", granularitySpec=" + granularitySpec +
+           ", dimensionsSpec=" + dimensionsSpec +
            ", context=" + context +
            '}';
   }
