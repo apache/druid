@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 /**
  * <pre>
@@ -83,28 +82,55 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
       List<String> partitionDimensions
   )
   {
-    return inputRow -> isRowHandled(inputRow, partitionDimensions, dimValueCount -> dimValueCount != 1);
+    return inputRow -> {
+      // Rows with multiple dimension values should cause an exception
+      ensureNoMultiValuedDimensions(inputRow, partitionDimensions);
+
+      // Rows with empty dimension values should be marked handled
+      // and need not be processed further
+      return hasEmptyDimensions(inputRow, partitionDimensions);
+    };
   }
 
   private static HandlingInputRowIterator.InputRowHandler createOnlySingleOrNullDimensionValueRowsHandler(
       List<String> partitionDimensions
   )
   {
-    // Rows.objectToStrings() returns an empty list for a single null value
-    return inputRow -> isRowHandled(inputRow, partitionDimensions, dimValueCount -> dimValueCount > 1);
+    return inputRow -> {
+      // Rows with multiple dimension values should cause an exception
+      ensureNoMultiValuedDimensions(inputRow, partitionDimensions);
+
+      // All other rows (single or null dimension values) need to be processed
+      // further and should not be marked as handled
+      return false;
+    };
   }
 
   /**
-   * @param valueCountPredicate Predicate that must be satisfied
-   *                            for atleast one of the partitionDimensions for the row to be marked as handled.
-   * @return true when the given InputRow should be marked handled
-   * and need not be processed further.
+   * Checks if the given InputRow has any dimension column that is empty.
    */
-  private static boolean isRowHandled(
+  private static boolean hasEmptyDimensions(InputRow inputRow, List<String> partitionDimensions)
+  {
+    for (String dimension : partitionDimensions) {
+      int dimensionValueCount = inputRow.getDimension(dimension).size();
+      if (dimensionValueCount == 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Verifies that the given InputRow does not have multiple values for any dimension.
+   *
+   * @throws IAE if any of the dimension columns in the given InputRow have
+   *             multiple values.
+   */
+  private static void ensureNoMultiValuedDimensions(
       InputRow inputRow,
-      List<String> partitionDimensions,
-      Predicate<Integer> valueCountPredicate
-  )
+      List<String> partitionDimensions
+  ) throws IAE
   {
     for (String dimension : partitionDimensions) {
       int dimensionValueCount = inputRow.getDimension(dimension).size();
@@ -114,12 +140,8 @@ public class RangePartitionIndexTaskInputRowIteratorBuilder implements IndexTask
             dimension,
             inputRow
         );
-      } else if (valueCountPredicate.test(dimensionValueCount)) {
-        return true;
       }
     }
-
-    return false;
   }
 
 }
