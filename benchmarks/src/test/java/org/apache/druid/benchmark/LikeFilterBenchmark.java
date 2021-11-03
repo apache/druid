@@ -138,7 +138,7 @@ public class LikeFilterBenchmark
                       ),
         GenericIndexed.STRING_STRATEGY
     );
-    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
+    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier<>(
         bitmapFactory,
         GenericIndexed.fromIterable(
             FluentIterable.from(ints)
@@ -156,7 +156,8 @@ public class LikeFilterBenchmark
                           ),
             serdeFactory.getObjectStrategy()
         ),
-        dictionary
+        dictionary,
+        BitmapIndexColumnPartSupplier.STRING_CONVERTER
     ).get();
     selector = new BitmapIndexSelector()
     {

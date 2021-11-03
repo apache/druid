@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.CloseableIndexed;
@@ -134,7 +133,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
       IncrementalIndex.DimensionDesc desc
   )
   {
-    return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
+    return makeDimensionSelector(desc.getHandler().getDimensionSpec(), currEntry, desc);
   }
 
   @Override

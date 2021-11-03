@@ -173,10 +173,11 @@ public class ExtractionDimFilterTest
     @Override
     public BitmapIndex getBitmapIndex(String dimension)
     {
-      return new BitmapIndexColumnPartSupplier(
+      return new BitmapIndexColumnPartSupplier<>(
           factory,
           GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
-          GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY)
+          GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY),
+          BitmapIndexColumnPartSupplier.STRING_CONVERTER
       ).get();
     }
 

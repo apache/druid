@@ -453,10 +453,11 @@ public class IndexIO
                 )
             )
             .setBitmapIndex(
-                new BitmapIndexColumnPartSupplier(
+                new BitmapIndexColumnPartSupplier<>(
                     new ConciseBitmapFactory(),
                     index.getBitmapIndexes().get(dimension),
-                    index.getDimValueLookup(dimension)
+                    index.getDimValueLookup(dimension),
+                    BitmapIndexColumnPartSupplier.STRING_CONVERTER
                 )
             );
         if (index.getSpatialIndexes().get(dimension) != null) {

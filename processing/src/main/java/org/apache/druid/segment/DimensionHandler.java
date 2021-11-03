@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -67,6 +69,14 @@ public interface DimensionHandler
    * @return Dimension name
    */
   String getDimensionName();
+
+  /**
+   * Create a {@link DimensionSpec} for this handler
+   */
+  default DimensionSpec getDimensionSpec()
+  {
+    return DefaultDimensionSpec.of(getDimensionName());
+  }
 
   /**
    * Get {@link MultiValueHandling} for the column associated with this handler.

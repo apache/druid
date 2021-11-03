@@ -167,7 +167,7 @@ public class BoundFilterBenchmark
         FluentIterable.from(ints).transform(i -> i.toString()),
         GenericIndexed.STRING_STRATEGY
     );
-    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
+    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier<>(
         bitmapFactory,
         GenericIndexed.fromIterable(
             FluentIterable.from(ints)
@@ -185,7 +185,8 @@ public class BoundFilterBenchmark
                           ),
             serdeFactory.getObjectStrategy()
         ),
-        dictionary
+        dictionary,
+        BitmapIndexColumnPartSupplier.STRING_CONVERTER
     ).get();
     selector = new BitmapIndexSelector()
     {

@@ -24,26 +24,37 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 
 /**
+ * Provides {@link BitmapIndex} for some dictionary encoded column, where the dictionary and bitmaps are stored in some
+ * {@link Indexed}. A {@link BitmapIndexConverter} must be provided to convert the {@link String} from the
+ * {@link BitmapIndex} interface to whatever actual value type is stored in the dictionary {@link Indexed}.
+ *
+ * This might change in the future if {@link BitmapIndex} is modified to also be generic
  */
-public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
+public class BitmapIndexColumnPartSupplier<T extends Comparable<T>> implements Supplier<BitmapIndex>
 {
   private final BitmapFactory bitmapFactory;
-  private final GenericIndexed<ImmutableBitmap> bitmaps;
-  private final GenericIndexed<String> dictionary;
+  private final Indexed<ImmutableBitmap> bitmaps;
+  private final Indexed<T> dictionary;
+  private final BitmapIndexConverter<T> indexConverter;
+
+  public static StringBitmapIndexConverter STRING_CONVERTER = new StringBitmapIndexConverter();
 
   public BitmapIndexColumnPartSupplier(
       BitmapFactory bitmapFactory,
-      GenericIndexed<ImmutableBitmap> bitmaps,
-      GenericIndexed<String> dictionary
+      Indexed<ImmutableBitmap> bitmaps,
+      Indexed<T> dictionary,
+      BitmapIndexConverter<T> indexConverter
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.dictionary = dictionary;
+    this.indexConverter = indexConverter;
   }
 
   @Override
@@ -60,7 +71,7 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       @Override
       public String getValue(int index)
       {
-        return dictionary.get(index);
+        return indexConverter.toString(dictionary.get(index));
       }
 
       @Override
@@ -79,7 +90,7 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       public int getIndex(@Nullable String value)
       {
         // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
-        return dictionary.indexOf(value);
+        return dictionary.indexOf(indexConverter.fromString(value));
       }
 
       @Override
@@ -93,5 +104,37 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
         return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
       }
     };
+  }
+
+  /**
+   * Convert String values from {@link BitmapIndex} to and from whatever type of value is actually stored in the
+   * dictionary {@link GenericIndexed} of the {@link BitmapIndexColumnPartSupplier}
+   */
+  interface BitmapIndexConverter<T>
+  {
+    @Nullable
+    T fromString(@Nullable String value);
+
+    @Nullable
+    String toString(@Nullable T value);
+  }
+
+  /**
+   * The original, strings all the way down
+   */
+  public static class StringBitmapIndexConverter implements BitmapIndexColumnPartSupplier.BitmapIndexConverter<String>
+  {
+    @Nullable
+    @Override
+    public String fromString(@Nullable String value)
+    {
+      return value;
+    }
+
+    @Override
+    public String toString(@Nullable String value)
+    {
+      return value;
+    }
   }
 }
