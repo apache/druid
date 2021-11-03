@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
 import org.apache.druid.java.util.common.ISE;
@@ -193,7 +194,7 @@ public class MapPopulator<K, V>
    *
    * @return number of entries parsed and bytes stored in the map.
    */
-  public PopulateResult populateAndWarnAtByteLimit(
+  public static <K, V> PopulateResult populateAndWarnAtByteLimit(
       final Iterator<Pair<K, V>> iterator,
       final Map<K, V> map,
       final long byteLimit,
@@ -213,9 +214,9 @@ public class MapPopulator<K, V>
       entries++;
       // this top level check so that we dont keep logging inability to determine
       // byte length for all pairs.
-      if (keyAndValueByteSizesCanBeDetermined) {
+      if (0 < byteLimit && keyAndValueByteSizesCanBeDetermined) {
         keyAndValueByteSizesCanBeDetermined = canKeyAndValueTypesByteSizesBeDetermined(lhs, rhs);
-        if (0 < byteLimit && keyAndValueByteSizesCanBeDetermined) {
+        if (keyAndValueByteSizesCanBeDetermined) {
           bytes += getByteLengthOfObject(lhs);
           bytes += getByteLengthOfObject(rhs);
           if (bytes > byteLimit * byteLimitMultiple) {
@@ -228,6 +229,7 @@ public class MapPopulator<K, V>
             byteLimitMultiple++;
           }
         }
+
       }
     }
     return new PopulateResult(lines, entries, bytes);
@@ -238,7 +240,8 @@ public class MapPopulator<K, V>
    * @param o the object to get the number of bytes of.
    * @return the number of bytes of the object.
    */
-  private long getByteLengthOfObject(@Nullable Object o)
+  @VisibleForTesting
+  static long getByteLengthOfObject(@Nullable Object o)
   {
     if (null != o) {
       if (o.getClass().getName().equals(STRING_CLASS_NAME)) {
@@ -256,7 +259,8 @@ public class MapPopulator<K, V>
     return 0;
   }
 
-  private boolean canKeyAndValueTypesByteSizesBeDetermined(@Nullable K key, @Nullable V value)
+  @VisibleForTesting
+  static <K, V> boolean canKeyAndValueTypesByteSizesBeDetermined(@Nullable K key, @Nullable V value)
   {
     boolean canBeDetermined = (null == key
                                || key.getClass().getName().equals(STRING_CLASS_NAME)
