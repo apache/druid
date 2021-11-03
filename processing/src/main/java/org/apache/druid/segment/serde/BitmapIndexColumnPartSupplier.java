@@ -42,7 +42,7 @@ public class BitmapIndexColumnPartSupplier<T extends Comparable<T>> implements S
   private final Indexed<T> dictionary;
   private final BitmapIndexConverter<T> indexConverter;
 
-  public static StringBitmapIndexConverter STRING_CONVERTER = new StringBitmapIndexConverter();
+  public static final StringBitmapIndexConverter STRING_CONVERTER = new StringBitmapIndexConverter();
 
   public BitmapIndexColumnPartSupplier(
       BitmapFactory bitmapFactory,
