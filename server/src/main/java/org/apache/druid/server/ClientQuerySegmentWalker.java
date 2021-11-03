@@ -60,10 +60,10 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -464,7 +464,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       @Nullable final String parentSqlQueryId
   )
   {
-    Queue<DataSource> queue = new LinkedList<>();
+    Queue<DataSource> queue = new ArrayDeque<>();
     queue.add(rootDataSource);
 
     /*
