@@ -350,24 +350,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
-        Query subQueryWithId = subQuery;
 
         final Sequence<?> queryResults;
 
         if (dryRun) {
           queryResults = Sequences.empty();
         } else {
-          final QueryRunner subqueryRunner = subQueryWithId.getRunner(this);
+          final QueryRunner subqueryRunner = subQuery.getRunner(this);
           queryResults = subqueryRunner.run(
-              QueryPlus.wrap(subQueryWithId),
+              QueryPlus.wrap(subQuery),
               DirectDruidClient.makeResponseContextForQuery()
           );
         }
 
         return toInlineDataSource(
-            subQueryWithId,
+            subQuery,
             queryResults,
-            warehouse.getToolChest(subQueryWithId),
+            warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             maxSubqueryRows
         );
@@ -496,10 +495,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   /**
    * To be used in conjunction with {@code generateSubqueryIds()} method. This does the actual task of populating the
    * query's id, subQueryId and sqlQueryId
-   * @param dataSource The datasource to be populated with the subqueries
+   *
+   * @param dataSource                   The datasource to be populated with the subqueries
    * @param queryDataSourceToSubqueryIds Map of the datasources to their level and sibling order
-   * @param parentQueryId Parent query's id
-   * @param parentSqlQueryId Parent query's sqlQueryId
+   * @param parentQueryId                Parent query's id
+   * @param parentSqlQueryId             Parent query's sqlQueryId
    * @return Populates the subqueries from the map
    */
   private DataSource insertSubqueryIds(
@@ -516,15 +516,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         String subQueryId = nestingInfo.lhs.toString() + "." + nestingInfo.rhs.toString();
         Query<?> query = queryDataSource.getQuery();
 
-        if(StringUtils.isEmpty(query.getSubQueryId())) {
+        if (StringUtils.isEmpty(query.getSubQueryId())) {
           query = query.withSubQueryId(subQueryId);
         }
 
-        if(StringUtils.isEmpty(query.getId()) && StringUtils.isNotEmpty(parentQueryId)) {
+        if (StringUtils.isEmpty(query.getId()) && StringUtils.isNotEmpty(parentQueryId)) {
           query = query.withId(parentQueryId);
         }
 
-        if(StringUtils.isEmpty(query.getSqlQueryId()) && StringUtils.isNotEmpty(parentQueryId)) {
+        if (StringUtils.isEmpty(query.getSqlQueryId()) && StringUtils.isNotEmpty(parentSqlQueryId)) {
           query = query.withSqlQueryId(parentSqlQueryId);
         }
 

@@ -346,7 +346,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -367,7 +367,6 @@ public class ClientQuerySegmentWalkerTest
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
-  // TODO: Check subquery id generation for this
   @Test
   public void testGroupByOnGroupByOnTable()
   {
@@ -391,8 +390,8 @@ public class ClientQuerySegmentWalkerTest
 
     testQuery(
         query,
-        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
-        ImmutableList.of(ExpectedQuery.cluster(subquery)),
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster. Also, it gets a subquery id
+        ImmutableList.of(ExpectedQuery.cluster(subquery.withSubQueryId("1.1"))),
         ImmutableList.of(new Object[]{3L})
     );
 
@@ -425,8 +424,8 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(
-            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(FOO))),
-            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(BAR)))
+            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(FOO)).withSubQueryId("foo.1")),
+            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(BAR)).withSubQueryId("bar.2"))
         ),
         ImmutableList.of(
             new Object[]{"a", 2L},
@@ -514,7 +513,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("2.1")),
             ExpectedQuery.cluster(
                 query.withDataSource(
                     query.getDataSource().withChildren(
@@ -583,40 +582,46 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(
             ExpectedQuery.cluster(
-                subquery.withDataSource(
-                    subquery.getDataSource().getChildren().get(0)
-                ).withId(DUMMY_QUERY_ID)
+                subquery
+                    .withDataSource(subquery.getDataSource().getChildren().get(0))
+                    .withId(DUMMY_QUERY_ID)
+                    .withSubQueryId("2.1.foo.1")
             ),
             ExpectedQuery.cluster(
-                subquery.withDataSource(
-                    subquery.getDataSource().getChildren().get(1)
-                ).withId(DUMMY_QUERY_ID)
+                subquery
+                    .withDataSource(subquery.getDataSource().getChildren().get(1))
+                    .withId(DUMMY_QUERY_ID)
+                    .withSubQueryId("2.1.bar.2")
             ),
             ExpectedQuery.cluster(
-                query.withDataSource(
-                    query.getDataSource().withChildren(
-                        ImmutableList.of(
-                            unionDataSource.getChildren().get(0),
-                            InlineDataSource.fromIterable(
-                                ImmutableList.of(new Object[]{"y"}),
-                                RowSignature.builder().add("s", ValueType.STRING).build()
+                query
+                    .withDataSource(
+                        query.getDataSource().withChildren(
+                            ImmutableList.of(
+                                unionDataSource.getChildren().get(0),
+                                InlineDataSource.fromIterable(
+                                    ImmutableList.of(new Object[]{"y"}),
+                                    RowSignature.builder().add("s", ValueType.STRING).build()
+                                )
                             )
                         )
                     )
-                )
+                    .withSubQueryId("foo.1")
             ),
             ExpectedQuery.cluster(
-                query.withDataSource(
-                    query.getDataSource().withChildren(
-                        ImmutableList.of(
-                            unionDataSource.getChildren().get(1),
-                            InlineDataSource.fromIterable(
-                                ImmutableList.of(new Object[]{"y"}),
-                                RowSignature.builder().add("s", ValueType.STRING).build()
+                query
+                    .withDataSource(
+                        query.getDataSource().withChildren(
+                            ImmutableList.of(
+                                unionDataSource.getChildren().get(1),
+                                InlineDataSource.fromIterable(
+                                    ImmutableList.of(new Object[]{"y"}),
+                                    RowSignature.builder().add("s", ValueType.STRING).build()
+                                )
                             )
                         )
                     )
-                )
+                    .withSubQueryId("bar.2")
             )
         ),
         ImmutableList.of(new Object[]{"y", "y", 1L})
@@ -657,7 +662,7 @@ public class ClientQuerySegmentWalkerTest
         query,
         // GroupBy handles its own subqueries; only the inner one will go to the cluster.
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -713,7 +718,7 @@ public class ClientQuerySegmentWalkerTest
         query,
         // GroupBy handles its own subqueries; only the inner one will go to the cluster.
         ImmutableList.of(
-            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID)),
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
                     InlineDataSource.fromIterable(
@@ -1364,7 +1369,6 @@ public class ClientQuerySegmentWalkerTest
       // Need to blast various parameters that will vary and aren't important to test for.
       this.query = query.withOverriddenContext(
           ImmutableMap.<String, Object>builder()
-//              .put(BaseQuery.SUB_QUERY_ID, "dummy")
               .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
               .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
               .put(QueryContexts.FINALIZE_KEY, true)

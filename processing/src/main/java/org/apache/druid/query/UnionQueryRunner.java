@@ -29,8 +29,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -113,14 +111,10 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
    */
   private String generateSubqueryId(String parentSubqueryId, String dataSourceName, int dataSourceIndex)
   {
-    final String DELIMITER = "-";
-    List<String> arr = new ArrayList<>();
-    if (!StringUtils.isEmpty(parentSubqueryId)) {
-      arr.add(parentSubqueryId);
+    String dataSourceNameIndex = dataSourceName + "." + dataSourceIndex;
+    if (StringUtils.isEmpty(parentSubqueryId)) {
+      return dataSourceNameIndex;
     }
-
-    arr.add(dataSourceName + "." + dataSourceIndex);
-
-    return String.join(DELIMITER, arr);
+    return parentSubqueryId + "." + dataSourceNameIndex;
   }
 }
