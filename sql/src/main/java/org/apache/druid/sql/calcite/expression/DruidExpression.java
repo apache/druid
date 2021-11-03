@@ -28,7 +28,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
@@ -55,9 +55,9 @@ public class DruidExpression
   @Nullable
   private final SimpleExtraction simpleExtraction;
   private final String expression;
-  private final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFn;
+  private final TrinaryFn<String, ColumnType, ExprMacroTable, VirtualColumn> virtualColumnFn;
 
-  private DruidExpression(@Nullable final SimpleExtraction simpleExtraction, final String expression, @Nullable final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFn)
+  private DruidExpression(@Nullable final SimpleExtraction simpleExtraction, final String expression, @Nullable final TrinaryFn<String, ColumnType, ExprMacroTable, VirtualColumn> virtualColumnFn)
   {
     this.simpleExtraction = simpleExtraction;
     this.expression = Preconditions.checkNotNull(expression);
@@ -89,7 +89,7 @@ public class DruidExpression
 
   public static DruidExpression forVirtualColumn(
       final String expression,
-      final TrinaryFn<String, ValueType, ExprMacroTable, VirtualColumn> virtualColumnFunction
+      final TrinaryFn<String, ColumnType, ExprMacroTable, VirtualColumn> virtualColumnFunction
   )
   {
     return new DruidExpression(null, expression, virtualColumnFunction);
@@ -182,7 +182,7 @@ public class DruidExpression
 
   public VirtualColumn toVirtualColumn(
       final String name,
-      final ValueType outputType,
+      final ColumnType outputType,
       final ExprMacroTable macroTable
   )
   {

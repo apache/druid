@@ -52,6 +52,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -239,9 +240,9 @@ public class IndexIO
 
       ColumnCapabilities capabilities1 = adapter1.getCapabilities(dim1Name);
       ColumnCapabilities capabilities2 = adapter2.getCapabilities(dim2Name);
-      ValueType dim1Type = capabilities1.getType();
-      ValueType dim2Type = capabilities2.getType();
-      if (dim1Type != dim2Type) {
+      ColumnType dim1Type = capabilities1.toColumnType();
+      ColumnType dim2Type = capabilities2.toColumnType();
+      if (!Objects.equals(dim1Type, dim2Type)) {
         throw new SegmentValidationException(
             "Dim [%s] types not equal. Expected %d found %d",
             dim1Name,

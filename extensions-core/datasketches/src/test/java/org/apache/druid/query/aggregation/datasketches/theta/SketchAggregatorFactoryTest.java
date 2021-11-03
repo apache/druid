@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -92,26 +92,26 @@ public class SketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("oldBuild", null)
-                    .add("oldMerge", ValueType.COMPLEX)
+                    .add("oldMerge", SketchModule.MERGE_TYPE)
                     .add("oldMergeFinalize", null)
-                    .add("merge", ValueType.COMPLEX)
+                    .add("merge", SketchModule.BUILD_TYPE)
                     .add("mergeFinalize", null)
-                    .add("oldBuild-access", ValueType.COMPLEX)
-                    .add("oldBuild-finalize", ValueType.DOUBLE)
-                    .add("oldMerge-access", ValueType.COMPLEX)
-                    .add("oldMerge-finalize", ValueType.COMPLEX)
-                    .add("oldMergeFinalize-access", ValueType.COMPLEX)
-                    .add("oldMergeFinalize-finalize", ValueType.DOUBLE)
-                    .add("merge-access", ValueType.COMPLEX)
-                    .add("merge-finalize", ValueType.COMPLEX)
-                    .add("mergeFinalize-access", ValueType.COMPLEX)
-                    .add("mergeFinalize-finalize", ValueType.DOUBLE)
-                    .add("sketchEstimate", ValueType.DOUBLE)
-                    .add("sketchEstimateStdDev", ValueType.COMPLEX)
-                    .add("sketchSet", ValueType.COMPLEX)
-                    .add("sketchString", ValueType.STRING)
+                    .add("oldBuild-access", SketchModule.BUILD_TYPE)
+                    .add("oldBuild-finalize", ColumnType.DOUBLE)
+                    .add("oldMerge-access", SketchModule.MERGE_TYPE)
+                    .add("oldMerge-finalize", SketchModule.MERGE_TYPE)
+                    .add("oldMergeFinalize-access", SketchModule.MERGE_TYPE)
+                    .add("oldMergeFinalize-finalize", ColumnType.DOUBLE)
+                    .add("merge-access", SketchModule.BUILD_TYPE)
+                    .add("merge-finalize", SketchModule.BUILD_TYPE)
+                    .add("mergeFinalize-access", SketchModule.BUILD_TYPE)
+                    .add("mergeFinalize-finalize", ColumnType.DOUBLE)
+                    .add("sketchEstimate", ColumnType.DOUBLE)
+                    .add("sketchEstimateStdDev", SketchModule.MERGE_TYPE)
+                    .add("sketchSet", SketchModule.MERGE_TYPE)
+                    .add("sketchString", ColumnType.STRING)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

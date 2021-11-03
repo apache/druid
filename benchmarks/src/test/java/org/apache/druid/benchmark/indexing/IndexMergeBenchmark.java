@@ -131,7 +131,7 @@ public class IndexMergeBenchmark
           rowsPerSegment
       );
 
-      IncrementalIndex<?> incIndex = makeIncIndex();
+      IncrementalIndex incIndex = makeIncIndex();
 
       gen.addToIndex(incIndex, rowsPerSegment);
 

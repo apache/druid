@@ -1,5 +1,6 @@
 {
   "type": "index_hadoop",
+  "hadoopDependencyCoordinates" : [${hadoop.integ.libs}],
   "spec": {
     "dataSchema": {
       "dataSource": "%%DATASOURCE%%",
@@ -93,20 +94,13 @@
         "dfs.datanode.use.datanode.hostname" : "true",
         "yarn.resourcemanager.hostname" : "druid-it-hadoop",
         "yarn.nodemanager.vmem-check-enabled" : "false",
-        "mapreduce.map.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Daws.region=%%AWS_REGION%%",
+        "mapreduce.map.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.job.classloader": "true",
         "mapreduce.job.user.classpath.first" : "true",
-        "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Daws.region=%%AWS_REGION%%",
+        "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
         "mapreduce.map.memory.mb" : 1024,
         "mapreduce.reduce.memory.mb" : 1024,
-        "fs.s3.awsAccessKeyId" : "%%AWS_ACCESS_KEY%%",
-        "fs.s3.awsSecretAccessKey" : "%%AWS_SECRET_KEY%%",
-        "fs.s3.impl" : "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
-        "fs.s3n.awsAccessKeyId" : "%%AWS_ACCESS_KEY%%",
-        "fs.s3n.awsSecretAccessKey" : "%%AWS_SECRET_KEY%%",
-        "fs.s3n.impl" : "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
-        "fs.s3a.access.key" : "%%AWS_ACCESS_KEY%%",
-        "fs.s3a.secret.key" : "%%AWS_SECRET_KEY%%",
-        "fs.s3a.impl" : "org.apache.hadoop.fs.s3a.S3AFileSystem"
+        "fs.azure.account.key.%%AZURE_ACCOUNT%%.blob.core.windows.net":"%%AZURE_KEY%%"
       },
       "rowFlushBoundary": 10000
     }

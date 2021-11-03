@@ -36,8 +36,9 @@ import java.util.Collections;
 
 public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
+  public static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
+
   private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchSqlAggFunction();
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
 
   @Override
   public SqlAggFunction calciteFunction()

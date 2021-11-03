@@ -39,7 +39,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -71,8 +70,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2003,31 +2000,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       combiningAggregators[i] = aggregators[i].getCombiningFactory();
     }
     return combiningAggregators;
-  }
-
-  @Test
-  public void testDictIdSeeker()
-  {
-    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Integer.BYTES).asIntBuffer();
-    dimConversions.put(0);
-    dimConversions.put(2);
-    dimConversions.put(4);
-    IndexMerger.IndexSeeker dictIdSeeker = new IndexMerger.IndexSeekerWithConversion(
-        (IntBuffer) dimConversions.asReadOnlyBuffer().rewind()
-    );
-    Assert.assertEquals(0, dictIdSeeker.seek(0));
-    Assert.assertEquals(-1, dictIdSeeker.seek(1));
-    Assert.assertEquals(1, dictIdSeeker.seek(2));
-    try {
-      dictIdSeeker.seek(5);
-      Assert.fail("Only support access in order");
-    }
-    catch (ISE ise) {
-      Assert.assertTrue("Only support access in order", true);
-    }
-    Assert.assertEquals(-1, dictIdSeeker.seek(3));
-    Assert.assertEquals(2, dictIdSeeker.seek(4));
-    Assert.assertEquals(-1, dictIdSeeker.seek(5));
   }
 
   @Test

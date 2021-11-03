@@ -64,6 +64,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -504,10 +505,10 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCacheStrategy() throws Exception
   {
-    doTestCacheStrategy(ValueType.STRING, "val1");
-    doTestCacheStrategy(ValueType.FLOAT, 2.1f);
-    doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
-    doTestCacheStrategy(ValueType.LONG, 2L);
+    doTestCacheStrategy(ColumnType.STRING, "val1");
+    doTestCacheStrategy(ColumnType.FLOAT, 2.1f);
+    doTestCacheStrategy(ColumnType.DOUBLE, 2.1d);
+    doTestCacheStrategy(ColumnType.LONG, 2L);
   }
 
   @Test
@@ -518,11 +519,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(ImmutableList.of(
-            new DefaultDimensionSpec("test", "test", ValueType.STRING),
-            new DefaultDimensionSpec("v0", "v0", ValueType.STRING)
+            new DefaultDimensionSpec("test", "test", ColumnType.STRING),
+            new DefaultDimensionSpec("v0", "v0", ColumnType.STRING)
         ))
         .setVirtualColumns(
-            new ExpressionVirtualColumn("v0", "concat('foo', test)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("v0", "concat('foo', test)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         )
         .setAggregatorSpecs(
             Arrays.asList(
@@ -681,11 +682,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         RowSignature.builder()
-                    .add("dim", ValueType.STRING)
-                    .add("rows", ValueType.LONG)
-                    .add("index", ValueType.DOUBLE)
+                    .add("dim", ColumnType.STRING)
+                    .add("rows", ColumnType.LONG)
+                    .add("index", ColumnType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", ValueType.LONG)
+                    .add("const", ColumnType.LONG)
                     .build(),
         new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
@@ -706,11 +707,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("dim", ValueType.STRING)
-                    .add("rows", ValueType.LONG)
-                    .add("index", ValueType.DOUBLE)
+                    .add("dim", ColumnType.STRING)
+                    .add("rows", ColumnType.LONG)
+                    .add("index", ColumnType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", ValueType.LONG)
+                    .add("const", ColumnType.LONG)
                     .build(),
         new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
@@ -862,7 +863,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     }
   }
 
-  private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
+  private void doTestCacheStrategy(final ColumnType valueType, final Object dimValue) throws IOException
   {
     final GroupByQuery query1 = GroupByQuery
         .builder()
@@ -874,7 +875,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.ROWS_COUNT,
-                getComplexAggregatorFactoryForValueType(valueType)
+                getComplexAggregatorFactoryForValueType(valueType.getType())
             )
         )
         .setPostAggregatorSpecs(
@@ -889,7 +890,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         );
 
     // test timestamps that result in integer size millis
-    final ResultRow result1 = ResultRow.of(123L, dimValue, 1, getIntermediateComplexValue(valueType, dimValue));
+    final ResultRow result1 = ResultRow.of(123L, dimValue, 1, getIntermediateComplexValue(valueType.getType(), dimValue));
 
     Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
 
@@ -908,9 +909,9 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
     final ResultRow typeAdjustedResult2;
-    if (valueType == ValueType.FLOAT) {
+    if (valueType.is(ValueType.FLOAT)) {
       typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10);
-    } else if (valueType == ValueType.LONG) {
+    } else if (valueType.is(ValueType.LONG)) {
       typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10);
     } else {
       typeAdjustedResult2 = result2;

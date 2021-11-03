@@ -17,29 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.guava;
+package org.apache.druid.math.expr;
 
-import org.apache.druid.java.util.common.logger.Logger;
 
-import java.io.Closeable;
-import java.io.IOException;
+import com.google.common.collect.ImmutableMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class CloseQuietly
+public class SettableObjectBindingTest
 {
-  private static final Logger log = new Logger(CloseQuietly.class);
-
-  public static void close(Closeable closeable)
+  @Test
+  public void testSettableBinding()
   {
-    if (closeable == null) {
-      return;
-    }
-    try {
-      closeable.close();
-    }
-    catch (IOException e) {
-      log.error(e, "IOException thrown while closing Closeable.");
-    }
+    SettableObjectBinding binding = new SettableObjectBinding(10);
+    Assert.assertEquals(0, binding.asMap().size());
+    binding = binding.withBinding("x", ExpressionType.LONG);
+    Assert.assertEquals(ExpressionType.LONG, binding.get("x"));
+    Assert.assertNull(binding.get("y"));
+    Assert.assertEquals(ImmutableMap.of("x", ExpressionType.LONG), binding.asMap());
   }
 }

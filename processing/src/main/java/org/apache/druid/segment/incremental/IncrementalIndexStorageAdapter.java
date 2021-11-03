@@ -120,9 +120,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
 
-  final IncrementalIndex<?> index;
+  final IncrementalIndex index;
 
-  public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
+  public IncrementalIndexStorageAdapter(IncrementalIndex index)
   {
     this.index = index;
   }
@@ -248,7 +248,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
     ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
     if (columnCapabilities != null) {
-      return columnCapabilities.getType().toString();
+      return columnCapabilities.asTypeString();
     } else {
       return null;
     }

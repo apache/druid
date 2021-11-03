@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -74,8 +75,8 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
@@ -117,14 +118,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("exprLong", "1 + 2", ValueType.LONG, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vdim0", "dim0", ValueType.STRING, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vdim1", "dim1", ValueType.STRING, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vd0", "d0", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vf0", "f0", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
-          new ExpressionVirtualColumn("vl0", "l0", ValueType.LONG, TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprLong", "1 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim0", "dim0", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim1", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -150,13 +151,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   // missing 'dim3' because makeDefaultSchemaRow does not expect to set it...
   static final RowSignature DEFAULT_ROW_SIGNATURE =
       RowSignature.builder()
-                  .add("dim0", ValueType.STRING)
-                  .add("dim1", ValueType.STRING)
-                  .add("dim2", ValueType.STRING)
-                  .add("timeDim", ValueType.STRING)
-                  .add("d0", ValueType.DOUBLE)
-                  .add("f0", ValueType.FLOAT)
-                  .add("l0", ValueType.LONG)
+                  .add("dim0", ColumnType.STRING)
+                  .add("dim1", ColumnType.STRING)
+                  .add("dim2", ColumnType.STRING)
+                  .add("timeDim", ColumnType.STRING)
+                  .add("d0", ColumnType.DOUBLE)
+                  .add("f0", ColumnType.FLOAT)
+                  .add("l0", ColumnType.LONG)
                   .build();
 
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
@@ -687,10 +688,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
     try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
 
-      final ExprType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
+      final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
       final List<String> values = new ArrayList<>();
 
-      if (ExprType.STRING.equals(outputType)) {
+      if (outputType.is(ExprType.STRING)) {
         final VectorObjectSelector objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector(
             virtualColumn
         );
@@ -705,7 +706,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         final VectorValueSelector valueSelector = cursor.getColumnSelectorFactory().makeValueSelector(virtualColumn);
         while (!cursor.isDone()) {
           final boolean[] nulls = valueSelector.getNullVector();
-          if (ExprType.DOUBLE.equals(outputType)) {
+          if (outputType.is(ExprType.DOUBLE)) {
             final double[] doubles = valueSelector.getDoubleVector();
             for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
               if (nulls != null && nulls[i]) {
@@ -743,7 +744,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // Generate rowSignature
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).getType());
+      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).toColumnType());
     }
 
     // Perform test

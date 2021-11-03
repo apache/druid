@@ -48,7 +48,7 @@ import {
   RowColumn,
   stringifyValue,
 } from '../../utils';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
+import { QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
@@ -203,31 +203,27 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         cancelToken,
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
-
         const isSql = !QueryView.isJsonLike(queryString);
-
         const query = isSql ? queryString : Hjson.parse(queryString);
+        const context = { ...queryContext, ...(mandatoryQueryContext || {}) };
 
-        const queryId = uuidv4();
+        if (typeof wrapQueryLimit !== 'undefined') {
+          context.sqlOuterLimit = wrapQueryLimit + 1;
+        }
 
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
-
-          if (isSql) {
-            context.sqlQueryId = queryId;
-          } else {
-            context.queryId = queryId;
-          }
-
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit + 1;
-          }
+        const queryIdKey = isSql ? 'sqlQueryId' : 'queryId';
+        // Look for the queryId in the JSON itself (if native) or in the context object.
+        let cancelQueryId = (isSql ? undefined : query.context?.queryId) || context[queryIdKey];
+        if (!cancelQueryId) {
+          // If the queryId (sqlQueryId) is not explicitly set on the context generate one so it is possible to cancel the query.
+          cancelQueryId = context[queryIdKey] = uuidv4();
         }
 
         void cancelToken.promise
           .then(() => {
-            return Api.instance.delete(`/druid/v2${isSql ? '/sql' : ''}/${queryId}`);
+            return Api.instance.delete(
+              `/druid/v2${isSql ? '/sql' : ''}/${Api.encodePath(cancelQueryId)}`,
+            );
           })
           .catch(() => {});
 
