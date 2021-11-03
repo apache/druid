@@ -453,32 +453,35 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * sibling order of all the subqueries that are present.
    * It also plumbs parent query's id and sql id in case the subqueries don't have it set by default
    *
-   * @param dataSource       Datasource whose subqueries need to be populated
+   * @param rootDataSource   Datasource whose subqueries need to be populated
    * @param parentQueryId    Parent Query's ID, can be null if do not need to update this in the subqueries
    * @param parentSqlQueryId Parent Query's SQL Query ID, can be null if do not need to update this in the subqueries
    * @return DataSource populated with the subqueries
    */
   private DataSource generateSubqueryIds(
-      DataSource dataSource,
+      DataSource rootDataSource,
       @Nullable final String parentQueryId,
       @Nullable final String parentSqlQueryId
   )
   {
     Queue<DataSource> queue = new LinkedList<>();
-    queue.add(dataSource);
+    queue.add(rootDataSource);
 
     /*
     Performs BFS on the datasource tree to find the nesting level, and the sibling order of the query datasource
      */
-    Map<DataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds = new HashMap<>();
+    Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds = new HashMap<>();
     int level = 1;
     while (!queue.isEmpty()) {
       int size = queue.size();
       int siblingOrder = 1;
       for (int i = 0; i < size; ++i) {
         DataSource currentDataSource = queue.poll();
+        if (currentDataSource == null) { // Shouldn't be encountered
+          continue;
+        }
         if (currentDataSource instanceof QueryDataSource) {
-          queryDataSourceToSubqueryIds.put(currentDataSource, new Pair<>(level, siblingOrder));
+          queryDataSourceToSubqueryIds.put((QueryDataSource) currentDataSource, new Pair<>(level, siblingOrder));
           ++siblingOrder;
         }
         queue.addAll(currentDataSource.getChildren());
@@ -489,58 +492,56 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     Returns the datasource by populating all the subqueries with the id generated in the map above.
     Implemented in a separate function since the methods on datasource and queries return a new datasource/query
      */
-    return insertSubqueryIds(dataSource, queryDataSourceToSubqueryIds, parentQueryId, parentSqlQueryId);
+    return insertSubqueryIds(rootDataSource, queryDataSourceToSubqueryIds, parentQueryId, parentSqlQueryId);
   }
 
   /**
    * To be used in conjunction with {@code generateSubqueryIds()} method. This does the actual task of populating the
    * query's id, subQueryId and sqlQueryId
    *
-   * @param dataSource                   The datasource to be populated with the subqueries
+   * @param currentDataSource            The datasource to be populated with the subqueries
    * @param queryDataSourceToSubqueryIds Map of the datasources to their level and sibling order
    * @param parentQueryId                Parent query's id
    * @param parentSqlQueryId             Parent query's sqlQueryId
    * @return Populates the subqueries from the map
    */
   private DataSource insertSubqueryIds(
-      DataSource dataSource,
-      Map<DataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds,
+      DataSource currentDataSource,
+      Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds,
       @Nullable final String parentQueryId,
       @Nullable final String parentSqlQueryId
   )
   {
-    if (queryDataSourceToSubqueryIds.containsKey(dataSource)) {
-      if (dataSource instanceof QueryDataSource) { // This should always be true, done for typecasting
-        QueryDataSource queryDataSource = (QueryDataSource) dataSource;
-        Pair<Integer, Integer> nestingInfo = queryDataSourceToSubqueryIds.get(dataSource);
-        String subQueryId = nestingInfo.lhs.toString() + "." + nestingInfo.rhs.toString();
-        Query<?> query = queryDataSource.getQuery();
+    if (currentDataSource instanceof QueryDataSource
+        && queryDataSourceToSubqueryIds.containsKey((QueryDataSource) currentDataSource)) {
+      QueryDataSource queryDataSource = (QueryDataSource) currentDataSource;
+      Pair<Integer, Integer> nestingInfo = queryDataSourceToSubqueryIds.get(queryDataSource);
+      String subQueryId = nestingInfo.lhs.toString() + "." + nestingInfo.rhs.toString();
+      Query<?> query = queryDataSource.getQuery();
 
-        if (StringUtils.isEmpty(query.getSubQueryId())) {
-          query = query.withSubQueryId(subQueryId);
-        }
-
-        if (StringUtils.isEmpty(query.getId()) && StringUtils.isNotEmpty(parentQueryId)) {
-          query = query.withId(parentQueryId);
-        }
-
-        if (StringUtils.isEmpty(query.getSqlQueryId()) && StringUtils.isNotEmpty(parentSqlQueryId)) {
-          query = query.withSqlQueryId(parentSqlQueryId);
-        }
-
-        queryDataSource = new QueryDataSource(query);
-        dataSource = queryDataSource;
+      if (StringUtils.isEmpty(query.getSubQueryId())) {
+        query = query.withSubQueryId(subQueryId);
       }
+
+      if (StringUtils.isEmpty(query.getId()) && StringUtils.isNotEmpty(parentQueryId)) {
+        query = query.withId(parentQueryId);
+      }
+
+      if (StringUtils.isEmpty(query.getSqlQueryId()) && StringUtils.isNotEmpty(parentSqlQueryId)) {
+        query = query.withSqlQueryId(parentSqlQueryId);
+      }
+
+      currentDataSource = new QueryDataSource(query);
     }
-    return dataSource.withChildren(dataSource.getChildren()
-                                             .stream()
-                                             .map(childDataSource -> insertSubqueryIds(
-                                                 childDataSource,
-                                                 queryDataSourceToSubqueryIds,
-                                                 parentQueryId,
-                                                 parentSqlQueryId
-                                             ))
-                                             .collect(Collectors.toList()));
+    return currentDataSource.withChildren(currentDataSource.getChildren()
+                                                           .stream()
+                                                           .map(childDataSource -> insertSubqueryIds(
+                                                               childDataSource,
+                                                               queryDataSourceToSubqueryIds,
+                                                               parentQueryId,
+                                                               parentSqlQueryId
+                                                           ))
+                                                           .collect(Collectors.toList()));
   }
 
   /**

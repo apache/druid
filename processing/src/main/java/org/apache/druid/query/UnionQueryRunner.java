@@ -84,8 +84,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                                       ).withSubQueryId(
                                           generateSubqueryId(
                                               query.getSubQueryId(),
-                                              // toString() works since the datasource will be a TableDataSource
-                                              indexBaseDataSourcePair.rhs.toString(),
+                                              // getName() works since the datasource will be a TableDataSource
+                                              indexBaseDataSourcePair.rhs.getName(),
                                               indexBaseDataSourcePair.lhs
                                           )
                                       ))
