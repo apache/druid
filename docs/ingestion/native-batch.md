@@ -786,7 +786,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |maxParseExceptions|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|unlimited|no|
 |maxSavedParseExceptions|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|0|no|
 |maxIntervalsIngested|The maximum number of segment intervals allowed to be ingested by the task. If violated, the job will exit early as failed. Only applies if task must determine intervals at runtime.|`Integer.MAX_VALUE`|
-|maxSegmentsIngested|Only compatible with `hashed` `partitionsSpec`. The maximum number of segmens allowed to be ingested by the task. If violated, the job will exit early as failed. Only applies if task must determine partitions at runtime.|`Integer.MAX_VALUE`|
+|maxSegmentsIngested|Only compatible with `hashed` `partitionsSpec`. The maximum number of segments allowed to be ingested by the task. If violated, the job will exit early as failed. Only applies if task must determine partitions at runtime.|`Integer.MAX_VALUE`|
 
 ### `partitionsSpec`
 
