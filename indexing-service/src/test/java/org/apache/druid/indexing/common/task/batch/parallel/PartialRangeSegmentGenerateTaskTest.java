@@ -54,7 +54,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   public void requiresForceGuaranteedRollup()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("multi_dim partitionsSpec required");
+    exception.expectMessage("single_dim or multi_dim partitionsSpec required");
 
     ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
         .forceGuaranteedRollup(false)
@@ -70,7 +70,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   public void requiresMultiDimensionPartitions()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("multi_dim partitionsSpec required");
+    exception.expectMessage("single_dim or multi_dim partitionsSpec required");
 
     PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
     ParallelIndexTuningConfig tuningConfig =

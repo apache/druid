@@ -32,7 +32,14 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Range partition a segment by multiple dimensions.
+ * Spec to create partitions based on value ranges of multiple dimensions.
+ * <p>
+ * A MultiDimensionPartitionSpec has the following fields:
+ * <ul>
+ *   <li>either targetRowsPerSegment or maxRowsPerSegment</li>
+ *   <li>partitionDimensions: List of dimension names to be used for partitioning</li>
+ *   <li>assumeGrouped: true if input data has already been grouped on time and dimensions</li>
+ * </ul>
  */
 public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
 {
@@ -79,21 +86,18 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
 
   private static int resolveMaxRowsPerSegment(Property<Integer> targetRows, Property<Integer> maxRows)
   {
-    final int resolvedValue;
-
     if (targetRows.getValue() != null) {
       Preconditions.checkArgument(targetRows.getValue() > 0, targetRows.getName() + " must be greater than 0");
       try {
-        resolvedValue = Math.addExact(targetRows.getValue(), (targetRows.getValue() / 2));
+        return Math.addExact(targetRows.getValue(), (targetRows.getValue() / 2));
       }
       catch (ArithmeticException e) {
         throw new IllegalArgumentException(targetRows.getName() + " is too large");
       }
     } else {
       Preconditions.checkArgument(maxRows.getValue() > 0, maxRows.getName() + " must be greater than 0");
-      resolvedValue = maxRows.getValue();
+      return maxRows.getValue();
     }
-    return resolvedValue;
   }
 
   @JsonProperty

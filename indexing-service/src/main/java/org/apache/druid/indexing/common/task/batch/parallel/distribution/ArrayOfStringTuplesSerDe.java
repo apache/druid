@@ -28,7 +28,7 @@ import org.apache.druid.data.input.StringTuple;
 
 /**
  * Serde for {@link StringTuple}.
- *
+ * <p>
  * Implementation similar to {@link ArrayOfStringsSerDe}.
  */
 public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
@@ -41,18 +41,26 @@ public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
     int length = 0;
     final byte[][] itemsBytes = new byte[items.length][];
     for (int i = 0; i < items.length; i++) {
+      // Get the byte contents of the StringTuple
       itemsBytes[i] = STRINGS_SERDE.serializeToByteArray(items[i].toArray());
-      length += itemsBytes[i].length + Integer.BYTES;
-      length += items[i].size() + Integer.BYTES;
+
+      // Overall byte representation contains number of items, size of content, byte contents
+      length += Integer.BYTES + Integer.BYTES + itemsBytes[i].length;
     }
+
     final byte[] bytes = new byte[length];
     final WritableMemory mem = WritableMemory.writableWrap(bytes);
     long offsetBytes = 0;
     for (int i = 0; i < items.length; i++) {
+      // Add the number of items in the StringTuple
       mem.putInt(offsetBytes, items[i].size());
       offsetBytes += Integer.BYTES;
+
+      // Add the size of byte content for the StringTuple
       mem.putInt(offsetBytes, itemsBytes[i].length);
       offsetBytes += Integer.BYTES;
+
+      // Add the byte contents of the StringTuple
       mem.putByteArray(offsetBytes, itemsBytes[i], 0, itemsBytes[i].length);
       offsetBytes += itemsBytes[i].length;
     }
@@ -65,17 +73,26 @@ public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
     final StringTuple[] array = new StringTuple[numItems];
     long offsetBytes = 0;
     for (int i = 0; i < numItems; i++) {
+      // Read the number of items in the StringTuple
       UnsafeUtil.checkBounds(offsetBytes, Integer.BYTES, mem.getCapacity());
-      final int numArrayItems = mem.getInt(offsetBytes);
+      final int numItemsInTuple = mem.getInt(offsetBytes);
       offsetBytes += Integer.BYTES;
+
+      // Read the size of byte content
       UnsafeUtil.checkBounds(offsetBytes, Integer.BYTES, mem.getCapacity());
-      final int arrayLength = mem.getInt(offsetBytes);
+      final int byteContentSize = mem.getInt(offsetBytes);
       offsetBytes += Integer.BYTES;
-      final byte[] bytes = new byte[arrayLength];
-      UnsafeUtil.checkBounds(offsetBytes, arrayLength, mem.getCapacity());
-      mem.getByteArray(offsetBytes, bytes, 0, arrayLength);
-      offsetBytes += arrayLength;
-      array[i] = StringTuple.create(STRINGS_SERDE.deserializeFromMemory(Memory.wrap(bytes), numArrayItems));
+
+      // Read the byte content
+      final byte[] byteContent = new byte[byteContentSize];
+      UnsafeUtil.checkBounds(offsetBytes, byteContentSize, mem.getCapacity());
+      mem.getByteArray(offsetBytes, byteContent, 0, byteContentSize);
+      offsetBytes += byteContentSize;
+
+      // Deserialize the byte content as a StringTuple
+      array[i] = StringTuple.create(
+          STRINGS_SERDE.deserializeFromMemory(Memory.wrap(byteContent), numItemsInTuple)
+      );
     }
     return array;
   }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -97,7 +98,8 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     PartitionsSpec partitionsSpec = ingestionSpec.getTuningConfig().getPartitionsSpec();
     Preconditions.checkArgument(
         partitionsSpec instanceof MultiDimensionPartitionsSpec,
-        "%s partitionsSpec required",
+        "%s or %s partitionsSpec required",
+        SingleDimensionPartitionsSpec.NAME,
         MultiDimensionPartitionsSpec.NAME
     );
 
