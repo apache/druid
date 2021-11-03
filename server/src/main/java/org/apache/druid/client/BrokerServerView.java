@@ -115,6 +115,7 @@ public class BrokerServerView implements TimelineServerView
     this.segmentWatcherConfig = segmentWatcherConfig;
 
     this.segmentFilter = (Pair<DruidServerMetadata, DataSegment> metadataAndSegment) -> {
+
       // Include only watched tiers if specified
       if (segmentWatcherConfig.getWatchedTiers() != null
           && !segmentWatcherConfig.getWatchedTiers().contains(metadataAndSegment.lhs.getTier())) {
@@ -133,7 +134,9 @@ public class BrokerServerView implements TimelineServerView
         return false;
       }
 
-      return true;
+      // Include realtime tasks only if they are watched
+      return metadataAndSegment.lhs.getType() != ServerType.INDEXER_EXECUTOR
+             || segmentWatcherConfig.isWatchRealtimeTasks();
     };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
