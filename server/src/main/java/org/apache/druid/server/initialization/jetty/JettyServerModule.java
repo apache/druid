@@ -561,4 +561,10 @@ public class JettyServerModule extends JerseyServletModule
   {
     return ACTIVE_CONNECTIONS.get();
   }
+
+  @VisibleForTesting
+  public void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  {
+    jettyServerThreadPool = threadPool;
+  }
 }
