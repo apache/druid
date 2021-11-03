@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,7 +59,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("a", new String[] {"foo", "bar", "baz", "foobar"})
         .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
         .put("c", new Double[] {3.1, 4.2, 5.3});
-    bindings = Parser.withMap(builder.build());
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test
@@ -290,6 +291,27 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArraySetAdd()
+  {
+    assertArrayExpr("array_set_add([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{null, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add([1, 2, 2], 1)", new Long[]{1L, 2L});
+    assertArrayExpr("array_set_add([], 1)", new String[]{"1"});
+    assertArrayExpr("array_set_add(<LONG>[], 1)", new Long[]{1L});
+    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{null});
+  }
+
+  @Test
+  public void testArraySetAddAll()
+  {
+    assertArrayExpr("array_set_add_all([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 4L, 6L});
+    assertArrayExpr("array_set_add_all([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add_all(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add_all(map(y -> y * 3, b), [1, 2, 3])", new Long[]{1L, 2L, 3L, 6L, 9L, 12L, 15L});
+    assertArrayExpr("array_set_add_all(0, 1)", new Long[]{0L, 1L});
+  }
+
+  @Test
   public void testArrayToString()
   {
     assertExpr("array_to_string([1, 2, 3], ',')", "1,2,3");
@@ -408,29 +430,32 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testRoundWithInvalidFirstArgument()
+  public void testRoundWithNullValueOrInvalid()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
-        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("null", "STRING"),
         Pair.of("x", "STRING"),
+        Pair.of("b", "LONG_ARRAY"),
         Pair.of("c", "DOUBLE_ARRAY"),
         Pair.of("a", "STRING_ARRAY")
-
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      try {
-        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
-        Assert.fail("Did not throw IllegalArgumentException");
-      }
-      catch (IllegalArgumentException e) {
-        Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
-                "The first argument to the function[round] should be integer or double type but got the type: %s",
-                argAndType.rhs
-            ),
-            e.getMessage()
-        );
+      if (NullHandling.sqlCompatible()) {
+        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+      } else {
+        try {
+          assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+          Assert.fail("Did not throw IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) {
+          Assert.assertEquals(
+              StringUtils.format(
+                  "The first argument to the function[round] should be integer or double type but got the type: %s",
+                  argAndType.rhs
+              ),
+              e.getMessage()
+          );
+        }
       }
     }
   }
@@ -452,8 +477,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       }
       catch (IllegalArgumentException e) {
         Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
+            StringUtils.format(
                 "The second argument to the function[round] should be integer type but got the type: %s",
                 argAndType.rhs
             ),
@@ -572,6 +596,16 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseConvertDoubleToLongBits(null)", null);
   }
 
+  @Test
+  public void testRepeat()
+  {
+    assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat(null, 10)", null);
+    assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
@@ -581,11 +615,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
 
+
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
@@ -602,5 +639,7 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

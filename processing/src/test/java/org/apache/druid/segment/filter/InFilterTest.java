@@ -396,7 +396,12 @@ public class InFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(InDimFilter.InFilterDruidPredicateFactory.class)
                   .usingGetClass()
                   .withNonnullFields("values")
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields(
+                      "longPredicateSupplier",
+                      "floatPredicateSupplier",
+                      "doublePredicateSupplier",
+                      "stringPredicateSupplier"
+                  )
                   .verify();
   }
 

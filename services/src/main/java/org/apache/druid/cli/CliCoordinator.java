@@ -28,6 +28,7 @@ import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
@@ -46,8 +47,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
+import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.http.JettyHttpClientModule;
+import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -63,6 +67,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -71,6 +76,11 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.KillAuditLog;
+import org.apache.druid.server.coordinator.duty.KillCompactionConfig;
+import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
+import org.apache.druid.server.coordinator.duty.KillRules;
+import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
@@ -214,14 +224,14 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            final ConditionalMultibind<CoordinatorDuty> conditionalMultibind = ConditionalMultibind.create(
+            // Binding for Set of indexing service coordinator Ddty
+            final ConditionalMultibind<CoordinatorDuty> conditionalIndexingServiceDutyMultibind = ConditionalMultibind.create(
                 properties,
                 binder,
                 CoordinatorDuty.class,
                 CoordinatorIndexingServiceDuty.class
             );
-
-            if (conditionalMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
+            if (conditionalIndexingServiceDutyMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
               throw new UnsupportedOperationException(
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
@@ -230,17 +240,49 @@ public class CliCoordinator extends ServerRunnable
                   + "for more details about compaction."
               );
             }
-
-            conditionalMultibind.addConditionBinding(
+            conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
-            conditionalMultibind.addConditionBinding(
+            conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.pendingSegments.on",
                 "true",
                 Predicates.equalTo("true"),
                 KillStalePendingSegments.class
+            );
+
+            // Binding for Set of metadata store management coordinator Ddty
+            final ConditionalMultibind<CoordinatorDuty> conditionalMetadataStoreManagementDutyMultibind = ConditionalMultibind.create(
+                properties,
+                binder,
+                CoordinatorDuty.class,
+                CoordinatorMetadataStoreManagementDuty.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.supervisor.on",
+                Predicates.equalTo("true"),
+                KillSupervisors.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.audit.on",
+                Predicates.equalTo("true"),
+                KillAuditLog.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.rule.on",
+                Predicates.equalTo("true"),
+                KillRules.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.datasource.on",
+                Predicates.equalTo("true"),
+                KillDatasourceMetadata.class
+            );
+            conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
+                "druid.coordinator.kill.compaction.on",
+                Predicates.equalTo("true"),
+                KillCompactionConfig.class
             );
 
             bindNodeRoleAndAnnouncer(
@@ -251,6 +293,13 @@ public class CliCoordinator extends ServerRunnable
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+
+            if (!beOverlord) {
+              // These are needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
+              binder.bind(TaskStorage.class).toProvider(Providers.of(null));
+              binder.bind(TaskMaster.class).toProvider(Providers.of(null));
+              binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
+            }
           }
 
           @Provides

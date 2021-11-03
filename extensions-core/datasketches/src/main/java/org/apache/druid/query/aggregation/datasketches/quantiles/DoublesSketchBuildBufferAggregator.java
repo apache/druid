@@ -19,60 +19,52 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.datasketches.memory.WritableMemory;
-import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
 
 public class DoublesSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  private final ColumnValueSelector<Double> selector;
-  private final int size;
-  private final int maxIntermediateSize;
+  private final BaseDoubleColumnValueSelector selector;
+  private final DoublesSketchBuildBufferAggregatorHelper helper;
 
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<UpdateDoublesSketch>> sketches = new IdentityHashMap<>();
-
-  public DoublesSketchBuildBufferAggregator(final ColumnValueSelector<Double> valueSelector, final int size,
-      final int maxIntermediateSize)
+  public DoublesSketchBuildBufferAggregator(
+      final BaseDoubleColumnValueSelector valueSelector,
+      final int size,
+      final int maxIntermediateSize
+  )
   {
     this.selector = valueSelector;
-    this.size = size;
-    this.maxIntermediateSize = maxIntermediateSize;
+    this.helper = new DoublesSketchBuildBufferAggregatorHelper(size, maxIntermediateSize);
   }
 
   @Override
-  public synchronized void init(final ByteBuffer buffer, final int position)
+  public void init(ByteBuffer buf, int position)
   {
-    final WritableMemory mem = getMemory(buffer);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final UpdateDoublesSketch sketch = DoublesSketch.builder().setK(size).build(region);
-    putSketch(buffer, position, sketch);
+    helper.init(buf, position);
   }
 
   @Override
-  public synchronized void aggregate(final ByteBuffer buffer, final int position)
+  public void aggregate(final ByteBuffer buffer, final int position)
   {
     if (selector.isNull()) {
       return;
     }
-    final UpdateDoublesSketch sketch = sketches.get(buffer).get(position);
+
+    final UpdateDoublesSketch sketch = helper.getSketchAtPosition(buffer, position);
     sketch.update(selector.getDouble());
   }
 
+  @Nullable
   @Override
-  public synchronized Object get(final ByteBuffer buffer, final int position)
+  public Object get(ByteBuffer buf, int position)
   {
-    return sketches.get(buffer).get(position).compact();
+    return helper.get(buf, position);
   }
 
   @Override
@@ -88,42 +80,17 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public synchronized void close()
+  public void close()
   {
-    sketches.clear();
-    memCache.clear();
+    helper.clear();
   }
 
   // A small number of sketches may run out of the given memory, request more memory on heap and move there.
   // In that case we need to reuse the object from the cache as opposed to wrapping the new buffer.
   @Override
-  public synchronized void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    UpdateDoublesSketch sketch = sketches.get(oldBuffer).get(oldPosition);
-    final WritableMemory oldRegion = getMemory(oldBuffer).writableRegion(oldPosition, maxIntermediateSize);
-    if (sketch.isSameResource(oldRegion)) { // sketch was not relocated on heap
-      final WritableMemory newRegion = getMemory(newBuffer).writableRegion(newPosition, maxIntermediateSize);
-      sketch = UpdateDoublesSketch.wrap(newRegion);
-    }
-    putSketch(newBuffer, newPosition, sketch);
-
-    final Int2ObjectMap<UpdateDoublesSketch> map = sketches.get(oldBuffer);
-    map.remove(oldPosition);
-    if (map.isEmpty()) {
-      sketches.remove(oldBuffer);
-      memCache.remove(oldBuffer);
-    }
-  }
-
-  private WritableMemory getMemory(final ByteBuffer buffer)
-  {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN));
-  }
-
-  private void putSketch(final ByteBuffer buffer, final int position, final UpdateDoublesSketch sketch)
-  {
-    Int2ObjectMap<UpdateDoublesSketch> map = sketches.computeIfAbsent(buffer, buf -> new Int2ObjectOpenHashMap<>());
-    map.put(position, sketch);
+    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 
   @Override
@@ -131,5 +98,4 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
   {
     inspector.visit("selector", selector);
   }
-
 }

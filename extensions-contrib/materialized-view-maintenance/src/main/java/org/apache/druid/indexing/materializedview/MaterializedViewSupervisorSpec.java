@@ -192,7 +192,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.isCombineText(),
         tuningConfig.getUseCombiner(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getBuildV9Directly(),
         tuningConfig.getNumBackgroundPersistThreads(),
         tuningConfig.isForceExtendableShardSpecs(),
         true,

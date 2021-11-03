@@ -45,6 +45,11 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
 {
   private File inputDir;
 
+  public ParallelIndexPhaseRunnerTest()
+  {
+    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+  }
+
   @Before
   public void setup() throws IOException
   {
@@ -126,6 +131,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
           toolbox,
           supervisorTaskId,
           groupId,
+          supervisorTaskId,
           tuningConfig,
           Collections.emptyMap()
       );

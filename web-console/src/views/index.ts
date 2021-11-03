@@ -18,9 +18,9 @@
 
 export * from './datasource-view/datasource-view';
 export * from './home-view/home-view';
+export * from './ingestion-view/ingestion-view';
 export * from './load-data-view/load-data-view';
 export * from './lookups-view/lookups-view';
+export * from './query-view/query-view';
 export * from './segments-view/segments-view';
 export * from './services-view/services-view';
-export * from './query-view/query-view';
-export * from './ingestion-view/ingestion-view';

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryStats;
@@ -150,6 +151,11 @@ public class SqlLifecycle
     Map<String, Object> newContext = new HashMap<>();
     if (queryContext != null) {
       newContext.putAll(queryContext);
+    }
+    // "bySegment" results are never valid to use with SQL because the result format is incompatible
+    // so, overwrite any user specified context to avoid exceptions down the line
+    if (newContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
+      log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
     newContext.computeIfAbsent(PlannerContext.CTX_SQL_QUERY_ID, k -> UUID.randomUUID().toString());
     return newContext;
@@ -456,6 +462,22 @@ public class SqlLifecycle
       catch (Exception ex) {
         log.error(ex, "Unable to log SQL [%s]!", sql);
       }
+    }
+  }
+
+  @VisibleForTesting
+  public State getState()
+  {
+    synchronized (lock) {
+      return state;
+    }
+  }
+
+  @VisibleForTesting
+  public Map<String, Object> getQueryContext()
+  {
+    synchronized (lock) {
+      return queryContext;
     }
   }
 

@@ -57,6 +57,19 @@
     <cve>CVE-2020-12690</cve>
     <cve>CVE-2020-12691</cve>
   </suppress>
+  <suppress>
+    <!--
+      ~ CVE-2021-27568:
+      ~ dependency on hadoop 2.8.5 is blocking us from updating this dependency. Not a major concern since Druid
+      ~ eats uncaught exceptions, and only displays them in logs. This issue also should only affect ingestion
+      ~ jobs which can only be run by admin type users.
+      -->
+    <notes><![CDATA[
+   file name: json-smart-2.3.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-smart@.*$</packageUrl>
+    <cve>CVE-2021-27568</cve>
+  </suppress>
 
 
   <suppress>
@@ -156,6 +169,14 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.nimbusds/nimbus\-jose\-jwt@4.41.1$</packageUrl>
     <cve>CVE-2019-17195</cve>
+  </suppress>
+  <suppress>
+    <!-- This CVE is a false positive. The CVE is not for apacheds-i18n -->
+    <notes><![CDATA[
+   file name: apacheds-i18n-2.0.0-M15.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@.*$</packageUrl>
+    <cve>CVE-2020-7791</cve>
   </suppress>
   <suppress>
       <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
@@ -307,7 +328,7 @@
      ]]></notes>
     <cve>CVE-2017-15288</cve>
   </suppress>
-  <suppress until="2021-04-30">
+  <suppress until="2021-05-30">
     <!-- Suppress this until https://github.com/apache/druid/issues/11028 is resolved. -->
     <notes><![CDATA[
      This vulnerability should be fixed soon and the suppression should be removed.

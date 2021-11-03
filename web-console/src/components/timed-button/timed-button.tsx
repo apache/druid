@@ -16,16 +16,9 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  ButtonGroup,
-  IButtonProps,
-  Menu,
-  MenuDivider,
-  MenuItem,
-  Popover,
-} from '@blueprintjs/core';
+import { Button, ButtonGroup, ButtonProps, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
@@ -36,7 +29,7 @@ export interface DelayLabel {
   delay: number;
 }
 
-export interface TimedButtonProps extends IButtonProps {
+export interface TimedButtonProps extends ButtonProps {
   delays: DelayLabel[];
   onRefresh: (auto: boolean) => void;
   localStorageKey?: LocalStorageKeys;
@@ -77,7 +70,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   return (
     <ButtonGroup className="timed-button">
       <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
-      <Popover
+      <Popover2
         content={
           <Menu>
             <MenuDivider title={label} />
@@ -93,7 +86,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
         }
       >
         <Button {...other} rightIcon={IconNames.CARET_DOWN} />
-      </Popover>
+      </Popover2>
     </ButtonGroup>
   );
 });

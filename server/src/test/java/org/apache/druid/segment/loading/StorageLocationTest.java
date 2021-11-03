@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.AlertBuilder;
@@ -30,18 +29,25 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 
 /**
  */
 public class StorageLocationTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
+  @SuppressWarnings("GuardedBy")
   public void testStorageLocationFreePercent()
   {
     // free space ignored only maxSize matters
@@ -61,10 +67,10 @@ public class StorageLocationTest
   }
 
   @Test
-  public void testStorageLocationRealFileSystem()
+  @SuppressWarnings("GuardedBy")
+  public void testStorageLocationRealFileSystem() throws IOException
   {
-    File file = FileUtils.createTempDir();
-    file.deleteOnExit();
+    File file = temporaryFolder.newFolder();
     StorageLocation location = new StorageLocation(file, 10_000, 100.0d);
     Assert.assertFalse(location.canHandle(newSegmentId("2012/2013").toString(), 5_000));
 
@@ -82,10 +88,11 @@ public class StorageLocationTest
   }
 
   @Test
-  public void testStorageLocation()
+  public void testStorageLocation() throws IOException
   {
+    File dir = temporaryFolder.newFolder();
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
+    StorageLocation loc = new StorageLocation(dir, expectedAvail, null);
 
     verifyLoc(expectedAvail, loc);
 
@@ -102,26 +109,28 @@ public class StorageLocationTest
     expectedAvail -= 23;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail += 10;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("/tmp/test2"), secondSegment);
+    loc.removeSegmentDir(new File(dir, "test2"), secondSegment);
     expectedAvail += 23;
     verifyLoc(expectedAvail, loc);
   }
 
   @Test
-  public void testMaybeReserve()
+  public void testMaybeReserve() throws IOException
   {
     ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     ArgumentCaptor<ServiceEventBuilder> argumentCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
     EmittingLogger.registerEmitter(emitter);
+
+    File dir = temporaryFolder.newFolder();
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
+    StorageLocation loc = new StorageLocation(dir, expectedAvail, null);
 
     verifyLoc(expectedAvail, loc);
 
@@ -138,7 +147,7 @@ public class StorageLocationTest
     expectedAvail -= 23;
     verifyLoc(expectedAvail, loc);
 
-    loc.removeSegmentDir(new File("/tmp/test1"), makeSegment("2012-01-01/2012-01-02", 10));
+    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
     expectedAvail += 10;
     verifyLoc(expectedAvail, loc);
 
@@ -153,6 +162,28 @@ public class StorageLocationTest
     Assert.assertTrue(description, description.contains("Please increase druid.segmentCache.locations maxSize param"));
   }
 
+  @Test
+  public void testReserveAndRelease() throws IOException
+  {
+    File dir = temporaryFolder.newFolder();
+    StorageLocation loc = new StorageLocation(dir, 1000L, null);
+
+    File reserved = loc.reserve("testPath", "segmentId", 100L);
+    Assert.assertNotNull(reserved);
+    Assert.assertEquals(new File(dir, "testPath"), reserved.getAbsoluteFile());
+    Assert.assertEquals(900L, loc.availableSizeBytes());
+    Assert.assertTrue(loc.contains("testPath"));
+
+    Assert.assertNull(loc.reserve("testPath", "segmentId", 100L));
+
+    Assert.assertTrue(loc.release("testPath", 100L));
+    Assert.assertEquals(1000L, loc.availableSizeBytes());
+    Assert.assertFalse(loc.contains("testPath"));
+
+    Assert.assertFalse(loc.release("testPath", 100L));
+  }
+
+  @SuppressWarnings("GuardedBy")
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
     Assert.assertEquals(maxSize, loc.availableSizeBytes());

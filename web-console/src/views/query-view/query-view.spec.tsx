@@ -21,22 +21,23 @@ import React from 'react';
 
 import { QueryView } from './query-view';
 
-describe('sql view', () => {
+describe('QueryView', () => {
   it('matches snapshot', () => {
-    const sqlView = shallow(<QueryView initQuery={'test'} />);
+    const sqlView = shallow(<QueryView initQuery="test" />);
     expect(sqlView).toMatchSnapshot();
   });
 
   it('matches snapshot with query', () => {
-    const sqlView = shallow(<QueryView initQuery={'SELECT +3'} />);
+    const sqlView = shallow(<QueryView initQuery="SELECT +3" />);
     expect(sqlView).toMatchSnapshot();
   });
 
-  it('trimSemicolon', () => {
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-    expect(QueryView.trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual(
-      'SELECT * FROM tbl --hello  ',
+  it('.formatStr', () => {
+    expect(QueryView.formatStr(null, 'csv')).toEqual('"null"');
+    expect(QueryView.formatStr('hello\nworld', 'csv')).toEqual('"hello world"');
+    expect(QueryView.formatStr(123, 'csv')).toEqual('"123"');
+    expect(QueryView.formatStr(new Date('2021-01-02T03:04:05.678Z'), 'csv')).toEqual(
+      '"2021-01-02T03:04:05.678Z"',
     );
   });
 });

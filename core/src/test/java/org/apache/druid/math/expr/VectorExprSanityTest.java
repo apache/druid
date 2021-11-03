@@ -415,29 +415,6 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
                  .toArray(String[][]::new);
   }
 
-  static class SettableObjectBinding implements Expr.ObjectBinding
-  {
-    private final Map<String, Object> bindings;
-
-    SettableObjectBinding()
-    {
-      this.bindings = new HashMap<>();
-    }
-
-    @Nullable
-    @Override
-    public Object get(String name)
-    {
-      return bindings.get(name);
-    }
-
-    public SettableObjectBinding withBinding(String name, @Nullable Object value)
-    {
-      bindings.put(name, value);
-      return this;
-    }
-  }
-
   static class SettableVectorInputBinding implements Expr.VectorInputBinding
   {
     private final Map<String, boolean[]> nulls;

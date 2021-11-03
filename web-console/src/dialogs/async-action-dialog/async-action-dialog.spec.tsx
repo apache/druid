@@ -29,9 +29,9 @@ describe('async action dialog', () => {
           return Promise.resolve();
         }}
         onClose={() => {}}
-        confirmButtonText={'test'}
-        successText={'test'}
-        failText={'test'}
+        confirmButtonText="test"
+        successText="test"
+        failText="test"
       />
     );
     render(asyncActionDialog);

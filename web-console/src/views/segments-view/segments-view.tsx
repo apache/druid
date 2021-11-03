@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import { SqlExpression, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -30,6 +31,7 @@ import {
   BracedText,
   MoreButton,
   RefreshButton,
+  SegmentTimeline,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
@@ -39,6 +41,8 @@ import { Api } from '../../singletons';
 import {
   addFilter,
   booleanCustomTableFilter,
+  Capabilities,
+  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
@@ -47,19 +51,19 @@ import {
   getNeedleAndMode,
   LocalStorageKeys,
   makeBooleanFilter,
+  NumberLike,
   queryDruidSql,
   QueryManager,
   QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
-import { Capabilities, CapabilitiesMode } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './segments-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Segment ID',
     'Datasource',
     'Start',
@@ -141,7 +145,7 @@ interface SegmentQueryResultRow {
   partitioning: string;
   size: number;
   partition_num: number;
-  num_rows: number;
+  num_rows: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
@@ -159,6 +163,7 @@ export interface SegmentsViewState {
   terminateDatasourceId?: string;
   hiddenColumns: LocalStorageBackedArray<string>;
   groupByInterval: boolean;
+  showSegmentTimeline: boolean;
 }
 
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
@@ -231,7 +236,7 @@ END AS "partitioning"`,
     return 'Sub minute';
   }
 
-  private segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
 
   private lastTableState: TableState | undefined;
 
@@ -250,6 +255,7 @@ END AS "partitioning"`,
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
       groupByInterval: false,
+      showSegmentTimeline: false,
     };
 
     this.segmentsQueryManager = new QueryManager({
@@ -342,9 +348,9 @@ END AS "partitioning"`,
           setIntermediateQuery(sqlQuery);
           return await queryDruidSql({ query: sqlQuery });
         } else if (capabilities.hasCoordinatorAccess()) {
-          let datasourceList: string[] = (await Api.instance.get(
-            '/druid/coordinator/v1/metadata/datasources',
-          )).data;
+          let datasourceList: string[] = (
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+          ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
@@ -364,9 +370,11 @@ END AS "partitioning"`,
 
           const n = Math.min(datasourceList.length, maxResults);
           for (let i = 0; i < n && results.length < maxResults; i++) {
-            const segments = (await Api.instance.get(
-              `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
-            )).data.segments;
+            const segments = (
+              await Api.instance.get(
+                `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+              )
+            ).data.segments;
             if (!Array.isArray(segments)) continue;
 
             let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
@@ -422,7 +430,7 @@ END AS "partitioning"`,
     this.segmentsQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
     const { capabilities } = this.props;
     const { hiddenColumns } = this.state;
     if (tableState) this.lastTableState = tableState;
@@ -742,13 +750,18 @@ END AS "partitioning"`,
       datasourceTableActionDialogId,
       actions,
       hiddenColumns,
+      showSegmentTimeline,
     } = this.state;
     const { capabilities } = this.props;
     const { groupByInterval } = this.state;
 
     return (
       <>
-        <div className="segments-view app-view">
+        <div
+          className={classNames('segments-view app-view', {
+            'show-segment-timeline': showSegmentTimeline,
+          })}
+        >
           <ViewControlBar label="Segments">
             <RefreshButton
               onRefresh={auto => this.segmentsQueryManager.rerunLastQuery(auto)}
@@ -776,6 +789,12 @@ END AS "partitioning"`,
               </Button>
             </ButtonGroup>
             {this.renderBulkSegmentsActions()}
+            <Switch
+              checked={showSegmentTimeline}
+              label="Show segment timeline"
+              onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+              disabled={!capabilities.hasSqlOrCoordinatorAccess()}
+            />
             <TableColumnSelector
               columns={tableColumns[capabilities.getMode()]}
               onChange={column =>
@@ -790,6 +809,7 @@ END AS "partitioning"`,
               tableColumnsHidden={hiddenColumns.storedArray}
             />
           </ViewControlBar>
+          {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
           {this.renderSegmentsTable()}
         </div>
         {this.renderTerminateSegmentAction()}

@@ -60,7 +60,9 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class is for testing both timeseries and groupBy queries with the same set of queries.
@@ -111,7 +113,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
           final List<VirtualColumn> virtualColumns = new ArrayList<>(
               Arrays.asList(tsQuery.getVirtualColumns().getVirtualColumns())
           );
+          Map<String, Object> theContext = tsQuery.getContext();
           if (timeDimension != null) {
+            theContext = new HashMap<>(tsQuery.getContext());
             final PeriodGranularity granularity = (PeriodGranularity) tsQuery.getGranularity();
             virtualColumns.add(
                 new ExpressionVirtualColumn(
@@ -121,6 +125,10 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                     TestExprMacroTable.INSTANCE
                 )
             );
+
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timeDimension);
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
           }
 
           GroupByQuery newQuery = GroupByQuery
@@ -137,7 +145,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
               .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
               .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
               .setVirtualColumns(VirtualColumns.create(virtualColumns))
-              .setContext(tsQuery.getContext())
+              .setContext(theContext)
               .build();
 
           return Sequences.map(
@@ -302,33 +310,5 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.
-  }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForArrayResponse();
-    }
-  }
-
-  @Override
-  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithTimestampResultFieldContextForMapResponse();
-    }
-  }
-
-  @Override
-  @Test
-  public void testTimeseriesWithPostAggregatorReferencingTimestampResultField()
-  {
-    // Cannot vectorize with an expression virtual column
-    if (!vectorize) {
-      super.testTimeseriesWithPostAggregatorReferencingTimestampResultField();
-    }
   }
 }

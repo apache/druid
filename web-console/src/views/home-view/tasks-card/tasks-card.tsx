@@ -22,8 +22,7 @@ import React from 'react';
 import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
-import { Capabilities } from '../../../utils';
+import { Capabilities, lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 function getTaskStatus(d: any) {
@@ -53,7 +52,11 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
 FROM sys.tasks
 GROUP BY 1`,
         });
-        return lookupBy(taskCountsFromQuery, x => x.status, x => x.count);
+        return lookupBy(
+          taskCountsFromQuery,
+          x => x.status,
+          x => x.count,
+        );
       } else if (capabilities.hasOverlordAccess()) {
         const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks')).data;
         return {
@@ -80,9 +83,9 @@ GROUP BY 1`,
   return (
     <HomeViewCard
       className="tasks-card"
-      href={'#ingestion'}
+      href="#ingestion"
       icon={IconNames.GANTT_CHART}
-      title={'Tasks'}
+      title="Tasks"
       loading={taskCountState.loading}
       error={taskCountState.error}
     >

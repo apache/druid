@@ -45,6 +45,7 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -109,6 +110,8 @@ public class DruidMeta extends MetaImpl
         context.put(entry);
       }
     }
+    // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
+    context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
     openDruidConnection(ch.id, context.build());
   }
 

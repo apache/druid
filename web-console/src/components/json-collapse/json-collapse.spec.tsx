@@ -25,7 +25,7 @@ import { JsonCollapse } from './json-collapse';
 describe('JsonCollapse', () => {
   it('matches snapshot', () => {
     const jsonCollapse = shallow(
-      <JsonCollapse buttonText={'test'} stringValue={JSONBig.stringify({ name: 'test' })} />,
+      <JsonCollapse buttonText="test" stringValue={JSONBig.stringify({ name: 'test' })} />,
     );
     expect(jsonCollapse).toMatchSnapshot();
   });

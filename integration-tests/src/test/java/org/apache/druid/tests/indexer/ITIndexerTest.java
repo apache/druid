@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -28,10 +29,16 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
+import org.joda.time.Interval;
+import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 @Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
@@ -64,6 +71,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
   private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_TASK = "/indexer/wikipedia_index_with_merge_column_limit_task.json";
   private static final String INDEX_WITH_MERGE_COLUMN_LIMIT_DATASOURCE = "wikipedia_index_with_merge_column_limit_test";
+
+  private static final String GET_LOCKED_INTERVALS = "wikipedia_index_get_locked_intervals_test";
 
   private static final CoordinatorDynamicConfig DYNAMIC_CONFIG_PAUSED =
       CoordinatorDynamicConfig.builder().withPauseCoordination(true).build();
@@ -294,4 +303,37 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
       );
     }
   }
+
+  @Test
+  public void testGetLockedIntervals() throws Exception
+  {
+    final String datasourceName = GET_LOCKED_INTERVALS + config.getExtraDatasourceNameSuffix();
+    try (final Closeable ignored = unloader(datasourceName)) {
+      // Submit an Indexing Task
+      submitIndexTask(INDEX_TASK, datasourceName);
+
+      // Wait until it acquires a lock
+      final Map<String, Integer> minTaskPriority = Collections.singletonMap(datasourceName, 0);
+      final Map<String, List<Interval>> lockedIntervals = new HashMap<>();
+      ITRetryUtil.retryUntilFalse(
+          () -> {
+            lockedIntervals.clear();
+            lockedIntervals.putAll(indexer.getLockedIntervals(minTaskPriority));
+            return lockedIntervals.isEmpty();
+          },
+          "Verify Intervals are Locked"
+      );
+
+      // Verify the locked intervals for this datasource
+      Assert.assertEquals(lockedIntervals.size(), 1);
+      Assert.assertEquals(
+          lockedIntervals.get(datasourceName),
+          Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
+      );
+
+      waitForAllTasksToCompleteForDataSource(datasourceName);
+    }
+
+  }
+
 }

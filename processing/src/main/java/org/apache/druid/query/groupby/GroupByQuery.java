@@ -73,6 +73,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -88,6 +89,9 @@ import java.util.stream.Collectors;
 public class GroupByQuery extends BaseQuery<ResultRow>
 {
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
+  public static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
   private static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
 
   private static final Comparator<ResultRow> NON_GRANULAR_TIME_COMP =
@@ -776,6 +780,19 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public Sequence<ResultRow> postProcess(Sequence<ResultRow> results)
   {
     return postProcessingFn.apply(results);
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        dimensions,
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   @Override

@@ -34,30 +34,50 @@ import java.util.Objects;
  */
 public class S3InputSourceConfig
 {
+  @JsonProperty
+  private String assumeRoleArn;
+  @JsonProperty
+  private String assumeRoleExternalId;
+  @JsonProperty
+  private PasswordProvider accessKeyId;
+  @JsonProperty
+  private PasswordProvider secretAccessKey;
+
   @JsonCreator
   public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
-      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
+      @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey,
+      @JsonProperty("assumeRoleArn") @Nullable String assumeRoleArn,
+      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId
   )
   {
+    this.assumeRoleArn = assumeRoleArn;
+    this.assumeRoleExternalId = assumeRoleExternalId;
     if (accessKeyId != null || secretAccessKey != null) {
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
     }
   }
 
-  @JsonProperty
-  private PasswordProvider accessKeyId;
+  @Nullable
+  public String getAssumeRoleArn()
+  {
+    return assumeRoleArn;
+  }
 
-  @JsonProperty
-  private PasswordProvider secretAccessKey;
+  @Nullable
+  public String getAssumeRoleExternalId()
+  {
+    return assumeRoleExternalId;
+  }
 
-
+  @Nullable
   public PasswordProvider getAccessKeyId()
   {
     return accessKeyId;
   }
 
+  @Nullable
   public PasswordProvider getSecretAccessKey()
   {
     return secretAccessKey;
@@ -76,6 +96,8 @@ public class S3InputSourceConfig
     return "S3InputSourceConfig{" +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
+           ", assumeRoleArn=" + assumeRoleArn +
+           ", assumeRoleExternalId=" + assumeRoleExternalId +
            '}';
   }
 
@@ -90,12 +112,14 @@ public class S3InputSourceConfig
     }
     S3InputSourceConfig that = (S3InputSourceConfig) o;
     return Objects.equals(accessKeyId, that.accessKeyId) &&
-           Objects.equals(secretAccessKey, that.secretAccessKey);
+           Objects.equals(secretAccessKey, that.secretAccessKey) &&
+           Objects.equals(assumeRoleArn, that.assumeRoleArn) &&
+           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(accessKeyId, secretAccessKey);
+    return Objects.hash(accessKeyId, secretAccessKey, assumeRoleArn, assumeRoleExternalId);
   }
 }

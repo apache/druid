@@ -34,7 +34,7 @@ export class DataLoader {
 
   constructor(props: DataLoaderProps) {
     Object.assign(this, props);
-    this.baseUrl = props.unifiedConsoleUrl! + '#load-data';
+    this.baseUrl = props.unifiedConsoleUrl + '#load-data';
   }
 
   /**
@@ -74,7 +74,7 @@ export class DataLoader {
     const previewSelector = '.raw-lines';
     await this.page.waitForSelector(previewSelector);
     const preview = await this.page.$eval(previewSelector, el => (el as HTMLTextAreaElement).value);
-    validator(preview!);
+    validator(preview);
   }
 
   private async parseData() {

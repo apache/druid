@@ -37,10 +37,13 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -154,6 +157,19 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
+  }
+
+  @Nullable
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return Queries.computeRequiredColumns(
+        virtualColumns,
+        dimFilter,
+        Collections.singletonList(dimensionSpec),
+        aggregatorSpecs,
+        Collections.emptyList()
+    );
   }
 
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)

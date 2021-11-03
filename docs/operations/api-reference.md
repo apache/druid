@@ -104,7 +104,7 @@ Returns the number of segments left to load until segments that should be loaded
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
-* `/druid/coordinator/v1/loadstatus?full?computeUsingClusterView`
+* `/druid/coordinator/v1/loadstatus?full&computeUsingClusterView`
 
 Returns the number of segments not yet loaded for each tier until all segments loading in the cluster are available.
 The result includes segment replication counts. It also factors in the number of available nodes that are of a service type that can load the segment when computing the number of segments remaining to load.
@@ -468,7 +468,7 @@ This is only valid for dataSource which has compaction enabled.
 
 * `/druid/coordinator/v1/compaction/status`
 
-Returns the status and statistics from the latest auto compaction run of all dataSources which have/had auto compaction enabled.
+Returns the status and statistics from the auto compaction run of all dataSources which have auto compaction enabled in the latest run.
 The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto compaction enabled). 
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
