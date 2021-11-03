@@ -47,7 +47,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(COMBINING_INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored2 = unloader(COMBINING_INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       final Function<String, String> combiningFirehoseSpecTransform = spec -> {
         try {
@@ -63,11 +63,32 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
       };
       final Function<String, String> transform = spec -> {
         try {
-          return StringUtils.replace(
+          spec = StringUtils.replace(
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString("0")
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString("{}")
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          return spec;
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);

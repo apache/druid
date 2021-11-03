@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -38,7 +37,6 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
 {
-  private static final Logger LOG = new Logger(ITTestCoordinatorPausedTest.class);
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -60,11 +58,34 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
 
       final Function<String, String> transform = spec -> {
         try {
-          return StringUtils.replace(
+
+          spec = StringUtils.replace(
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString("0")
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString("{}")
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          return spec;
+
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);

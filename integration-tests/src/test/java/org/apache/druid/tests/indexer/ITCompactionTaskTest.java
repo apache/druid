@@ -196,6 +196,26 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
           "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
           jsonMapper.writeValueAsString("0")
       );
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%PARTITIONS_SPEC%%",
+          jsonMapper.writeValueAsString("{}")
+      );
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%FORCE_GUARANTEED_ROLLUP%%",
+          jsonMapper.writeValueAsString(false)
+      );
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%MAX_INTERVALS_INGESTED%%",
+          jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+      );
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%MAX_SEGMENTS_INGESTED%%",
+          jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+      );
 
       queryHelper.testQueriesFromString(queryResponseTemplate);
       compactData(compactionResource, newSegmentGranularity, null);

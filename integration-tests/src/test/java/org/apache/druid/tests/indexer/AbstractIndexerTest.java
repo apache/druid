@@ -110,6 +110,27 @@ public abstract class AbstractIndexerTest
         "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
         jsonMapper.writeValueAsString("0")
     );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%PARTITIONS_SPEC%%",
+        jsonMapper.writeValueAsString("{}")
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%FORCE_GUARANTEED_ROLLUP%%",
+        jsonMapper.writeValueAsString(false)
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%MAX_INTERVALS_INGESTED%%",
+        jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%MAX_SEGMENTS_INGESTED%%",
+        jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+    );
+
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
 

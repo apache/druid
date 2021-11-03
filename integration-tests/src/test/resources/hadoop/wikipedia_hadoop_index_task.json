@@ -81,6 +81,8 @@
       "type": "hadoop",
       "partitionsSpec": %%PARTITIONS_SPEC%%,
       "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%,
+      "maxIntervalsIngested": %%MAX_INTERVALS_INGESTED%%,
+      "maxSegmentsIngested": %%MAX_SEGMENTS_INGESTED%%,
       "jobProperties": {
         "fs.permissions.umask-mode": "022",
         "fs.default.name" : "hdfs://druid-it-hadoop:9000",

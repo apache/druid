@@ -49,11 +49,32 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
 
       final Function<String, String> transform = spec -> {
         try {
-          return StringUtils.replace(
+          spec = StringUtils.replace(
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString("0")
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString("{}")
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          return spec;
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);

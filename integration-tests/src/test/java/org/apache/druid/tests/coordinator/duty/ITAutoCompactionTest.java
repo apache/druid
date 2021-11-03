@@ -693,6 +693,26 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
         jsonMapper.writeValueAsString("0")
     );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%PARTITIONS_SPEC%%",
+        jsonMapper.writeValueAsString("{}")
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%FORCE_GUARANTEED_ROLLUP%%",
+        jsonMapper.writeValueAsString(false)
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%MAX_INTERVALS_INGESTED%%",
+        jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+    );
+    taskSpec = StringUtils.replace(
+        taskSpec,
+        "%%MAX_SEGMENTS_INGESTED%%",
+        jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+    );
     for (Map.Entry<String, Object> entry : specs.entrySet()) {
       taskSpec = StringUtils.replace(
           taskSpec,

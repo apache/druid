@@ -79,8 +79,11 @@
         },
         "tuningConfig": {
             "type": "index",
-            "maxRowsPerSegment": 3,
-            "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%
+            "partitionsSpec": %%PARTITIONS_SPEC%%,
+            "forceGuaranteedRollup": %%FORCE_GUARANTEED_ROLLUP%%,
+            "awaitSegmentAvailabilityTimeoutMillis": %%SEGMENT_AVAIL_TIMEOUT_MILLIS%%,
+            "maxIntervalsIngested": %%MAX_INTERVALS_INGESTED%%,
+            "maxSegmentsIngested": %%MAX_SEGMENTS_INGESTED%%
         }
     }
 }
