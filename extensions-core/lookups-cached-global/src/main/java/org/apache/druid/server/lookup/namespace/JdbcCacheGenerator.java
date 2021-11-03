@@ -101,9 +101,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         Handle handle = getHandle(entryId, namespace);
         ResultIterator<Pair<String, String>> pairs = getLookupPairs(handle, namespace)) {
       final Map<String, String> cache = versionedCache.getCache();
-      final MapPopulator.PopulateResult populateResult = new MapPopulator<String, String>(
-          null
-      ).populateAndWarnAtByteLimit(
+      final MapPopulator.PopulateResult populateResult = MapPopulator.populateAndWarnAtByteLimit(
           pairs,
           cache,
           (long) (MAX_MEMORY * namespace.getMaxHeapPercentage() / 100.0),
