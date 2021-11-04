@@ -74,7 +74,8 @@ public abstract class AbstractGcsInputHadoopIndexTest extends AbstractITBatchInd
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

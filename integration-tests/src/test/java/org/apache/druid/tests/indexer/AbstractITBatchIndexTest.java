@@ -108,7 +108,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       boolean waitForNewVersion,
       boolean runTestQueries,
       boolean waitForSegmentsToLoad,
-      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
+      boolean expectSuccess
   ) throws IOException
   {
     doIndexTest(
@@ -119,7 +120,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         waitForNewVersion,
         runTestQueries,
         waitForSegmentsToLoad,
-        segmentAvailabilityConfirmationPair
+        segmentAvailabilityConfirmationPair,
+        expectSuccess
     );
   }
 
@@ -131,7 +133,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       boolean waitForNewVersion,
       boolean runTestQueries,
       boolean waitForSegmentsToLoad,
-      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
+      boolean expectSuccess
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -148,9 +151,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullDatasourceName,
         waitForNewVersion,
         waitForSegmentsToLoad,
-        segmentAvailabilityConfirmationPair
+        segmentAvailabilityConfirmationPair,
+        expectSuccess
     );
-    if (runTestQueries) {
+    if (expectSuccess && runTestQueries) {
       doTestQuery(dataSource, queryFilePath);
     }
   }
@@ -230,7 +234,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullReindexDatasourceName,
         false,
         true,
-        segmentAvailabilityConfirmationPair
+        segmentAvailabilityConfirmationPair,
+        true
     );
     try {
       String queryResponseTemplate;
@@ -292,7 +297,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
 
     Pair<Boolean, Boolean> dummyPair = new Pair<>(false, false);
-    submitTaskAndWait(taskSpec, fullDatasourceName, false, true, dummyPair);
+    submitTaskAndWait(taskSpec, fullDatasourceName, false, true, dummyPair, true);
     try {
       sqlQueryHelper.testQueriesFromFile(queryFilePath);
     }
@@ -307,7 +312,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String dataSourceName,
       boolean waitForNewVersion,
       boolean waitForSegmentsToLoad,
-      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
+      boolean expectSuccess
   )
   {
     final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
@@ -320,7 +326,12 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
+    if (!expectSuccess) {
+      indexer.waitUntilTaskFails(taskID);
+      return;
+    } else {
+      indexer.waitUntilTaskCompletes(taskID);
+    }
 
     if (assertRunsSubTasks) {
       final boolean perfectRollup = !taskSpec.contains("dynamic");

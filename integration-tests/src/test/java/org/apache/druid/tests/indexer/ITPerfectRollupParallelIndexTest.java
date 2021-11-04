@@ -102,7 +102,8 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
 
       doReindexTest(

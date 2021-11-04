@@ -21,6 +21,8 @@ package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -103,7 +105,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
@@ -135,7 +137,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doReindexTest(
           INDEX_DATASOURCE,
@@ -155,6 +158,162 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   }
 
   @Test
+  public void testIndexDataDynamicPartitioningShortCircuitIntervals() throws Exception
+  {
+    DynamicPartitionsSpec dynamicPartitionsSpec = new DynamicPartitionsSpec(3, 5000L);
+
+    final Function<String, String> transform = spec -> {
+      try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(dynamicPartitionsSpec)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%FORCE_GUARANTEED_ROLLUP%%",
+            jsonMapper.writeValueAsString(false)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_INTERVALS_INGESTED%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENTS_INGESTED%%",
+            jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+        );
+        return spec;
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    doIndexTest(
+        INDEX_DATASOURCE,
+        INDEX_TASK,
+        transform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        true,
+        true,
+        new Pair<>(false, false),
+        false
+    );
+  }
+
+  @Test
+  public void testIndexDataHashedPartitioningShortCircuitIntervals() throws Exception
+  {
+    HashedPartitionsSpec hashedPartitionsSpec = HashedPartitionsSpec.defaultSpec();
+
+    final Function<String, String> transform = spec -> {
+      try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(hashedPartitionsSpec)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%FORCE_GUARANTEED_ROLLUP%%",
+            jsonMapper.writeValueAsString(true)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_INTERVALS_INGESTED%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENTS_INGESTED%%",
+            jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+        );
+        return spec;
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    doIndexTest(
+        INDEX_DATASOURCE,
+        INDEX_TASK,
+        transform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        true,
+        true,
+        new Pair<>(false, false),
+        false
+    );
+  }
+
+  @Test
+  public void testIndexDataHashedPartitioningShortCircuitSegments() throws Exception
+  {
+    HashedPartitionsSpec hashedPartitionsSpec = HashedPartitionsSpec.defaultSpec();
+
+    final Function<String, String> transform = spec -> {
+      try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(hashedPartitionsSpec)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%FORCE_GUARANTEED_ROLLUP%%",
+            jsonMapper.writeValueAsString(true)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_INTERVALS_INGESTED%%",
+            jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENTS_INGESTED%%",
+            jsonMapper.writeValueAsString("0")
+        );
+        return spec;
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    doIndexTest(
+        INDEX_DATASOURCE,
+        INDEX_TASK,
+        transform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        true,
+        true,
+        new Pair<>(false, false),
+        false
+    );
+  }
+
+  @Test
   public void testReIndexDataWithTimestamp() throws Exception
   {
     final String reindexDatasource = REINDEX_DATASOURCE + "-testReIndexDataWithTimestamp";
@@ -171,7 +330,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doReindexTest(
           INDEX_WITH_TIMESTAMP_DATASOURCE,
@@ -215,7 +375,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
         fullReindexDatasourceName,
         false,
         false,
-        dummyPair
+        dummyPair,
+        true
     );
   }
 
@@ -236,7 +397,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doReindexTest(
           MERGE_INDEX_DATASOURCE,
@@ -276,7 +438,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
@@ -309,7 +471,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(true, true)
+          new Pair<>(true, true),
+          true
       );
     }
   }
@@ -337,7 +500,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
@@ -369,7 +532,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           false,
           false,
-          new Pair<>(true, false)
+          new Pair<>(true, false),
+          true
       );
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
       ITRetryUtil.retryUntilTrue(
@@ -392,7 +556,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }

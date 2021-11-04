@@ -128,7 +128,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }
@@ -177,7 +178,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
 
       doReindexTest(
@@ -239,7 +241,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(true, true)
+          new Pair<>(true, true),
+          true
       );
     }
   }
@@ -296,7 +299,8 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           false,
           false,
           false,
-          new Pair<>(true, false)
+          new Pair<>(true, false),
+          true
       );
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
       ITRetryUtil.retryUntilTrue(

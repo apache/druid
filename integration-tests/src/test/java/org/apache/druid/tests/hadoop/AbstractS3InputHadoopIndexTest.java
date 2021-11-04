@@ -91,7 +91,8 @@ public abstract class AbstractS3InputHadoopIndexTest extends AbstractITBatchInde
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

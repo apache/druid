@@ -183,7 +183,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         false,
         false,
         true,
-        segmentAvailabilityConfirmationPair
+        segmentAvailabilityConfirmationPair,
+        true
     );
   }
 }

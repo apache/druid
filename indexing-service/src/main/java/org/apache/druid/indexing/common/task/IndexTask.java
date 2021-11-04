@@ -67,6 +67,7 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -495,11 +496,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
               partitionAnalysis.getAggregateSegmentCount()
           );
-          throw new RuntimeException(
+          throw new RE(
               StringUtils.format("This ingestion task was determined to have breached the limit of [%d] segments ingested. "
-                            + "Total segments that would be ingested by this task: [%d]",
-                            ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
-                            partitionAnalysis.getAggregateSegmentCount()
+                                 + "Total segments that would be ingested by this task: [%d]",
+                                 ingestionSchema.getTuningConfig().getMaxSegmentsIngested(),
+                                 partitionAnalysis.getAggregateSegmentCount()
               )
           );
         }
@@ -515,7 +516,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               ingestionSchema.getTuningConfig().getMaxIntervalsIngested(),
               partitionAnalysis.getNumTimePartitions()
           );
-          throw new RuntimeException(
+          throw new RE(
               StringUtils.format("This ingestion task was determined to have breached the limit of [%d] intervals ingested. "
                             + "Total intervals that would be ingested by this task: [%d]",
                             ingestionSchema.getTuningConfig().getMaxIntervalsIngested(),

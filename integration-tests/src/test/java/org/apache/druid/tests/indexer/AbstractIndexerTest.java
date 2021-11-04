@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -113,7 +114,7 @@ public abstract class AbstractIndexerTest
     taskSpec = StringUtils.replace(
         taskSpec,
         "%%PARTITIONS_SPEC%%",
-        jsonMapper.writeValueAsString("{}")
+        jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
     );
     taskSpec = StringUtils.replace(
         taskSpec,

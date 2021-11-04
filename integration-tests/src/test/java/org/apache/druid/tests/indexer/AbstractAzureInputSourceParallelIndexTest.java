@@ -129,7 +129,8 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

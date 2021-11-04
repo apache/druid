@@ -108,7 +108,8 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

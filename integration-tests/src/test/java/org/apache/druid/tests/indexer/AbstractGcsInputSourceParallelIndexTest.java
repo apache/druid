@@ -129,7 +129,8 @@ public abstract class AbstractGcsInputSourceParallelIndexTest extends AbstractIT
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

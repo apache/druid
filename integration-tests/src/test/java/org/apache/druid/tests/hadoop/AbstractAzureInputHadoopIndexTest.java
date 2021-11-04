@@ -78,7 +78,8 @@ public abstract class AbstractAzureInputHadoopIndexTest extends AbstractITBatchI
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

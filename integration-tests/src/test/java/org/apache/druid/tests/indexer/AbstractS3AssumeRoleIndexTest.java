@@ -112,7 +112,8 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }
@@ -256,7 +257,8 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }

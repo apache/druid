@@ -696,7 +696,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     taskSpec = StringUtils.replace(
         taskSpec,
         "%%PARTITIONS_SPEC%%",
-        jsonMapper.writeValueAsString("{}")
+        jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
     );
     taskSpec = StringUtils.replace(
         taskSpec,

@@ -129,7 +129,8 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

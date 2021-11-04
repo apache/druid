@@ -110,7 +110,8 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doIndexTest(
           COMBINING_INDEX_DATASOURCE,
@@ -120,7 +121,8 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }

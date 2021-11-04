@@ -129,7 +129,8 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

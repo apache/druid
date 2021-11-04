@@ -112,7 +112,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
 
       // Index again, this time only choosing the second data file, and without explicit intervals chosen.
@@ -125,7 +126,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           true,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
 
       doReindexTest(
@@ -196,7 +198,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           false,
           true,
           true,
-          new Pair<>(true, true)
+          new Pair<>(true, true),
+          true
       );
     }
   }
@@ -250,7 +253,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           false,
           false,
           false,
-          new Pair<>(true, false)
+          new Pair<>(true, false),
+          true
       );
       coordinatorClient.postDynamicConfig(DYNAMIC_CONFIG_DEFAULT);
       ITRetryUtil.retryUntilTrue(

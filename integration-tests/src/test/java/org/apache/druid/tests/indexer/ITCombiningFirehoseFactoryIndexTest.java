@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -71,7 +72,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
@@ -103,7 +104,8 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doIndexTest(
           COMBINING_INDEX_DATASOURCE,
@@ -113,7 +115,8 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }

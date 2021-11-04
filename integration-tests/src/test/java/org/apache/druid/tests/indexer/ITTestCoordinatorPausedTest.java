@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -67,7 +68,7 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
@@ -100,7 +101,8 @@ public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
           false,
           false,
           false,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       TimeUnit.MINUTES.sleep(3);
       if (coordinatorClient.areSegmentsLoaded(INDEX_DATASOURCE)) {

@@ -120,7 +120,8 @@ public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractI
           false,
           true,
           true,
-          segmentAvailabilityConfirmationPair
+          segmentAvailabilityConfirmationPair,
+          true
       );
     }
   }

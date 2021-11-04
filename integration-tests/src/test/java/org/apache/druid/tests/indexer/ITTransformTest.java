@@ -58,7 +58,8 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doReindexTest(
           INDEX_DATASOURCE,
@@ -87,7 +88,8 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
       doReindexTest(
           INDEX_DATASOURCE,
@@ -114,7 +116,8 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           false,
           true,
           true,
-          new Pair<>(false, false)
+          new Pair<>(false, false),
+          true
       );
     }
   }

@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -199,7 +200,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           "%%PARTITIONS_SPEC%%",
-          jsonMapper.writeValueAsString("{}")
+          jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
       );
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,

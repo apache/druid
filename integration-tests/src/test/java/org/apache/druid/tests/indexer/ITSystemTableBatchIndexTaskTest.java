@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -57,7 +58,7 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
-              jsonMapper.writeValueAsString("{}")
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(3, 5000L))
           );
           spec = StringUtils.replace(
               spec,
