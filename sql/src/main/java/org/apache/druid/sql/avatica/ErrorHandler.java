@@ -28,10 +28,10 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.ForbiddenException;
 
-import javax.annotation.Nonnull;
 
 /**
  * ErrorHandler is a utilty class that is used to sanitize and log exceptions at the error level.
@@ -85,7 +85,7 @@ class ErrorHandler
    * @param <T>     any type that extends throwable
    * @return the original Throwable
    */
-  public <T extends Throwable> T logFailure(T error, String message, Object... format)
+  public static  <T extends Throwable> T logFailure(T error, String message, Object... format)
   {
     LOG.error(error, message, format);
     return error;
@@ -98,7 +98,7 @@ class ErrorHandler
    * @param <T>   any type that extends throwable
    * @return the original Throwable
    */
-  public <T extends Throwable> T logFailure(T error)
+  public static <T extends Throwable> T logFailure(T error)
   {
     logFailure(error, error.getMessage());
     return error;
@@ -117,9 +117,6 @@ class ErrorHandler
    */
   public <T extends Throwable> RuntimeException sanitize(T error)
   {
-    if (error instanceof QueryInterruptedException) {
-      return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded((QueryInterruptedException) error);
-    }
     if (error instanceof QueryException) {
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded((QueryException) error);
     }
@@ -142,8 +139,9 @@ class ErrorHandler
       // could do `throw sanitize(error);` but to avoid unnecessary going down multiple levels this is avoided here.
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
-    return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded(QueryInterruptedException.wrapIfNeeded(
-        error));
+    QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
+    Exception transformedError = errorResponseTransformStrategy.transformIfNeeded(wrappedError);
+    return (QueryException) transformedError;
   }
 
   /**

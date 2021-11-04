@@ -58,7 +58,8 @@ public class ErrorHandlerTest
   }
 
   @Test
-  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsTrueWhenNotUsingNoErrorResponseTransformStrategy() {
+  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsTrueWhenNotUsingNoErrorResponseTransformStrategy()
+  {
     ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
     AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
         ImmutableList.of());
@@ -70,7 +71,8 @@ public class ErrorHandlerTest
   }
 
   @Test
-  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsFalseWhenUsingNoErrorResponseTransformStrategy() {
+  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsFalseWhenUsingNoErrorResponseTransformStrategy()
+  {
     ServerConfig serverConfig = new ServerConfig();
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     Assert.assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
