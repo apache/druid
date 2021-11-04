@@ -47,9 +47,8 @@ public class JettyServerModuleTest
         events.add(event);
       }
     };
-    JettyServerModule jettyServerModule = new JettyServerModule();
     QueuedThreadPool jettyServerThreadPool = Mockito.mock(QueuedThreadPool.class);
-    jettyServerModule.setJettyServerThreadPool(jettyServerThreadPool);
+    JettyServerModule.setJettyServerThreadPool(jettyServerThreadPool);
     Mockito.when(jettyServerThreadPool.getThreads()).thenReturn(100);
     Mockito.when(jettyServerThreadPool.getIdleThreads()).thenReturn(40);
     Mockito.when(jettyServerThreadPool.isLowOnThreads()).thenReturn(true);

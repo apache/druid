@@ -563,7 +563,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @VisibleForTesting
-  public void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  public static void setJettyServerThreadPool(QueuedThreadPool threadPool)
   {
     jettyServerThreadPool = threadPool;
   }
