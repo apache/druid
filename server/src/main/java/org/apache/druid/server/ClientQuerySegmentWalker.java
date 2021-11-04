@@ -514,7 +514,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         && queryDataSourceToSubqueryIds.containsKey((QueryDataSource) currentDataSource)) {
       QueryDataSource queryDataSource = (QueryDataSource) currentDataSource;
       Pair<Integer, Integer> nestingInfo = queryDataSourceToSubqueryIds.get(queryDataSource);
-      String subQueryId = nestingInfo.lhs.toString() + "." + nestingInfo.rhs.toString();
+      String subQueryId = nestingInfo.lhs + "." + nestingInfo.rhs;
       Query<?> query = queryDataSource.getQuery();
 
       if (StringUtils.isEmpty(query.getSubQueryId())) {
