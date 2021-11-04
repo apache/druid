@@ -35,9 +35,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * {@link ShardSpec} for range partitioning based on multiple dimensions
+ * {@link ShardSpec} for partitioning based on ranges of one or more dimensions.
  */
-public class MultiDimensionShardSpec implements ShardSpec
+public class DimensionRangeShardSpec implements ShardSpec
 {
   public static final int UNKNOWN_NUM_CORE_PARTITIONS = -1;
 
@@ -59,7 +59,7 @@ public class MultiDimensionShardSpec implements ShardSpec
    * @param partitionNum unique ID for this shard
    */
   @JsonCreator
-  public MultiDimensionShardSpec(
+  public DimensionRangeShardSpec(
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("start") @Nullable StringTuple start,
       @JsonProperty("end") @Nullable StringTuple end,
@@ -131,7 +131,7 @@ public class MultiDimensionShardSpec implements ShardSpec
   {
     return (long timestamp, InputRow row) -> {
       for (ShardSpec spec : shardSpecs) {
-        if (((MultiDimensionShardSpec) spec).isInChunk(row)) {
+        if (((DimensionRangeShardSpec) spec).isInChunk(row)) {
           return spec;
         }
       }
@@ -221,7 +221,7 @@ public class MultiDimensionShardSpec implements ShardSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    MultiDimensionShardSpec shardSpec = (MultiDimensionShardSpec) o;
+    DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) o;
     return partitionNum == shardSpec.partitionNum &&
            numCorePartitions == shardSpec.numCorePartitions &&
            Objects.equals(dimensions, shardSpec.dimensions) &&

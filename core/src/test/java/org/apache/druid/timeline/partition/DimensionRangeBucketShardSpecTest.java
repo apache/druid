@@ -37,7 +37,7 @@ import org.junit.rules.ExpectedException;
 import java.util.Arrays;
 import java.util.List;
 
-public class MultiDimensionRangeBucketShardSpecTest
+public class DimensionRangeBucketShardSpecTest
 {
 
   private static final List<String> DIMENSIONS = Arrays.asList("dim1", "dim2");
@@ -49,14 +49,14 @@ public class MultiDimensionRangeBucketShardSpecTest
   public void testConvert()
   {
     Assert.assertEquals(
-        new BuildingMultiDimensionShardSpec(
+        new BuildingDimensionRangeShardSpec(
             1,
             DIMENSIONS,
             StringTuple.create("start1", "start2"),
             StringTuple.create("end1", "end2"),
             5
         ),
-        new MultiDimensionRangeBucketShardSpec(
+        new DimensionRangeBucketShardSpec(
             1,
             DIMENSIONS,
             StringTuple.create("start1", "start2"),
@@ -70,7 +70,7 @@ public class MultiDimensionRangeBucketShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(1, 0, "test"),
-        new MultiDimensionRangeBucketShardSpec(
+        new DimensionRangeBucketShardSpec(
             1,
             DIMENSIONS,
             StringTuple.create("start1", "start2"),
@@ -83,14 +83,14 @@ public class MultiDimensionRangeBucketShardSpecTest
   public void testShardSpecLookup()
   {
     final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new MultiDimensionRangeBucketShardSpec(0, DIMENSIONS, null, StringTuple.create("c", "12")),
-        new MultiDimensionRangeBucketShardSpec(
+        new DimensionRangeBucketShardSpec(0, DIMENSIONS, null, StringTuple.create("c", "12")),
+        new DimensionRangeBucketShardSpec(
             1,
             DIMENSIONS,
             StringTuple.create("f", "13"),
             StringTuple.create("i", "9")
         ),
-        new MultiDimensionRangeBucketShardSpec(2, DIMENSIONS, StringTuple.create("i", "9"), null)
+        new DimensionRangeBucketShardSpec(2, DIMENSIONS, StringTuple.create("i", "9"), null)
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
@@ -132,18 +132,18 @@ public class MultiDimensionRangeBucketShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(new NamedType(
-        MultiDimensionRangeBucketShardSpec.class,
-        MultiDimensionRangeBucketShardSpec.TYPE
+        DimensionRangeBucketShardSpec.class,
+        DimensionRangeBucketShardSpec.TYPE
     ));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
-    final MultiDimensionRangeBucketShardSpec original = new MultiDimensionRangeBucketShardSpec(
+    final DimensionRangeBucketShardSpec original = new DimensionRangeBucketShardSpec(
         1,
         DIMENSIONS,
         StringTuple.create("start1", "start2"),
         StringTuple.create("end1", "end2")
     );
     final String json = mapper.writeValueAsString(original);
-    final MultiDimensionRangeBucketShardSpec fromJson = (MultiDimensionRangeBucketShardSpec) mapper.readValue(
+    final DimensionRangeBucketShardSpec fromJson = (DimensionRangeBucketShardSpec) mapper.readValue(
         json,
         ShardSpec.class
     );
@@ -158,7 +158,7 @@ public class MultiDimensionRangeBucketShardSpecTest
         "Start tuple must either be null or of the same size as the number of partition dimensions"
     );
 
-    new MultiDimensionRangeBucketShardSpec(
+    new DimensionRangeBucketShardSpec(
         1,
         DIMENSIONS,
         StringTuple.create("a"),
@@ -174,7 +174,7 @@ public class MultiDimensionRangeBucketShardSpecTest
         "End tuple must either be null or of the same size as the number of partition dimensions"
     );
 
-    new MultiDimensionRangeBucketShardSpec(
+    new DimensionRangeBucketShardSpec(
         1,
         DIMENSIONS,
         StringTuple.create("a", "b"),
@@ -185,6 +185,6 @@ public class MultiDimensionRangeBucketShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(MultiDimensionRangeBucketShardSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DimensionRangeBucketShardSpec.class).usingGetClass().verify();
   }
 }

@@ -34,7 +34,7 @@ import java.util.Map;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class MultiDimensionShardSpecTest
+public class DimensionRangeShardSpecTest
 {
 
   private final List<String> dimensions = new ArrayList<>();
@@ -44,7 +44,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1", "d2");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         StringTuple.create("India", "Delhi"),
         StringTuple.create("Spain", "Valencia"),
@@ -89,7 +89,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1", "d2");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         null,
         StringTuple.create("Spain", "Valencia"),
@@ -138,7 +138,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1", "d2");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         StringTuple.create("France", "Lyon"),
         null,
@@ -179,7 +179,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1", "d2");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         StringTuple.create("France", "Bordeaux"),
         StringTuple.create("France", "Paris"),
@@ -216,7 +216,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         StringTuple.create("India"),
         StringTuple.create("Spain"),
@@ -257,7 +257,7 @@ public class MultiDimensionShardSpecTest
   {
     setDimensions("d1", "d2");
 
-    final MultiDimensionShardSpec shardSpec = new MultiDimensionShardSpec(
+    final DimensionRangeShardSpec shardSpec = new DimensionRangeShardSpec(
         dimensions,
         StringTuple.create("India", "Delhi"),
         StringTuple.create("Spain", "Valencia"),
@@ -300,9 +300,9 @@ public class MultiDimensionShardSpecTest
   /**
    * Checks if the given InputRow is in the chunk represented by the given shard spec.
    */
-  private boolean isInChunk(MultiDimensionShardSpec shardSpec, InputRow row)
+  private boolean isInChunk(DimensionRangeShardSpec shardSpec, InputRow row)
   {
-    return MultiDimensionShardSpec.isInChunk(
+    return DimensionRangeShardSpec.isInChunk(
         shardSpec.getDimensions(),
         shardSpec.getStart(),
         shardSpec.getEnd(),

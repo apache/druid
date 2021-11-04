@@ -33,8 +33,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.MultiDimensionShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.hamcrest.Matchers;
@@ -226,7 +226,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = runTestTask(
-        new MultiDimensionPartitionsSpec(
+        new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
             Collections.singletonList(DIM1),
@@ -390,7 +390,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
   private static void assertValuesInRange(List<StringTuple> values, DataSegment segment)
   {
-    MultiDimensionShardSpec shardSpec = (MultiDimensionShardSpec) segment.getShardSpec();
+    DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
     StringTuple start = shardSpec.getStart();
     StringTuple end = shardSpec.getEnd();
     Assert.assertTrue(shardSpec.toString(), start != null || end != null);

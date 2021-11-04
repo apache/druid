@@ -32,9 +32,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -57,8 +57,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.MultiDimensionShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -230,7 +230,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(newTuningConfig(
-            new MultiDimensionPartitionsSpec(7, null, Collections.singletonList("dim"), false),
+            new DimensionRangePartitionsSpec(7, null, Collections.singletonList("dim"), false),
             2,
             true
         )).build();
@@ -238,9 +238,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Assert.assertSame(MultiDimensionShardSpec.class, segment.getShardSpec().getClass());
+      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
-          new MultiDimensionPartitionsSpec(7, null, Collections.singletonList("dim"), false),
+          new DimensionRangePartitionsSpec(7, null, Collections.singletonList("dim"), false),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -273,7 +273,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(newTuningConfig(
-            new MultiDimensionPartitionsSpec(7, null, Collections.singletonList("dim"), false),
+            new DimensionRangePartitionsSpec(7, null, Collections.singletonList("dim"), false),
             1,
             true
         )).build();
@@ -281,9 +281,9 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
     for (DataSegment segment : compactedSegments) {
       // Expect compaction state to exist as store compaction state by default
-      Assert.assertSame(MultiDimensionShardSpec.class, segment.getShardSpec().getClass());
+      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
-          new MultiDimensionPartitionsSpec(7, null, Collections.singletonList("dim"), false),
+          new DimensionRangePartitionsSpec(7, null, Collections.singletonList("dim"), false),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(

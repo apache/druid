@@ -39,7 +39,7 @@ import java.util.Objects;
 /**
  * {@link ShardSpec} for range partitioning based on a single dimension
  */
-public class SingleDimensionShardSpec extends MultiDimensionShardSpec
+public class SingleDimensionShardSpec extends DimensionRangeShardSpec
 {
   public static final int UNKNOWN_NUM_CORE_PARTITIONS = -1;
 
@@ -78,7 +78,7 @@ public class SingleDimensionShardSpec extends MultiDimensionShardSpec
 
   /**
    * Returns a Map to be used for serializing objects of this class. This is to
-   * ensure that a new field added in {@link MultiDimensionShardSpec} does
+   * ensure that a new field added in {@link DimensionRangeShardSpec} does
    * not get serialized when serializing a {@code SingleDimensionShardSpec}.
    *
    * @return A map containing only the keys {@code "dimension"}, {@code "start"},

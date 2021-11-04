@@ -35,7 +35,7 @@ import java.util.Map;
 /**
  * Partition a segment by a single dimension.
  */
-public class SingleDimensionPartitionsSpec extends MultiDimensionPartitionsSpec
+public class SingleDimensionPartitionsSpec extends DimensionRangePartitionsSpec
 {
   public static final String NAME = "single_dim";
   static final String OLD_NAME = "dimension";  // for backward compatibility
@@ -117,7 +117,7 @@ public class SingleDimensionPartitionsSpec extends MultiDimensionPartitionsSpec
 
   /**
    * Returns a Map to be used for serializing objects of this class. This is to
-   * ensure that a new field added in {@link MultiDimensionPartitionsSpec} does
+   * ensure that a new field added in {@link DimensionRangePartitionsSpec} does
    * not get serialized when serializing a {@code SingleDimensionPartitionsSpec}.
    *
    * @return A map containing only the keys {@code "partitionDimension"},

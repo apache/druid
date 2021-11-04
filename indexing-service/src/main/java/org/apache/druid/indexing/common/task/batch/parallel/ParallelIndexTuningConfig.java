@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
@@ -200,8 +200,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
-    if (getPartitionsSpec() != null && getPartitionsSpec() instanceof MultiDimensionPartitionsSpec) {
-      List<String> partitionDimensions = ((MultiDimensionPartitionsSpec) getPartitionsSpec()).getPartitionDimensions();
+    if (getPartitionsSpec() != null && getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      List<String> partitionDimensions = ((DimensionRangePartitionsSpec) getPartitionsSpec()).getPartitionDimensions();
       if (partitionDimensions == null || partitionDimensions.isEmpty()) {
         throw new IAE("partitionDimensions must be specified");
       }

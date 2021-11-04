@@ -31,20 +31,20 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class BuildingMultiDimensionShardSpecTest
+public class BuildingDimensionRangeShardSpecTest
 {
   @Test
   public void testConvert()
   {
     Assert.assertEquals(
-        new MultiDimensionShardSpec(
+        new DimensionRangeShardSpec(
             Arrays.asList("dim1", "dim2"),
             StringTuple.create("start1", "start2"),
             StringTuple.create("end1", "end2"),
             5,
             10
         ),
-        new BuildingMultiDimensionShardSpec(
+        new BuildingDimensionRangeShardSpec(
             1,
             Arrays.asList("dim1", "dim2"),
             StringTuple.create("start1", "start2"),
@@ -65,7 +65,7 @@ public class BuildingMultiDimensionShardSpecTest
             5,
             10
         ),
-        new BuildingMultiDimensionShardSpec(
+        new BuildingDimensionRangeShardSpec(
             1,
             Collections.singletonList("dim"),
             StringTuple.create("start"),
@@ -80,7 +80,7 @@ public class BuildingMultiDimensionShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
-        new BuildingMultiDimensionShardSpec(
+        new BuildingDimensionRangeShardSpec(
             1,
             Arrays.asList("dim1", "dim2"),
             StringTuple.create("start1", "start2"),
@@ -95,10 +95,10 @@ public class BuildingMultiDimensionShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
-        new NamedType(BuildingMultiDimensionShardSpec.class, BuildingMultiDimensionShardSpec.TYPE)
+        new NamedType(BuildingDimensionRangeShardSpec.class, BuildingDimensionRangeShardSpec.TYPE)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
-    final BuildingMultiDimensionShardSpec original = new BuildingMultiDimensionShardSpec(
+    final BuildingDimensionRangeShardSpec original = new BuildingDimensionRangeShardSpec(
         1,
         Arrays.asList("dim1", "dim2"),
         StringTuple.create("start1", "start2"),
@@ -106,7 +106,7 @@ public class BuildingMultiDimensionShardSpecTest
         5
     );
     final String json = mapper.writeValueAsString(original);
-    final BuildingMultiDimensionShardSpec fromJson = (BuildingMultiDimensionShardSpec) mapper.readValue(
+    final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) mapper.readValue(
         json,
         ShardSpec.class
     );
@@ -116,6 +116,6 @@ public class BuildingMultiDimensionShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(BuildingMultiDimensionShardSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(BuildingDimensionRangeShardSpec.class).usingGetClass().verify();
   }
 }

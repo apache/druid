@@ -41,9 +41,9 @@ import java.util.Objects;
  *   <li>assumeGrouped: true if input data has already been grouped on time and dimensions</li>
  * </ul>
  */
-public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpec
+public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpec
 {
-  public static final String NAME = "multi_dim";
+  public static final String NAME = "range";
 
   private final Integer targetRowsPerSegment;
   private final Integer maxRowsPerSegment;
@@ -54,7 +54,7 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
   private final int resolvedMaxRowPerSegment;
 
   @JsonCreator
-  public MultiDimensionPartitionsSpec(
+  public DimensionRangePartitionsSpec(
       @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty(PARTITION_DIMENSIONS) List<String> partitionDimensions,
@@ -169,7 +169,7 @@ public class MultiDimensionPartitionsSpec implements DimensionBasedPartitionsSpe
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    MultiDimensionPartitionsSpec that = (MultiDimensionPartitionsSpec) o;
+    DimensionRangePartitionsSpec that = (DimensionRangePartitionsSpec) o;
     return assumeGrouped == that.assumeGrouped &&
            resolvedMaxRowPerSegment == that.resolvedMaxRowPerSegment &&
            Objects.equals(targetRowsPerSegment, that.targetRowsPerSegment) &&

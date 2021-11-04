@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
@@ -37,7 +37,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.MultiDimensionRangeBucketShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -103,7 +103,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
                            .collect(Collectors.toList())
     );
     final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
-        new MultiDimensionPartitionsSpec(null, 1, PARTITION_DIMENSIONS, false)
+        new DimensionRangePartitionsSpec(null, 1, PARTITION_DIMENSIONS, false)
     );
     INTERVAL_TO_PARTITIONS.forEach(partitionAnalysis::updateBucket);
     target = SegmentAllocators.forNonLinearPartitioning(
@@ -210,7 +210,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
         SegmentId.of(DATASOURCE, interval, INTERVAL_TO_VERSION.get(interval), bucketId),
         segmentIdWithShardSpec.asSegmentId()
     );
-    MultiDimensionRangeBucketShardSpec shardSpec = (MultiDimensionRangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
+    DimensionRangeBucketShardSpec shardSpec = (DimensionRangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
     Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getDimensions());
     Assert.assertEquals(bucketId, shardSpec.getBucketId());
     Assert.assertEquals(partitionStart, shardSpec.getStart());

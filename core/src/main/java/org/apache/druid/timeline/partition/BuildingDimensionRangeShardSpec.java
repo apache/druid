@@ -30,11 +30,11 @@ import java.util.Objects;
 /**
  * See {@link BuildingShardSpec} for how this class is used.
  *
- * @see MultiDimensionShardSpec
+ * @see DimensionRangeShardSpec
  */
-public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiDimensionShardSpec>
+public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<DimensionRangeShardSpec>
 {
-  public static final String TYPE = "building_multi_dim";
+  public static final String TYPE = "building_range";
 
   private final int bucketId;
   private final List<String> dimensions;
@@ -45,7 +45,7 @@ public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiD
   private final int partitionId;
 
   @JsonCreator
-  public BuildingMultiDimensionShardSpec(
+  public BuildingDimensionRangeShardSpec(
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("start") @Nullable StringTuple start,
@@ -95,7 +95,7 @@ public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiD
   }
 
   @Override
-  public MultiDimensionShardSpec convert(int numCorePartitions)
+  public DimensionRangeShardSpec convert(int numCorePartitions)
   {
     return dimensions != null && dimensions.size() == 1
            ? new SingleDimensionShardSpec(
@@ -104,7 +104,7 @@ public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiD
         firstOrNull(end),
         partitionId,
         numCorePartitions
-    ) : new MultiDimensionShardSpec(
+    ) : new DimensionRangeShardSpec(
         dimensions,
         start,
         end,
@@ -133,7 +133,7 @@ public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiD
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BuildingMultiDimensionShardSpec that = (BuildingMultiDimensionShardSpec) o;
+    BuildingDimensionRangeShardSpec that = (BuildingDimensionRangeShardSpec) o;
     return bucketId == that.bucketId &&
            partitionId == that.partitionId &&
            Objects.equals(dimensions, that.dimensions) &&

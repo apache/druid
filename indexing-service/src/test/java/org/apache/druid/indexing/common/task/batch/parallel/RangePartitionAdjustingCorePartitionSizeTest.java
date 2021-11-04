@@ -26,12 +26,12 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.MultiDimensionShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -100,7 +100,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
       }
     }
     final List<String> partitionDimensions = Collections.singletonList("dim1");
-    final DimensionBasedPartitionsSpec partitionsSpec = new MultiDimensionPartitionsSpec(
+    final DimensionBasedPartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(
         2,
         null,
         partitionDimensions,
@@ -122,8 +122,8 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
     );
     Assert.assertEquals(1, segments.size());
     final DataSegment segment = segments.get(0);
-    Assert.assertSame(MultiDimensionShardSpec.class, segment.getShardSpec().getClass());
-    final MultiDimensionShardSpec shardSpec = (MultiDimensionShardSpec) segment.getShardSpec();
+    Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
+    final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
     Assert.assertEquals(1, shardSpec.getNumCorePartitions());
     Assert.assertEquals(0, shardSpec.getPartitionNum());
     Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());
@@ -141,7 +141,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
     }
 
     final List<String> partitionDimensions = Collections.singletonList("dim1");
-    final DimensionBasedPartitionsSpec partitionsSpec = new MultiDimensionPartitionsSpec(
+    final DimensionBasedPartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(
         2,
         null,
         partitionDimensions,
@@ -161,8 +161,8 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
     );
     Assert.assertEquals(5, segments.size());
     segments.forEach(segment -> {
-      Assert.assertSame(MultiDimensionShardSpec.class, segment.getShardSpec().getClass());
-      final MultiDimensionShardSpec shardSpec = (MultiDimensionShardSpec) segment.getShardSpec();
+      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
+      final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
       Assert.assertEquals(5, shardSpec.getNumCorePartitions());
       Assert.assertTrue(shardSpec.getPartitionNum() < shardSpec.getNumCorePartitions());
       Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());

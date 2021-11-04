@@ -39,8 +39,8 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
@@ -529,7 +529,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
   {
-    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof MultiDimensionPartitionsSpec;
+    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
   private boolean isParallelMode()
@@ -900,8 +900,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     distributions.forEach(distributionMerger::merge);
     StringDistribution mergedDistribution = distributionMerger.getResult();
 
-    MultiDimensionPartitionsSpec partitionsSpec =
-        (MultiDimensionPartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
+    DimensionRangePartitionsSpec partitionsSpec =
+        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
 
     final PartitionBoundaries partitions;
     Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();

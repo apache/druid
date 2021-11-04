@@ -82,21 +82,21 @@ public class PartitionHolderCompletenessTest
         new Object[]{
             // Simulate empty range buckets with MultiDimensionShardSpec
             ImmutableList.of(
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     null,
                     StringTuple.create("aaa"),
                     0,
                     3
                 ),
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     StringTuple.create("ttt"),
                     StringTuple.create("zzz"),
                     2,
                     3
                 ),
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     StringTuple.create("bbb"),
                     StringTuple.create("fff"),
@@ -106,27 +106,27 @@ public class PartitionHolderCompletenessTest
             ),
             StringUtils.format(
                 "%s with empty buckets",
-                MultiDimensionShardSpec.class.getSimpleName()
+                DimensionRangeShardSpec.class.getSimpleName()
             )
         },
         new Object[]{
             // Simulate old format segments with missing numCorePartitions
             ImmutableList.of(
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     StringTuple.create("bbb"),
                     StringTuple.create("fff"),
                     1,
                     null
                 ),
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     StringTuple.create("fff"),
                     null,
                     2,
                     null
                 ),
-                new MultiDimensionShardSpec(
+                new DimensionRangeShardSpec(
                     Collections.singletonList("dim"),
                     null,
                     StringTuple.create("bbb"),
@@ -136,7 +136,7 @@ public class PartitionHolderCompletenessTest
             ),
             StringUtils.format(
                 "%s with missing numCorePartitions",
-                MultiDimensionShardSpec.class.getSimpleName()
+                DimensionRangeShardSpec.class.getSimpleName()
             )
         }
     );

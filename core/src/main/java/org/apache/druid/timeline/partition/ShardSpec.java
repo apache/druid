@@ -35,7 +35,7 @@ import java.util.Map;
 @JsonSubTypes({
     @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
     @JsonSubTypes.Type(name = "single", value = SingleDimensionShardSpec.class),
-    @JsonSubTypes.Type(name = "multi", value = MultiDimensionShardSpec.class),
+    @JsonSubTypes.Type(name = "range", value = DimensionRangeShardSpec.class),
     @JsonSubTypes.Type(name = "linear", value = LinearShardSpec.class),
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpec.class),
     @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class),
@@ -45,13 +45,13 @@ import java.util.Map;
     @JsonSubTypes.Type(name = BuildingNumberedShardSpec.TYPE, value = BuildingNumberedShardSpec.class),
     @JsonSubTypes.Type(name = BuildingHashBasedNumberedShardSpec.TYPE, value = BuildingHashBasedNumberedShardSpec.class),
     @JsonSubTypes.Type(name = BuildingSingleDimensionShardSpec.TYPE, value = BuildingSingleDimensionShardSpec.class),
-    @JsonSubTypes.Type(name = BuildingMultiDimensionShardSpec.TYPE, value = BuildingMultiDimensionShardSpec.class),
+    @JsonSubTypes.Type(name = BuildingDimensionRangeShardSpec.TYPE, value = BuildingDimensionRangeShardSpec.class),
     // BucketShardSpecs are the shardSpec with missing partitionId and numCorePartitions.
     // These shardSpecs must not be used in segment push.
     // See BucketShardSpec for more details.
     @JsonSubTypes.Type(name = HashBucketShardSpec.TYPE, value = HashBucketShardSpec.class),
-    @JsonSubTypes.Type(name = RangeBucketShardSpec.TYPE, value = RangeBucketShardSpec.class),
-    @JsonSubTypes.Type(name = MultiDimensionRangeBucketShardSpec.TYPE, value = MultiDimensionRangeBucketShardSpec.class)
+    @JsonSubTypes.Type(name = SingleDimensionRangeBucketShardSpec.TYPE, value = SingleDimensionRangeBucketShardSpec.class),
+    @JsonSubTypes.Type(name = DimensionRangeBucketShardSpec.TYPE, value = DimensionRangeBucketShardSpec.class)
 })
 public interface ShardSpec
 {

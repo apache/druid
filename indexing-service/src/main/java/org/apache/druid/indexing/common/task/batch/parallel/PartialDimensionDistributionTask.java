@@ -34,7 +34,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -131,9 +131,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
 
     Preconditions.checkArgument(
-        ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof MultiDimensionPartitionsSpec,
+        ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof DimensionRangePartitionsSpec,
         "%s partitionsSpec required",
-        MultiDimensionPartitionsSpec.NAME
+        DimensionRangePartitionsSpec.NAME
     );
 
     this.subtaskSpecId = subtaskSpecId;
@@ -194,7 +194,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
 
-    MultiDimensionPartitionsSpec partitionsSpec = (MultiDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
+    DimensionRangePartitionsSpec partitionsSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
     final List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
     Preconditions.checkArgument(

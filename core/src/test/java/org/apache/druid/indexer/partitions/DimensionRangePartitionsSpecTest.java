@@ -30,14 +30,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class MultiDimensionPartitionsSpecTest
+public class DimensionRangePartitionsSpecTest
 {
   private static final Integer TARGET_ROWS_PER_SEGMENT = 1;
   private static final Integer MAX_ROWS_PER_SEGMENT = null;
   private static final Integer HISTORICAL_NULL = PartitionsSpec.HISTORICAL_NULL;
   private static final List<String> PARTITION_DIMENSIONS = Arrays.asList("a", "b");
   private static final boolean ASSUME_GROUPED = false;
-  private static final MultiDimensionPartitionsSpec SPEC = new MultiDimensionPartitionsSpec(
+  private static final DimensionRangePartitionsSpec SPEC = new DimensionRangePartitionsSpec(
       TARGET_ROWS_PER_SEGMENT,
       MAX_ROWS_PER_SEGMENT,
       PARTITION_DIMENSIONS,
@@ -52,7 +52,7 @@ public class MultiDimensionPartitionsSpecTest
   public void serde()
   {
     String json = serialize(SPEC);
-    MultiDimensionPartitionsSpec spec = deserialize(json);
+    DimensionRangePartitionsSpec spec = deserialize(json);
     Assert.assertEquals(SPEC, spec);
   }
 
@@ -106,7 +106,7 @@ public class MultiDimensionPartitionsSpecTest
   @Test
   public void resolvesMaxFromTargetRowsPerSegment()
   {
-    MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
+    DimensionRangePartitionsSpec spec = new TestSpecBuilder()
         .targetRowsPerSegment(123)
         .build();
     Assert.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
@@ -115,7 +115,7 @@ public class MultiDimensionPartitionsSpecTest
   @Test
   public void resolvesMaxFromMaxRowsPerSegment()
   {
-    MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
+    DimensionRangePartitionsSpec spec = new TestSpecBuilder()
         .maxRowsPerSegment(123)
         .build();
     Assert.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
@@ -134,7 +134,7 @@ public class MultiDimensionPartitionsSpecTest
   public void getPartitionDimensionFromNonNull()
   {
     List<String> partitionDimensions = Collections.singletonList("a");
-    MultiDimensionPartitionsSpec spec = new TestSpecBuilder()
+    DimensionRangePartitionsSpec spec = new TestSpecBuilder()
         .targetRowsPerSegment(10)
         .partitionDimensions(partitionDimensions)
         .build();
@@ -151,10 +151,10 @@ public class MultiDimensionPartitionsSpecTest
     }
   }
 
-  private static MultiDimensionPartitionsSpec deserialize(String serialized)
+  private static DimensionRangePartitionsSpec deserialize(String serialized)
   {
     try {
-      return OBJECT_MAPPER.readValue(serialized, MultiDimensionPartitionsSpec.class);
+      return OBJECT_MAPPER.readValue(serialized, DimensionRangePartitionsSpec.class);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -195,9 +195,9 @@ public class MultiDimensionPartitionsSpecTest
       build();
     }
 
-    MultiDimensionPartitionsSpec build()
+    DimensionRangePartitionsSpec build()
     {
-      return new MultiDimensionPartitionsSpec(
+      return new DimensionRangePartitionsSpec(
           targetRowsPerSegment,
           maxRowsPerSegment,
           partitionDimensions,

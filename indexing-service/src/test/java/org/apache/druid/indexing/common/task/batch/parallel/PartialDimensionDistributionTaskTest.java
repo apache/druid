@@ -101,7 +101,7 @@ public class PartialDimensionDistributionTaskTest
     public void requiresMultiDimensionPartitions()
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("multi_dim partitionsSpec required");
+      exception.expectMessage("range partitionsSpec required");
 
       PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
       ParallelIndexTuningConfig tuningConfig =

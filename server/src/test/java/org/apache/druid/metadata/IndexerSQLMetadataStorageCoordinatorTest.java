@@ -36,10 +36,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.apache.druid.timeline.partition.MultiDimensionShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
@@ -1824,7 +1824,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               ImmutableMap.of(),
               dimensions,
               metrics,
-              new MultiDimensionShardSpec(
+              new DimensionRangeShardSpec(
                   Collections.singletonList("dim"),
                   i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
                   i == 5 ? null : StringTuple.create(String.valueOf(i)),

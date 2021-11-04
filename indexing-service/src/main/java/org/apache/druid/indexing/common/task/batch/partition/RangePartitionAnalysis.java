@@ -20,11 +20,11 @@
 package org.apache.druid.indexing.common.task.batch.partition;
 
 import com.google.common.collect.Maps;
-import org.apache.druid.indexer.partitions.MultiDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
-import org.apache.druid.timeline.partition.MultiDimensionRangeBucketShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 
@@ -38,18 +38,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class RangePartitionAnalysis
-    implements CompletePartitionAnalysis<PartitionBoundaries, MultiDimensionPartitionsSpec>
+    implements CompletePartitionAnalysis<PartitionBoundaries, DimensionRangePartitionsSpec>
 {
   private final Map<Interval, PartitionBoundaries> intervalToPartitionBoundaries = new HashMap<>();
-  private final MultiDimensionPartitionsSpec partitionsSpec;
+  private final DimensionRangePartitionsSpec partitionsSpec;
 
-  public RangePartitionAnalysis(MultiDimensionPartitionsSpec partitionsSpec)
+  public RangePartitionAnalysis(DimensionRangePartitionsSpec partitionsSpec)
   {
     this.partitionsSpec = partitionsSpec;
   }
 
   @Override
-  public MultiDimensionPartitionsSpec getPartitionsSpec()
+  public DimensionRangePartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
   }
@@ -90,7 +90,7 @@ public class RangePartitionAnalysis
 
   /**
    * Translate {@link PartitionBoundaries} into the corresponding
-   * {@link MultiDimensionPartitionsSpec} with segment id.
+   * {@link DimensionRangePartitionsSpec} with segment id.
    */
   private static List<BucketNumberedShardSpec<?>> translatePartitionBoundaries(
       List<String> partitionDimensions,
@@ -102,7 +102,7 @@ public class RangePartitionAnalysis
     }
 
     return IntStream.range(0, partitionBoundaries.size() - 1)
-                    .mapToObj(i -> new MultiDimensionRangeBucketShardSpec(
+                    .mapToObj(i -> new DimensionRangeBucketShardSpec(
                         i,
                         partitionDimensions,
                         partitionBoundaries.get(i),
