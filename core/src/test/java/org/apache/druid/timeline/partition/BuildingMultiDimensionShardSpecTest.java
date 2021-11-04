@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class BuildingMultiDimensionShardSpecTest
 {
@@ -48,6 +49,27 @@ public class BuildingMultiDimensionShardSpecTest
             Arrays.asList("dim1", "dim2"),
             StringTuple.create("start1", "start2"),
             StringTuple.create("end1", "end2"),
+            5
+        ).convert(10)
+    );
+  }
+
+  @Test
+  public void testConvert_withSingleDimension()
+  {
+    Assert.assertEquals(
+        new SingleDimensionShardSpec(
+            "dim",
+            "start",
+            "end",
+            5,
+            10
+        ),
+        new BuildingMultiDimensionShardSpec(
+            1,
+            Collections.singletonList("dim"),
+            StringTuple.create("start"),
+            StringTuple.create("end"),
             5
         ).convert(10)
     );

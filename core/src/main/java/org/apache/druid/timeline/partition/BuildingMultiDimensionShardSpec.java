@@ -34,7 +34,7 @@ import java.util.Objects;
  */
 public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiDimensionShardSpec>
 {
-  public static final String TYPE = "building_single_dim";
+  public static final String TYPE = "building_multi_dim";
 
   private final int bucketId;
   private final List<String> dimensions;
@@ -97,7 +97,25 @@ public class BuildingMultiDimensionShardSpec implements BuildingShardSpec<MultiD
   @Override
   public MultiDimensionShardSpec convert(int numCorePartitions)
   {
-    return new MultiDimensionShardSpec(dimensions, start, end, partitionId, numCorePartitions);
+    return dimensions != null && dimensions.size() == 1
+           ? new SingleDimensionShardSpec(
+        dimensions.get(0),
+        firstOrNull(start),
+        firstOrNull(end),
+        partitionId,
+        numCorePartitions
+    ) : new MultiDimensionShardSpec(
+        dimensions,
+        start,
+        end,
+        partitionId,
+        numCorePartitions
+    );
+  }
+
+  private String firstOrNull(StringTuple tuple)
+  {
+    return tuple == null || tuple.size() < 1 ? null : tuple.get(0);
   }
 
   @Override

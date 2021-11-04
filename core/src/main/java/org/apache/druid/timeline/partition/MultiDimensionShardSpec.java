@@ -116,6 +116,11 @@ public class MultiDimensionShardSpec implements ShardSpec
     return numCorePartitions;
   }
 
+  public boolean isNumCorePartitionsUnknown()
+  {
+    return numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS;
+  }
+
   @Override
   public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
@@ -168,7 +173,7 @@ public class MultiDimensionShardSpec implements ShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    if (numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS) {
+    if (isNumCorePartitionsUnknown()) {
       return StringPartitionChunk.make(start, end, partitionNum, obj);
     } else {
       return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
@@ -233,8 +238,8 @@ public class MultiDimensionShardSpec implements ShardSpec
   @Override
   public String toString()
   {
-    return "SingleDimensionShardSpec{" +
-           "dimension='" + dimensions + '\'' +
+    return "MultiDimensionShardSpec{" +
+           "dimensions='" + dimensions + '\'' +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +
            ", partitionNum=" + partitionNum +

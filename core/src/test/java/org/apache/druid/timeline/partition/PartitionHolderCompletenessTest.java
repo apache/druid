@@ -68,6 +68,18 @@ public class PartitionHolderCompletenessTest
             )
         },
         new Object[]{
+            // Simulate old format segments with missing numCorePartitions
+            ImmutableList.of(
+                new SingleDimensionShardSpec("dim", "bbb", "fff", 1, null),
+                new SingleDimensionShardSpec("dim", "fff", null, 2, null),
+                new SingleDimensionShardSpec("dim", null, "bbb", 0, null)
+            ),
+            StringUtils.format(
+                "%s with missing numCorePartitions",
+                SingleDimensionShardSpec.class.getSimpleName()
+            )
+        },
+        new Object[]{
             // Simulate empty range buckets with MultiDimensionShardSpec
             ImmutableList.of(
                 new MultiDimensionShardSpec(
