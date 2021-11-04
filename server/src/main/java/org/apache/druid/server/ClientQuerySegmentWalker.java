@@ -467,9 +467,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     Queue<DataSource> queue = new ArrayDeque<>();
     queue.add(rootDataSource);
 
-    /*
-    Performs BFS on the datasource tree to find the nesting level, and the sibling order of the query datasource
-     */
+    // Performs BFS on the datasource tree to find the nesting level, and the sibling order of the query datasource
     Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds = new HashMap<>();
     int level = 1;
     while (!queue.isEmpty()) {
