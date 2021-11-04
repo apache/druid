@@ -26,7 +26,7 @@ DRUID_MAXDIRECTMEMORYSIZE=6172m
 
 druid_emitter_logging_logLevel=debug
 
-druid_extensions_loadList=["druid-histogram", "druid-datasketches", "druid-lookups-cached-global", "postgresql-metadata-storage"]
+druid_extensions_loadList="['druid-histogram', 'druid-datasketches', 'druid-lookups-cached-global', 'postgresql-metadata-storage']"
 
 druid_zk_service_host=zookeeper
 
@@ -38,7 +38,7 @@ druid_metadata_storage_connector_password=FoolishPassword
 
 druid_coordinator_balancer_strategy=cachingCost
 
-druid_indexer_runner_javaOptsArray=["-server", "-Xmx1g", "-Xms1g", "-XX:MaxDirectMemorySize=3g", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]
+druid_indexer_runner_javaOptsArray="['-server', '-Xmx1g', '-Xms1g', '-XX:MaxDirectMemorySize=3g', '-Duser.timezone=UTC', '-Dfile.encoding=UTF-8', '-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager']"
 druid_indexer_fork_property_druid_processing_buffer_sizeBytes=256MiB
 
 druid_storage_type=local
@@ -49,4 +49,4 @@ druid_indexer_logs_directory=/opt/shared/indexing-logs
 druid_processing_numThreads=2
 druid_processing_numMergeBuffers=2
 
-DRUID_LOG4J=<?xml version="1.0" encoding="UTF-8" ?><Configuration status="WARN"><Appenders><Console name="Console" target="SYSTEM_OUT"><PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/></Console></Appenders><Loggers><Root level="info"><AppenderRef ref="Console"/></Root><Logger name="org.apache.druid.jetty.RequestLog" additivity="false" level="DEBUG"><AppenderRef ref="Console"/></Logger></Loggers></Configuration>
+DRUID_LOG4J="<?xml version='1.0' encoding='UTF-8' ?><Configuration status='WARN'><Appenders><Console name='Console' target='SYSTEM_OUT'><PatternLayout pattern='%d{ISO8601} %p [%t] %c - %m%n'/></Console></Appenders><Loggers><Root level='info'><AppenderRef ref='Console'/></Root><Logger name='org.apache.druid.jetty.RequestLog' additivity='false' level='DEBUG'><AppenderRef ref='Console'/></Logger></Loggers></Configuration>"
