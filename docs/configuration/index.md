@@ -1007,7 +1007,6 @@ You can optionally use the `dimensionsSpec` object to configure the dimensions o
 |Field|Description|Required|
 |-----|-----------|--------|
 |`dimensions`| A list of dimension names or objects. Cannot have the same column in both dimensions and dimensionExclusions. Defaults to 'null', which preserves the original dimensions.|No|
-|`dimensionExclusions`| The names of dimensions to exclude from compaction. Only names are supported here, not objects. This list is only used if the dimensions list is null or empty; otherwise it is ignored. Defaults to `[]`.|No|
 
 ###### Automatic compaction IOConfig
 
