@@ -238,7 +238,7 @@ public class DimensionRangeShardSpec implements ShardSpec
   @Override
   public String toString()
   {
-    return "MultiDimensionShardSpec{" +
+    return "DimensionRangeShardSpec{" +
            "dimensions='" + dimensions + '\'' +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +

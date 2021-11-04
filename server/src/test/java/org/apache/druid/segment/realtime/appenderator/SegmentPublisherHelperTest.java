@@ -29,6 +29,7 @@ import org.apache.druid.timeline.partition.BuildingDimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingSingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -190,8 +191,8 @@ public class SegmentPublisherHelperTest
     );
     final Set<DataSegment> annotated = SegmentPublisherHelper.annotateShardSpec(segments);
     for (DataSegment segment : annotated) {
-      Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
-      final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
+      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
+      final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
       Assert.assertEquals(3, shardSpec.getNumCorePartitions());
     }
   }

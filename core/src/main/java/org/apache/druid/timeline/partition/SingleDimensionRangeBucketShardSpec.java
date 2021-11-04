@@ -134,7 +134,7 @@ public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardS
   @Override
   public String toString()
   {
-    return "RangeBucket{" +
+    return "SingleDimensionRangeBucketShardSpec{" +
            ", bucketId=" + bucketId +
            ", dimension='" + dimension + '\'' +
            ", start='" + start + '\'' +

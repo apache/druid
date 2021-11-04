@@ -150,7 +150,7 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
   @Override
   public String toString()
   {
-    return "BuildingMultiDimensionShardSpec{" +
+    return "BuildingDimensionRangeShardSpec{" +
            "bucketId=" + bucketId +
            ", dimension='" + dimensions + '\'' +
            ", start='" + start + '\'' +

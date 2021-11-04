@@ -146,7 +146,7 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
   @Override
   public String toString()
   {
-    return "MultiRangeBucket{" +
+    return "DimensionRangeBucketShardSpec{" +
            ", bucketId=" + bucketId +
            ", dimension='" + dimensions + '\'' +
            ", start='" + start + '\'' +

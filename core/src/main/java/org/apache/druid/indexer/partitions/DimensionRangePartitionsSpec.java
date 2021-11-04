@@ -192,7 +192,7 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
   @Override
   public String toString()
   {
-    return "MultiDimensionPartitionsSpec{" +
+    return "DimensionRangePartitionsSpec{" +
            "targetRowsPerSegment=" + targetRowsPerSegment +
            ", maxRowsPerSegment=" + maxRowsPerSegment +
            ", partitionDimension='" + partitionDimensions + '\'' +
