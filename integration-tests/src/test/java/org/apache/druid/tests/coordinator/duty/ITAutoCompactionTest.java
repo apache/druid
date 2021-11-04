@@ -683,35 +683,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-//  @Test
-//  public void testAutoCompactionDutyWithDimensionExclusion() throws Exception
-//  {
-//    loadData(INDEX_TASK);
-//    try (final Closeable ignored = unloader(fullDatasourceName)) {
-//      verifyQuery(INDEX_QUERIES_RESOURCE);
-//      submitCompactionConfig(
-//          MAX_ROWS_PER_SEGMENT_COMPACTED,
-//          NO_SKIP_OFFSET,
-//          null,
-//          new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of()),
-//          false
-//      );
-//      forceTriggerAutoCompaction(2);
-//      expectedResult = ImmutableMap.of(
-//          "%%EXPECTED_COUNT_RESULT%%", 1,
-//          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
-//      );
-//      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
-//      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
-//
-//      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
-//      // Verify rollup segments does not get compacted again
-//      forceTriggerAutoCompaction(2);
-//      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
-//      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
-//    }
-//  }
-
   private void loadData(String indexTask) throws Exception
   {
     loadData(indexTask, ImmutableMap.of());
