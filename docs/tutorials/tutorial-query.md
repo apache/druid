@@ -220,7 +220,7 @@ You can submit native queries [directly to the Druid Broker over HTTP](../queryi
 
 ```json
 {
-  "query": "SELECT ..."
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10"
 }
 ```
 
