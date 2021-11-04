@@ -42,31 +42,17 @@ import java.util.stream.Collectors;
 public class UserCompactionTaskDimensionsConfig
 {
   @Nullable private final List<DimensionSchema> dimensions;
-  @Nullable private final List<String> dimensionExclusions;
 
   @JsonCreator
   public UserCompactionTaskDimensionsConfig(
-      @Nullable @JsonProperty("dimensions") List<DimensionSchema> dimensions,
-      @Nullable @JsonProperty("dimensionExclusions") List<String> dimensionExclusions
+      @Nullable @JsonProperty("dimensions") List<DimensionSchema> dimensions
   )
   {
-    this.dimensions = dimensions;
-    this.dimensionExclusions = dimensionExclusions;
-
-    List<String> dimensionNames = new ArrayList<>();
-    if (this.dimensions != null) {
-      dimensionNames = this.dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
+    if (dimensions != null) {
+      List<String> dimensionNames = dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
       ParserUtils.validateFields(dimensionNames);
     }
-    if (this.dimensionExclusions != null) {
-      ParserUtils.validateFields(this.dimensionExclusions);
-    }
-    if (this.dimensions != null && this.dimensionExclusions != null) {
-      Preconditions.checkArgument(
-          Sets.intersection(Sets.newHashSet(dimensionNames), Sets.newHashSet(dimensionExclusions)).isEmpty(),
-          "dimensions and dimensions exclusions cannot overlap"
-      );
-    }
+    this.dimensions = dimensions;
   }
 
   @Nullable
@@ -74,13 +60,6 @@ public class UserCompactionTaskDimensionsConfig
   public List<DimensionSchema> getDimensions()
   {
     return dimensions;
-  }
-
-  @Nullable
-  @JsonProperty
-  public List<String> getDimensionExclusions()
-  {
-    return dimensionExclusions;
   }
 
   @Override
@@ -93,14 +72,13 @@ public class UserCompactionTaskDimensionsConfig
       return false;
     }
     UserCompactionTaskDimensionsConfig that = (UserCompactionTaskDimensionsConfig) o;
-    return Objects.equals(dimensions, that.dimensions) &&
-           Objects.equals(dimensionExclusions, that.dimensionExclusions);
+    return Objects.equals(dimensions, that.dimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dimensions, dimensionExclusions);
+    return Objects.hash(dimensions);
   }
 
   @Override
@@ -108,7 +86,6 @@ public class UserCompactionTaskDimensionsConfig
   {
     return "UserCompactionTaskDimensionsConfig{" +
            "dimensions=" + dimensions +
-           ", dimensionExclusions=" + dimensionExclusions +
            '}';
   }
 }

@@ -21,9 +21,12 @@ package org.apache.druid.tests.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -38,6 +41,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -175,7 +179,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, false);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null,false);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -190,7 +194,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, false);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null,false);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -679,6 +683,35 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+//  @Test
+//  public void testAutoCompactionDutyWithDimensionExclusion() throws Exception
+//  {
+//    loadData(INDEX_TASK);
+//    try (final Closeable ignored = unloader(fullDatasourceName)) {
+//      verifyQuery(INDEX_QUERIES_RESOURCE);
+//      submitCompactionConfig(
+//          MAX_ROWS_PER_SEGMENT_COMPACTED,
+//          NO_SKIP_OFFSET,
+//          null,
+//          new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of()),
+//          false
+//      );
+//      forceTriggerAutoCompaction(2);
+//      expectedResult = ImmutableMap.of(
+//          "%%EXPECTED_COUNT_RESULT%%", 1,
+//          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
+//      );
+//      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+//      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+//
+//      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+//      // Verify rollup segments does not get compacted again
+//      forceTriggerAutoCompaction(2);
+//      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+//      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+//    }
+//  }
+
   private void loadData(String indexTask) throws Exception
   {
     loadData(indexTask, ImmutableMap.of());
@@ -752,7 +785,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, boolean dropExisting) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dropExisting);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, dropExisting);
+  }
+
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, boolean dropExisting) throws Exception
+  {
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, dropExisting);
   }
 
   private void submitCompactionConfig(
@@ -760,6 +798,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Period skipOffsetFromLatest,
       int maxNumConcurrentSubTasks,
       UserCompactionTaskGranularityConfig granularitySpec,
+      UserCompactionTaskDimensionsConfig dimensionsSpec,
       boolean dropExisting
   ) throws Exception
   {
@@ -789,7 +828,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             1
         ),
         granularitySpec,
-        null,
+        dimensionsSpec,
         !dropExisting ? null : new UserCompactionTaskIOConfig(true),
         null
     );

@@ -901,7 +901,7 @@ public class CompactSegmentsTest
                 null
             ),
             null,
-            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null),
+            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
             null,
             null
         )
@@ -922,7 +922,6 @@ public class CompactSegmentsTest
     ClientCompactionTaskDimensionsSpec actual = dimensionsSpecArgumentCaptor.getValue();
     Assert.assertNotNull(actual);
     Assert.assertEquals(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), actual.getDimensions());
-    Assert.assertNull(actual.getDimensionExclusions());
   }
 
   @Test
@@ -1692,7 +1691,7 @@ public class CompactSegmentsTest
                 compactionPartitionsSpec,
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
                     clientCompactionTaskQuery.getDimensionsSpec().getDimensions(),
-                    clientCompactionTaskQuery.getDimensionsSpec().getDimensionExclusions() == null ? null : new ArrayList<>(clientCompactionTaskQuery.getDimensionsSpec().getDimensionExclusions()),
+                    null,
                     null
                 ),
                 ImmutableMap.of(

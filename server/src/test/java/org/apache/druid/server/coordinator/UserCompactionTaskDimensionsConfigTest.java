@@ -50,8 +50,7 @@ public class UserCompactionTaskDimensionsConfigTest
   public void testSerde() throws IOException
   {
     final UserCompactionTaskDimensionsConfig expected = new UserCompactionTaskDimensionsConfig(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")),
-        ImmutableList.of("__time", "val")
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))
     );
     final ObjectMapper mapper = new ObjectMapper();
     final byte[] json = mapper.writeValueAsBytes(expected);
@@ -66,8 +65,7 @@ public class UserCompactionTaskDimensionsConfigTest
   public void testInvalidDimensionsAndExclusionsOverlap()
   {
     final UserCompactionTaskDimensionsConfig expected = new UserCompactionTaskDimensionsConfig(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")),
-        ImmutableList.of("dim")
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))
     );
   }
 
@@ -75,17 +73,7 @@ public class UserCompactionTaskDimensionsConfigTest
   public void testInvalidDimensionsField()
   {
     final UserCompactionTaskDimensionsConfig expected = new UserCompactionTaskDimensionsConfig(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim", "dim")),
-        ImmutableList.of("__time")
-    );
-  }
-
-  @Test(expected = ParseException.class)
-  public void testInvalidDimensionExclusionsField()
-  {
-    final UserCompactionTaskDimensionsConfig expected = new UserCompactionTaskDimensionsConfig(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")),
-        ImmutableList.of("__time", "__time")
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim", "dim"))
     );
   }
 }

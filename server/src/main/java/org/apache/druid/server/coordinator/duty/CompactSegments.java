@@ -358,8 +358,7 @@ public class CompactSegments implements CoordinatorDuty
         ClientCompactionTaskDimensionsSpec dimensionsSpec;
         if (config.getDimensionsSpec() != null) {
           dimensionsSpec = new ClientCompactionTaskDimensionsSpec(
-              config.getDimensionsSpec().getDimensions(),
-              config.getDimensionsSpec().getDimensionExclusions()
+              config.getDimensionsSpec().getDimensions()
           );
         } else {
           dimensionsSpec = null;

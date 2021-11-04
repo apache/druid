@@ -449,7 +449,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         null,
-        new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null),
+        new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
         null,
         ImmutableMap.of("key", "val")
     );

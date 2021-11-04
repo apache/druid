@@ -119,7 +119,7 @@ public class ClientCompactionTaskQuerySerdeTest
             100
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
-        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val")),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         ImmutableMap.of("key", "value")
     );
 
@@ -214,11 +214,6 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getIoConfig().isDropExisting()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
-
-    Assert.assertEquals(
-        query.getDimensionsSpec().getDimensionExclusions(),
-        task.getDimensionsSpec().getDimensionExclusions()
-    );
     Assert.assertEquals(
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
@@ -325,7 +320,7 @@ public class ClientCompactionTaskQuerySerdeTest
             100
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
-        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val")),
+        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         new HashMap<>()
     );
 

@@ -21,13 +21,10 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -42,31 +39,17 @@ import java.util.stream.Collectors;
 public class ClientCompactionTaskDimensionsSpec
 {
   @Nullable private final List<DimensionSchema> dimensions;
-  @Nullable private final List<String> dimensionExclusions;
 
   @JsonCreator
   public ClientCompactionTaskDimensionsSpec(
-      @Nullable @JsonProperty("dimensions") List<DimensionSchema> dimensions,
-      @Nullable @JsonProperty("dimensionExclusions") List<String> dimensionExclusions
+      @Nullable @JsonProperty("dimensions") List<DimensionSchema> dimensions
   )
   {
-    this.dimensions = dimensions;
-    this.dimensionExclusions = dimensionExclusions;
-
-    List<String> dimensionNames = new ArrayList<>();
-    if (this.dimensions != null) {
-      dimensionNames = this.dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
+    if (dimensions != null) {
+      List<String> dimensionNames = dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
       ParserUtils.validateFields(dimensionNames);
     }
-    if (this.dimensionExclusions != null) {
-      ParserUtils.validateFields(this.dimensionExclusions);
-    }
-    if (this.dimensions != null && this.dimensionExclusions != null) {
-      Preconditions.checkArgument(
-          Sets.intersection(Sets.newHashSet(dimensionNames), Sets.newHashSet(dimensionExclusions)).isEmpty(),
-          "dimensions and dimensions exclusions cannot overlap"
-      );
-    }
+    this.dimensions = dimensions;
   }
 
   @Nullable
@@ -74,13 +57,6 @@ public class ClientCompactionTaskDimensionsSpec
   public List<DimensionSchema> getDimensions()
   {
     return dimensions;
-  }
-
-  @Nullable
-  @JsonProperty
-  public List<String> getDimensionExclusions()
-  {
-    return dimensionExclusions;
   }
 
   @Override
@@ -93,14 +69,13 @@ public class ClientCompactionTaskDimensionsSpec
       return false;
     }
     ClientCompactionTaskDimensionsSpec that = (ClientCompactionTaskDimensionsSpec) o;
-    return Objects.equals(dimensions, that.dimensions) &&
-           Objects.equals(dimensionExclusions, that.dimensionExclusions);
+    return Objects.equals(dimensions, that.dimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dimensions, dimensionExclusions);
+    return Objects.hash(dimensions);
   }
 
   @Override
@@ -108,7 +83,6 @@ public class ClientCompactionTaskDimensionsSpec
   {
     return "ClientCompactionTaskDimensionsSpec{" +
            "dimensions=" + dimensions +
-           ", dimensionExclusions=" + dimensionExclusions +
            '}';
   }
 }
