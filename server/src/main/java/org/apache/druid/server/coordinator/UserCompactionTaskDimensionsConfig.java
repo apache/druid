@@ -27,9 +27,9 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -42,40 +42,43 @@ import java.util.stream.Collectors;
 public class UserCompactionTaskDimensionsConfig
 {
   @Nullable private final List<DimensionSchema> dimensions;
-  @Nullable private final Set<String> dimensionExclusions;
+  @Nullable private final List<String> dimensionExclusions;
 
   @JsonCreator
   public UserCompactionTaskDimensionsConfig(
       @Nullable @JsonProperty("dimensions") List<DimensionSchema> dimensions,
-      @Nullable @JsonProperty("dimensionExclusions") Set<String> dimensionExclusions
+      @Nullable @JsonProperty("dimensionExclusions") List<String> dimensionExclusions
   )
   {
     this.dimensions = dimensions;
     this.dimensionExclusions = dimensionExclusions;
 
-    if (this.dimensions != null && this.dimensionExclusions != null) {
-      Preconditions.checkArgument(
-          Sets.intersection(Sets.newHashSet(this.dimensions), dimensionExclusions).isEmpty(),
-          "dimensions and dimensions exclusions cannot overlap"
-      );
-    }
+    List<String> dimensionNames = new ArrayList<>();
     if (this.dimensions != null) {
-      List<String> dimensionNames = this.dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
+      dimensionNames = this.dimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList());
       ParserUtils.validateFields(dimensionNames);
     }
     if (this.dimensionExclusions != null) {
       ParserUtils.validateFields(this.dimensionExclusions);
     }
+    if (this.dimensions != null && this.dimensionExclusions != null) {
+      Preconditions.checkArgument(
+          Sets.intersection(Sets.newHashSet(dimensionNames), Sets.newHashSet(dimensionExclusions)).isEmpty(),
+          "dimensions and dimensions exclusions cannot overlap"
+      );
+    }
   }
 
   @Nullable
+  @JsonProperty
   public List<DimensionSchema> getDimensions()
   {
     return dimensions;
   }
 
   @Nullable
-  public Set<String> getDimensionExclusions()
+  @JsonProperty
+  public List<String> getDimensionExclusions()
   {
     return dimensionExclusions;
   }

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -120,6 +121,7 @@ public class DataSegmentTest
         new NumberedShardSpec(3, 0),
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo")), null, null),
             ImmutableMap.of(),
             ImmutableMap.of()
         ),
@@ -142,6 +144,7 @@ public class DataSegmentTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
+    Assert.assertEquals(4, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 
@@ -154,6 +157,7 @@ public class DataSegmentTest
     Assert.assertEquals(segment.getShardSpec(), deserializedSegment.getShardSpec());
     Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(segment.getId(), deserializedSegment.getId());
+    Assert.assertEquals(segment.getLastCompactionState(), deserializedSegment.getLastCompactionState());
 
     deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, segment.compareTo(deserializedSegment));
@@ -232,6 +236,7 @@ public class DataSegmentTest
   {
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
         Collections.singletonMap("test", "map"),
         Collections.singletonMap("test2", "map2")
     );

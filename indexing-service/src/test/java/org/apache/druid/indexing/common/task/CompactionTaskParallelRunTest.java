@@ -156,6 +156,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       // Expect compaction state to exist as store compaction state by default
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -196,6 +197,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -236,6 +238,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -276,6 +279,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
