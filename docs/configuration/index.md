@@ -1006,7 +1006,7 @@ You can optionally use the `dimensionsSpec` object to configure the dimensions o
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`dimensions`| A list of dimension names or objects. Cannot have the same column in both dimensions and dimensionExclusions. Defaults to 'null', which preserves the original dimensions.|No|
+|`dimensions`| A list of dimension names or objects. Defaults to 'null', which preserves the original dimensions. Note that setting this will cause segments manually compacted with `dimensionExclusions` to be compacted again.|No|
 
 ###### Automatic compaction IOConfig
 
