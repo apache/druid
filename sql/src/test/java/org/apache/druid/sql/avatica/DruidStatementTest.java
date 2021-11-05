@@ -256,5 +256,4 @@ public class DruidStatementTest extends CalciteTestBase
     );
     Assert.assertTrue(statement.isDone());
   }
-
 }

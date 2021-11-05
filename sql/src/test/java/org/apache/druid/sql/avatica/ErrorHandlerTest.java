@@ -20,6 +20,7 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -42,7 +43,7 @@ public class ErrorHandlerTest
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     QueryException input = new QueryException("error", "error message", "error class", "host");
 
-    RuntimeException output = errorHandler.logFailureAndSanitize(input);
+    RuntimeException output = errorHandler.sanitize(input);
     Assert.assertNull(output.getMessage());
   }
 
@@ -53,7 +54,7 @@ public class ErrorHandlerTest
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     QueryException input = new QueryException("error", "error messagez", "error class", "host");
 
-    RuntimeException output = errorHandler.logFailureAndSanitize(input);
+    RuntimeException output = errorHandler.sanitize(input);
     Assert.assertEquals("error messagez", output.getMessage());
   }
 

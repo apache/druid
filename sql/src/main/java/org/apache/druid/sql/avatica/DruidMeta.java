@@ -122,6 +122,9 @@ public class DruidMeta extends MetaImpl
       context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
       openDruidConnection(ch.id, context.build());
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -137,6 +140,9 @@ public class DruidMeta extends MetaImpl
         druidConnection.close();
       }
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -150,6 +156,9 @@ public class DruidMeta extends MetaImpl
       getDruidConnection(ch.id);
       return connProps;
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -158,8 +167,16 @@ public class DruidMeta extends MetaImpl
   @Override
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
-    final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
-    return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
+    try {
+      final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -181,7 +198,7 @@ public class DruidMeta extends MetaImpl
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
       if (authenticationResult == null) {
-        throw errorHandler.logFailureAndSanitize(
+        throw ErrorHandler.logFailure(
             new ForbiddenException("Authentication failed."),
             "Authentication failed for statement[%s]",
             druidStatement.getStatementId()
@@ -190,6 +207,9 @@ public class DruidMeta extends MetaImpl
       statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
       LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
       return statement;
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
     }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
@@ -224,7 +244,7 @@ public class DruidMeta extends MetaImpl
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
       if (authenticationResult == null) {
-        throw errorHandler.logFailureAndSanitize(
+        throw ErrorHandler.logFailure(
             new ForbiddenException("Authentication failed."),
             "Authentication failed for statement[%s]",
             druidStatement.getStatementId()
@@ -250,10 +270,8 @@ public class DruidMeta extends MetaImpl
           )
       );
     }
-    catch (NoSuchStatementException e) {
-      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
-        throw errorHandler.sanitize(e);
-      }
+    // cannot affect these exceptions as avatica handles them
+    catch (NoSuchConnectionException | NoSuchStatementException e) {
       throw e;
     }
     catch (Throwable t) {
@@ -293,6 +311,9 @@ public class DruidMeta extends MetaImpl
       LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
       return getDruidStatement(statement).nextFrame(offset, maxRows);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -318,7 +339,6 @@ public class DruidMeta extends MetaImpl
   ) throws NoSuchStatementException
   {
     try {
-
       final DruidStatement druidStatement = getDruidStatement(statement);
       final Frame firstFrame = druidStatement.execute(parameterValues)
                                              .nextFrame(
@@ -339,6 +359,9 @@ public class DruidMeta extends MetaImpl
               )
           )
       );
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
     }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
@@ -371,6 +394,9 @@ public class DruidMeta extends MetaImpl
         }
       }
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -397,9 +423,12 @@ public class DruidMeta extends MetaImpl
       return !isDone;
     }
     catch (NoSuchStatementException e) {
-      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
-        throw errorHandler.sanitize(e);
-      }
+//      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
+//        throw errorHandler.sanitize(e);
+//      }
+      throw e;
+    }
+    catch (NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
@@ -438,6 +467,9 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
       throw errorHandler.sanitize(t);
     }
@@ -472,8 +504,11 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
-      throw errorHandler.logFailureAndSanitize(t);
+      throw errorHandler.sanitize(t);
     }
   }
 
@@ -528,8 +563,11 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
-      throw errorHandler.logFailureAndSanitize(t);
+      throw errorHandler.sanitize(t);
     }
   }
 
@@ -595,8 +633,11 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
-      throw errorHandler.logFailureAndSanitize(t);
+      throw errorHandler.sanitize(t);
     }
   }
 
@@ -613,8 +654,11 @@ public class DruidMeta extends MetaImpl
 
       return sqlResultSet(ch, sql);
     }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
     catch (Throwable t) {
-      throw errorHandler.logFailureAndSanitize(t);
+      throw errorHandler.sanitize(t);
     }
   }
 
@@ -666,7 +710,7 @@ public class DruidMeta extends MetaImpl
       if (connectionCount.get() > config.getMaxConnections()) {
         // We aren't going to make a connection after all.
         connectionCount.decrementAndGet();
-        throw errorHandler.logFailureAndSanitize(
+        throw ErrorHandler.logFailure(
             new ISE("Too many connections"),
             "Too many connections, limit is[%,d] per broker",
             config.getMaxConnections()
@@ -682,7 +726,7 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw errorHandler.logFailureAndSanitize(new ISE("Connection[%s] already open.", connectionId));
+      throw ErrorHandler.logFailure(new ISE("Connection[%s] already open.", connectionId));
     }
 
     LOG.debug("Connection[%s] opened.", connectionId);

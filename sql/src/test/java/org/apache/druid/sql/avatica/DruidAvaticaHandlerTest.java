@@ -835,7 +835,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     clientNoTrailingSlash.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections, limit is[4]");
+    expectedException.expectMessage("Too many connections");
 
     final Connection connection5 = DriverManager.getConnection(url);
   }

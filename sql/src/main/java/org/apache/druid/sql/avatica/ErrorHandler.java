@@ -20,6 +20,8 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.inject.Inject;
+import org.apache.calcite.avatica.NoSuchConnectionException;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
@@ -44,35 +46,6 @@ class ErrorHandler
   ErrorHandler(final ServerConfig serverConfig)
   {
     this.errorResponseTransformStrategy = serverConfig.getErrorResponseTransformStrategy();
-  }
-
-  /**
-   * Logs a throwable at the error level and sanitizes the throwable if applicable. Will return
-   * the sanitized or original throwable.
-   *
-   * @param error A throwable that will be logged then sanitized
-   * @param <T>
-   * @return The sanitized throwable
-   */
-  public <T extends Throwable> RuntimeException logFailureAndSanitize(T error)
-  {
-    return logFailureAndSanitize(error, error.getMessage());
-  }
-
-  /**
-   * Logs an error message at the error level and sanitizes the throwable if applicable. Will return
-   * the sanitized or original throwable.
-   *
-   * @param error   the throwable that will be sanitized
-   * @param message the error string formate message to be logged
-   * @param format  the format args for the message
-   * @param <T>
-   * @return A sanitized version of the throwable if applicable otherwise the original throwable
-   */
-  public <T extends Throwable> RuntimeException logFailureAndSanitize(T error, String message, Object... format)
-  {
-    logFailure(error, message, format);
-    return sanitize(error);
   }
 
   /**
@@ -116,11 +89,20 @@ class ErrorHandler
    */
   public <T extends Throwable> RuntimeException sanitize(T error)
   {
+//    if (error instanceof NoSuchConnectionException) {
+//      return (NoSuchConnectionException) errorResponseTransformStrategy.transformIfNeeded(new NSCE(((NoSuchConnectionException) error).getConnectionId()));
+//    }
+    if (error instanceof NoSuchConnectionException) {
+      if (this.hasAffectingErrorResponseTransformStrategy()) {
+        return new NoSuchConnectionException("");
+      }
+      return (NoSuchConnectionException) error;
+    }
     if (error instanceof QueryException) {
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded((QueryException) error);
     }
     if (error instanceof ForbiddenException) {
-      return (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
+      return  (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
     }
     if (error instanceof ISE) {
       return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
@@ -139,8 +121,7 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
-    Exception transformedError = errorResponseTransformStrategy.transformIfNeeded(wrappedError);
-    return (QueryException) transformedError;
+    return (QueryInterruptedException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
   }
 
   /**
