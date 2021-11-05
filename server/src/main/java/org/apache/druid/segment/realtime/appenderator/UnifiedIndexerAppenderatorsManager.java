@@ -175,7 +175,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = new AppenderatorImpl(
+      Appenderator appenderator = new StreamAppenderator(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -188,8 +188,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler,
-          true
+          parseExceptionHandler
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -208,8 +207,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean batchMemoryMappedIndex
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     synchronized (this) {
@@ -228,8 +226,81 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler,
-          batchMemoryMappedIndex
+          parseExceptionHandler
+      );
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
+  }
+
+  @Override
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          DatasourceBundle::new
+      );
+
+      Appenderator appenderator = Appenderators.createOpenSegmentsOffline(
+          taskId,
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          wrapIndexMerger(indexMerger),
+          rowIngestionMeters,
+          parseExceptionHandler
+      );
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
+  }
+
+  @Override
+  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          DatasourceBundle::new
+      );
+
+      Appenderator appenderator = Appenderators.createClosedSegmentsOffline(
+          taskId,
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          wrapIndexMerger(indexMerger),
+          rowIngestionMeters,
+          parseExceptionHandler
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -493,7 +564,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   /**
    * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by
-   * {@link AppenderatorImpl} with a shared executor service. Merge/persist methods that are not used by
+   * {@link StreamAppenderator} with a shared executor service. Merge/persist methods that are not used by
    * AppenderatorImpl will throw an exception if called.
    */
   public static class LimitedPoolIndexMerger implements IndexMerger

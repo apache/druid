@@ -29,6 +29,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
 import org.apache.druid.java.util.common.FileUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,6 +47,28 @@ public class AvroHadoopInputRowParserTest
     for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+  }
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, false, false, false);
+    AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsBytes(parser),
+        AvroHadoopInputRowParser.class
+    );
+    Assert.assertEquals(parser, parser2);
+  }
+
+  @Test
+  public void testSerdeNonDefaults() throws IOException
+  {
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, true, true, true);
+    AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsBytes(parser),
+        AvroHadoopInputRowParser.class
+    );
+    Assert.assertEquals(parser, parser2);
   }
 
   @Test
@@ -67,6 +90,7 @@ public class AvroHadoopInputRowParserTest
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
+    Assert.assertEquals(parser, parser2);
     InputRow inputRow = parser2.parseBatch(record).get(0);
     AvroStreamInputRowParserTest.assertInputRowCorrect(inputRow, AvroStreamInputRowParserTest.DIMENSIONS, fromPigAvroStorage);
   }

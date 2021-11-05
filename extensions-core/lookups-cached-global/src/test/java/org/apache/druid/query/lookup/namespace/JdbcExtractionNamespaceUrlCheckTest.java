@@ -62,6 +62,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -99,6 +100,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -134,6 +136,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -155,7 +158,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
     public void testWhenInvalidUrlFormat()
     {
       expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Invalid URL format [jdbc:mysql:/invalid-url::3006]");
+      expectedException.expectMessage("Invalid URL format for MySQL: [jdbc:mysql:/invalid-url::3006]");
       new JdbcExtractionNamespace(
           new MetadataStorageConnectorConfig()
           {
@@ -171,6 +174,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -212,6 +216,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -249,6 +254,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          10L,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -284,6 +290,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -305,7 +312,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
     public void testWhenInvalidUrlFormat()
     {
       expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Invalid URL format [jdbc:postgresql://invalid-url::3006]");
+      expectedException.expectMessage("Invalid URL format for PostgreSQL: [jdbc:postgresql://invalid-url::3006]");
       new JdbcExtractionNamespace(
           new MetadataStorageConnectorConfig()
           {
@@ -321,6 +328,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -364,6 +372,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -405,6 +414,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           TS_COLUMN,
           "some filter",
           new Period(10),
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override

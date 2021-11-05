@@ -113,4 +113,15 @@ public class CloudObjectLocationTest
     // will never get here
     Assert.assertEquals(invalidBucket, new CloudObjectLocation(invalidBucket.toUri(SCHEME)));
   }
+
+  @Test
+  public void testInvalidBucketName()
+  {
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("bucket name cannot be null. Please verify if bucket name adheres to naming rules");
+    // Underscore(_) character is not valid for bucket names
+    CloudObjectLocation invalidBucket1 = new CloudObjectLocation("test_bucket", "path/to/path");
+    CloudObjectLocation invalidBucket2 = new CloudObjectLocation(invalidBucket1.toUri(SCHEME));
+    Assert.assertEquals("test_bucket", new CloudObjectLocation(invalidBucket2.toUri(SCHEME)));
+  }
 }

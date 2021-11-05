@@ -117,6 +117,6 @@ public class CompactionResourceTest
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
-    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(404, response.getStatus());
   }
 }

@@ -36,7 +36,7 @@ By default, compaction does not modify the underlying data of the segments. Howe
 - Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
-- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](index.md#perfect-rollup-vs-best-effort-rollup).
+- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](./rollup.md#perfect-rollup-vs-best-effort-rollup).
 
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
@@ -82,7 +82,7 @@ If you want to control dimension ordering or ensure specific values for dimensio
 
 ### Rollup
 Druid only rolls up the output segment when `rollup` is set for all input segments.
-See [Roll-up](../ingestion/index.md#rollup) for more details.
+See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
 
 ## Setting up manual compaction
@@ -192,7 +192,8 @@ You can optionally use the `granularitySpec` object to configure the segment gra
     ,
     "granularitySpec": {
       "segmentGranularity": <time_period>,
-      "queryGranularity": <time_period>
+      "queryGranularity": <time_period>,
+      "rollup": true
     }
     ...
 ```
@@ -202,9 +203,10 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 |Field|Description|Required|
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values. Not supported for automatic compaction.|No|
+|`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
+|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
-For example, to set the segment granularity to "day" and the query granularity to "hour":
+For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
 ```json
 {
   "type" : "compact",
@@ -213,11 +215,12 @@ For example, to set the segment granularity to "day" and the query granularity t
     "type": "compact",
     "inputSpec": {
       "type": "interval",
-      "interval": "2017-01-01/2018-01-01",
+      "interval": "2017-01-01/2018-01-01"
     },
     "granularitySpec": {
       "segmentGranularity":"day",
-      "queryGranularity":"hour"
+      "queryGranularity":"hour",
+      "rollup": true
     }
   }
 }

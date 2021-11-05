@@ -341,6 +341,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
   public void emit(ServiceEmitter emitter)
   {
     checkModifiedFromOwnerThread();

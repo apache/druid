@@ -30,8 +30,8 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -117,11 +117,11 @@ public class HyperUniqueFinalizingPostAggregatorTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("approxCount", null)
                     .add("approxCountRound", null)
-                    .add("a", ValueType.DOUBLE)
-                    .add("b", ValueType.LONG)
+                    .add("a", ColumnType.DOUBLE)
+                    .add("b", ColumnType.LONG)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

@@ -45,7 +45,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -390,9 +390,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      BaseCalciteQueryTest.expressionVirtualColumn("v0", "(\"d1\" * 7)", ValueType.DOUBLE),
-                      BaseCalciteQueryTest.expressionVirtualColumn("v1", "(\"f1\" * 7)", ValueType.FLOAT),
-                      BaseCalciteQueryTest.expressionVirtualColumn("v2", "(\"l1\" * 7)", ValueType.LONG)
+                      BaseCalciteQueryTest.expressionVirtualColumn("v0", "(\"d1\" * 7)", ColumnType.DOUBLE),
+                      BaseCalciteQueryTest.expressionVirtualColumn("v1", "(\"f1\" * 7)", ColumnType.FLOAT),
+                      BaseCalciteQueryTest.expressionVirtualColumn("v2", "(\"l1\" * 7)", ColumnType.LONG)
                   )
                   .aggregators(
                       ImmutableList.of(
@@ -474,7 +474,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             .dataSource(CalciteTests.DATASOURCE3)
             .intervals(querySegmentSpec(Filtration.eternity()))
             .virtualColumns(
-                new ExpressionVirtualColumn("v0", "CAST(\"dim1\", 'DOUBLE')", ValueType.DOUBLE, ExprMacroTable.nil())
+                new ExpressionVirtualColumn("v0", "CAST(\"dim1\", 'DOUBLE')", ColumnType.DOUBLE, ExprMacroTable.nil())
             )
             .granularity(Granularities.ALL)
             .aggregators(
@@ -570,8 +570,8 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(

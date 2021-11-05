@@ -208,12 +208,7 @@ public class InlineFirehoseTest
 
   private static InlineFirehose create(String data)
   {
-    try {
-      return new InlineFirehose(data, PARSER);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return new InlineFirehose(data, PARSER);
   }
 
   private static void assertRowValue(String expected, InputRow row)

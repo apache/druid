@@ -25,7 +25,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,7 +46,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
     // This strategy is used for ExtractionFns on the __time column. They always return STRING, so we need to convert
     // from STRING to the desired output type.
     this.dimensionValueConverter = DimensionHandlerUtils.converterFromTypeToType(
-        ValueType.STRING,
+        ColumnType.STRING,
         query.getDimensionSpec().getOutputType()
     );
   }

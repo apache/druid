@@ -22,12 +22,15 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -37,6 +40,9 @@ import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private Expr.ObjectBinding bindings;
 
   @Before
@@ -435,9 +441,9 @@ public class FunctionTest extends InitializedNullHandlingTest
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("null", "STRING"),
         Pair.of("x", "STRING"),
-        Pair.of("b", "LONG_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY"),
-        Pair.of("a", "STRING_ARRAY")
+        Pair.of("b", "ARRAY<LONG>"),
+        Pair.of("c", "ARRAY<DOUBLE>"),
+        Pair.of("a", "ARRAY<STRING>")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       if (NullHandling.sqlCompatible()) {
@@ -466,8 +472,8 @@ public class FunctionTest extends InitializedNullHandlingTest
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("1.2", "DOUBLE"),
         Pair.of("x", "STRING"),
-        Pair.of("a", "STRING_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY")
+        Pair.of("a", "ARRAY<STRING>"),
+        Pair.of("c", "ARRAY<DOUBLE>")
 
     );
     for (Pair<String, String> argAndType : invalidArguments) {
@@ -506,7 +512,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[greatest] does not accept STRING_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[greatest] does not accept ARRAY<STRING> types", e.getMessage());
     }
 
     // Null handling
@@ -534,13 +540,185 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[least] does not accept LONG_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[least] does not accept ARRAY<LONG> types", e.getMessage());
     }
 
     // Null handling
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+  }
+
+  @Test
+  public void testSizeFormat()
+  {
+    assertExpr("human_readable_binary_byte_format(-1024)", "-1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024)", "1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024)", "1.00 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024)", "1.00 TiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024*1024)", "1.00 PiB");
+
+    assertExpr("human_readable_decimal_byte_format(-1000)", "-1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000)", "1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000)", "1.00 MB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000)", "1.00 GB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000*1000)", "1.00 TB");
+
+    assertExpr("human_readable_decimal_format(-1000)", "-1.00 K");
+    assertExpr("human_readable_decimal_format(1000)", "1.00 K");
+    assertExpr("human_readable_decimal_format(1000*1000)", "1.00 M");
+    assertExpr("human_readable_decimal_format(1000*1000*1000)", "1.00 G");
+    assertExpr("human_readable_decimal_format(1000*1000*1000*1000)", "1.00 T");
+  }
+
+  @Test
+  public void testSizeFormatWithDifferentPrecision()
+  {
+    assertExpr("human_readable_binary_byte_format(1024, 0)", "1 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024, 1)", "1.0 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024, 2)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024, 3)", "1.000 TiB");
+
+    assertExpr("human_readable_decimal_byte_format(1234, 0)", "1 KB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000, 1)", "1.2 MB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000, 2)", "1.23 GB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000*1000, 3)", "1.234 TB");
+
+    assertExpr("human_readable_decimal_format(1234, 0)", "1 K");
+    assertExpr("human_readable_decimal_format(1234*1000,1)", "1.2 M");
+    assertExpr("human_readable_decimal_format(1234*1000*1000,2)", "1.23 G");
+    assertExpr("human_readable_decimal_format(1234*1000*1000*1000,3)", "1.234 T");
+  }
+
+  @Test
+  public void testSizeFormatWithEdgeCases()
+  {
+    //a nonexist value is null which is treated as 0
+    assertExpr("human_readable_binary_byte_format(nonexist)", NullHandling.sqlCompatible() ? null : "0 B");
+
+    //f = 12.34
+    assertExpr("human_readable_binary_byte_format(f)", "12 B");
+
+    //nan is Double.NaN
+    assertExpr("human_readable_binary_byte_format(nan)", "0 B");
+
+    //inf = Double.POSITIVE_INFINITY
+    assertExpr("human_readable_binary_byte_format(inf)", "8.00 EiB");
+
+    //inf = Double.NEGATIVE_INFINITY
+    assertExpr("human_readable_binary_byte_format(-inf)", "-8.00 EiB");
+
+    // o = 0
+    assertExpr("human_readable_binary_byte_format(o)", "0 B");
+
+    // od = 0D
+    assertExpr("human_readable_binary_byte_format(od)", "0 B");
+
+    // of = 0F
+    assertExpr("human_readable_binary_byte_format(of)", "0 B");
+  }
+
+  @Test
+  public void testSizeForatInvalidArgumentType()
+  {
+    try {
+      //x = "foo"
+      Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      // for sqlCompatible, function above returns null and goes here
+      // but for non-sqlCompatible, it must not go to here
+      Assert.assertTrue(NullHandling.sqlCompatible() ? true : false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs a number as its first argument", e.getMessage());
+    }
+
+    try {
+      //x = "foo"
+      Parser.parse("human_readable_binary_byte_format(1024, x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("human_readable_binary_byte_format(1024, of)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Function[human_readable_binary_byte_format] needs an integer as its second argument", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testSizeFormatInvalidPrecision()
+  {
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[9223372036854775807] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[-9223372036854775808] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, -1)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[-1] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, 4)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals("Given precision[4] of Function[human_readable_binary_byte_format] must be in the range of [0,3]", e.getMessage());
+    }
+  }
+
+  @Test
+  public void testSizeFormatInvalidArgumentSize()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[human_readable_binary_byte_format] needs 1 or 2 arguments");
+    Parser.parse("human_readable_binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
+          .eval(bindings);
   }
 
   @Test
@@ -567,6 +745,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     // unary doesn't accept any slop
     assertExpr("bitwiseComplement('1')", null);
     assertExpr("bitwiseComplement(null)", null);
+
+    // data truncation
+    try {
+      assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null);
+      Assert.fail("Did not throw IllegalArgumentException");
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertEquals("Possible data truncation, param [461168601842738800000000000000.000000] is out of long value range", e.getMessage());
+    }
 
     // doubles are cast
     assertExpr("bitwiseOr(2.345, 1)", 3L);
@@ -605,7 +792,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat(nonexistent, 10)", null);
   }
 
-
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
@@ -614,7 +800,6 @@ public class FunctionTest extends InitializedNullHandlingTest
     final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
     final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
-
 
     final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());

@@ -19,20 +19,37 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.Segment;
+import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
-import java.io.File;
-
 /**
- * Loading segments from deep storage to local storage.
- * Implementations must be thread-safe.
+ * Loading segments from deep storage to local storage. Internally, this class can delegate the download to
+ * {@link SegmentCacheManager}. Implementations must be thread-safe.
  */
+@UnstableApi
 public interface SegmentLoader
 {
-  boolean isSegmentLoaded(DataSegment segment);
-  Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
-  File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
+   * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
+   * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}
+   * or a different {@link ReferenceCountingSegment}. Caller should not assume any particular behavior.
+   *
+   * Returning a {@code ReferenceCountingSegment} will let custom implementations keep track of reference count for
+   * segments that the custom implementations are creating. That way, custom implementations can know when the segment
+   * is in use or not.
+   * @param segment - Segment to load
+   * @param lazy - Whether column metadata de-serialization is to be deferred to access time. Setting this flag to true can speed up segment loading
+   * @param loadFailed - Callback to invoke if lazy loading fails during column access.
+   * @throws SegmentLoadingException - If there is an error in loading the segment
+   */
+  ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+
+  /**
+   * cleanup any state used by this segment
+   */
   void cleanup(DataSegment segment);
 }

@@ -59,6 +59,7 @@ Available Metrics
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
@@ -158,9 +159,10 @@ These metrics are applicable for the Kinesis Indexing Service.
 |`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 |`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
-## Ingestion metrics (Realtime process)
+## Ingestion metrics 
 
-These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime process. These metrics are deltas for each emission period.
+Streaming ingestion tasks and certain types of
+batch ingestion emit the following metrics. These metrics are deltas for each emission period.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
@@ -179,7 +181,9 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/handoff/count`|Number of handoffs that happened.|dataSource, taskId, taskType.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
 |`ingest/sink/count`|Number of sinks not handoffed.|dataSource, taskId, taskType.|1~3|
-|`ingest/events/messageGap`|Time gap between the data time in event and current system time.|dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
+|`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. |dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
+|`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator|dataSource.|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
+|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource, noticeType.| < 1s. |
 
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
@@ -321,8 +325,8 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/swap/pageOut`|Paged out swap.||Varies.|
 |`sys/disk/write/count`|Writes to disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
 |`sys/disk/read/count`|Reads from disk.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/write/size`|Bytes written to disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
-|`sys/disk/read/size`|Bytes read from disk. Can we used to determine how much paging is occurring with regards to segments.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|Varies.|
+|`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`,`fsTypeName`, `fsSysTypeName`, `fsOptions`.|Varies.|
+|`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`.|Varies.|
 |`sys/net/write/size`|Bytes written to the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/net/read/size`|Bytes read from the network.|netName, netAddress, netHwaddr|Varies.|
 |`sys/fs/used`|Filesystem bytes used.|fsDevName, fsDirName, fsTypeName, fsSysTypeName, fsOptions.|< max|
@@ -332,3 +336,17 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/storage/used`|Disk space used.|fsDirName.|Varies.|
 |`sys/cpu`|CPU used.|cpuName, cpuTime.|Varies.|
 
+## Cgroup
+
+These metrics are available on operating systems with the cgroup kernel feature. All the values are derived by reading from `/sys/fs/cgroup`.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`cgroup/cpu/shares`|Relative value of CPU time available to this process. Read from `cpu.shares`.||Varies.|
+|`cgroup/cpu/cores_quota`|Number of cores available to this process. Derived from `cpu.cfs_quota_us`/`cpu.cfs_period_us`.||Varies. A value of -1 indicates there is no explicit quota set.|
+|`cgroup/memory/*`|Memory stats for this process (e.g. `cache`, `total_swap`, etc.). Each stat produces a separate metric. Read from `memory.stat`.||Varies.|
+|`cgroup/memory_numa/*/pages`|Memory stats, per NUMA node, for this process (e.g. `total`, `unevictable`, etc.). Each stat produces a separate metric. Read from `memory.num_stat`.|`numaZone`|Varies.|
+|`cgroup/cpuset/cpu_count`|Total number of CPUs available to the process. Derived from `cpuset.cpus`.||Varies.|
+|`cgroup/cpuset/effective_cpu_count`|Total number of active CPUs available to the process. Derived from `cpuset.effective_cpus`.||Varies.|
+|`cgroup/cpuset/mems_count`|Total number of memory nodes available to the process. Derived from `cpuset.mems`.||Varies.|
+|`cgroup/cpuset/effective_mems_count`|Total number of active memory nodes available to the process. Derived from `cpuset.effective_mems`.||Varies.|

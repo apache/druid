@@ -33,6 +33,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -90,9 +91,9 @@ public class IndexedTableJoinableTest
           new Object[]{"baz", null, 1L}
       ),
       RowSignature.builder()
-                  .add(KEY_COLUMN, ValueType.STRING)
-                  .add(VALUE_COLUMN, ValueType.LONG)
-                  .add(ALL_SAME_COLUMN, ValueType.LONG)
+                  .add(KEY_COLUMN, ColumnType.STRING)
+                  .add(VALUE_COLUMN, ColumnType.LONG)
+                  .add(ALL_SAME_COLUMN, ColumnType.LONG)
                   .build()
   );
 

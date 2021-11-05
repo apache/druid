@@ -316,6 +316,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       if (ignoreAfterThreshold &&
           query.getDimensionsFilter() == null &&
+          !storageAdapter.hasBuiltInFilters() &&
           query.getIntervals().stream().anyMatch(interval -> interval.contains(storageAdapter.getInterval()))) {
         endIndex = Math.min(endIndex, startIndex + query.getThreshold());
       }

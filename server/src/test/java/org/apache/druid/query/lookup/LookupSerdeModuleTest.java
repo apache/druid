@@ -34,7 +34,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
@@ -73,7 +73,7 @@ public class LookupSerdeModuleTest
     final ExpressionVirtualColumn virtualColumn = new ExpressionVirtualColumn(
         "v",
         "lookup(xxx, 'beep')",
-        ValueType.STRING,
+        ColumnType.STRING,
         injector.getInstance(ExprMacroTable.class)
     );
 

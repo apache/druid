@@ -19,10 +19,17 @@
 
 package org.apache.druid.firehose.sql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,8 +38,55 @@ import java.util.Set;
 
 public class MySQLFirehoseDatabaseConnectorTest
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final JdbcAccessSecurityConfig INJECTED_CONF = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
+
+  static {
+    MAPPER.registerModules(new MySQLMetadataStorageModule().getJacksonModules());
+    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF));
+  }
+
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mysql://localhost:3306/test";
+      }
+    };
+    MySQLFirehoseDatabaseConnector connector = new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
+        INJECTED_CONF
+    );
+    MySQLFirehoseDatabaseConnector andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    Assert.assertEquals(connector, andBack);
+
+    // test again with classname
+    connector = new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        "some.class.name.Driver",
+        INJECTED_CONF
+    );
+    andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    Assert.assertEquals(connector, andBack);
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(MySQLFirehoseDatabaseConnector.class)
+                  .usingGetClass()
+                  .withNonnullFields("connectorConfig")
+                  .withIgnoredFields("dbi")
+                  .verify();
+  }
 
   @Test
   public void testSuccessWhenNoPropertyInUriAndNoAllowlist()
@@ -50,6 +104,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -70,6 +125,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -93,6 +149,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -115,9 +172,35 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
+
+  @Test
+  public void testSuccessOnlyValidPropertyMariaDb()
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mariadb://localhost:3306/test?user=maytas&password=secret&keyonly";
+      }
+    };
+
+    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(
+        ImmutableSet.of("user", "password", "keyonly", "etc")
+    );
+
+    new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
+        securityConfig
+    );
+  }
+
+
 
   @Test
   public void testFailOnlyInvalidProperty()
@@ -138,6 +221,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -161,6 +245,31 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
+        securityConfig
+    );
+  }
+
+  @Test
+  public void testFailValidAndInvalidPropertyMariadb()
+  {
+    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mariadb://localhost:3306/test?user=maytas&password=secret&keyonly";
+      }
+    };
+
+    JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
+
+    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expect(IllegalArgumentException.class);
+
+    new MySQLFirehoseDatabaseConnector(
+        connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -194,6 +303,7 @@ public class MySQLFirehoseDatabaseConnectorTest
 
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         securityConfig
     );
   }
@@ -211,10 +321,11 @@ public class MySQLFirehoseDatabaseConnectorTest
       }
     };
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
+        null,
         new JdbcAccessSecurityConfig()
     );
   }

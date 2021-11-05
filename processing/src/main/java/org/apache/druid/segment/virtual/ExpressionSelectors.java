@@ -39,6 +39,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -141,16 +142,16 @@ public class ExpressionSelectors
   {
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
-      final ValueType inputType = plan.getSingleInputType();
-      if (inputType == ValueType.LONG) {
+      final ColumnType inputType = plan.getSingleInputType();
+      if (inputType.is(ValueType.LONG)) {
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
             !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
-      } else if (inputType == ValueType.STRING) {
+      } else if (inputType.is(ValueType.STRING)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
             plan.getExpression()
         );
       }
@@ -186,7 +187,7 @@ public class ExpressionSelectors
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
-      if (plan.getSingleInputType() == ValueType.STRING) {
+      if (plan.getSingleInputType().is(ValueType.STRING)) {
         return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
@@ -263,27 +264,26 @@ public class ExpressionSelectors
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
 
-      if (nativeType == ValueType.FLOAT) {
+      if (columnCapabilities == null || columnCapabilities.isArray()) {
+        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
+        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
+      } else if (columnCapabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (nativeType == ValueType.LONG) {
+      } else if (columnCapabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (nativeType == ValueType.DOUBLE) {
+      } else if (columnCapabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (nativeType == ValueType.STRING) {
+      } else if (columnCapabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal
         );
-      } else if (nativeType == null || ValueType.isArray(nativeType)) {
-        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
         // Unhandleable ValueType (COMPLEX).
         supplier = null;
@@ -411,15 +411,18 @@ public class ExpressionSelectors
   @Nullable
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
-    switch (eval.type()) {
-      case STRING_ARRAY:
-        return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
-      case DOUBLE_ARRAY:
-        return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
-      case LONG_ARRAY:
-        return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
-      default:
-        return eval.value();
+    if (eval.type().isArray()) {
+      switch (eval.type().getElementType().getType()) {
+        case STRING:
+          return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
+        case DOUBLE:
+          return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
+        case LONG:
+          return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
+        default:
+
+      }
     }
+    return eval.value();
   }
 }
