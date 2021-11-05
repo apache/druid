@@ -156,7 +156,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
     try {
       LOG.debug("LookupExtractorFactoryContainerProvider starting.");
-      FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
+      if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
+        FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
+      }
       loadAllLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
