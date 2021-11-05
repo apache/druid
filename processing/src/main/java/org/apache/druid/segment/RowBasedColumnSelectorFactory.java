@@ -36,9 +36,13 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
@@ -47,21 +51,32 @@ import java.util.function.ToLongFunction;
  */
 public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
-  private final Supplier<T> supplier;
+  private static final long NO_ID = -1;
+
+  private final Supplier<T> rowSupplier;
+
+  @Nullable
+  private final LongSupplier rowIdSupplier;
   private final RowAdapter<T> adapter;
-  private final RowSignature rowSignature;
+  private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
 
-  private RowBasedColumnSelectorFactory(
-      final Supplier<T> supplier,
+  /**
+   * Package-private constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
+   * column value reuse optimizations.
+   */
+  RowBasedColumnSelectorFactory(
+      final Supplier<T> rowSupplier,
+      @Nullable final LongSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
-      final RowSignature rowSignature,
+      final ColumnInspector columnInspector,
       final boolean throwParseExceptions
   )
   {
-    this.supplier = supplier;
-    this.adapter = adapter;
-    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature must be nonnull");
+    this.rowSupplier = Preconditions.checkNotNull(rowSupplier, "rowSupplier");
+    this.rowIdSupplier = rowIdSupplier;
+    this.adapter = Preconditions.checkNotNull(adapter, "adapter");
+    this.columnInspector = Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
   }
 
@@ -69,10 +84,10 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    * Create an instance based on any object, along with a {@link RowAdapter} for that object.
    *
    * @param adapter              adapter for these row objects
-   * @param supplier             supplier of row objects
-   * @param signature            will be used for reporting available columns and their capabilities. Note that the this
+   * @param rowSupplier          supplier of row objects
+   * @param columnInspector      will be used for reporting available columns and their capabilities. Note that this
    *                             factory will still allow creation of selectors on any named field in the rows, even if
-   *                             it doesn't appear in "rowSignature". (It only needs to be accessible via
+   *                             it doesn't appear in "columnInspector". (It only needs to be accessible via
    *                             {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
    *                             passing in {@link RowSignature#empty()}.
    * @param throwParseExceptions whether numeric selectors should throw parse exceptions or use a default/null value
@@ -80,26 +95,27 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
-      final Supplier<RowType> supplier,
-      final RowSignature signature,
+      final Supplier<RowType> rowSupplier,
+      final ColumnInspector columnInspector,
       final boolean throwParseExceptions
   )
   {
-    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature, throwParseExceptions);
+    return new RowBasedColumnSelectorFactory<>(rowSupplier, null, adapter, columnInspector, throwParseExceptions);
   }
 
   @Nullable
   static ColumnCapabilities getColumnCapabilities(
-      final RowSignature rowSignature,
+      final ColumnInspector columnInspector,
       final String columnName
   )
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-      // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
+      // TIME_COLUMN_NAME is handled specially; override the provided inspector.
       return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     } else {
-      final ColumnType valueType = rowSignature.getColumnType(columnName).orElse(null);
-
+      final Optional<ColumnCapabilities> inspectedCapabilities =
+          Optional.ofNullable(columnInspector.getColumnCapabilities(columnName));
+      final ColumnType valueType = inspectedCapabilities.map(ColumnCapabilities::toColumnType).orElse(null);
 
       if (valueType != null) {
         if (valueType.isNumeric()) {
@@ -111,12 +127,23 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
 
         // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-        // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
-        // causes expression selectors to always treat us as arrays, so leave as unknown
-        return new ColumnCapabilitiesImpl()
+        final ColumnCapabilitiesImpl retVal = new ColumnCapabilitiesImpl()
             .setType(valueType)
             .setDictionaryValuesUnique(false)
             .setDictionaryValuesSorted(false);
+
+        // Set hasMultipleValues = false if the inspector asserts that there will not be multiple values.
+        //
+        // Note: we do not set hasMultipleValues = true ever, because even though we might return multiple values,
+        // setting it affirmatively causes expression selectors to always treat the column values as arrays. And we
+        // don't want that.
+        if (inspectedCapabilities.map(ColumnCapabilities::hasMultipleValues)
+                                 .orElse(ColumnCapabilities.Capable.UNKNOWN)
+                                 .isFalse()) {
+          retVal.setHasMultipleValues(false);
+        }
+
+        return retVal;
       } else {
         return null;
       }
@@ -145,17 +172,32 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
       return new BaseSingleValueDimensionSelector()
       {
+        private long currentId = NO_ID;
+        private String currentValue;
+
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(timestampFunction.applyAsLong(supplier.get()));
+          updateCurrentValue();
+          return currentValue;
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", supplier);
+          inspector.visit("row", rowSupplier);
           inspector.visit("extractionFn", extractionFn);
+        }
+
+        private void updateCurrentValue()
+        {
+          if (rowIdSupplier == null || rowIdSupplier.getAsLong() != currentId) {
+            currentValue = extractionFn.apply(timestampFunction.applyAsLong(rowSupplier.get()));
+
+            if (rowIdSupplier != null) {
+              currentId = rowIdSupplier.getAsLong();
+            }
+          }
         }
       };
     } else {
@@ -163,130 +205,82 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
       return new DimensionSelector()
       {
+        private long currentId = NO_ID;
+        private List<String> dimensionValues;
+
         private final RangeIndexedInts indexedInts = new RangeIndexedInts();
 
         @Override
         public IndexedInts getRow()
         {
-          final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-          indexedInts.setSize(dimensionValues != null ? dimensionValues.size() : 0);
+          updateCurrentValues();
+          indexedInts.setSize(dimensionValues.size());
           return indexedInts;
         }
 
         @Override
         public ValueMatcher makeValueMatcher(final @Nullable String value)
         {
-          if (extractionFn == null) {
-            return new ValueMatcher()
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
             {
-              @Override
-              public boolean matches()
-              {
-                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-                if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return value == null;
-                }
+              updateCurrentValues();
 
-                for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
-                    return true;
-                  }
-                }
-                return false;
+              if (dimensionValues.isEmpty()) {
+                return value == null;
               }
 
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("row", supplier);
+              for (String dimensionValue : dimensionValues) {
+                if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
+                  return true;
+                }
               }
-            };
-          } else {
-            return new ValueMatcher()
+              return false;
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              @Override
-              public boolean matches()
-              {
-                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-                if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return value == null;
-                }
-
-                for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)), value)) {
-                    return true;
-                  }
-                }
-                return false;
-              }
-
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("row", supplier);
-                inspector.visit("extractionFn", extractionFn);
-              }
-            };
-          }
+              inspector.visit("row", rowSupplier);
+              inspector.visit("extractionFn", extractionFn);
+            }
+          };
         }
 
         @Override
         public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
         {
           final boolean matchNull = predicate.apply(null);
-          if (extractionFn == null) {
-            return new ValueMatcher()
+
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
             {
-              @Override
-              public boolean matches()
-              {
-                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-                if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return matchNull;
-                }
+              updateCurrentValues();
 
-                for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
-                    return true;
-                  }
-                }
-                return false;
+              if (dimensionValues.isEmpty()) {
+                return matchNull;
               }
 
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("row", supplier);
-                inspector.visit("predicate", predicate);
+              for (String dimensionValue : dimensionValues) {
+                if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
+                  return true;
+                }
               }
-            };
-          } else {
-            return new ValueMatcher()
+              return false;
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              @Override
-              public boolean matches()
-              {
-                final List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-                if (dimensionValues == null || dimensionValues.isEmpty()) {
-                  return matchNull;
-                }
-
-                for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)))) {
-                    return true;
-                  }
-                }
-                return false;
-              }
-
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("row", supplier);
-                inspector.visit("predicate", predicate);
-              }
-            };
-          }
+              inspector.visit("row", rowSupplier);
+              inspector.visit("predicate", predicate);
+              inspector.visit("extractionFn", extractionFn);
+            }
+          };
         }
 
         @Override
@@ -298,10 +292,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = NullHandling.emptyToNullIfNeeded(
-              Rows.objectToStrings(dimFunction.apply(supplier.get())).get(id)
-          );
-          return extractionFn == null ? value : extractionFn.apply(value);
+          updateCurrentValues();
+          return dimensionValues.get(id);
         }
 
         @Override
@@ -321,10 +313,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public Object getObject()
         {
-          List<String> dimensionValues = Rows.objectToStrings(dimFunction.apply(supplier.get()));
-          if (dimensionValues == null) {
-            return null;
-          }
+          updateCurrentValues();
+
           if (dimensionValues.size() == 1) {
             return dimensionValues.get(0);
           }
@@ -340,8 +330,66 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", supplier);
+          inspector.visit("row", rowSupplier);
           inspector.visit("extractionFn", extractionFn);
+        }
+
+        private void updateCurrentValues()
+        {
+          if (rowIdSupplier == null || rowIdSupplier.getAsLong() != currentId) {
+            try {
+              final Object rawValue = dimFunction.apply(rowSupplier.get());
+
+              if (rawValue == null || rawValue instanceof String) {
+                final String s = NullHandling.emptyToNullIfNeeded((String) rawValue);
+
+                if (extractionFn == null) {
+                  dimensionValues = Collections.singletonList(s);
+                } else {
+                  dimensionValues = Collections.singletonList(extractionFn.apply(s));
+                }
+              } else if (rawValue instanceof List) {
+                // Consistent behavior with Rows.objectToStrings, but applies extractionFn too.
+                //noinspection rawtypes
+                final List<String> values = new ArrayList<>(((List) rawValue).size());
+
+                //noinspection rawtypes
+                for (final Object item : ((List) rawValue)) {
+                  // Behavior with null item is to convert it to string "null". This is not what most other areas of Druid
+                  // would do when treating a null as a string, but it's consistent with Rows.objectToStrings, which is
+                  // commonly used when retrieving strings from input-row-like objects.
+                  if (extractionFn == null) {
+                    values.add(NullHandling.emptyToNullIfNeeded(String.valueOf(item)));
+                  } else {
+                    values.add(NullHandling.emptyToNullIfNeeded(extractionFn.apply(String.valueOf(item))));
+                  }
+                }
+
+                dimensionValues = values;
+              } else {
+                final List<String> nonExtractedValues = Rows.objectToStrings(rawValue);
+                dimensionValues = new ArrayList<>(nonExtractedValues.size());
+
+                for (final String value : nonExtractedValues) {
+                  final String s = NullHandling.emptyToNullIfNeeded(value);
+
+                  if (extractionFn == null) {
+                    dimensionValues.add(s);
+                  } else {
+                    dimensionValues.add(extractionFn.apply(s));
+                  }
+                }
+              }
+            }
+            catch (Throwable e) {
+              currentId = NO_ID;
+              throw e;
+            }
+
+            if (rowIdSupplier != null) {
+              currentId = rowIdSupplier.getAsLong();
+            }
+          }
         }
       };
     }
@@ -358,7 +406,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public long getLong()
         {
-          return timestampFunction.applyAsLong(supplier.get());
+          return timestampFunction.applyAsLong(rowSupplier.get());
         }
 
         @Override
@@ -371,7 +419,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", supplier);
+          inspector.visit("row", rowSupplier);
         }
       }
       return new TimeLongColumnSelector();
@@ -426,13 +474,13 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          inspector.visit("row", supplier);
+          inspector.visit("row", rowSupplier);
         }
 
         @Nullable
         private Object getCurrentValue()
         {
-          return columnFunction.apply(supplier.get());
+          return columnFunction.apply(rowSupplier.get());
         }
 
         @Nullable
@@ -452,6 +500,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return getColumnCapabilities(rowSignature, columnName);
+    return getColumnCapabilities(columnInspector, columnName);
   }
 }
