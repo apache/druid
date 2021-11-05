@@ -31,7 +31,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -122,8 +122,8 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
     );
     Assert.assertEquals(1, segments.size());
     final DataSegment segment = segments.get(0);
-    Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
-    final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
+    Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+    final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
     Assert.assertEquals(1, shardSpec.getNumCorePartitions());
     Assert.assertEquals(0, shardSpec.getPartitionNum());
     Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());
@@ -161,8 +161,8 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
     );
     Assert.assertEquals(5, segments.size());
     segments.forEach(segment -> {
-      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
-      final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
+      Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+      final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
       Assert.assertEquals(5, shardSpec.getNumCorePartitions());
       Assert.assertTrue(shardSpec.getPartitionNum() < shardSpec.getNumCorePartitions());
       Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());
