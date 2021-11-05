@@ -187,7 +187,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
 
     final File persistDir = toolbox.getPersistDir();
     org.apache.commons.io.FileUtils.forceDelete(persistDir);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(taskTempDir);
+    FileUtils.mkdirp(persistDir);
 
     final Set<DataSegment> pushedSegments = mergeAndPushSegments(
         toolbox,
