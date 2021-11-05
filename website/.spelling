@@ -1770,6 +1770,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
