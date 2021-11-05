@@ -61,14 +61,6 @@ public class ClientCompactionTaskDimensionsSpecTest
     Assert.assertEquals(expected, fromJson);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testInvalidDimensionsAndExclusionsOverlap()
-  {
-    final ClientCompactionTaskDimensionsSpec expected = new ClientCompactionTaskDimensionsSpec(
-        DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))
-    );
-  }
-
   @Test(expected = ParseException.class)
   public void testInvalidDimensionsField()
   {
