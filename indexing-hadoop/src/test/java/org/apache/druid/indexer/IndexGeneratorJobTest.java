@@ -718,8 +718,8 @@ public class IndexGeneratorJobTest
         } else if ("single".equals(partitionType)) {
           String[] singleDimensionShardInfo = (String[]) shardInfo[i];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();
-          Assert.assertEquals(singleDimensionShardInfo[0], spec.getStartTuple());
-          Assert.assertEquals(singleDimensionShardInfo[1], spec.getEndTuple());
+          Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());
+          Assert.assertEquals(singleDimensionShardInfo[1], spec.getEnd());
         } else {
           throw new RE("Invalid partition type:[%s]", partitionType);
         }

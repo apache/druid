@@ -371,8 +371,8 @@ public class DeterminePartitionsJobTest
       for (HadoopyShardSpec spec : specs) {
         SingleDimensionShardSpec actualSpec = (SingleDimensionShardSpec) spec.getActualSpec();
         Assert.assertEquals(shardNum, spec.getShardNum());
-        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][0], actualSpec.getStartTuple());
-        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][1], actualSpec.getEndTuple());
+        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][0], actualSpec.getStart());
+        Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][1], actualSpec.getEnd());
         Assert.assertEquals(partitionNum, actualSpec.getPartitionNum());
         shardNum++;
         partitionNum++;
