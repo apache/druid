@@ -27,10 +27,10 @@ title: "Aggregations"
 > language. For information about aggregators available in SQL, refer to the
 > [SQL documentation](sql.md#aggregation-functions).
 
-Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid.
-Aggregations can also be specified as part of many queries at query time.
+Aggregations specified at ingestion time, from within the ingestion spec, provide a way to summarize data before it enters Apache Druid.
+Aggregations are also used at query time.
 
-Available aggregations are:
+The following sections list the types of aggregations available at ingestion and query time.
 
 ### Count aggregator
 
@@ -49,7 +49,7 @@ query time.
 
 #### `longSum` aggregator
 
-computes the sum of values as a 64-bit, signed integer
+Computes the sum of values as a 64-bit, signed integer.
 
 ```json
 { "type" : "longSum", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -60,7 +60,7 @@ computes the sum of values as a 64-bit, signed integer
 
 #### `doubleSum` aggregator
 
-Computes and stores the sum of values as 64-bit floating point value. Similar to `longSum`
+Computes and stores the sum of values as 64-bit floating point value. Similar to `longSum`.
 
 ```json
 { "type" : "doubleSum", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -68,7 +68,7 @@ Computes and stores the sum of values as 64-bit floating point value. Similar to
 
 #### `floatSum` aggregator
 
-Computes and stores the sum of values as 32-bit floating point value. Similar to `longSum` and `doubleSum`
+Computes and stores the sum of values as 32-bit floating point value. Similar to `longSum` and `doubleSum`.
 
 ```json
 { "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -78,7 +78,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `doubleMin` aggregator
 
-`doubleMin` computes the minimum of all metric values and Double.POSITIVE_INFINITY
+`doubleMin` computes the minimum of all metric values and Double.POSITIVE_INFINITY.
 
 ```json
 { "type" : "doubleMin", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -86,7 +86,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `doubleMax` aggregator
 
-`doubleMax` computes the maximum of all metric values and Double.NEGATIVE_INFINITY
+`doubleMax` computes the maximum of all metric values and Double.NEGATIVE_INFINITY.
 
 ```json
 { "type" : "doubleMax", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -94,7 +94,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `floatMin` aggregator
 
-`floatMin` computes the minimum of all metric values and Float.POSITIVE_INFINITY
+`floatMin` computes the minimum of all metric values and Float.POSITIVE_INFINITY.
 
 ```json
 { "type" : "floatMin", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -102,7 +102,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `floatMax` aggregator
 
-`floatMax` computes the maximum of all metric values and Float.NEGATIVE_INFINITY
+`floatMax` computes the maximum of all metric values and Float.NEGATIVE_INFINITY.
 
 ```json
 { "type" : "floatMax", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -110,7 +110,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `longMin` aggregator
 
-`longMin` computes the minimum of all metric values and Long.MAX_VALUE
+`longMin` computes the minimum of all metric values and Long.MAX_VALUE.
 
 ```json
 { "type" : "longMin", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -118,7 +118,7 @@ Computes and stores the sum of values as 32-bit floating point value. Similar to
 
 #### `longMax` aggregator
 
-`longMax` computes the maximum of all metric values and Long.MIN_VALUE
+`longMax` computes the maximum of all metric values and Long.MIN_VALUE.
 
 ```json
 { "type" : "longMax", "name" : <output_name>, "fieldName" : <metric_name> }
@@ -138,11 +138,11 @@ To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator]
 
 (Double/Float/Long) First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
-Note that queries with first/last aggregators on a segment created with rollup enabled will return the rolled up value, and not the last value within the raw ingested data.
+Note that queries with first/last aggregators on a segment created with rollup enabled return the rolled up value, and not the last value within the raw ingested data.
 
 #### `doubleFirst` aggregator
 
-`doubleFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`doubleFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -154,7 +154,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `doubleLast` aggregator
 
-`doubleLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`doubleLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -166,7 +166,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `floatFirst` aggregator
 
-`floatFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`floatFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -178,7 +178,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `floatLast` aggregator
 
-`floatLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`floatLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -190,7 +190,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `longFirst` aggregator
 
-`longFirst` computes the metric value with the minimum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`longFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -202,7 +202,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `longLast` aggregator
 
-`longLast` computes the metric value with the maximum timestamp or 0 in default mode or `null` in SQL compatible mode if no row exist
+`longLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
@@ -214,7 +214,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `stringFirst` aggregator
 
-`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exist
+`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exists.
 
 ```json
 {
@@ -229,7 +229,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `stringLast` aggregator
 
-`stringLast` computes the metric value with the maximum timestamp or `null` if no row exist
+`stringLast` computes the metric value with the maximum timestamp or `null` if no row exists.
 
 ```json
 {
@@ -248,7 +248,7 @@ Returns any value including null. This aggregator can simplify and optimize the 
 
 #### `doubleAny` aggregator
 
-`doubleAny` returns any double metric value
+`doubleAny` returns any double metric value.
 
 ```json
 {
@@ -260,7 +260,7 @@ Returns any value including null. This aggregator can simplify and optimize the 
 
 #### `floatAny` aggregator
 
-`floatAny` returns any float metric value
+`floatAny` returns any float metric value.
 
 ```json
 {
@@ -272,7 +272,7 @@ Returns any value including null. This aggregator can simplify and optimize the 
 
 #### `longAny` aggregator
 
-`longAny` returns any long metric value
+`longAny` returns any long metric value.
 
 ```json
 {
@@ -284,7 +284,7 @@ Returns any value including null. This aggregator can simplify and optimize the 
 
 #### `stringAny` aggregator
 
-`stringAny` returns any string metric value
+`stringAny` returns any string metric value.
 
 ```json
 {
@@ -434,8 +434,9 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
 A grouping aggregator can only be used as part of GroupBy queries which have a subtotal spec. It returns a number for
 each output row that lets you infer whether a particular dimension is included in the sub-grouping used for that row. You can pass
 a *non-empty* list of dimensions to this aggregator which *must* be a subset of dimensions that you are grouping on. 
-E.g if the aggregator has `["dim1", "dim2"]` as input dimensions and `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, 
-following can be the possible output of the aggregator
+
+For example, if the aggregator has `["dim1", "dim2"]` as input dimensions and `[["dim1", "dim2"], ["dim1"], ["dim2"], []]` as subtotals, the
+possible output of the aggregator is:
 
 | subtotal used in query | Output | (bits representation) |
 |------------------------|--------|-----------------------|
@@ -444,8 +445,8 @@ following can be the possible output of the aggregator
 | `["dim2"]`               | 2      | (10)                  |
 | `[]`                     | 3      | (11)                  |  
 
-As illustrated in above example, output number can be thought of as an unsigned n bit number where n is the number of dimensions passed to the aggregator. 
-The bit at position X is set in this number to 0 if a dimension at position X in input to aggregators is included in the sub-grouping. Otherwise, this bit 
+As illustrated in the example, the output number can be thought of as an unsigned _n_ bit number where _n_ is the number of dimensions passed to the aggregator. 
+The bit at position X is set in this number to 0 if a dimension at position X in the aggregator input is included in the sub-grouping. Otherwise, this bit 
 is set to 1.
 
 ```json
