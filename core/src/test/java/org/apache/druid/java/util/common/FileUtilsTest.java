@@ -19,9 +19,12 @@
 
 package org.apache.druid.java.util.common;
 
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
@@ -140,5 +143,54 @@ public class FileUtilsTest
       baseDir.setWritable(true);
       Files.delete(baseDir.toPath());
     }
+  }
+
+  @Test
+  public void testMkdirp() throws IOException
+  {
+    final File tmpDir = folder.newFolder();
+    final File testDirectory = new File(tmpDir, "test");
+
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
+
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
+  }
+
+  @Test
+  public void testMkdirpCannotCreateOverExistingFile() throws IOException
+  {
+    final File tmpFile = folder.newFile();
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Cannot create directory");
+    FileUtils.mkdirp(tmpFile);
+  }
+
+  @Test
+  public void testMkdirpCannotCreateInNonWritableDirectory() throws IOException
+  {
+    final File tmpDir = folder.newFolder();
+    final File testDirectory = new File(tmpDir, "test");
+    tmpDir.setWritable(false);
+    try {
+      final IllegalStateException e = Assert.assertThrows(
+          IllegalStateException.class,
+          () -> FileUtils.mkdirp(testDirectory)
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot create directory"))
+      );
+    }
+    finally {
+      tmpDir.setWritable(true);
+    }
+
+    // Now it should work.
+    FileUtils.mkdirp(testDirectory);
+    Assert.assertTrue(testDirectory.isDirectory());
   }
 }

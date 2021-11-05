@@ -161,9 +161,7 @@ public class ForkingTaskRunner
                   try {
                     final Closer closer = Closer.create();
                     try {
-                      if (!attemptDir.mkdirs()) {
-                        throw new IOE("Could not create directories: %s", attemptDir);
-                      }
+                      FileUtils.mkdirp(attemptDir);
 
                       final File taskFile = new File(taskDir, "task.json");
                       final File statusFile = new File(attemptDir, "status.json");
