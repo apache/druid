@@ -43,7 +43,7 @@ public class ErrorHandlerTest
     QueryException input = new QueryException("error", "error message", "error class", "host");
 
     RuntimeException output = errorHandler.logFailureAndSanitize(input);
-    Assert.assertEquals("org.apache.druid.query.QueryException", output.getMessage());
+    Assert.assertNull(output.getMessage());
   }
 
   @Test

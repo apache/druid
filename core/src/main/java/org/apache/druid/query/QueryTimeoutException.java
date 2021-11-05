@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.exception.SanitizableException;
 
 import javax.annotation.Nullable;
 
