@@ -391,11 +391,9 @@ public class FileUtils
   @SuppressForbidden(reason = "File#mkdirs")
   public static void mkdirp(final File directory) throws IOException
   {
-    // Second isDirectory check is necessary in case of races.
-    //noinspection DuplicateBooleanBranch
-    final boolean success = directory.isDirectory() || directory.mkdirs() || directory.isDirectory();
-
-    if (!success) {
+    // isDirectory check after mkdirs is necessary in case of concurrent calls to mkdirp, because two concurrent
+    // calls to mkdirs cannot both succeed.
+    if (!directory.mkdirs() && !directory.isDirectory()) {
       throw new IOE("Cannot create directory [%s]", directory);
     }
   }

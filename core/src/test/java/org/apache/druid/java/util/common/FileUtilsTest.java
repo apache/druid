@@ -163,7 +163,7 @@ public class FileUtilsTest
   {
     final File tmpFile = folder.newFile();
 
-    expectedException.expect(IllegalStateException.class);
+    expectedException.expect(IOException.class);
     expectedException.expectMessage("Cannot create directory");
     FileUtils.mkdirp(tmpFile);
   }
@@ -175,10 +175,7 @@ public class FileUtilsTest
     final File testDirectory = new File(tmpDir, "test");
     tmpDir.setWritable(false);
     try {
-      final IllegalStateException e = Assert.assertThrows(
-          IllegalStateException.class,
-          () -> FileUtils.mkdirp(testDirectory)
-      );
+      final IOException e = Assert.assertThrows(IOException.class, () -> FileUtils.mkdirp(testDirectory));
 
       MatcherAssert.assertThat(
           e,
