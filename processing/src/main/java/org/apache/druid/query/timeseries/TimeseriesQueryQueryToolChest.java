@@ -417,7 +417,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
       rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
     }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
+    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
     rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
     return rowSignatureBuilder.build();
   }
