@@ -707,7 +707,7 @@ public class DeterminePartitionsJob implements Jobby
 
               shardSpec = new SingleDimensionShardSpec(
                   currentDimPartitions.dim,
-                  previousShardSpec.getDimensionStart(),
+                  previousShardSpec.getStart(),
                   null,
                   previousShardSpec.getPartitionNum(),
                   // Set unknown core partitions size so that the legacy way is used for checking partitionHolder

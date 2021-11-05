@@ -391,8 +391,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static void assertValuesInRange(List<StringTuple> values, DataSegment segment)
   {
     DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
-    StringTuple start = shardSpec.getStart();
-    StringTuple end = shardSpec.getEnd();
+    StringTuple start = shardSpec.getStartTuple();
+    StringTuple end = shardSpec.getEndTuple();
     Assert.assertTrue(shardSpec.toString(), start != null || end != null);
 
     for (StringTuple value : values) {

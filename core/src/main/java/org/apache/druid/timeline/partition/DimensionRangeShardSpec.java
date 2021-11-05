@@ -90,14 +90,14 @@ public class DimensionRangeShardSpec implements ShardSpec
 
   @Nullable
   @JsonProperty("start")
-  public StringTuple getStart()
+  public StringTuple getStartTuple()
   {
     return start;
   }
 
   @Nullable
   @JsonProperty("end")
-  public StringTuple getEnd()
+  public StringTuple getEndTuple()
   {
     return end;
   }

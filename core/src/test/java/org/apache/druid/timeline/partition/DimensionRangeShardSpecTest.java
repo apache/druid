@@ -304,8 +304,8 @@ public class DimensionRangeShardSpecTest
   {
     return DimensionRangeShardSpec.isInChunk(
         shardSpec.getDimensions(),
-        shardSpec.getStart(),
-        shardSpec.getEnd(),
+        shardSpec.getStartTuple(),
+        shardSpec.getEndTuple(),
         row
     );
   }

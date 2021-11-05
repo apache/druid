@@ -103,13 +103,13 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
   }
 
   @Nullable
-  public String getDimensionStart()
+  public String getStart()
   {
     return start;
   }
 
   @Nullable
-  public String getDimensionEnd()
+  public String getEnd()
   {
     return end;
   }
