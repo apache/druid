@@ -25,6 +25,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -77,6 +78,43 @@ public abstract class ComplexMetricSerde
   @Deprecated
   public abstract ObjectStrategy getObjectStrategy();
 
+  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  {
+    final ObjectStrategy<T> objectStrategy = this.getObjectStrategy();
+    return new TypeStrategy<T>()
+    {
+
+      @Override
+      public int estimateSizeBytes(@Nullable T value)
+      {
+        byte[] bytes = objectStrategy.toBytes(value);
+        return bytes == null ? 0 : bytes.length;
+      }
+
+      @Override
+      public T read(ByteBuffer buffer)
+      {
+        final int complexLength = buffer.getInt();
+        ByteBuffer dupe = buffer.duplicate();
+        dupe.limit(dupe.position() + complexLength);
+        return objectStrategy.fromByteBuffer(dupe, complexLength);
+      }
+
+      @Override
+      public void write(ByteBuffer buffer, T value)
+      {
+        byte[] bytes = objectStrategy.toBytes(value);
+        buffer.putInt(bytes.length);
+        buffer.put(bytes, 0, bytes.length);
+      }
+
+      @Override
+      public int compare(T o1, T o2)
+      {
+        return objectStrategy.compare(o1, o2);
+      }
+    };
+  }
   /**
    * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn
    * into a number of expected input bytes to produce that object.

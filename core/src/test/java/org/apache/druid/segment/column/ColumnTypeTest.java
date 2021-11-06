@@ -155,5 +155,11 @@ public class ColumnTypeTest
     {
       super(valueType, complexTypeName, elementType);
     }
+
+    @Override
+    public <T> TypeStrategy<T> getStrategy()
+    {
+      throw new UnsupportedOperationException("nope");
+    }
   }
 }

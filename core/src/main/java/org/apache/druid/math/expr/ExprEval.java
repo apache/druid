@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -50,36 +50,17 @@ public abstract class ExprEval<T>
   {
     switch (type.getType()) {
       case LONG:
-        if (Types.isNullableNull(buffer, offset)) {
+        if (TypeStrategies.isNullableNull(buffer, offset)) {
           return ofLong(null);
         }
-        return of(Types.readNullableLong(buffer, offset));
+        return of(TypeStrategies.readNullableLong(buffer, offset));
       case DOUBLE:
-        if (Types.isNullableNull(buffer, offset)) {
+        if (TypeStrategies.isNullableNull(buffer, offset)) {
           return ofDouble(null);
         }
-        return of(Types.readNullableDouble(buffer, offset));
-      case STRING:
-        if (Types.isNullableNull(buffer, offset)) {
-          return of(null);
-        }
-        final byte[] stringBytes = Types.readNullableVariableBlob(buffer, offset);
-        return of(StringUtils.fromUtf8(stringBytes));
-      case ARRAY:
-        switch (type.getElementType().getType()) {
-          case LONG:
-            return ofLongArray(Types.readNullableLongArray(buffer, offset));
-          case DOUBLE:
-            return ofDoubleArray(Types.readNullableDoubleArray(buffer, offset));
-          case STRING:
-            return ofStringArray(Types.readNullableStringArray(buffer, offset));
-          default:
-            throw new UOE("Cannot deserialize expression array of type %s", type);
-        }
-      case COMPLEX:
-        return ofComplex(type, Types.readNullableComplexType(buffer, offset, type));
+        return of(TypeStrategies.readNullableDouble(buffer, offset));
       default:
-        throw new UOE("Cannot deserialize expression type %s", type);
+        return ofType(type, type.getStrategy().readNullable(buffer, offset));
     }
   }
 
@@ -96,49 +77,22 @@ public abstract class ExprEval<T>
     switch (eval.type().getType()) {
       case LONG:
         if (eval.isNumericNull()) {
-          Types.writeNull(buffer, offset);
+          TypeStrategies.writeNull(buffer, offset);
         } else {
-          Types.writeNullableLong(buffer, offset, eval.asLong());
+          TypeStrategies.writeNullableLong(buffer, offset, eval.asLong());
         }
         break;
       case DOUBLE:
         if (eval.isNumericNull()) {
-          Types.writeNull(buffer, offset);
+          TypeStrategies.writeNull(buffer, offset);
         } else {
-          Types.writeNullableDouble(buffer, offset, eval.asDouble());
+          TypeStrategies.writeNullableDouble(buffer, offset, eval.asDouble());
         }
-        break;
-      case STRING:
-        final byte[] stringBytes = StringUtils.toUtf8Nullable(eval.asString());
-        if (stringBytes != null) {
-          Types.writeNullableVariableBlob(buffer, offset, stringBytes, eval.type(), maxSizeBytes);
-        } else {
-          Types.writeNull(buffer, offset);
-        }
-        break;
-      case ARRAY:
-        switch (eval.type().getElementType().getType()) {
-          case LONG:
-            Long[] longs = eval.asLongArray();
-            Types.writeNullableLongArray(buffer, offset, longs, maxSizeBytes);
-            break;
-          case DOUBLE:
-            Double[] doubles = eval.asDoubleArray();
-            Types.writeNullableDoubleArray(buffer, offset, doubles, maxSizeBytes);
-            break;
-          case STRING:
-            String[] strings = eval.asStringArray();
-            Types.writeNullableStringArray(buffer, offset, strings, maxSizeBytes);
-            break;
-          default:
-            throw new UOE("Cannot serialize expression array type %s", eval.type());
-        }
-        break;
-      case COMPLEX:
-        Types.writeNullableComplexType(buffer, offset, eval.type(), eval.value(), maxSizeBytes);
         break;
       default:
-        throw new UOE("Cannot serialize expression type %s", eval.type());
+        final TypeStrategy strategy = eval.type().getStrategy();
+        TypeStrategies.checkMaxBytes(eval.type(), strategy.estimateSizeBytesNullable(eval.value()), maxSizeBytes);
+        strategy.writeNullable(buffer, offset, eval.value());
     }
   }
 
@@ -447,10 +401,10 @@ public abstract class ExprEval<T>
         }
 
         if (bytes != null) {
-          ObjectByteStrategy<?> strategy = Types.getStrategy(type.getComplexTypeName());
+          TypeStrategy<?> strategy = type.getStrategy();
           assert strategy != null;
           ByteBuffer bb = ByteBuffer.wrap(bytes);
-          return ofComplex(type, strategy.fromByteBuffer(bb, bytes.length));
+          return ofComplex(type, strategy.read(bb));
         }
 
         return ofComplex(type, value);

@@ -50,6 +50,12 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     super(type, complexTypeName, elementType);
   }
 
+  @Override
+  public <T> TypeStrategy<T> getStrategy()
+  {
+    return ColumnTypeFactory.getTypeStrategy(this);
+  }
+
   @Nullable
   @JsonCreator
   public static ColumnType fromString(@Nullable String typeName)
