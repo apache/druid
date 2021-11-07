@@ -102,7 +102,8 @@ public class CompactionTuningConfigTest
         null,
         null,
         null,
-        5L
+        5L,
+        null
     );
   }
 
@@ -144,7 +145,8 @@ public class CompactionTuningConfigTest
         null,
         null,
         null,
-        0L
+        0L,
+        null
     );
     Assert.assertEquals(0L, tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
   }
@@ -184,6 +186,7 @@ public class CompactionTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null,

@@ -73,6 +73,7 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
+  private final boolean rejectRowIfParseError;
 
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
@@ -94,7 +95,8 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("rejectRowIfParseError") @Nullable Boolean rejectRowIfParseError
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -140,6 +142,9 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+    this.rejectRowIfParseError = rejectRowIfParseError == null
+                                 ? TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR
+                                 : rejectRowIfParseError;
   }
 
   @Override
@@ -161,6 +166,12 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @Override
+  public boolean isRejectRowIfParseError()
+  {
+    return rejectRowIfParseError;
   }
 
   @JsonProperty
@@ -299,7 +310,8 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
         segmentWriteOutMediumFactory,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        rejectRowIfParseError
     );
   }
 }

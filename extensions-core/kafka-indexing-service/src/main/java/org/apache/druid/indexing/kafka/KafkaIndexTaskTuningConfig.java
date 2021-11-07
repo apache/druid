@@ -52,7 +52,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("rejectRowIfParseError") @Nullable Boolean rejectRowIfParseError
   )
   {
     super(
@@ -75,7 +76,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        rejectRowIfParseError
     );
   }
 
@@ -101,7 +103,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        isRejectRowIfParseError()
     );
   }
 
@@ -128,7 +131,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+           ", rejectRowIfParseError=" + isRejectRowIfParseError() +
            '}';
   }
-
 }

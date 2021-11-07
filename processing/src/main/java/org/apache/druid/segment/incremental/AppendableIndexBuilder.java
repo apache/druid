@@ -34,6 +34,7 @@ public abstract class AppendableIndexBuilder
   protected boolean sortFacts = true;
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
+  protected boolean rejectRowIfParseError = false;
 
   protected final Logger log = new Logger(this.getClass());
 
@@ -103,6 +104,12 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setMaxBytesInMemory(final long maxBytesInMemory)
   {
     this.maxBytesInMemory = maxBytesInMemory;
+    return this;
+  }
+
+  public AppendableIndexBuilder setRejectRowIfParseError(boolean rejectRowIfParseError)
+  {
+    this.rejectRowIfParseError = rejectRowIfParseError;
     return this;
   }
 

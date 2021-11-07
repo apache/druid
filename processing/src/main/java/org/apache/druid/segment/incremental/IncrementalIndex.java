@@ -631,6 +631,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       stringBuilder.delete(messageLen - 1, messageLen);
     }
     return new ParseException(
+
         true,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
         row,

@@ -84,7 +84,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_HANDOFF_CONDITION_TIMEOUT,
         DEFAULT_ALERT_TIMEOUT,
         null,
-        DEFAULT_DEDUP_COLUMN
+        DEFAULT_DEDUP_COLUMN,
+        DEFAULT_REJECT_ROW_IF_PARSE_ERROR
     );
   }
 
@@ -110,6 +111,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   @Nullable
   private final String dedupColumn;
+  private final boolean rejectRowIfParseError;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -132,7 +134,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("dedupColumn") @Nullable String dedupColumn
+      @JsonProperty("dedupColumn") @Nullable String dedupColumn,
+      @JsonProperty("rejectRowIfParseError") @Nullable Boolean rejectRowIfParseError
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -170,6 +173,9 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.dedupColumn = dedupColumn == null ? DEFAULT_DEDUP_COLUMN : dedupColumn;
+    this.rejectRowIfParseError = rejectRowIfParseError == null
+                                 ? TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR
+                                 : rejectRowIfParseError;
   }
 
   @Override
@@ -191,6 +197,12 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @Override
+  public boolean isRejectRowIfParseError()
+  {
+    return rejectRowIfParseError;
   }
 
   @JsonProperty
@@ -333,7 +345,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        rejectRowIfParseError
     );
   }
 
@@ -360,7 +373,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         handoffConditionTimeout,
         alertTimeout,
         segmentWriteOutMediumFactory,
-        dedupColumn
+        dedupColumn,
+        rejectRowIfParseError
     );
   }
 }

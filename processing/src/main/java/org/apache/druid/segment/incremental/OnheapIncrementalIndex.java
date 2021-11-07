@@ -69,6 +69,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
+  protected final boolean rejectRowIfParseError;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -81,12 +82,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      long maxBytesInMemory
+      long maxBytesInMemory,
+      boolean rejectRowIfParseError
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
+    this.rejectRowIfParseError = rejectRowIfParseError;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts, dimsComparator());
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
@@ -500,7 +503,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          rejectRowIfParseError
       );
     }
   }

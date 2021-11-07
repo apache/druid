@@ -220,6 +220,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -283,7 +284,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        tuningConfig.isRejectRowIfParseError()
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -329,7 +331,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        tuningConfig.isRejectRowIfParseError()
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -380,7 +383,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
-        tuningConfig.getDedupColumn()
+        tuningConfig.getDedupColumn(),
+        tuningConfig.isRejectRowIfParseError()
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

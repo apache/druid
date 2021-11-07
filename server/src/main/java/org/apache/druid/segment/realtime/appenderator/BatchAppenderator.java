@@ -465,7 +465,8 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          null
+          null,
+          tuningConfig.isRejectRowIfParseError()
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -1029,6 +1030,7 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
         null,
+        tuningConfig.isRejectRowIfParseError(),
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable

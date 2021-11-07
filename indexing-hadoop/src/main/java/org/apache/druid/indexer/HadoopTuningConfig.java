@@ -74,7 +74,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null
+        null,
+        TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR
     );
   }
   @Nullable
@@ -102,6 +103,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  private final boolean rejectRowIfParseError;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -130,7 +132,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      final @JsonProperty("rejectRowIfParseError") @Nullable Boolean rejectRowIfParseError
   )
   {
     this.workingPath = workingPath;
@@ -182,6 +185,10 @@ public class HadoopTuningConfig implements TuningConfig
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
     }
+
+    this.rejectRowIfParseError = rejectRowIfParseError == null
+                                 ? TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR :
+                                 rejectRowIfParseError;
   }
 
   @Nullable
@@ -243,6 +250,12 @@ public class HadoopTuningConfig implements TuningConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @Override
+  public boolean isRejectRowIfParseError()
+  {
+    return rejectRowIfParseError;
   }
 
   @JsonProperty
@@ -363,7 +376,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        rejectRowIfParseError
     );
   }
 
@@ -394,7 +408,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        rejectRowIfParseError
     );
   }
 
@@ -425,7 +440,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        rejectRowIfParseError
     );
   }
 }

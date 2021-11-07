@@ -1197,6 +1197,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final int maxParseExceptions;
     private final int maxSavedParseExceptions;
     private final long awaitSegmentAvailabilityTimeoutMillis;
+    private final boolean rejectRowIfParseError;
 
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
@@ -1267,7 +1268,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @JsonProperty("rejectRowIfParseError") @Nullable Boolean rejectRowIfParseError
     )
     {
       this(
@@ -1295,7 +1297,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          reportParseExceptions
       );
 
       Preconditions.checkArgument(
@@ -1306,7 +1309,27 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
     }
 
     private IndexTuningConfig(
@@ -1327,7 +1350,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxParseExceptions,
         @Nullable Integer maxSavedParseExceptions,
         @Nullable Integer maxColumnsToMerge,
-        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+        @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @Nullable Boolean rejectRowIfParseError
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1373,6 +1397,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
       }
+
+      this.rejectRowIfParseError = rejectRowIfParseError == null
+                                   ? TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR
+                                   : rejectRowIfParseError;
     }
 
     @Override
@@ -1396,7 +1424,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          rejectRowIfParseError
       );
     }
 
@@ -1420,7 +1449,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          rejectRowIfParseError
       );
     }
 
@@ -1443,6 +1473,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public long getMaxBytesInMemory()
     {
       return maxBytesInMemory;
+    }
+
+    @Override
+    public boolean isRejectRowIfParseError()
+    {
+      return rejectRowIfParseError;
     }
 
     @JsonProperty
@@ -1636,7 +1672,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
              Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis);
+             Objects.equals(awaitSegmentAvailabilityTimeoutMillis, that.awaitSegmentAvailabilityTimeoutMillis) &&
+             rejectRowIfParseError == that.rejectRowIfParseError;
     }
 
     @Override
@@ -1660,7 +1697,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           segmentWriteOutMediumFactory,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          rejectRowIfParseError
       );
     }
 
@@ -1685,6 +1723,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
              ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
+             ", rejectRowIfParseError=" + rejectRowIfParseError +
              '}';
     }
   }

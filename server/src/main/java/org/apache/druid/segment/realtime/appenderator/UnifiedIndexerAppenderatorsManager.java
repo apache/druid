@@ -393,7 +393,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();
-    return new MemoryParameterOverridingAppenderatorConfig(baseConfig, perWorkerLimit);
+    return new MemoryParameterOverridingAppenderatorConfig(
+        baseConfig,
+        perWorkerLimit,
+        baseConfig.isRejectRowIfParseError()
+    );
   }
 
   @VisibleForTesting
@@ -452,14 +456,17 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   {
     private final AppenderatorConfig baseConfig;
     private final long newMaxBytesInMemory;
+    private final boolean rejectRowIfParseError;
 
     public MemoryParameterOverridingAppenderatorConfig(
         AppenderatorConfig baseConfig,
-        long newMaxBytesInMemory
+        long newMaxBytesInMemory,
+        boolean rejectRowIfParseError
     )
     {
       this.baseConfig = baseConfig;
       this.newMaxBytesInMemory = newMaxBytesInMemory;
+      this.rejectRowIfParseError = rejectRowIfParseError;
     }
 
     @Override
@@ -484,6 +491,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public long getMaxBytesInMemory()
     {
       return newMaxBytesInMemory;
+    }
+
+    @Override
+    public boolean isRejectRowIfParseError()
+    {
+      return rejectRowIfParseError;
     }
 
     @Override

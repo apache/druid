@@ -145,6 +145,7 @@ public class AppenderatorImpl implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
+  private final boolean rejectRowIfParseError;
   private final boolean skipBytesInMemoryOverheadCheck;
 
   private final QuerySegmentWalker texasRanger;
@@ -236,6 +237,7 @@ public class AppenderatorImpl implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+    rejectRowIfParseError = tuningConfig.isRejectRowIfParseError();
 
     if (isOpenSegments) {
       log.info("Running open segments appenderator");
@@ -496,7 +498,8 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          null
+          null,
+          rejectRowIfParseError
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -1297,6 +1300,7 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             null,
+            rejectRowIfParseError,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

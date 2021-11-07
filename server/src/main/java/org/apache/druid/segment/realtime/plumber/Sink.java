@@ -67,6 +67,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean rejectRowIfParseError;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
@@ -84,7 +85,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
-      String dedupColumn
+      String dedupColumn,
+      boolean rejectRowIfParseError
   )
   {
     this(
@@ -96,6 +98,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         maxRowsInMemory,
         maxBytesInMemory,
         dedupColumn,
+        rejectRowIfParseError,
         Collections.emptyList()
     );
   }
@@ -109,6 +112,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       int maxRowsInMemory,
       long maxBytesInMemory,
       String dedupColumn,
+      boolean rejectRowIfParseError,
       List<FireHydrant> hydrants
   )
   {
@@ -120,6 +124,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.dedupColumn = dedupColumn;
+    this.rejectRowIfParseError = rejectRowIfParseError;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -334,6 +339,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
+        .setRejectRowIfParseError(rejectRowIfParseError)
         .build();
 
     final FireHydrant old;
