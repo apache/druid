@@ -989,9 +989,6 @@ The below is a list of the supported configurations for auto compaction.
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|no (default = 5)|
 
 ###### Automatic compaction granularitySpec
-You can optionally use the `granularitySpec` object to configure the granularity and rollup of the compacted segments.
-
-`granularitySpec` takes the following keys:
 
 |Field|Description|Required|
 |-----|-----------|--------|
@@ -1000,9 +997,6 @@ You can optionally use the `granularitySpec` object to configure the granularity
 |`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
 ###### Automatic compaction dimensions spec
-You can optionally use the `dimensionsSpec` object to configure the dimensions of the compacted segments.
-
-`dimensionsSpec` takes the following keys:
 
 |Field|Description|Required|
 |-----|-----------|--------|

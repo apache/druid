@@ -426,6 +426,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                        existingGranularitySpec.isRollup() :
                                        null;
         if (existingRollup == null || !config.getGranularitySpec().isRollup().equals(existingRollup)) {
+          log.info(
+              "Configured rollup[%s] is different from the rollup[%s] of segments. Needs compaction",
+              config.getGranularitySpec().isRollup(),
+              existingRollup
+          );
           return true;
         }
       }
@@ -437,6 +442,11 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                      existingGranularitySpec.getQueryGranularity() :
                                                      null;
         if (!config.getGranularitySpec().getQueryGranularity().equals(existingQueryGranularity)) {
+          log.info(
+              "Configured queryGranularity[%s] is different from the queryGranularity[%s] of segments. Needs compaction",
+              config.getGranularitySpec().getQueryGranularity(),
+              existingQueryGranularity
+          );
           return true;
         }
       }
@@ -450,6 +460,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                                                          existingDimensionsSpec.getDimensions() :
                                                          null;
         if (!config.getDimensionsSpec().getDimensions().equals(existingDimensions)) {
+          log.info(
+              "Configured dimensionsSpec is different from the dimensionsSpec of segments. Needs compaction"
+          );
           return true;
         }
       }

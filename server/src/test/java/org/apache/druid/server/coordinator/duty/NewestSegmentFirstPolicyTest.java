@@ -1100,7 +1100,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     // Auto compaction config sets Dimensions=["foo"]
-    final CompactionSegmentIterator iterator = policy.reset(
+    CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
             130000,
             new Period("P0D"),
@@ -1134,6 +1134,20 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertEquals(
         ImmutableSet.copyOf(expectedSegmentsToCompact),
         ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+
+    // Auto compaction config sets Dimensions=null
+    iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
+            130000,
+            new Period("P0D"),
+            null,
+            new UserCompactionTaskDimensionsConfig(null)
+        )),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
