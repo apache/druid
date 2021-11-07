@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -788,11 +789,26 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+        ObjectMapper mapper = CalciteTests.getJsonMapper();
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, sql),
             expectedQueries.get(i),
             recordedQueries.get(i)
         );
+        try {
+          // go through some JSON serde and back
+          // Assert.assertEquals(expectedQueries.get(i), stringAndBack) is a failure, perhaps due to some not fully
+          // implemented equals along the way, but serializing to a string again and comparing it to the string form
+          // of the expected query does pass, so do that for now
+          final String recordedString = mapper.writeValueAsString(recordedQueries.get(i));
+          final Query<?> stringAndBack = mapper.readValue(recordedString, Query.class);
+          final String stringAgain = mapper.writeValueAsString(stringAndBack);
+          final String expectedString = mapper.writeValueAsString(expectedQueries.get(i));
+          Assert.assertEquals(expectedString, stringAgain);
+        }
+        catch (JsonProcessingException e) {
+          Assert.fail(e.getMessage());
+        }
       }
     }
   }
