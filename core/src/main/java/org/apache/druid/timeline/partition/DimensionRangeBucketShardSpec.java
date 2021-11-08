@@ -21,7 +21,9 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -31,29 +33,39 @@ import java.util.Objects;
 /**
  * See {@link BucketNumberedShardSpec} for how this class is used.
  *
- * @see BuildingSingleDimensionShardSpec
+ * @see BuildingDimensionRangeShardSpec
  */
-public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
+public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingDimensionRangeShardSpec>
 {
-  public static final String TYPE = "bucket_single_dim";
+  public static final String TYPE = "bucket_range";
 
   private final int bucketId;
-  private final String dimension;
+  private final List<String> dimensions;
   @Nullable
-  private final String start;
+  private final StringTuple start;
   @Nullable
-  private final String end;
+  private final StringTuple end;
 
   @JsonCreator
-  public RangeBucketShardSpec(
+  public DimensionRangeBucketShardSpec(
       @JsonProperty("bucketId") int bucketId,
-      @JsonProperty("dimension") String dimension,
-      @JsonProperty("start") @Nullable String start,
-      @JsonProperty("end") @Nullable String end
+      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("start") @Nullable StringTuple start,
+      @JsonProperty("end") @Nullable StringTuple end
   )
   {
+    // Verify that the tuple sizes and number of dimensions are the same
+    Preconditions.checkArgument(
+        start == null || start.size() == dimensions.size(),
+        "Start tuple must either be null or of the same size as the number of partition dimensions"
+    );
+    Preconditions.checkArgument(
+        end == null || end.size() == dimensions.size(),
+        "End tuple must either be null or of the same size as the number of partition dimensions"
+    );
+
     this.bucketId = bucketId;
-    this.dimension = dimension;
+    this.dimensions = dimensions;
     this.start = start;
     this.end = end;
   }
@@ -66,34 +78,29 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   }
 
   @JsonProperty
-  public String getDimension()
+  public List<String> getDimensions()
   {
-    return dimension;
+    return dimensions;
   }
 
   @Nullable
   @JsonProperty
-  public String getStart()
+  public StringTuple getStart()
   {
     return start;
   }
 
   @Nullable
   @JsonProperty
-  public String getEnd()
+  public StringTuple getEnd()
   {
     return end;
   }
 
   @Override
-  public BuildingSingleDimensionShardSpec convert(int partitionId)
+  public BuildingDimensionRangeShardSpec convert(int partitionId)
   {
-    return new BuildingSingleDimensionShardSpec(bucketId, dimension, start, end, partitionId);
-  }
-
-  public boolean isInChunk(InputRow inputRow)
-  {
-    return SingleDimensionShardSpec.isInChunk(dimension, start, end, inputRow);
+    return new BuildingDimensionRangeShardSpec(bucketId, dimensions, start, end, partitionId);
   }
 
   @Override
@@ -101,12 +108,17 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   {
     return (long timestamp, InputRow row) -> {
       for (ShardSpec spec : shardSpecs) {
-        if (((RangeBucketShardSpec) spec).isInChunk(row)) {
+        if (((DimensionRangeBucketShardSpec) spec).isInChunk(row)) {
           return spec;
         }
       }
       throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
     };
+  }
+
+  private boolean isInChunk(InputRow inputRow)
+  {
+    return DimensionRangeShardSpec.isInChunk(dimensions, start, end, inputRow);
   }
 
   @Override
@@ -118,9 +130,9 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    RangeBucketShardSpec bucket = (RangeBucketShardSpec) o;
+    DimensionRangeBucketShardSpec bucket = (DimensionRangeBucketShardSpec) o;
     return bucketId == bucket.bucketId &&
-           Objects.equals(dimension, bucket.dimension) &&
+           Objects.equals(dimensions, bucket.dimensions) &&
            Objects.equals(start, bucket.start) &&
            Objects.equals(end, bucket.end);
   }
@@ -128,15 +140,15 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucketId, dimension, start, end);
+    return Objects.hash(bucketId, dimensions, start, end);
   }
 
   @Override
   public String toString()
   {
-    return "RangeBucket{" +
+    return "DimensionRangeBucketShardSpec{" +
            ", bucketId=" + bucketId +
-           ", dimension='" + dimension + '\'' +
+           ", dimension='" + dimensions + '\'' +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +
            '}';

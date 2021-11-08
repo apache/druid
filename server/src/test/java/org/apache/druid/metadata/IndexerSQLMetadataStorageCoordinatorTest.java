@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -35,6 +36,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -1802,6 +1804,49 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(2, shardSpec.getPartitionNum());
     Assert.assertEquals(0, shardSpec.getNumCorePartitions());
     Assert.assertEquals(3, shardSpec.getNumBuckets());
+  }
+
+  @Test
+  public void testAddNumberedShardSpecAfterMultiDimensionsShardSpecWithUnknownCorePartitionSize() throws IOException
+  {
+    final String datasource = "datasource";
+    final Interval interval = Intervals.of("2020-01-01/P1D");
+    final String version = "version";
+    final List<String> dimensions = ImmutableList.of("dim");
+    final List<String> metrics = ImmutableList.of("met");
+    final Set<DataSegment> originalSegments = new HashSet<>();
+    for (int i = 0; i < 6; i++) {
+      originalSegments.add(
+          new DataSegment(
+              datasource,
+              interval,
+              version,
+              ImmutableMap.of(),
+              dimensions,
+              metrics,
+              new DimensionRangeShardSpec(
+                  Collections.singletonList("dim"),
+                  i == 0 ? null : StringTuple.create(String.valueOf(i - 1)),
+                  i == 5 ? null : StringTuple.create(String.valueOf(i)),
+                  i,
+                  null // emulate shardSpecs created in older versions of Druid
+              ),
+              9,
+              10L
+          )
+      );
+    }
+    coordinator.announceHistoricalSegments(originalSegments);
+    final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+        datasource,
+        "seq",
+        null,
+        interval,
+        NumberedPartialShardSpec.instance(),
+        version,
+        false
+    );
+    Assert.assertNull(id);
   }
 
   @Test

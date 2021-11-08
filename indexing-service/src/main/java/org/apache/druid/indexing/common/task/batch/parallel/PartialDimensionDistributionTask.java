@@ -32,8 +32,9 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -130,9 +131,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
 
     Preconditions.checkArgument(
-        ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof SingleDimensionPartitionsSpec,
+        ingestionSchema.getTuningConfig().getPartitionsSpec() instanceof DimensionRangePartitionsSpec,
         "%s partitionsSpec required",
-        SingleDimensionPartitionsSpec.NAME
+        DimensionRangePartitionsSpec.NAME
     );
 
     this.subtaskSpecId = subtaskSpecId;
@@ -193,10 +194,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
 
-    SingleDimensionPartitionsSpec partitionsSpec = (SingleDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
+    DimensionRangePartitionsSpec partitionsSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
-    String partitionDimension = partitionsSpec.getPartitionDimension();
-    Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
+    final List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
+    Preconditions.checkArgument(
+        partitionDimensions != null && !partitionDimensions.isEmpty(),
+        "partitionDimension required in partitionsSpec"
+    );
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
@@ -225,7 +229,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
             parseExceptionHandler
         );
         HandlingInputRowIterator iterator =
-            new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)
+            new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimensions, SKIP_NULL)
                 .delegate(inputRowIterator)
                 .granularitySpec(granularitySpec)
                 .build()
@@ -233,7 +237,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       Map<Interval, StringDistribution> distribution = determineDistribution(
           iterator,
           granularitySpec,
-          partitionDimension,
+          partitionDimensions,
           isAssumeGrouped
       );
       sendReport(toolbox, new DimensionDistributionReport(getId(), distribution));
@@ -245,7 +249,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private Map<Interval, StringDistribution> determineDistribution(
       HandlingInputRowIterator inputRowIterator,
       GranularitySpec granularitySpec,
-      String partitionDimension,
+      List<String> partitionDimensions,
       boolean isAssumeGrouped
   )
   {
@@ -270,12 +274,18 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         assert optInterval.isPresent();
         interval = optInterval.get();
       }
-      String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
+      String[] values = new String[partitionDimensions.size()];
+      for (int i = 0; i < partitionDimensions.size(); ++i) {
+        values[i] = Iterables.getOnlyElement(
+            inputRow.getDimension(partitionDimensions.get(i))
+        );
+      }
+      final StringTuple partitionDimensionValues = StringTuple.create(values);
 
-      if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
+      if (inputRowFilter.accept(interval, partitionDimensionValues, inputRow)) {
         StringDistribution stringDistribution =
             intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
-        stringDistribution.put(partitionDimensionValue);
+        stringDistribution.put(partitionDimensionValues);
       }
     }
 
@@ -306,17 +316,17 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     /**
      * @return True if input row should be accepted, else false
      */
-    boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow);
+    boolean accept(Interval interval, StringTuple partitionDimensionValues, InputRow inputRow);
 
     /**
      * @return Minimum partition dimension value for each interval processed so far.
      */
-    Map<Interval, String> getIntervalToMinPartitionDimensionValue();
+    Map<Interval, StringTuple> getIntervalToMinPartitionDimensionValue();
 
     /**
      * @return Maximum partition dimension value for each interval processed so far.
      */
-    Map<Interval, String> getIntervalToMaxPartitionDimensionValue();
+    Map<Interval, StringTuple> getIntervalToMaxPartitionDimensionValue();
   }
 
   /**
@@ -362,7 +372,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     }
 
     @Override
-    public boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow)
+    public boolean accept(Interval interval, StringTuple partitionDimensionValue, InputRow inputRow)
     {
       delegate.accept(interval, partitionDimensionValue, inputRow);
 
@@ -384,13 +394,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     }
 
     @Override
-    public Map<Interval, String> getIntervalToMinPartitionDimensionValue()
+    public Map<Interval, StringTuple> getIntervalToMinPartitionDimensionValue()
     {
       return delegate.getIntervalToMinPartitionDimensionValue();
     }
 
     @Override
-    public Map<Interval, String> getIntervalToMaxPartitionDimensionValue()
+    public Map<Interval, StringTuple> getIntervalToMaxPartitionDimensionValue()
     {
       return delegate.getIntervalToMaxPartitionDimensionValue();
     }
@@ -402,8 +412,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
    */
   private static class PassthroughInputRowFilter implements InputRowFilter
   {
-    private final Map<Interval, String> intervalToMinDimensionValue;
-    private final Map<Interval, String> intervalToMaxDimensionValue;
+    private final Map<Interval, StringTuple> intervalToMinDimensionValue;
+    private final Map<Interval, StringTuple> intervalToMaxDimensionValue;
 
     PassthroughInputRowFilter()
     {
@@ -412,19 +422,19 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     }
 
     @Override
-    public boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow)
+    public boolean accept(Interval interval, StringTuple partitionDimensionValue, InputRow inputRow)
     {
       updateMinDimensionValue(interval, partitionDimensionValue);
       updateMaxDimensionValue(interval, partitionDimensionValue);
       return true;
     }
 
-    private void updateMinDimensionValue(Interval interval, String dimensionValue)
+    private void updateMinDimensionValue(Interval interval, StringTuple dimensionValue)
     {
       intervalToMinDimensionValue.compute(
           interval,
           (intervalKey, currentMinValue) -> {
-            if (currentMinValue == null || dimensionValue.compareTo(currentMinValue) < 0) {
+            if (currentMinValue == null || currentMinValue.compareTo(dimensionValue) > 0) {
               return dimensionValue;
             } else {
               return currentMinValue;
@@ -433,12 +443,12 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       );
     }
 
-    private void updateMaxDimensionValue(Interval interval, String dimensionValue)
+    private void updateMaxDimensionValue(Interval interval, StringTuple dimensionValue)
     {
       intervalToMaxDimensionValue.compute(
           interval,
           (intervalKey, currentMaxValue) -> {
-            if (currentMaxValue == null || dimensionValue.compareTo(currentMaxValue) > 0) {
+            if (currentMaxValue == null || currentMaxValue.compareTo(dimensionValue) < 0) {
               return dimensionValue;
             } else {
               return currentMaxValue;
@@ -448,13 +458,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     }
 
     @Override
-    public Map<Interval, String> getIntervalToMinPartitionDimensionValue()
+    public Map<Interval, StringTuple> getIntervalToMinPartitionDimensionValue()
     {
       return intervalToMinDimensionValue;
     }
 
     @Override
-    public Map<Interval, String> getIntervalToMaxPartitionDimensionValue()
+    public Map<Interval, StringTuple> getIntervalToMaxPartitionDimensionValue()
     {
       return intervalToMaxDimensionValue;
     }

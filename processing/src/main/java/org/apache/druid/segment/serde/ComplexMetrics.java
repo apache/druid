@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +63,7 @@ public class ComplexMetrics
               value.getClass().getName()
           );
         } else {
+          Types.registerStrategy(type, serde.getObjectStrategy());
           return value;
         }
       }

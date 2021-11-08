@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -151,7 +152,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   private Object eval(Expr arg)
   {
     Expr expr = apply(Collections.singletonList(arg));
-    ExprEval eval = expr.eval(ExprUtils.nilBindings());
+    ExprEval eval = expr.eval(InputBindings.nilBindings());
     return eval.value();
   }
 }
