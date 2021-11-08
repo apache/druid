@@ -21,12 +21,14 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -75,6 +77,66 @@ public class PartitionHolderCompletenessTest
             StringUtils.format(
                 "%s with missing numCorePartitions",
                 SingleDimensionShardSpec.class.getSimpleName()
+            )
+        },
+        new Object[]{
+            // Simulate empty range buckets with MultiDimensionShardSpec
+            ImmutableList.of(
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    null,
+                    StringTuple.create("aaa"),
+                    0,
+                    3
+                ),
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    StringTuple.create("ttt"),
+                    StringTuple.create("zzz"),
+                    2,
+                    3
+                ),
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    StringTuple.create("bbb"),
+                    StringTuple.create("fff"),
+                    1,
+                    3
+                )
+            ),
+            StringUtils.format(
+                "%s with empty buckets",
+                DimensionRangeShardSpec.class.getSimpleName()
+            )
+        },
+        new Object[]{
+            // Simulate old format segments with missing numCorePartitions
+            ImmutableList.of(
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    StringTuple.create("bbb"),
+                    StringTuple.create("fff"),
+                    1,
+                    null
+                ),
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    StringTuple.create("fff"),
+                    null,
+                    2,
+                    null
+                ),
+                new DimensionRangeShardSpec(
+                    Collections.singletonList("dim"),
+                    null,
+                    StringTuple.create("bbb"),
+                    0,
+                    null
+                )
+            ),
+            StringUtils.format(
+                "%s with missing numCorePartitions",
+                DimensionRangeShardSpec.class.getSimpleName()
             )
         }
     );

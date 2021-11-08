@@ -32,6 +32,7 @@ import java.util.Map;
 public class SettableObjectBinding implements Expr.ObjectBinding
 {
   private final Map<String, Object> bindings;
+  private Expr.InputBindingInspector inspector = InputBindings.nilBindings();
 
   public SettableObjectBinding()
   {
@@ -50,9 +51,22 @@ public class SettableObjectBinding implements Expr.ObjectBinding
     return bindings.get(name);
   }
 
+  @Nullable
+  @Override
+  public ExpressionType getType(String name)
+  {
+    return inspector.getType(name);
+  }
+
   public SettableObjectBinding withBinding(String name, @Nullable Object value)
   {
     bindings.put(name, value);
+    return this;
+  }
+
+  public SettableObjectBinding withInspector(Expr.InputBindingInspector inspector)
+  {
+    this.inspector = inspector;
     return this;
   }
 

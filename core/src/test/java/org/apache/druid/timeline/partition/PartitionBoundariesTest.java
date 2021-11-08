@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.StringTuple;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,17 +31,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+
 public class PartitionBoundariesTest
 {
   private PartitionBoundaries target;
-  private String[] values;
-  private List<String> expected;
+  private StringTuple[] values;
+  private List<StringTuple> expected;
 
   @Before
   public void setup()
   {
-    values = new String[]{"a", "dup", "dup", "z"};
-    expected = Arrays.asList(null, "dup", null);
+    values = new StringTuple[]{
+        StringTuple.create("a"),
+        StringTuple.create("dup"),
+        StringTuple.create("dup"),
+        StringTuple.create("z")
+    };
+    expected = Arrays.asList(null, StringTuple.create("dup"), null);
     target = new PartitionBoundaries(values);
   }
 
@@ -53,13 +60,13 @@ public class PartitionBoundariesTest
   @Test(expected = UnsupportedOperationException.class)
   public void isImmutable()
   {
-    target.add("should fail");
+    target.add(StringTuple.create("should fail"));
   }
 
   @Test
   public void cannotBeIndirectlyModified()
   {
-    values[1] = "changed";
+    values[1] = StringTuple.create("changed");
     Assert.assertEquals(expected, target);
   }
 
@@ -72,7 +79,7 @@ public class PartitionBoundariesTest
   @Test
   public void handlesRepeatedValue()
   {
-    Assert.assertEquals(Arrays.asList(null, null), new PartitionBoundaries("a", "a", "a"));
+    Assert.assertEquals(Arrays.asList(null, null), new PartitionBoundaries(StringTuple.create("a"), StringTuple.create("a"), StringTuple.create("a")));
   }
 
   @Test

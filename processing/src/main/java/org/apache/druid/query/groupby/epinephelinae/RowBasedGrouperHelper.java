@@ -384,7 +384,7 @@ public class RowBasedGrouperHelper
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        signature,
+        () -> signature,
         false
     );
   }
@@ -978,7 +978,12 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, final List<ColumnType> fieldTypes, int dimStart)
+    private static int compareDimsInRows(
+        RowBasedKey key1,
+        RowBasedKey key2,
+        final List<ColumnType> fieldTypes,
+        int dimStart
+    )
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
         final int cmp;
@@ -1350,7 +1355,12 @@ public class RowBasedGrouperHelper
         case LONG:
         case FLOAT:
         case DOUBLE:
-          return makeNullHandlingNumericserdeHelper(valueType.getType(), keyBufferPosition, pushLimitDown, stringComparator);
+          return makeNullHandlingNumericserdeHelper(
+              valueType.getType(),
+              keyBufferPosition,
+              pushLimitDown,
+              stringComparator
+          );
         default:
           throw new IAE("invalid type: %s", valueType);
       }

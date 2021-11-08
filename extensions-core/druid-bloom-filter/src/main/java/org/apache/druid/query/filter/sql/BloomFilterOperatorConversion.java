@@ -28,7 +28,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.expressions.BloomFilterExprMacro;
+import org.apache.druid.query.expressions.BloomFilterExpressions;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
@@ -49,14 +49,14 @@ import java.util.List;
 public class BloomFilterOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(BloomFilterExprMacro.FN_NAME))
+      .operatorBuilder(StringUtils.toUpperCase(BloomFilterExpressions.TestExprMacro.FN_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER)
       .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
 
   public BloomFilterOperatorConversion()
   {
-    super(SQL_FUNCTION, BloomFilterExprMacro.FN_NAME);
+    super(SQL_FUNCTION, BloomFilterExpressions.TestExprMacro.FN_NAME);
   }
 
   @Override

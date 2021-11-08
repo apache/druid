@@ -56,8 +56,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Function;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -72,24 +70,13 @@ public class ScanQueryResultOrderingTest
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
 
-  private static final RowAdapter<Object[]> ROW_ADAPTER = new RowAdapter<Object[]>()
-  {
-    @Override
-    public ToLongFunction<Object[]> timestampFunction()
-    {
+  private static final RowAdapter<Object[]> ROW_ADAPTER = columnName -> {
+    if (ID_COLUMN.equals(columnName)) {
+      return row -> row[1];
+    } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return row -> ((DateTime) row[0]).getMillis();
-    }
-
-    @Override
-    public Function<Object[], Object> columnFunction(String columnName)
-    {
-      if (ID_COLUMN.equals(columnName)) {
-        return row -> row[1];
-      } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-        return timestampFunction()::applyAsLong;
-      } else {
-        return row -> null;
-      }
+    } else {
+      return row -> null;
     }
   };
 
