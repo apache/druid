@@ -56,6 +56,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -789,22 +790,21 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
-        ObjectMapper mapper = CalciteTests.getJsonMapper();
+        ObjectMapper mapper = CalciteTests.getJsonMapper().registerModules(new LookupSerdeModule().getJacksonModules());
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, sql),
             expectedQueries.get(i),
             recordedQueries.get(i)
         );
         try {
-          // go through some JSON serde and back
-          // Assert.assertEquals(expectedQueries.get(i), stringAndBack) is a failure, perhaps due to some not fully
-          // implemented equals along the way, but serializing to a string again and comparing it to the string form
-          // of the expected query does pass, so do that for now
+          // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
+          // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
+          // in the recorded queries, but it is a regular map after deserialization
           final String recordedString = mapper.writeValueAsString(recordedQueries.get(i));
           final Query<?> stringAndBack = mapper.readValue(recordedString, Query.class);
-          final String stringAgain = mapper.writeValueAsString(stringAndBack);
           final String expectedString = mapper.writeValueAsString(expectedQueries.get(i));
-          Assert.assertEquals(expectedString, stringAgain);
+          final Query<?> expectedStringAndBack = mapper.readValue(expectedString, Query.class);
+          Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
         catch (JsonProcessingException e) {
           Assert.fail(e.getMessage());
