@@ -71,10 +71,10 @@ public abstract class ExprEval<T>
    *
    * This should be refactored to be consolidated with some of the standard type handling of aggregators probably
    */
-  public static void serialize(ByteBuffer buffer, int position, ExprEval<?> eval, int maxSizeBytes)
+  public static void serialize(ByteBuffer buffer, int position, ExpressionType type, ExprEval<?> eval, int maxSizeBytes)
   {
     int offset = position;
-    switch (eval.type().getType()) {
+    switch (type.getType()) {
       case LONG:
         if (eval.isNumericNull()) {
           TypeStrategies.writeNull(buffer, offset);
@@ -90,8 +90,12 @@ public abstract class ExprEval<T>
         }
         break;
       default:
-        final TypeStrategy strategy = eval.type().getStrategy();
-        TypeStrategies.checkMaxBytes(eval.type(), strategy.estimateSizeBytesNullable(eval.value()), maxSizeBytes);
+        final TypeStrategy strategy = type.getStrategy();
+        // if the types don't match, cast it so things don't get weird
+        if (type.equals(eval.type())) {
+          eval = eval.castTo(type);
+        }
+        TypeStrategies.checkMaxBytes(type, strategy.estimateSizeBytesNullable(eval.value()), maxSizeBytes);
         strategy.writeNullable(buffer, offset, eval.value());
     }
   }

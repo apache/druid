@@ -56,7 +56,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    ExprEval.serialize(buf, position, initialValue, maxSizeBytes);
+    ExprEval.serialize(buf, position, outputType, initialValue, maxSizeBytes);
     // set a bit to indicate we haven't aggregated on top of expression type (not going to lie this could be nicer)
     if (isNullUnlessAggregated) {
       buf.put(position, (byte) (buf.get(position) | NOT_AGGREGATED_BIT));
@@ -69,7 +69,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     ExprEval<?> acc = ExprEval.deserialize(buf, position, outputType);
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);
-    ExprEval.serialize(buf, position, newAcc, maxSizeBytes);
+    ExprEval.serialize(buf, position, outputType, newAcc, maxSizeBytes);
     // scrub not aggregated bit
     buf.put(position, (byte) (buf.get(position) & IS_AGGREGATED_MASK));
   }

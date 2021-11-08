@@ -365,7 +365,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
 
   private void assertExpr(int position, ExprEval expected, int maxSizeBytes)
   {
-    ExprEval.serialize(buffer, position, expected, maxSizeBytes);
+    ExprEval.serialize(buffer, position, expected.type(), expected, maxSizeBytes);
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
           expected.asArray(),
