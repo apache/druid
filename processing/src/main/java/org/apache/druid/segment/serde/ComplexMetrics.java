@@ -63,7 +63,7 @@ public class ComplexMetrics
               value.getClass().getName()
           );
         } else {
-          TypeStrategies.register(type, serde.getTypeStrategy());
+          TypeStrategies.registerComplex(type, serde.getTypeStrategy());
           return value;
         }
       }

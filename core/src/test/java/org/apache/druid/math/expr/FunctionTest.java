@@ -53,7 +53,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setupClass()
   {
-    TypeStrategies.register(
+    TypeStrategies.registerComplex(
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );

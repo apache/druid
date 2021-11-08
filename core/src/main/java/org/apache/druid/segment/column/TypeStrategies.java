@@ -65,7 +65,7 @@ public class TypeStrategies
    *
    * @param strategy The {@link TypeStrategy} object to be associated with the 'type' in the map.
    */
-  public static void register(String typeName, TypeStrategy<?> strategy)
+  public static void registerComplex(String typeName, TypeStrategy<?> strategy)
   {
     Preconditions.checkNotNull(typeName);
     COMPLEX_STRATEGIES.compute(typeName, (key, value) -> {

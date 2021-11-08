@@ -53,7 +53,7 @@ public class ParserTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setup()
   {
-    TypeStrategies.register(
+    TypeStrategies.registerComplex(
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );

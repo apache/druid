@@ -44,7 +44,7 @@ public class TypeStrategiesTest
   @BeforeClass
   public static void setup()
   {
-    TypeStrategies.register(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new NullableLongPairTypeStrategy());
+    TypeStrategies.registerComplex(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new NullableLongPairTypeStrategy());
   }
 
   @Test
@@ -58,7 +58,7 @@ public class TypeStrategiesTest
   @Test
   public void testRegisterDuplicate()
   {
-    TypeStrategies.register(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new NullableLongPairTypeStrategy());
+    TypeStrategies.registerComplex(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new NullableLongPairTypeStrategy());
     TypeStrategy<?> strategy = TypeStrategies.getComplex(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName());
     Assert.assertNotNull(strategy);
     Assert.assertTrue(strategy instanceof NullableLongPairTypeStrategy);
@@ -74,7 +74,7 @@ public class TypeStrategiesTest
         + "found [org.apache.druid.segment.column.TypeStrategiesTest$NullableLongPairTypeStrategy]."
     );
 
-    TypeStrategies.register(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypeStrategy<String>()
+    TypeStrategies.registerComplex(NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypeStrategy<String>()
     {
       @Override
       public int estimateSizeBytes(@Nullable String value)
