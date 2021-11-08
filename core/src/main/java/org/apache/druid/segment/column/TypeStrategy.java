@@ -47,10 +47,17 @@ import java.util.Comparator;
 public interface TypeStrategy<T> extends Comparator<T>
 {
   /**
-   * The size in bytes that writing this value to memory would require, useful for constraining the values
+   * The size in bytes that writing this value to memory would require, useful for constraining the values maximum size
+   *
+   * This does not include the null byte, use {@link #estimateSizeBytesNullable(Object)} instead.
    */
   int estimateSizeBytes(@Nullable T value);
 
+  /**
+   * The size in bytes that writing this value to memory would require, including the null byte, useful for constraining
+   * the values maximum size. If the value is null, the size will be {@link Byte#BYTES}, otherwise it will be
+   * {@link Byte#BYTES} + {@link #estimateSizeBytes(Object)}
+   */
   default int estimateSizeBytesNullable(@Nullable T value)
   {
     if (value == null) {
@@ -60,15 +67,25 @@ public interface TypeStrategy<T> extends Comparator<T>
   }
 
   /**
-   * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}
+   * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
+   * the underlying position by the size of the value read.
    */
   T read(ByteBuffer buffer);
 
   /**
-   * Write a non-null value to the {@link ByteBuffer} at position {@link ByteBuffer#position()}
+   * Write a non-null value to the {@link ByteBuffer} at position {@link ByteBuffer#position()}. This will move the
+   * underlying position by the size of the value written.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link #estimateSizeBytes(Object)} to determine the required size of a value before writing if the size
+   * is unknown.
    */
   void write(ByteBuffer buffer, T value);
 
+  /**
+   * Read a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
+   * move the underlying position by the size of the value read.
+   */
   @Nullable
   default T readNullable(ByteBuffer buffer)
   {
@@ -78,6 +95,15 @@ public interface TypeStrategy<T> extends Comparator<T>
     return read(buffer);
   }
 
+  /**
+   * Write a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
+   * move the underlying position by the size of the value written. If the value is null, only the null byte will be
+   * set - to {@link NullHandling#IS_NULL_BYTE}.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link #estimateSizeBytesNullable(Object)} to determine the required size of a value before writing if the size
+   * is unknown.
+   */
   default void writeNullable(ByteBuffer buffer, @Nullable T value)
   {
     if (value == null) {
@@ -88,6 +114,11 @@ public interface TypeStrategy<T> extends Comparator<T>
     write(buffer, value);
   }
 
+  /**
+   * Read a non-null value from the {@link ByteBuffer} at the requested position. This will not permanently move the
+   * underlying {@link ByteBuffer#position()}.
+   *
+   */
   default T read(ByteBuffer buffer, int offset)
   {
     final int oldPosition = buffer.position();
@@ -97,6 +128,14 @@ public interface TypeStrategy<T> extends Comparator<T>
     return value;
   }
 
+  /**
+   * Write a non-null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
+   * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link #estimateSizeBytes(Object)} to determine the required size of a value before writing if the size
+   * is unknown.
+   */
   default int write(ByteBuffer buffer, int offset, T value)
   {
     final int oldPosition = buffer.position();
@@ -107,6 +146,10 @@ public interface TypeStrategy<T> extends Comparator<T>
     return size;
   }
 
+  /**
+   * Read a potentially null value from the {@link ByteBuffer} at the requested position. This will not permanently
+   * move the underlying {@link ByteBuffer#position()}.
+   */
   @Nullable
   default T readNullable(ByteBuffer buffer, int offset)
   {
@@ -116,6 +159,14 @@ public interface TypeStrategy<T> extends Comparator<T>
     return read(buffer, offset + TypeStrategies.VALUE_OFFSET);
   }
 
+  /**
+   * Write a potentially null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
+   * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link #estimateSizeBytesNullable(Object)} to determine the required size of a value before writing if the size
+   * is unknown.
+   */
   default int writeNullable(ByteBuffer buffer, int offset, @Nullable T value)
   {
     if (value == null) {
