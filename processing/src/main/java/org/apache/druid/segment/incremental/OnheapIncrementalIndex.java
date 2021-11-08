@@ -153,12 +153,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected AddToFactsResult addToFacts(
       InputRow row,
-      IncrementalIndexRow key,
+      IncrementalIndexRowResult incrementalIndexRowResult,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
-      boolean skipMaxRowsInMemoryCheck
+      boolean skipMaxRowsInMemoryCheck,
+      boolean rejectRowIfParseError
   ) throws IndexSizeExceededException
   {
+    IncrementalIndexRow key = incrementalIndexRowResult.getIncrementalIndexRow();
     final List<String> parseExceptionMessages = new ArrayList<>();
     final int priorIndex = facts.getPriorIndex(key);
 
@@ -166,6 +168,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final AggregatorFactory[] metrics = getMetrics();
     final AtomicInteger numEntries = getNumEntries();
     final AtomicLong sizeInBytes = getBytesInMemory();
+    if (rejectRowIfParseError && !incrementalIndexRowResult.getParseExceptionMessages().isEmpty()) {
+      return new AddToFactsResult(
+          numEntries.get(),
+          sizeInBytes.get(),
+          incrementalIndexRowResult.getParseExceptionMessages()
+      );
+    }
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);

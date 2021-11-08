@@ -169,19 +169,27 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     @Override
     protected AddToFactsResult addToFacts(
         InputRow row,
-        IncrementalIndexRow key,
+        IncrementalIndexRowResult incrementalIndexRowResult,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,
-        boolean skipMaxRowsInMemoryCheck // ignore for benchmark
+        boolean skipMaxRowsInMemoryCheck, // ignore for benchmark
+        boolean rejectRowIfParseError
     ) throws IndexSizeExceededException
     {
-
+      IncrementalIndexRow key = incrementalIndexRowResult.getIncrementalIndexRow();
       final Integer priorIdex = getFacts().getPriorIndex(key);
 
       Aggregator[] aggs;
       final AggregatorFactory[] metrics = getMetrics();
       final AtomicInteger numEntries = getNumEntries();
       final AtomicLong sizeInBytes = getBytesInMemory();
+      if (rejectRowIfParseError && !incrementalIndexRowResult.getParseExceptionMessages().isEmpty()) {
+        return new AddToFactsResult(
+            numEntries.get(),
+            sizeInBytes.get(),
+            incrementalIndexRowResult.getParseExceptionMessages()
+        );
+      }
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
       } else {

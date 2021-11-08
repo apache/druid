@@ -1475,6 +1475,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxBytesInMemory;
     }
 
+    @JsonProperty
     @Override
     public boolean isRejectRowIfParseError()
     {

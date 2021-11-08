@@ -252,6 +252,7 @@ public class HadoopTuningConfig implements TuningConfig
     return maxBytesInMemory;
   }
 
+  @JsonProperty
   @Override
   public boolean isRejectRowIfParseError()
   {

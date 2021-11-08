@@ -400,7 +400,8 @@ public class IndexGeneratorJob implements Jobby
       ParseException pe = IncrementalIndex.getCombinedParseException(
           inputRow,
           serializeResult.getParseExceptionMessages(),
-          null
+          null,
+          config.getSchema().getTuningConfig().isRejectRowIfParseError()
       );
       if (pe != null) {
         throw pe;

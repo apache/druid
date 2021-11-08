@@ -169,6 +169,7 @@ public class RealtimeAppenderatorTuningConfig implements AppenderatorConfig
   }
 
   @Override
+  @JsonProperty
   public boolean isRejectRowIfParseError()
   {
     return rejectRowIfParseError;

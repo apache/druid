@@ -336,10 +336,11 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(
       InputRow row,
-      IncrementalIndexRow key,
+      IncrementalIndexRowResult incrementalIndexRowResult,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
-      boolean skipMaxRowsInMemoryCheck
+      boolean skipMaxRowsInMemoryCheck,
+      boolean rejectRowIfParseError
   ) throws IndexSizeExceededException;
 
   public abstract int getLastRowIndex();
@@ -477,16 +478,18 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
         row,
-        incrementalIndexRowResult.getIncrementalIndexRow(),
+        incrementalIndexRowResult,
         in,
         rowSupplier,
-        skipMaxRowsInMemoryCheck
+        skipMaxRowsInMemoryCheck,
+        rejectRowIfParseError
     );
     updateMaxIngestedTime(row.getTimestamp());
     @Nullable ParseException parseException = getCombinedParseException(
         row,
         incrementalIndexRowResult.getParseExceptionMessages(),
-        addToFactsResult.getParseExceptionMessages()
+        addToFactsResult.getParseExceptionMessages(),
+        rejectRowIfParseError
     );
     return new IncrementalIndexAddResult(
         addToFactsResult.getRowCount(),
@@ -602,7 +605,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   public static ParseException getCombinedParseException(
       InputRow row,
       @Nullable List<String> dimParseExceptionMessages,
-      @Nullable List<String> aggParseExceptionMessages
+      @Nullable List<String> aggParseExceptionMessages,
+      boolean rejectRowIfParseError
   )
   {
     int numAdded = 0;
@@ -633,8 +637,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       stringBuilder.delete(messageLen - 1, messageLen);
     }
     return new ParseException(
-
-        true,
+        !rejectRowIfParseError,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
         row,
         stringBuilder.toString()
