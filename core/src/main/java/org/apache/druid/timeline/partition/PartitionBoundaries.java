@@ -19,8 +19,11 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ForwardingList;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,13 +38,6 @@ import java.util.stream.Collectors;
 public class PartitionBoundaries extends ForwardingList<StringTuple> implements List<StringTuple>
 {
   private final List<StringTuple> delegate;
-
-  // For jackson
-  @SuppressWarnings("unused")
-  private PartitionBoundaries()
-  {
-    delegate = new ArrayList<>();
-  }
 
   /**
    * @param partitions Elements corresponding to evenly-spaced fractional ranks of the distribution
@@ -69,6 +65,57 @@ public class PartitionBoundaries extends ForwardingList<StringTuple> implements 
     }
 
     delegate = Collections.unmodifiableList(partitionBoundaries);
+  }
+
+  /**
+   * This constructor supports an array of Objects and not just an array of
+   * StringTuples for backward compatibility. Older versions of this class
+   * are serialized as a String array.
+   *
+   * @param partitions array of StringTuples or array of String
+   */
+  @JsonCreator
+  private PartitionBoundaries(Object[] partitions)
+  {
+    delegate = Arrays.stream(partitions)
+                     .map(this::toStringTuple)
+                     .collect(Collectors.toList());
+  }
+
+  @JsonValue
+  public Object getSerializableObject()
+  {
+    boolean isSingleDim = true;
+    for (StringTuple tuple : delegate) {
+      if (tuple != null && tuple.size() != 1) {
+        isSingleDim = false;
+        break;
+      }
+    }
+
+    if (isSingleDim) {
+      return delegate.stream().map(StringTuple::firstOrNull).collect(Collectors.toList());
+    } else {
+      return delegate;
+    }
+  }
+
+  /**
+   * Converts the given item to a StringTuple.
+   */
+  private StringTuple toStringTuple(Object item)
+  {
+    if (item == null || item instanceof StringTuple) {
+      return (StringTuple) item;
+    } else if (item instanceof String) {
+      return StringTuple.create((String) item);
+    } else if (item instanceof String[]) {
+      return StringTuple.create((String[]) item);
+    } else if (item instanceof List) {
+      return StringTuple.create((String[]) ((List) item).toArray(new String[0]));
+    } else {
+      throw new IAE("Item must either be a String or StringTuple");
+    }
   }
 
   @Override

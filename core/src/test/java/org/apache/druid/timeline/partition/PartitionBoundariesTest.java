@@ -92,6 +92,22 @@ public class PartitionBoundariesTest
   }
 
   @Test
+  public void testSerdeWithMultiDimensions() throws JsonProcessingException
+  {
+    PartitionBoundaries original = new PartitionBoundaries(
+        StringTuple.create("a", "10"),
+        StringTuple.create("b", "7"),
+        StringTuple.create("c", "4")
+    );
+
+    final ObjectMapper objectMapper = new ObjectMapper();
+    String json = objectMapper.writeValueAsString(original);
+
+    PartitionBoundaries deserialized = objectMapper.readValue(json, PartitionBoundaries.class);
+    Assert.assertEquals(original, deserialized);
+  }
+
+  @Test
   public void testGetNumBucketsOfNonEmptyPartitionBoundariesReturningCorrectSize()
   {
     Assert.assertEquals(2, target.getNumBuckets());

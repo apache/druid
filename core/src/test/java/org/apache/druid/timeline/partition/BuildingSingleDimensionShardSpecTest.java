@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -67,6 +66,9 @@ public class BuildingSingleDimensionShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(BuildingSingleDimensionShardSpec.class).usingGetClass().verify();
+    Assert.assertEquals(
+        new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4),
+        new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4)
+    );
   }
 }
