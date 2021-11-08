@@ -284,7 +284,7 @@ public interface Expr extends Cacheable
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
@@ -364,13 +364,15 @@ public interface Expr extends Cacheable
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

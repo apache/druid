@@ -52,13 +52,20 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public static final ColumnType TYPE = ColumnType.ofComplex(BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME);
   private static final int DEFAULT_NUM_ENTRIES = 1500;
 
-  private static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
+  public static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
     if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
       ByteBuffer buf1 = (ByteBuffer) o1;
       ByteBuffer buf2 = (ByteBuffer) o2;
       return Integer.compare(
           BloomKFilter.getNumSetBits(buf1, buf1.position()),
           BloomKFilter.getNumSetBits(buf2, buf2.position())
+      );
+    } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
+      BloomKFilter f1 = (BloomKFilter) o1;
+      BloomKFilter f2 = (BloomKFilter) o2;
+      return Integer.compare(
+          f1.getNumSetBits(),
+          f2.getNumSetBits()
       );
     } else {
       throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());

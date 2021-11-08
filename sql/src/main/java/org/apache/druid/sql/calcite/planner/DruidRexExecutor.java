@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -74,10 +75,12 @@ public class DruidRexExecutor implements RexExecutor
         final Expr expr = Parser.parse(druidExpression.getExpression(), plannerContext.getExprMacroTable());
 
         final ExprEval exprResult = expr.eval(
-            name -> {
-              // Sanity check. Bindings should not be used for a constant expression.
-              throw new UnsupportedOperationException();
-            }
+            InputBindings.forFunction(
+                name -> {
+                  // Sanity check. Bindings should not be used for a constant expression.
+                  throw new UnsupportedOperationException();
+                }
+            )
         );
 
         final RexNode literal;
