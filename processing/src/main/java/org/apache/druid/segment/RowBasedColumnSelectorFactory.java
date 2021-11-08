@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -113,22 +112,20 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       // TIME_COLUMN_NAME is handled specially; override the provided inspector.
       return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     } else {
-      final Optional<ColumnCapabilities> inspectedCapabilities =
-          Optional.ofNullable(columnInspector.getColumnCapabilities(columnName));
-      final ColumnType valueType = inspectedCapabilities.map(ColumnCapabilities::toColumnType).orElse(null);
+      final ColumnCapabilities inspectedCapabilities = columnInspector.getColumnCapabilities(columnName);
 
-      if (valueType != null) {
-        if (valueType.isNumeric()) {
-          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+      if (inspectedCapabilities != null) {
+        if (inspectedCapabilities.isNumeric()) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(inspectedCapabilities);
         }
 
-        if (valueType.isArray()) {
-          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(valueType);
+        if (inspectedCapabilities.isArray()) {
+          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(inspectedCapabilities);
         }
 
         // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
         final ColumnCapabilitiesImpl retVal = new ColumnCapabilitiesImpl()
-            .setType(valueType)
+            .setType(inspectedCapabilities)
             .setDictionaryValuesUnique(false)
             .setDictionaryValuesSorted(false);
 
@@ -137,9 +134,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         // Note: we do not set hasMultipleValues = true ever, because even though we might return multiple values,
         // setting it affirmatively causes expression selectors to always treat the column values as arrays. And we
         // don't want that.
-        if (inspectedCapabilities.map(ColumnCapabilities::hasMultipleValues)
-                                 .orElse(ColumnCapabilities.Capable.UNKNOWN)
-                                 .isFalse()) {
+        if (inspectedCapabilities.hasMultipleValues().isFalse()) {
           retVal.setHasMultipleValues(false);
         }
 
@@ -293,7 +288,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         public String lookupName(int id)
         {
           updateCurrentValues();
-          return dimensionValues.get(id);
+          return NullHandling.emptyToNullIfNeeded(dimensionValues.get(id));
         }
 
         @Override
@@ -359,9 +354,9 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
                   // would do when treating a null as a string, but it's consistent with Rows.objectToStrings, which is
                   // commonly used when retrieving strings from input-row-like objects.
                   if (extractionFn == null) {
-                    values.add(NullHandling.emptyToNullIfNeeded(String.valueOf(item)));
+                    values.add(String.valueOf(item));
                   } else {
-                    values.add(NullHandling.emptyToNullIfNeeded(extractionFn.apply(String.valueOf(item))));
+                    values.add(extractionFn.apply(String.valueOf(item)));
                   }
                 }
 
