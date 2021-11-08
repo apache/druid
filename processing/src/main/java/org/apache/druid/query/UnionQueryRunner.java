@@ -88,7 +88,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                                               indexBaseDataSourcePair.rhs.getName(),
                                               indexBaseDataSourcePair.lhs
                                           )
-                                      ))
+                                      )),
+                                      responseContext
                                   )
                          ).collect(Collectors.toList())
             )
