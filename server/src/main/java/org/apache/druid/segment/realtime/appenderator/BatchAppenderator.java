@@ -280,7 +280,7 @@ public class BatchAppenderator implements Appenderator
     final IncrementalIndexAddResult addResult;
 
     try {
-      addResult = sink.add(row, false); // allow incrememtal persis is always true for batch
+      addResult = sink.add(row, false, tuningConfig.isRejectRowIfParseError()); // allow incrememtal persis is always true for batch
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }

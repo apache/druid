@@ -161,7 +161,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     return currHydrant;
   }
 
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck, boolean rejectRowIfParseError) throws IndexSizeExceededException
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -181,7 +181,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return Plumber.DUPLICATE;
       }
 
-      return index.add(row, skipMaxRowsInMemoryCheck);
+      return index.add(row, skipMaxRowsInMemoryCheck, rejectRowIfParseError);
     }
   }
 

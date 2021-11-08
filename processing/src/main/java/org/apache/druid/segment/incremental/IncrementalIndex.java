@@ -454,7 +454,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
-    return add(row, false);
+    return add(row, false, false);
   }
 
   /**
@@ -467,10 +467,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    *
    * @param row the row of data to add
    * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
+   * @param rejectRowIfParseError whether ot not to skip adding a row for which a parsing error is found.
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck, boolean rejectRowIfParseError)
+      throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(

@@ -304,7 +304,7 @@ public class AppenderatorImpl implements Appenderator
     final IncrementalIndexAddResult addResult;
 
     try {
-      addResult = sink.add(row, !allowIncrementalPersists);
+      addResult = sink.add(row, !allowIncrementalPersists, tuningConfig.isRejectRowIfParseError());
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }
