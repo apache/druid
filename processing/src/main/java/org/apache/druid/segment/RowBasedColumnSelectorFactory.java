@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 
@@ -58,7 +57,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Nullable
   private final LongSupplier rowIdSupplier;
   private final RowAdapter<T> adapter;
-  private final ColumnInspector columnInspector;
+  private final Supplier<ColumnInspector> columnInspectorSupplier;
   private final boolean throwParseExceptions;
 
   /**
@@ -69,38 +68,39 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       final Supplier<T> rowSupplier,
       @Nullable final LongSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
-      final ColumnInspector columnInspector,
+      final Supplier<ColumnInspector> columnInspectorSupplier,
       final boolean throwParseExceptions
   )
   {
-    this.rowSupplier = Preconditions.checkNotNull(rowSupplier, "rowSupplier");
+    this.rowSupplier = rowSupplier;
     this.rowIdSupplier = rowIdSupplier;
-    this.adapter = Preconditions.checkNotNull(adapter, "adapter");
-    this.columnInspector = Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
+    this.adapter = adapter;
+    this.columnInspectorSupplier =
+        Preconditions.checkNotNull(columnInspectorSupplier, "columnInspectorSupplier must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
   }
 
   /**
    * Create an instance based on any object, along with a {@link RowAdapter} for that object.
    *
-   * @param adapter              adapter for these row objects
-   * @param rowSupplier          supplier of row objects
-   * @param columnInspector      will be used for reporting available columns and their capabilities. Note that this
-   *                             factory will still allow creation of selectors on any named field in the rows, even if
-   *                             it doesn't appear in "columnInspector". (It only needs to be accessible via
-   *                             {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
-   *                             passing in {@link RowSignature#empty()}.
-   * @param throwParseExceptions whether numeric selectors should throw parse exceptions or use a default/null value
-   *                             when their inputs are not actually numeric
+   * @param adapter                 adapter for these row objects
+   * @param supplier                supplier of row objects
+   * @param columnInspectorSupplier will be used for reporting available columns and their capabilities. Note that this
+   *                                factory will still allow creation of selectors on any named field in the rows, even if
+   *                                it doesn't appear in "columnInspector". (It only needs to be accessible via
+   *                                {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
+   *                                passing in {@link org.apache.druid.segment.column.RowSignature#empty()}.
+   * @param throwParseExceptions    whether numeric selectors should throw parse exceptions or use a default/null value
+   *                                when their inputs are not actually numeric
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
-      final Supplier<RowType> rowSupplier,
-      final ColumnInspector columnInspector,
+      final Supplier<RowType> supplier,
+      final Supplier<ColumnInspector> columnInspectorSupplier,
       final boolean throwParseExceptions
   )
   {
-    return new RowBasedColumnSelectorFactory<>(rowSupplier, null, adapter, columnInspector, throwParseExceptions);
+    return new RowBasedColumnSelectorFactory<>(supplier, null, adapter, columnInspectorSupplier, throwParseExceptions);
   }
 
   @Nullable
@@ -500,6 +500,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return getColumnCapabilities(columnInspector, columnName);
+    return getColumnCapabilities(columnInspectorSupplier.get(), columnName);
   }
 }

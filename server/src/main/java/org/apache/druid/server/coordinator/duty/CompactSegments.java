@@ -28,7 +28,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -297,7 +297,7 @@ public class CompactSegments implements CoordinatorDuty
   private static boolean useRangePartitions(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     // dynamic partitionsSpec will be used if getPartitionsSpec() returns null
-    return tuningConfig.getPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    return tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
   private static List<TaskStatusPlus> filterNonCompactionTasks(List<TaskStatusPlus> taskStatuses)

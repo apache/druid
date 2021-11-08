@@ -31,7 +31,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.expressions.BloomFilterExprMacro;
+import org.apache.druid.query.expressions.BloomFilterExpressions;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
@@ -74,7 +74,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
       exprMacros.add(CalciteTests.INJECTOR.getInstance(clazz));
     }
     exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
-    exprMacros.add(new BloomFilterExprMacro());
+    exprMacros.add(new BloomFilterExpressions.TestExprMacro());
     return new ExprMacroTable(exprMacros);
   }
 
