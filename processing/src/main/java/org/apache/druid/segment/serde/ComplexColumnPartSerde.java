@@ -78,12 +78,14 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     return (buffer, builder, columnConfig) -> {
+      // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change
+      // since it isn't supported anywhere in the query engines)
+      // longer term this needs to be captured by making the serde provide this information, and then this should
+      // no longer be set to true but rather the actual values
+      builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
+      builder.setComplexTypeName(typeName);
+
       if (serde != null) {
-        // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change
-        // since it isn't supported anywhere in the query engines)
-        // longer term this needs to be captured by making the serde provide this information, and then this should
-        // no longer be set to true but rather the actual values
-        builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
         serde.deserializeColumn(buffer, builder, columnConfig);
       }
     };
