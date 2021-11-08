@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,6 +29,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +59,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -88,6 +92,7 @@ import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.http.SqlParameter;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -471,13 +476,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create();
+    return queryLogHook = QueryLogHook.create(CalciteTests.getJsonMapper());
   }
 
   @Before
   public void setUp() throws Exception
   {
     walker = createQuerySegmentWalker();
+    ObjectMapper mapper = CalciteTests.getJsonMapper();
+    mapper.registerModules(getJacksonModules());
+    setMapperInjectableValues(mapper, getJacksonInjectables());
   }
 
   @After
@@ -503,6 +511,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public ExprMacroTable createMacroTable()
   {
     return CalciteTests.createExprMacroTable();
+  }
+
+  public Map<String, Object> getJacksonInjectables()
+  {
+    return new HashMap<>();
+  }
+
+  public final void setMapperInjectableValues(ObjectMapper mapper, Map<String, Object> injectables)
+  {
+    // duplicate the injectable values from CalciteTests.INJECTOR initialization, mainly to update the injectable
+    // macro table, or whatever else you feel like injecting to a mapper
+    LookupExtractorFactoryContainerProvider lookupProvider =
+        CalciteTests.INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class);
+    mapper.setInjectableValues(new InjectableValues.Std(injectables)
+                                   .addValue(ExprMacroTable.class.getName(), createMacroTable())
+                                                .addValue(ObjectMapper.class.getName(), mapper)
+                                                .addValue(
+                                                    DataSegment.PruneSpecsHolder.class,
+                                                    DataSegment.PruneSpecsHolder.DEFAULT
+                                                )
+                                                .addValue(
+                                                    LookupExtractorFactoryContainerProvider.class.getName(),
+                                                    lookupProvider
+                                                )
+    );
+  }
+
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return new LookupSerdeModule().getJacksonModules();
   }
 
   public void assertQueryIsUnplannable(final String sql)
@@ -790,12 +828,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
-        ObjectMapper mapper = CalciteTests.getJsonMapper().registerModules(new LookupSerdeModule().getJacksonModules());
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, sql),
             expectedQueries.get(i),
             recordedQueries.get(i)
         );
+
+        // ugly workaround, for some reason the static mapper from Calcite.INJECTOR seems to get messed up over
+        // multiple test runs, resulting in missing subtypes that cause this JSON serde round-trip test
+        ObjectMapper mapper = new DefaultObjectMapper().registerModules(getJacksonModules());
+        setMapperInjectableValues(mapper, getJacksonInjectables());
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present

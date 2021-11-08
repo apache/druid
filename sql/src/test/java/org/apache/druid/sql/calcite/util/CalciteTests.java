@@ -265,8 +265,6 @@ public class CalciteTests
                                       .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
         );
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(
-//            TestHelper.makeJsonMapper()
-//        );
             mapper
         );
 
@@ -1037,6 +1035,7 @@ public class CalciteTests
       exprMacros.add(INJECTOR.getInstance(clazz));
     }
     exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
+
     return new ExprMacroTable(exprMacros);
   }
 
