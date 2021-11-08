@@ -378,7 +378,7 @@ public class RowBasedGrouperHelper
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        query.getResultRowSignature(),
+        () -> query.getResultRowSignature(),
         false
     );
   }

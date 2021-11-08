@@ -19,34 +19,16 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.segment.column.TypeDescriptor;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.JsonConfigProvider;
 
-/**
- * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
- */
-public enum ExprType implements TypeDescriptor
+public class ExpressionProcessingModule implements Module
 {
-  DOUBLE,
-  LONG,
-  STRING,
-  ARRAY,
-  COMPLEX;
-
   @Override
-  public boolean isNumeric()
+  public void configure(Binder binder)
   {
-    return LONG.equals(this) || DOUBLE.equals(this);
-  }
-
-  @Override
-  public boolean isPrimitive()
-  {
-    return this != ARRAY && this != COMPLEX;
-  }
-
-  @Override
-  public boolean isArray()
-  {
-    return this == ExprType.ARRAY;
+    JsonConfigProvider.bind(binder, "druid.expressions", ExpressionProcessingConfig.class);
+    binder.requestStaticInjection(ExpressionProcessing.class);
   }
 }

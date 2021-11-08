@@ -19,34 +19,28 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.segment.column.TypeDescriptor;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
- */
-public enum ExprType implements TypeDescriptor
+import javax.annotation.Nullable;
+
+public class ExpressionProcessingConfig
 {
-  DOUBLE,
-  LONG,
-  STRING,
-  ARRAY,
-  COMPLEX;
+  public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
 
-  @Override
-  public boolean isNumeric()
+  @JsonProperty("allowNestedArrays")
+  private final boolean allowNestedArrays;
+
+  @JsonCreator
+  public ExpressionProcessingConfig(@JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays)
   {
-    return LONG.equals(this) || DOUBLE.equals(this);
+    this.allowNestedArrays = allowNestedArrays == null
+                             ? Boolean.valueOf(System.getProperty(NESTED_ARRAYS_CONFIG_STRING, "false"))
+                             : allowNestedArrays;
   }
 
-  @Override
-  public boolean isPrimitive()
+  public boolean allowNestedArrays()
   {
-    return this != ARRAY && this != COMPLEX;
-  }
-
-  @Override
-  public boolean isArray()
-  {
-    return this == ExprType.ARRAY;
+    return allowNestedArrays;
   }
 }

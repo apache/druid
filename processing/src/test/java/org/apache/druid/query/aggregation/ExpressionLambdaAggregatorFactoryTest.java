@@ -26,6 +26,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -189,7 +190,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("x"),
         null,
         "0",
-        null,
+        "<LONG>[]",
         true,
         "array_set_add(__acc, x)",
         "array_set_add_all(__acc, expr_agg_name)",
@@ -411,6 +412,52 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
   }
 
   @Test
+  public void testComplexType()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("some_column"),
+        null,
+        "hyper_unique()",
+        null,
+        null,
+        "hyper_unique_add(some_column, __acc)",
+        "hyper_unique_add(__acc, expr_agg_name)",
+        null,
+        null,
+        new HumanReadableBytes(2048),
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getFinalizedType());
+  }
+
+  @Test
+  public void testComplexTypeFinalized()
+  {
+    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+        "expr_agg_name",
+        ImmutableSet.of("some_column"),
+        null,
+        "hyper_unique()",
+        null,
+        null,
+        "hyper_unique_add(some_column, __acc)",
+        "hyper_unique_add(__acc, expr_agg_name)",
+        null,
+        "hyper_unique_estimate(o)",
+        new HumanReadableBytes(2048),
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getFinalizedType());
+  }
+
+  @Test
   public void testResultArraySignature()
   {
     final TimeseriesQuery query =
@@ -544,6 +591,34 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                       "fold((x, acc) -> x + acc, o, 0)",
                       new HumanReadableBytes(2048),
                       TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionLambdaAggregatorFactory(
+                      "complex_expr",
+                      ImmutableSet.of("some_column"),
+                      null,
+                      "hyper_unique()",
+                      null,
+                      null,
+                      "hyper_unique_add(some_column, __acc)",
+                      "hyper_unique_add(__acc, expr_agg_name)",
+                      null,
+                      null,
+                      new HumanReadableBytes(2048),
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionLambdaAggregatorFactory(
+                      "complex_expr_finalized",
+                      ImmutableSet.of("some_column"),
+                      null,
+                      "hyper_unique()",
+                      null,
+                      null,
+                      "hyper_unique_add(some_column, __acc)",
+                      "hyper_unique_add(__acc, expr_agg_name)",
+                      null,
+                      "hyper_unique_estimate(o)",
+                      new HumanReadableBytes(2048),
+                      TestExprMacroTable.INSTANCE
                   )
               )
               .postAggregators(
@@ -552,7 +627,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                   new FieldAccessPostAggregator("double-array-expr-access", "double_array_expr_finalized"),
                   new FinalizingFieldAccessPostAggregator("double-array-expr-finalize", "double_array_expr_finalized"),
                   new FieldAccessPostAggregator("long-array-expr-access", "long_array_expr_finalized"),
-                  new FinalizingFieldAccessPostAggregator("long-array-expr-finalize", "long_array_expr_finalized")
+                  new FinalizingFieldAccessPostAggregator("long-array-expr-finalize", "long_array_expr_finalized"),
+                  new FieldAccessPostAggregator("complex-expr-access", "complex_expr_finalized"),
+                  new FinalizingFieldAccessPostAggregator("complex-expr-finalize", "complex_expr_finalized")
               )
               .build();
 
@@ -576,6 +653,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                     .add("double_array_expr_finalized", null)
                     // long because fold type equals finalized type, even though merge type is array
                     .add("long_array_expr_finalized", ColumnType.LONG)
+                    .add("complex_expr", HyperUniquesAggregatorFactory.TYPE)
+                    // type does not equal finalized type. (combining factory type does equal finalized type,
+                    // but this signature doesn't use combining factory)
+                    .add("complex_expr_finalized", null)
                     // fold type is string
                     .add("string-array-expr-access", ColumnType.STRING)
                     // finalized type is string
@@ -588,6 +669,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
                     .add("long-array-expr-access", ColumnType.LONG)
                     // finalized type is long
                     .add("long-array-expr-finalize", ColumnType.LONG)
+                    .add("complex-expr-access", HyperUniquesAggregatorFactory.TYPE)
+                    .add("complex-expr-finalize", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

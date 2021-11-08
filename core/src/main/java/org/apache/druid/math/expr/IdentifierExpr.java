@@ -122,7 +122,7 @@ class IdentifierExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.bestEffortOf(bindings.get(binding));
+    return ExprEval.ofType(bindings.getType(binding), bindings.get(binding));
   }
 
   @Override

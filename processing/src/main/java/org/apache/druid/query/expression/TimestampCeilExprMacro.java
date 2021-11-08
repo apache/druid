@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,7 +67,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     TimestampCeilExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      this.granularity = getGranularity(args, ExprUtils.nilBindings());
+      this.granularity = getGranularity(args, InputBindings.nilBindings());
     }
 
     @Nonnull
