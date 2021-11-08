@@ -186,7 +186,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     );
 
     final File persistDir = toolbox.getPersistDir();
-    org.apache.commons.io.FileUtils.forceDelete(persistDir);
+    org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
     final Set<DataSegment> pushedSegments = mergeAndPushSegments(
