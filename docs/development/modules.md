@@ -358,13 +358,12 @@ druid.coordinator.cleanupMetadata.period=PT10S
 
 ### Routing data through a HTTP proxy for your extension
 
-It is possible to adds the ability for the HttpClient of your extension to connect through a HTTP proxy. 
-Internally, Druid will augment the channel factory to check if it is supposed to be proxied and, if so, connect to the proxy host first, 
-issue a CONNECT command through to the final recipient host and then give the channel to the normal http client for usage.
+You can add the ability for the `HttpClient` of your extension to connect through an HTTP proxy. 
 
-To enable this feature and allow for proxy in your extension's HTTP client, 
-first, add `HttpClientProxyConfig` as a `@JsonProperty` to the HTTP config class of your extension. 
-Next, in the extension's module class, add `HttpProxyConfig` to `HttpClientConfig`. For example, 
+To support proxy connection for your extension's HTTP client:
+1. Add `HttpClientProxyConfig` as a `@JsonProperty` to the HTTP config class of your extension. 
+2. In the extension's module class, add `HttpProxyConfig` config to `HttpClientConfig`. 
+For example, where `config` variable is the extension's HTTP config from step 1:
 ```
 final HttpClientConfig.Builder builder = HttpClientConfig
     .builder()
@@ -372,7 +371,6 @@ final HttpClientConfig.Builder builder = HttpClientConfig
     .withReadTimeout(config.getReadTimeout().toStandardDuration())
     .withHttpProxyConfig(config.getProxyConfig());
 ```
-(note that the `config` variable in the example above is the HTTP config class of your extension)
 
 ### Bundle your extension with all the other Druid extensions
 
