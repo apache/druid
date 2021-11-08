@@ -1160,6 +1160,9 @@ public abstract class ExprEval<T>
         }
         return ExprEval.ofType(castTo, null);
       }
+      if (type().equals(castTo)) {
+        return this;
+      }
       switch (castTo.getType()) {
         case STRING:
           if (value.length == 1) {
