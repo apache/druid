@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.ForwardingList;
+import org.apache.druid.data.input.StringTuple;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,9 +32,9 @@ import java.util.stream.Collectors;
 /**
  * List of range partition boundaries.
  */
-public class PartitionBoundaries extends ForwardingList<String> implements List<String>
+public class PartitionBoundaries extends ForwardingList<StringTuple> implements List<StringTuple>
 {
-  private final List<String> delegate;
+  private final List<StringTuple> delegate;
 
   // For jackson
   @SuppressWarnings("unused")
@@ -45,7 +46,7 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
   /**
    * @param partitions Elements corresponding to evenly-spaced fractional ranks of the distribution
    */
-  public PartitionBoundaries(String... partitions)
+  public PartitionBoundaries(StringTuple... partitions)
   {
     if (partitions.length == 0) {
       delegate = Collections.emptyList();
@@ -53,7 +54,7 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
     }
 
     // Future improvement: Handle skewed partitions better (e.g., many values are repeated).
-    List<String> partitionBoundaries = Arrays.stream(partitions)
+    List<StringTuple> partitionBoundaries = Arrays.stream(partitions)
                                              .distinct()
                                              .collect(Collectors.toCollection(ArrayList::new));
 
@@ -71,7 +72,7 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
   }
 
   @Override
-  protected List<String> delegate()
+  protected List<StringTuple> delegate()
   {
     return delegate;
   }

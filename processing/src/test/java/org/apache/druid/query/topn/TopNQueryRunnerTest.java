@@ -6075,6 +6075,71 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, query);
   }
 
+  @Test
+  public void testExpressionAggregatorComplex()
+  {
+
+    // sorted by array hyperunique expression
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric("carExpr")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(
+            ImmutableList.of(
+                new CardinalityAggregatorFactory(
+                    "car",
+                    ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                    false
+                ),
+                new ExpressionLambdaAggregatorFactory(
+                    "carExpr",
+                    ImmutableSet.of("quality"),
+                    null,
+                    "hyper_unique()",
+                    null,
+                    null,
+                    "hyper_unique_add(quality, __acc)",
+                    "hyper_unique_add(carExpr, __acc)",
+                    null,
+                    "hyper_unique_estimate(o)",
+                    null,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        )
+        .build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
+                                .put("car", 9.019833517963864)
+                                .put("carExpr", 9.019833517963864)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
+                                .put("car", 2.000977198748901)
+                                .put("carExpr", 2.000977198748901)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
+                                .put("car", 2.000977198748901)
+                                .put("carExpr", 2.000977198748901)
+                                .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
   private static Map<String, Object> makeRowWithNulls(
       String dimName,
       @Nullable Object dimValue,

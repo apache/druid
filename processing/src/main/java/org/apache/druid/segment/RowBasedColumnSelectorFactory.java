@@ -49,19 +49,19 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 {
   private final Supplier<T> supplier;
   private final RowAdapter<T> adapter;
-  private final RowSignature rowSignature;
+  private final Supplier<RowSignature> rowSignatureSupplier;
   private final boolean throwParseExceptions;
 
   private RowBasedColumnSelectorFactory(
       final Supplier<T> supplier,
       final RowAdapter<T> adapter,
-      final RowSignature rowSignature,
+      final Supplier<RowSignature> rowSignatureSupplier,
       final boolean throwParseExceptions
   )
   {
     this.supplier = supplier;
     this.adapter = adapter;
-    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature must be nonnull");
+    this.rowSignatureSupplier = Preconditions.checkNotNull(rowSignatureSupplier, "rowSignature must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
   }
 
@@ -70,7 +70,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    *
    * @param adapter              adapter for these row objects
    * @param supplier             supplier of row objects
-   * @param signature            will be used for reporting available columns and their capabilities. Note that the this
+   * @param signatureSupplier    will be used for reporting available columns and their capabilities. Note that the this
    *                             factory will still allow creation of selectors on any named field in the rows, even if
    *                             it doesn't appear in "rowSignature". (It only needs to be accessible via
    *                             {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
@@ -81,11 +81,11 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
-      final RowSignature signature,
+      final Supplier<RowSignature> signatureSupplier,
       final boolean throwParseExceptions
   )
   {
-    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signature, throwParseExceptions);
+    return new RowBasedColumnSelectorFactory<>(supplier, adapter, signatureSupplier, throwParseExceptions);
   }
 
   @Nullable
@@ -452,6 +452,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return getColumnCapabilities(rowSignature, columnName);
+    return getColumnCapabilities(rowSignatureSupplier.get(), columnName);
   }
 }

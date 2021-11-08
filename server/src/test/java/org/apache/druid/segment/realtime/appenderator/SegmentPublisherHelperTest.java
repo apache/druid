@@ -22,11 +22,14 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.BuildingDimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingSingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -40,6 +43,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
 import java.util.Set;
 
 public class SegmentPublisherHelperTest
@@ -155,6 +159,40 @@ public class SegmentPublisherHelperTest
     for (DataSegment segment : annotated) {
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
+      Assert.assertEquals(3, shardSpec.getNumCorePartitions());
+    }
+  }
+
+  @Test
+  public void testAnnotateCorePartitionSetSizeForDimensionRangeShardSpec()
+  {
+    final Set<DataSegment> segments = ImmutableSet.of(
+        newSegment(new BuildingDimensionRangeShardSpec(
+            0,
+            Arrays.asList("dim1", "dim2"),
+            null,
+            StringTuple.create("a", "5"),
+            0
+        )),
+        newSegment(new BuildingDimensionRangeShardSpec(
+            1,
+            Arrays.asList("dim1", "dim2"),
+            null,
+            StringTuple.create("a", "5"),
+            1
+        )),
+        newSegment(new BuildingDimensionRangeShardSpec(
+            2,
+            Arrays.asList("dim1", "dim2"),
+            null,
+            StringTuple.create("a", "5"),
+            2
+        ))
+    );
+    final Set<DataSegment> annotated = SegmentPublisherHelper.annotateShardSpec(segments);
+    for (DataSegment segment : annotated) {
+      Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
+      final DimensionRangeShardSpec shardSpec = (DimensionRangeShardSpec) segment.getShardSpec();
       Assert.assertEquals(3, shardSpec.getNumCorePartitions());
     }
   }
