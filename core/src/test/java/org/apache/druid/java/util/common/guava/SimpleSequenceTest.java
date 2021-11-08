@@ -43,14 +43,14 @@ public class SimpleSequenceTest
   }
 
   @Test
-  public void testGetIterable() throws Exception
+  public void testGetIterable()
   {
     final List<Integer> vals = Collections.singletonList(1);
     Assert.assertSame(vals, ((SimpleSequence<Integer>) Sequences.simple(vals)).getIterable());
   }
 
   @Test
-  public void testToList() throws Exception
+  public void testToList()
   {
     final List<Integer> vals = Arrays.asList(1, 2);
     Assert.assertEquals(vals, Sequences.simple(vals).toList());
