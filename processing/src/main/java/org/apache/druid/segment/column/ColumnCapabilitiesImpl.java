@@ -156,7 +156,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    * Create a no frills, simple column with {@link ValueType} set and everything else false
    * @param valueType
    */
-  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ColumnType valueType)
+  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(TypeSignature<ValueType> valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
                                                                  .setHasMultipleValues(false)
@@ -191,7 +191,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    * and {@link #hasNulls} is not set
    * @param valueType
    */
-  public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(ColumnType valueType)
+  public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(TypeSignature<ValueType> valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
                                                                  .setHasMultipleValues(true)
@@ -246,7 +246,13 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return elementType;
   }
 
+  @JsonProperty
   public ColumnCapabilitiesImpl setType(ColumnType type)
+  {
+    return setType((TypeSignature<ValueType>) type);
+  }
+
+  public ColumnCapabilitiesImpl setType(TypeSignature<ValueType> type)
   {
     Preconditions.checkNotNull(type, "'type' must be nonnull");
     this.type = type.getType();

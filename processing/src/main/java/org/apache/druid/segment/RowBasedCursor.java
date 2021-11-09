@@ -46,6 +46,8 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ColumnSelectorFactory columnSelectorFactory;
   private final ValueMatcher valueMatcher;
 
+  private long rowId = 0;
+
   RowBasedCursor(
       final RowWalker<RowType> rowWalker,
       final RowAdapter<RowType> rowAdapter,
@@ -63,9 +65,10 @@ public class RowBasedCursor<RowType> implements Cursor
     this.descending = descending;
     this.cursorTime = gran.toDateTime(interval.getStartMillis());
     this.columnSelectorFactory = virtualColumns.wrap(
-        RowBasedColumnSelectorFactory.create(
-            rowAdapter,
+        new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,
+            () -> rowId,
+            rowAdapter,
             () -> rowSignature,
             false
         )
@@ -104,6 +107,7 @@ public class RowBasedCursor<RowType> implements Cursor
   public void advanceUninterruptibly()
   {
     rowWalker.advance();
+    rowId++;
     advanceToMatchingRow();
   }
 
@@ -122,6 +126,7 @@ public class RowBasedCursor<RowType> implements Cursor
   @Override
   public void reset()
   {
+    rowId = 0;
     rowWalker.reset();
     rowWalker.skipToDateTime(descending ? interval.getEnd().minus(1) : interval.getStart(), descending);
     advanceToMatchingRow();
@@ -131,6 +136,7 @@ public class RowBasedCursor<RowType> implements Cursor
   {
     while (!isDone() && !valueMatcher.matches()) {
       rowWalker.advance();
+      rowId++;
     }
   }
 }
