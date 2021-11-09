@@ -246,6 +246,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return elementType;
   }
 
+  @JsonProperty
+  public ColumnCapabilitiesImpl setType(ColumnType type)
+  {
+    return setType((TypeSignature<ValueType>) type);
+  }
+
   public ColumnCapabilitiesImpl setType(TypeSignature<ValueType> type)
   {
     Preconditions.checkNotNull(type, "'type' must be nonnull");
