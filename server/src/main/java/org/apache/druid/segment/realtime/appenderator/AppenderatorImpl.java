@@ -260,7 +260,6 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public Object startJob()
   {
-    tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
@@ -381,7 +380,8 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck
+            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -1099,6 +1099,8 @@ public class AppenderatorImpl implements Appenderator
   {
     if (basePersistDirLock == null) {
       try {
+        FileUtils.mkdirp(tuningConfig.getBasePersistDirectory());
+
         basePersistDirLockChannel = FileChannel.open(
             computeLockFile().toPath(),
             StandardOpenOption.CREATE,
@@ -1476,7 +1478,7 @@ public class AppenderatorImpl implements Appenderator
   private File createPersistDirIfNeeded(SegmentIdWithShardSpec identifier) throws IOException
   {
     final File persistDir = computePersistDir(identifier);
-    org.apache.commons.io.FileUtils.forceMkdir(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     objectMapper.writeValue(computeIdentifierFile(identifier), identifier);
 

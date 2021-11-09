@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,7 +53,8 @@ public class MemoryTest
         cgroupDir,
         "memory/system.slice/some.service"
     );
-    Assert.assertTrue((memoryDir.isDirectory() && memoryDir.exists()) || memoryDir.mkdirs());
+
+    FileUtils.mkdirp(memoryDir);
     TestUtils.copyResource("/memory.stat", new File(memoryDir, "memory.stat"));
     TestUtils.copyResource("/memory.numa_stat", new File(memoryDir, "memory.numa_stat"));
   }
