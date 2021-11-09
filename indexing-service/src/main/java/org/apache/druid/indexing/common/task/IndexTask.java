@@ -1298,7 +1298,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxSavedParseExceptions,
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
-          reportParseExceptions
+          rejectRowIfParseError
       );
 
       Preconditions.checkArgument(

@@ -484,7 +484,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         skipMaxRowsInMemoryCheck,
         rejectRowIfParseError
     );
-    updateMaxIngestedTime(row.getTimestamp());
+    if (!rejectRowIfParseError || (incrementalIndexRowResult.getParseExceptionMessages().isEmpty()
+                                   && addToFactsResult.parseExceptionMessages.isEmpty())) {
+      updateMaxIngestedTime(row.getTimestamp());
+    }
     @Nullable ParseException parseException = getCombinedParseException(
         row,
         incrementalIndexRowResult.getParseExceptionMessages(),

@@ -1346,6 +1346,7 @@ public class IndexTaskTest extends IngestionTestBase
         7,
         7,
         null,
+        null,
         null
     );
 
@@ -1480,6 +1481,7 @@ public class IndexTaskTest extends IngestionTestBase
         2,
         5,
         null,
+        null,
         null
     );
 
@@ -1605,6 +1607,7 @@ public class IndexTaskTest extends IngestionTestBase
         true,
         2,
         5,
+        null,
         null,
         null
     );
@@ -2419,6 +2422,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         1,
+        null,
         null,
         null
     );

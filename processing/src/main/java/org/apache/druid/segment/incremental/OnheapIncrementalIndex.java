@@ -169,11 +169,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final AtomicInteger numEntries = getNumEntries();
     final AtomicLong sizeInBytes = getBytesInMemory();
     if (rejectRowIfParseError && !incrementalIndexRowResult.getParseExceptionMessages().isEmpty()) {
-      return new AddToFactsResult(
-          numEntries.get(),
-          sizeInBytes.get(),
-          incrementalIndexRowResult.getParseExceptionMessages()
-      );
+      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
     }
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);

@@ -179,7 +179,8 @@ public class BatchAppenderatorsTest
           0L,
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+          null
       );
       metrics = new FireDepartmentMetrics();
 
@@ -375,6 +376,7 @@ public class BatchAppenderatorsTest
       private final IndexSpec indexSpecForIntermediatePersists;
       @Nullable
       private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+      private final boolean rejectRowIfParseError;
 
       public TestIndexTuningConfig(
           AppendableIndexSpec appendableIndexSpec,
@@ -387,7 +389,8 @@ public class BatchAppenderatorsTest
           Long pushTimeout,
           @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
           Integer maxColumnsToMerge,
-          File basePersistDirectory
+          File basePersistDirectory,
+          Boolean rejectRowIfParseError
       )
       {
         this.appendableIndexSpec = appendableIndexSpec;
@@ -404,6 +407,9 @@ public class BatchAppenderatorsTest
 
         this.partitionsSpec = null;
         this.indexSpecForIntermediatePersists = this.indexSpec;
+        this.rejectRowIfParseError = rejectRowIfParseError == null ?
+                                     TuningConfig.DEFAULT_REJECT_ROW_IF_PARSE_ERROR :
+                                     rejectRowIfParseError;
       }
 
       @Override
@@ -428,6 +434,12 @@ public class BatchAppenderatorsTest
       public long getMaxBytesInMemory()
       {
         return maxBytesInMemory;
+      }
+
+      @Override
+      public boolean isRejectRowIfParseError()
+      {
+        return false;
       }
 
       @Override

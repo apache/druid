@@ -175,6 +175,7 @@ public class DruidJsonValidatorTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),

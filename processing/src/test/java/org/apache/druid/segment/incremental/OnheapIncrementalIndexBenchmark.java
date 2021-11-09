@@ -184,11 +184,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       final AtomicInteger numEntries = getNumEntries();
       final AtomicLong sizeInBytes = getBytesInMemory();
       if (rejectRowIfParseError && !incrementalIndexRowResult.getParseExceptionMessages().isEmpty()) {
-        return new AddToFactsResult(
-            numEntries.get(),
-            sizeInBytes.get(),
-            incrementalIndexRowResult.getParseExceptionMessages()
-        );
+        return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
       }
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
