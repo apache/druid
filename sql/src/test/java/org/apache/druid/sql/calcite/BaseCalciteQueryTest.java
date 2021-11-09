@@ -128,8 +128,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
-  final boolean useDefault = NullHandling.replaceWithDefault();
-
   @BeforeClass
   public static void setupNullValues()
   {
@@ -269,15 +267,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Closer resourceCloser;
   public static int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  final boolean useDefault = NullHandling.replaceWithDefault();
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
 
+  public ObjectMapper queryJsonMapper;
   public SpecificSegmentsQuerySegmentWalker walker = null;
   public QueryLogHook queryLogHook;
 
@@ -476,13 +478,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create(CalciteTests.getJsonMapper());
+    return queryLogHook = QueryLogHook.create(queryJsonMapper);
   }
 
   @Before
   public void setUp() throws Exception
   {
+    queryJsonMapper = createQueryJsonMapper();
     walker = createQuerySegmentWalker();
+
+    // also register the static injected mapper, though across multiple test runs
     ObjectMapper mapper = CalciteTests.getJsonMapper();
     mapper.registerModules(getJacksonModules());
     setMapperInjectableValues(mapper, getJacksonInjectables());
@@ -501,6 +506,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         conglomerate,
         temporaryFolder.newFolder()
     );
+  }
+
+  public ObjectMapper createQueryJsonMapper()
+  {
+    // ugly workaround, for some reason the static mapper from Calcite.INJECTOR seems to get messed up over
+    // multiple test runs, resulting in missing subtypes that cause this JSON serde round-trip test
+    // this should be nearly identical to CalciteTests.getJsonMapper()
+    ObjectMapper mapper = new DefaultObjectMapper().registerModules(getJacksonModules());
+    setMapperInjectableValues(mapper, getJacksonInjectables());
+    return mapper;
   }
 
   public DruidOperatorTable createOperatorTable()
@@ -770,7 +785,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         createOperatorTable(),
         createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        queryJsonMapper
     );
   }
 
@@ -834,18 +849,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             recordedQueries.get(i)
         );
 
-        // ugly workaround, for some reason the static mapper from Calcite.INJECTOR seems to get messed up over
-        // multiple test runs, resulting in missing subtypes that cause this JSON serde round-trip test
-        ObjectMapper mapper = new DefaultObjectMapper().registerModules(getJacksonModules());
-        setMapperInjectableValues(mapper, getJacksonInjectables());
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = mapper.writeValueAsString(recordedQueries.get(i));
-          final Query<?> stringAndBack = mapper.readValue(recordedString, Query.class);
-          final String expectedString = mapper.writeValueAsString(expectedQueries.get(i));
-          final Query<?> expectedStringAndBack = mapper.readValue(expectedString, Query.class);
+          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
+          final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
+          final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
           Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
         catch (JsonProcessingException e) {
@@ -945,7 +956,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         createOperatorTable(),
         createMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+        queryJsonMapper
     );
 
     SqlLifecycle lifecycle = lifecycleFactory.factorize();
