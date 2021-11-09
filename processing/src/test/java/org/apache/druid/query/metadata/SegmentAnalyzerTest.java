@@ -42,7 +42,6 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
@@ -59,9 +58,12 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -76,6 +78,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 {
   private static final EnumSet<SegmentMetadataQuery.AnalysisType> EMPTY_ANALYSES =
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
+
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void testIncrementalWorks()
@@ -282,20 +287,43 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         .setMaxRowCount(10000)
         .build();
     IncrementalIndex incrementalIndex = TestIndex.loadIncrementalIndex(retVal, source);
-    QueryableIndex queryableIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
-    SegmentAnalyzer analyzer = new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
-    QueryableIndexSegment segment = new QueryableIndexSegment(
-        queryableIndex,
-        SegmentId.dummy("ds")
-    );
-    Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
-    ColumnAnalysis invalidColumnAnalysis = analyses.get(invalid_aggregator);
-    Assert.assertTrue(invalidColumnAnalysis.isError());
 
-    // Run a segment metadata query also to verify it doesn't break
-    final List<SegmentAnalysis> results = getSegmentAnalysises(segment, EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
-    for (SegmentAnalysis result : results) {
-      Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
+    // Analyze the in-memory segment.
+    {
+      SegmentAnalyzer analyzer = new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
+      IncrementalIndexSegment segment = new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("ds"));
+      Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
+      ColumnAnalysis columnAnalysis = analyses.get(invalid_aggregator);
+      Assert.assertFalse(columnAnalysis.isError());
+      Assert.assertEquals("COMPLEX<invalid_complex_column_type>", columnAnalysis.getType());
+    }
+
+    // Persist the index.
+    final File segmentFile = TestIndex.INDEX_MERGER.persist(
+        incrementalIndex,
+        temporaryFolder.newFolder(),
+        TestIndex.INDEX_SPEC,
+        null
+    );
+
+    // Unload the complex serde, then analyze the persisted segment.
+    ComplexMetrics.unregisterSerde(InvalidAggregatorFactory.TYPE);
+    {
+      SegmentAnalyzer analyzer = new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
+      QueryableIndexSegment segment = new QueryableIndexSegment(
+          TestIndex.INDEX_IO.loadIndex(segmentFile),
+          SegmentId.dummy("ds")
+      );
+      Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
+      ColumnAnalysis invalidColumnAnalysis = analyses.get(invalid_aggregator);
+      Assert.assertTrue(invalidColumnAnalysis.isError());
+      Assert.assertEquals("error:unknown_complex_invalid_complex_column_type", invalidColumnAnalysis.getErrorMessage());
+
+      // Run a segment metadata query also to verify it doesn't break
+      final List<SegmentAnalysis> results = getSegmentAnalysises(segment, EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
+      for (SegmentAnalysis result : results) {
+        Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
+      }
     }
   }
 

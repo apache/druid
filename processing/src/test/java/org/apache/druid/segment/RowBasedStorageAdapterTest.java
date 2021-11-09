@@ -198,7 +198,10 @@ public class RowBasedStorageAdapterTest
             if (valueType == null || valueType == ValueType.COMPLEX) {
               return i -> null;
             } else {
-              return i -> DimensionHandlerUtils.convertObjectToType(i, ROW_SIGNATURE.getColumnType(columnName).orElse(null));
+              return i -> DimensionHandlerUtils.convertObjectToType(
+                  i,
+                  ROW_SIGNATURE.getColumnType(columnName).orElse(null)
+              );
             }
           }
         }
@@ -399,24 +402,21 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getColumnTypeName()
+  public void test_getColumnTypeString()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       if (UNKNOWN_TYPE_NAME.equals(columnName)) {
-        Assert.assertNull(columnName, adapter.getColumnTypeName(columnName));
+        Assert.assertNull(columnName, adapter.getColumnCapabilities(columnName));
       } else {
-        Assert.assertEquals(columnName, ValueType.valueOf(columnName).name(), adapter.getColumnTypeName(columnName));
+        Assert.assertEquals(
+            columnName,
+            ValueType.valueOf(columnName).name(),
+            adapter.getColumnCapabilities(columnName).asTypeString()
+        );
       }
     }
-  }
-
-  @Test
-  public void test_getColumnTypeName_nonexistent()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertNull(adapter.getColumnTypeName("nonexistent"));
   }
 
   @Test
