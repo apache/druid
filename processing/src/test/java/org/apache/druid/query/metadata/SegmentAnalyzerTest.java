@@ -295,7 +295,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
       ColumnAnalysis columnAnalysis = analyses.get(invalid_aggregator);
       Assert.assertFalse(columnAnalysis.isError());
-      Assert.assertEquals("invalid_complex_column_type", columnAnalysis.getType());
+      Assert.assertEquals("COMPLEX<invalid_complex_column_type>", columnAnalysis.getType());
     }
 
     // Persist the index.

@@ -73,7 +73,7 @@ public class ComplexMetrics
   /**
    * Unregister a serde name -> ComplexMetricSerde mapping.
    *
-   * If the spedified serde key string is not in use, does nothing.
+   * If the specified serde key string is not in use, does nothing.
    *
    * Only expected to be used in tests.
    */
