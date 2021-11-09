@@ -124,8 +124,8 @@ An example `dataSchema` is:
   },
   "dimensionsSpec": {
     "dimensions": [
-      { "page" },
-      { "language" },
+      "page",
+      "language",
       { "type": "long", "name": "userId" }
     ]
   },
@@ -402,8 +402,8 @@ An example `parser` is:
     },
     "dimensionsSpec": {
       "dimensions": [
-        { "page" },
-        { "language" },
+        "page",
+        "language",
         { "type": "long", "name": "userId" }
       ]
     }
