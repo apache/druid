@@ -37,6 +37,7 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
@@ -79,7 +80,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
-                ValueType.STRING.toString(),
+                ColumnType.STRING,
+                ValueType.STRING.name(),
                 true,
                 false,
                 10881,

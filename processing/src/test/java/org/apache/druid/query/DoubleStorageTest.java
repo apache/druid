@@ -51,6 +51,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -155,7 +156,8 @@ public class DoubleStorageTest
         ImmutableMap.of(
             TIME_COLUMN,
             new ColumnAnalysis(
-                ValueType.LONG.toString(),
+                ColumnType.LONG,
+                ValueType.LONG.name(),
                 false,
                 false,
                 100,
@@ -166,7 +168,8 @@ public class DoubleStorageTest
             ),
             DIM_NAME,
             new ColumnAnalysis(
-                ValueType.STRING.toString(),
+                ColumnType.STRING,
+                ValueType.STRING.name(),
                 false,
                 false,
                 120,
@@ -177,7 +180,8 @@ public class DoubleStorageTest
             ),
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
-                ValueType.DOUBLE.toString(),
+                ColumnType.DOUBLE,
+                ValueType.DOUBLE.name(),
                 false,
                 false,
                 80,
@@ -200,7 +204,8 @@ public class DoubleStorageTest
         ImmutableMap.of(
             TIME_COLUMN,
             new ColumnAnalysis(
-                ValueType.LONG.toString(),
+                ColumnType.LONG,
+                ValueType.LONG.name(),
                 false,
                 false,
                 100,
@@ -211,7 +216,8 @@ public class DoubleStorageTest
             ),
             DIM_NAME,
             new ColumnAnalysis(
-                ValueType.STRING.toString(),
+                ColumnType.STRING,
+                ValueType.STRING.name(),
                 false,
                 false,
                 120,
@@ -222,7 +228,8 @@ public class DoubleStorageTest
             ),
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
-                ValueType.FLOAT.toString(),
+                ColumnType.FLOAT,
+                ValueType.FLOAT.name(),
                 false,
                 false,
                 80,

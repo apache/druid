@@ -87,9 +87,11 @@ The format of the result is:
 } ]
 ```
 
-Dimension columns will have type `STRING`, `FLOAT`, `DOUBLE`, or `LONG`.
-Metric columns will have type `FLOAT`, `DOUBLE`, or `LONG`, or the name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
-Timestamp column will have type `LONG`.
+All columns will contain a `typeSignature` which is the Druid internal representation of the type information for this column, is what is show in [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table) table in SQL, and is typically the value used to supply Druid with JSON type information at query or ingest time. This value will be `STRING`, `FLOAT`, `DOUBLE`, `LONG`, or `COMPLEX<typeName>` (e.g. `COMPLEX<hyperUnique>`).
+
+Additionally, columns will have a legacy friendly `type` name. This might match `typeSignature` for some column types (`STRING`, `FLOAT`, `DOUBLE`, or `LONG`) but for COMPLEX columns will only contain the name of the underlying complex type such as `hyperUnique`.
+
+The timestamp column will always have `typeSignature` and `type` as `LONG`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.

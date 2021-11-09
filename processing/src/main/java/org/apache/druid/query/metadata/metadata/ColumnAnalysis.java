@@ -22,6 +22,8 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Objects;
 
@@ -33,10 +35,11 @@ public class ColumnAnalysis
 
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis("STRING", false, false, -1, null, null, null, ERROR_PREFIX + reason);
+    return new ColumnAnalysis(ColumnType.STRING, "STRING", false, false, -1, null, null, null, ERROR_PREFIX + reason);
   }
 
   private final String type;
+  private final ColumnType typeSignature;
   private final boolean hasMultipleValues;
   private final boolean hasNulls;
   private final long size;
@@ -47,6 +50,7 @@ public class ColumnAnalysis
 
   @JsonCreator
   public ColumnAnalysis(
+      @JsonProperty("typeSignature") ColumnType typeSignature,
       @JsonProperty("type") String type,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
       @JsonProperty("hasNulls") boolean hasNulls,
@@ -57,6 +61,7 @@ public class ColumnAnalysis
       @JsonProperty("errorMessage") String errorMessage
   )
   {
+    this.typeSignature = typeSignature;
     this.type = type;
     this.hasMultipleValues = hasMultipleValues;
     this.hasNulls = hasNulls;
@@ -71,6 +76,12 @@ public class ColumnAnalysis
   public String getType()
   {
     return type;
+  }
+
+  @JsonProperty
+  public ColumnType getTypeSignature()
+  {
+    return typeSignature;
   }
 
   @JsonProperty
@@ -136,7 +147,19 @@ public class ColumnAnalysis
     }
 
     if (!type.equals(rhs.getType())) {
-      return ColumnAnalysis.error("cannot_merge_diff_types");
+      return ColumnAnalysis.error(
+          StringUtils.format("cannot_merge_diff_types: [%s] and [%s]", type, rhs.getType())
+      );
+    }
+
+    if (!typeSignature.equals(rhs.getTypeSignature())) {
+      return ColumnAnalysis.error(
+          StringUtils.format(
+              "cannot_merge_diff_types: [%s] and [%s]",
+              typeSignature.asTypeString(),
+              rhs.getTypeSignature().asTypeString()
+          )
+      );
     }
 
     Integer cardinality = getCardinality();
@@ -153,6 +176,7 @@ public class ColumnAnalysis
     Comparable newMax = choose(maxValue, rhs.maxValue, true);
 
     return new ColumnAnalysis(
+        typeSignature,
         type,
         multipleValues,
         hasNulls || rhs.hasNulls,
@@ -181,6 +205,7 @@ public class ColumnAnalysis
   {
     return "ColumnAnalysis{" +
            "type='" + type + '\'' +
+           ", columnType=" + typeSignature +
            ", hasMultipleValues=" + hasMultipleValues +
            ", hasNulls=" + hasNulls +
            ", size=" + size +
@@ -205,6 +230,7 @@ public class ColumnAnalysis
            hasNulls == that.hasNulls &&
            size == that.size &&
            Objects.equals(type, that.type) &&
+           Objects.equals(typeSignature, that.typeSignature) &&
            Objects.equals(cardinality, that.cardinality) &&
            Objects.equals(minValue, that.minValue) &&
            Objects.equals(maxValue, that.maxValue) &&
@@ -214,6 +240,7 @@ public class ColumnAnalysis
   @Override
   public int hashCode()
   {
-    return Objects.hash(type, hasMultipleValues, hasNulls, size, cardinality, minValue, maxValue, errorMessage);
+    return Objects.hash(type,
+                        typeSignature, hasMultipleValues, hasNulls, size, cardinality, minValue, maxValue, errorMessage);
   }
 }
