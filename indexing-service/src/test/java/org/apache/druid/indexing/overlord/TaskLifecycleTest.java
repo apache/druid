@@ -89,6 +89,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -157,7 +158,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -925,7 +925,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
-      file.mkdirs();
+      FileUtils.mkdirp(file);
       segmentFiles.add(file);
     }
 

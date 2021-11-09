@@ -300,10 +300,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     // the parent directories of the segment are removed
     final File downloadStartMarker = new File(storageDir, DOWNLOAD_START_MARKER_FILE_NAME);
     synchronized (directoryWriteRemoveLock) {
-      if (!storageDir.mkdirs()) {
-        log.debug("Unable to make parent file[%s]", storageDir);
-      }
       try {
+        FileUtils.mkdirp(storageDir);
+
         if (!downloadStartMarker.createNewFile()) {
           throw new SegmentLoadingException("Was not able to create new download marker for [%s]", storageDir);
         }

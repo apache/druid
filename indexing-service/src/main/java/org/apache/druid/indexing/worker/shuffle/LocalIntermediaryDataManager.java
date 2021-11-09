@@ -24,7 +24,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
@@ -35,6 +34,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -197,7 +197,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
           supervisorTaskCheckTimes.computeIfAbsent(
               supervisorTaskId,
               k -> {
-                for (File eachFile : FileUtils.listFiles(supervisorTaskDir, null, true)) {
+                for (File eachFile : org.apache.commons.io.FileUtils.listFiles(supervisorTaskDir, null, true)) {
                   final String relativeSegmentPath = locationPath
                       .relativize(eachFile.toPath().toAbsolutePath())
                       .toString();
@@ -298,7 +298,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     final Closer closer = Closer.create();
     closer.register(() -> {
       try {
-        FileUtils.forceDelete(taskTempDir);
+        org.apache.commons.io.FileUtils.forceDelete(taskTempDir);
       }
       catch (IOException e) {
         LOG.warn(e, "Failed to delete directory[%s]", taskTempDir.getAbsolutePath());
@@ -316,7 +316,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
 
     //noinspection unused
     try (final Closer resourceCloser = closer) {
-      FileUtils.forceMkdir(taskTempDir);
+      FileUtils.mkdirp(taskTempDir);
 
       // Tempary compressed file. Will be removed when taskTempDir is deleted.
       final File tempZippedFile = new File(taskTempDir, segment.getId().toString());
@@ -340,8 +340,8 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
         final File destFile = location.reserve(partitionFilePath, segment.getId().toString(), tempZippedFile.length());
         if (destFile != null) {
           try {
-            FileUtils.forceMkdirParent(destFile);
-            org.apache.druid.java.util.common.FileUtils.writeAtomically(
+            FileUtils.mkdirp(destFile.getParentFile());
+            FileUtils.writeAtomically(
                 destFile,
                 out -> Files.asByteSource(tempZippedFile).copyTo(out)
             );
@@ -355,7 +355,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
           }
           catch (Exception e) {
             location.release(partitionFilePath, tempZippedFile.length());
-            FileUtils.deleteQuietly(destFile);
+            org.apache.commons.io.FileUtils.deleteQuietly(destFile);
             LOG.warn(
                 e,
                 "Failed to write segment[%s] at [%s]. Trying again with the next location",
@@ -421,10 +421,10 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
       final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
       if (supervisorTaskPath.exists()) {
         LOG.info("Cleaning up [%s]", supervisorTaskPath);
-        for (File eachFile : FileUtils.listFiles(supervisorTaskPath, null, true)) {
+        for (File eachFile : org.apache.commons.io.FileUtils.listFiles(supervisorTaskPath, null, true)) {
           location.removeFile(eachFile);
         }
-        FileUtils.forceDelete(supervisorTaskPath);
+        org.apache.commons.io.FileUtils.forceDelete(supervisorTaskPath);
       }
     }
     supervisorTaskCheckTimes.remove(supervisorTaskId);

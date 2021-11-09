@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -344,7 +345,7 @@ public class DoubleStorageTest
     }
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();
-    someTmpFile.mkdirs();
+    FileUtils.mkdirp(someTmpFile);
     INDEX_MERGER_V9.persist(index, someTmpFile, new IndexSpec(), null);
     someTmpFile.delete();
     return INDEX_IO.loadIndex(someTmpFile);
