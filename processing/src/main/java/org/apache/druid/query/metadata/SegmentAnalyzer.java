@@ -360,7 +360,7 @@ public class SegmentAnalyzer
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
           return new ColumnAnalysis(
-              capabilities.toColumnType(),
+              capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities.toColumnType(),
               typeName,
               hasMultipleValues,
               hasNulls,
@@ -379,7 +379,7 @@ public class SegmentAnalyzer
       }
 
       return new ColumnAnalysis(
-          capabilities.toColumnType(),
+          capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities.toColumnType(),
           typeName,
           hasMultipleValues,
           hasNulls,
