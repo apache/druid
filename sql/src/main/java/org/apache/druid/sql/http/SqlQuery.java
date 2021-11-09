@@ -36,7 +36,10 @@ public class SqlQuery
   public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
   {
     return parameters.stream()
-                     .map(SqlParameter::getTypedValue)
+                     // null params are not good!
+                     // we pass them to the planner, so that it can generate a proper error message.
+                     // see SqlParameterizerShuttle and RelParameterizerShuttle.
+                     .map(p -> p == null ? null : p.getTypedValue())
                      .collect(Collectors.toList());
   }
 
@@ -49,7 +52,7 @@ public class SqlQuery
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
-      @JsonProperty("resultFormat") final ResultFormat resultFormat,
+      @JsonProperty("resultFormat") final ResultFormat   resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("context") final Map<String, Object> context,
       @JsonProperty("parameters") final List<SqlParameter> parameters
