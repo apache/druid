@@ -87,11 +87,11 @@ The format of the result is:
 } ]
 ```
 
-All columns will contain a `typeSignature` which is the Druid internal representation of the type information for this column, is what is show in [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table) table in SQL, and is typically the value used to supply Druid with JSON type information at query or ingest time. This value will be `STRING`, `FLOAT`, `DOUBLE`, `LONG`, or `COMPLEX<typeName>` (e.g. `COMPLEX<hyperUnique>`).
+All columns contain a `typeSignature` that Druid uses to represent the column type information internally. The `typeSignature` is typically the same value used to identify the JSON type information at query or ingest time. One of: STRING`, `FLOAT`, `DOUBLE`, `LONG`, or `COMPLEX<typeName>`, e.g. `COMPLEX<hyperUnique>`.
 
-Additionally, columns will have a legacy friendly `type` name. This might match `typeSignature` for some column types (`STRING`, `FLOAT`, `DOUBLE`, or `LONG`) but for COMPLEX columns will only contain the name of the underlying complex type such as `hyperUnique`.
+Columns will also have a legacy `type` name. For some column types, the value may match the `typeSignature`  (`STRING`, `FLOAT`, `DOUBLE`, or `LONG`). For `COMPLEX` columns, the `type` only contains the name of the underlying complex type such as `hyperUnique`.
 
-The timestamp column will always have `typeSignature` and `type` as `LONG`.
+New applications should use `typeSignature`, not `type`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.

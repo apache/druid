@@ -73,15 +73,16 @@ public class ColumnAnalysis
   }
 
   @JsonProperty
-  public String getType()
-  {
-    return type;
-  }
-
-  @JsonProperty
   public ColumnType getTypeSignature()
   {
     return typeSignature;
+  }
+
+  @JsonProperty
+  @Deprecated
+  public String getType()
+  {
+    return type;
   }
 
   @JsonProperty
@@ -146,13 +147,13 @@ public class ColumnAnalysis
       return rhs;
     }
 
-    if (!type.equals(rhs.getType())) {
+    if (!Objects.equals(type, rhs.getType())) {
       return ColumnAnalysis.error(
           StringUtils.format("cannot_merge_diff_types: [%s] and [%s]", type, rhs.getType())
       );
     }
 
-    if (!typeSignature.equals(rhs.getTypeSignature())) {
+    if (!Objects.equals(typeSignature, rhs.getTypeSignature())) {
       return ColumnAnalysis.error(
           StringUtils.format(
               "cannot_merge_diff_types: [%s] and [%s]",
@@ -204,8 +205,8 @@ public class ColumnAnalysis
   public String toString()
   {
     return "ColumnAnalysis{" +
-           "type='" + type + '\'' +
-           ", columnType=" + typeSignature +
+           "typeSignature='" + typeSignature + '\'' +
+           ", type=" + type +
            ", hasMultipleValues=" + hasMultipleValues +
            ", hasNulls=" + hasNulls +
            ", size=" + size +
@@ -229,8 +230,8 @@ public class ColumnAnalysis
     return hasMultipleValues == that.hasMultipleValues &&
            hasNulls == that.hasNulls &&
            size == that.size &&
-           Objects.equals(type, that.type) &&
            Objects.equals(typeSignature, that.typeSignature) &&
+           Objects.equals(type, that.type) &&
            Objects.equals(cardinality, that.cardinality) &&
            Objects.equals(minValue, that.minValue) &&
            Objects.equals(maxValue, that.maxValue) &&
@@ -240,7 +241,16 @@ public class ColumnAnalysis
   @Override
   public int hashCode()
   {
-    return Objects.hash(type,
-                        typeSignature, hasMultipleValues, hasNulls, size, cardinality, minValue, maxValue, errorMessage);
+    return Objects.hash(
+        typeSignature,
+        type,
+        hasMultipleValues,
+        hasNulls,
+        size,
+        cardinality,
+        minValue,
+        maxValue,
+        errorMessage
+    );
   }
 }
