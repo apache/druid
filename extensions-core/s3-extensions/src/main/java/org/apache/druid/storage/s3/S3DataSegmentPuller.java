@@ -149,11 +149,9 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  private FileObject buildFileObject(final URI uri) throws AmazonServiceException
+  public FileObject buildFileObject(final URI uri) throws AmazonServiceException
   {
     final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
-    final S3ObjectSummary objectSummary =
-        S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
     final String path = uri.getPath();
 
     return new FileObject()
@@ -182,7 +180,7 @@ public class S3DataSegmentPuller implements URIDataPuller
         try {
           if (s3Object == null) {
             // lazily promote to full GET
-            s3Object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
+            s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
           }
 
           final InputStream in = s3Object.getObjectContent();
@@ -231,6 +229,8 @@ public class S3DataSegmentPuller implements URIDataPuller
       @Override
       public long getLastModified()
       {
+        final S3ObjectSummary objectSummary =
+            S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
         return objectSummary.getLastModified().getTime();
       }
 
@@ -252,9 +252,7 @@ public class S3DataSegmentPuller implements URIDataPuller
    * Returns the "version" (aka last modified timestamp) of the URI
    *
    * @param uri The URI to check the last timestamp
-   *
    * @return The time in ms of the last modification of the URI in String format
-   *
    * @throws IOException
    */
   @Override
