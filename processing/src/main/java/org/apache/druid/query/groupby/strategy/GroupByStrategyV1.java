@@ -25,7 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
@@ -34,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GroupByMergedQueryRunner;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -270,11 +270,11 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
   @Override
   public QueryRunner<ResultRow> mergeRunners(
-      final ListeningExecutorService exec,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
-    return new GroupByMergedQueryRunner<>(exec, configSupplier, queryWatcher, bufferPool, queryRunners);
+    return new GroupByMergedQueryRunner<>(queryProcessingPool, configSupplier, queryWatcher, bufferPool, queryRunners);
   }
 
   @Override

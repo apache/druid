@@ -124,7 +124,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={label}
           onClick={() => {
-            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addToWhere(clause), true);
+            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addWhere(clause), true);
           }}
         />
       );
@@ -180,15 +180,15 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    const selectIndex = parsedQuery.getSelectIndexForColumn(columnName);
-    if (!parsedQuery.isGroupedSelectIndex(selectIndex)) return;
+    const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
+    if (!groupedSelectIndexes.length) return;
 
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
         text="Remove group by"
         onClick={() => {
-          onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
+          onQueryChange(parsedQuery.removeSelectIndexes(groupedSelectIndexes), true);
         }}
       />
     );
@@ -204,7 +204,13 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={prettyPrintSql(ex)}
           onClick={() => {
-            onQueryChange(parsedQuery.addToGroupBy(ex.as(alias)), true);
+            onQueryChange(
+              parsedQuery.addSelect(ex.as(alias), {
+                insertIndex: 'last-grouping',
+                addToGroupBy: 'end',
+              }),
+              true,
+            );
           }}
         />
       );
@@ -259,7 +265,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuItem
           text={prettyPrintSql(ex)}
           onClick={() => {
-            onQueryChange(parsedQuery.addSelectExpression(ex.as(alias)), true);
+            onQueryChange(parsedQuery.addSelect(ex.as(alias)), true);
           }}
         />
       );

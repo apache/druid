@@ -26,9 +26,9 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -56,7 +56,7 @@ public class UnifiedIndexerAppenderatorsManagerTest
   public final ExpectedException expectedException = ExpectedException.none();
 
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
-      Execs.directExecutor(),
+      DirectQueryProcessingPool.INSTANCE,
       NoopJoinableFactory.INSTANCE,
       new WorkerConfig(),
       MapCache.create(10),

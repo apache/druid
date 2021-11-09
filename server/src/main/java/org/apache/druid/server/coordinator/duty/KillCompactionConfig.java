@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -58,17 +60,23 @@ public class KillCompactionConfig implements CoordinatorDuty
 
   private final JacksonConfigManager jacksonConfigManager;
   private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final MetadataStorageConnector connector;
+  private final MetadataStorageTablesConfig connectorConfig;
 
   @Inject
   public KillCompactionConfig(
       DruidCoordinatorConfig config,
       SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
-      JacksonConfigManager jacksonConfigManager
+      JacksonConfigManager jacksonConfigManager,
+      MetadataStorageConnector connector,
+      MetadataStorageTablesConfig connectorConfig
   )
   {
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
     this.jacksonConfigManager = jacksonConfigManager;
     this.period = config.getCoordinatorCompactionKillPeriod().getMillis();
+    this.connector = connector;
+    this.connectorConfig = connectorConfig;
     Preconditions.checkArgument(
         this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
         "Coordinator compaction configuration kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
@@ -88,7 +96,8 @@ public class KillCompactionConfig implements CoordinatorDuty
       try {
         RetryUtils.retry(
             () -> {
-              CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(jacksonConfigManager);
+              final byte[] currentBytes = CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
+              final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(jacksonConfigManager, currentBytes);
               // If current compaction config is empty then there is nothing to do
               if (CoordinatorCompactionConfig.empty().equals(current)) {
                 log.info(
@@ -112,8 +121,7 @@ public class KillCompactionConfig implements CoordinatorDuty
 
               ConfigManager.SetResult result = jacksonConfigManager.set(
                   CoordinatorCompactionConfig.CONFIG_KEY,
-                  // Do database insert without swap if the current config is empty as this means the config may be null in the database
-                  current,
+                  currentBytes,
                   CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values())),
                   new AuditInfo(
                       "KillCompactionConfig",

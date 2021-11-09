@@ -1481,15 +1481,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return maxPendingPersists;
     }
 
-    /**
-     * Always returns true, doesn't affect the version being built.
-     */
-    @Deprecated
-    @JsonProperty
-    public boolean isBuildV9Directly()
-    {
-      return true;
-    }
 
     @JsonProperty
     public boolean isForceGuaranteedRollup()

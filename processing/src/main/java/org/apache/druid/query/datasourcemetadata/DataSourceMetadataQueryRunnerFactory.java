@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
@@ -36,7 +37,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
 import java.util.Iterator;
-import java.util.concurrent.ExecutorService;
 
 /**
  */
@@ -64,11 +64,11 @@ public class DataSourceMetadataQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<DataSourceMetadataResultValue>> mergeRunners(
-      ExecutorService queryExecutor,
+      QueryProcessingPool queryProcessingPool,
       Iterable<QueryRunner<Result<DataSourceMetadataResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
+    return new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryRunners);
   }
 
   @Override

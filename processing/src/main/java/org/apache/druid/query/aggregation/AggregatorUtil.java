@@ -20,9 +20,11 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -40,10 +42,12 @@ import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @PublicApi
@@ -359,5 +363,26 @@ public class AggregatorUtil
       return ExpressionVectorSelectors.makeVectorValueSelector(columnSelectorFactory, fieldExpression.get());
     }
     return columnSelectorFactory.makeValueSelector(fieldName);
+  }
+
+  public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
+      byte aggregatorType,
+      String fieldName,
+      Supplier<Expr> fieldExpression
+  )
+  {
+    return Suppliers.memoize(() -> {
+      byte[] fieldNameBytes = StringUtils.toUtf8WithNullToEmpty(fieldName);
+      byte[] expressionBytes = Optional.ofNullable(fieldExpression.get())
+                                       .map(Expr::getCacheKey)
+                                       .orElse(StringUtils.EMPTY_BYTES);
+
+      return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
+                       .put(aggregatorType)
+                       .put(fieldNameBytes)
+                       .put(AggregatorUtil.STRING_SEPARATOR)
+                       .put(expressionBytes)
+                       .array();
+    });
   }
 }

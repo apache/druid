@@ -44,7 +44,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_EXTRACT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .returnTypeNonNull(SqlTypeName.BIGINT)
+      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 

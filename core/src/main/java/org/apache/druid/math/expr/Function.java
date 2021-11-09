@@ -647,7 +647,7 @@ public interface Function
       if (evals.isEmpty()) {
         // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
         // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
-        // databases. This also matches the behavior the the long/double greatest/least post aggregators. Some other
+        // databases. This also matches the behavior the long/double greatest/least post aggregators. Some other
         // databases (e.g., MySQL) return null if any expression is null.
         // https://www.postgresql.org/docs/9.5/functions-conditional.html
         // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
@@ -2721,6 +2721,9 @@ public interface Function
     @Override
     protected ExprEval eval(String x, int y)
     {
+      if (x == null) {
+        return ExprEval.of(null);
+      }
       return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
     }
   }

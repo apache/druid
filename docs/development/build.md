@@ -23,30 +23,32 @@ title: "Build from source"
   -->
 
 
-You can build Apache Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.
-For building the latest code in master, follow the instructions [here](https://github.com/apache/druid/blob/master/docs/development/build.md).
-
+You can build Apache Druid directly from source. Use the version of this page
+that matches the version you want to build.
+For building the latest code in master, follow the latest version of this page
+[here](https://github.com/apache/druid/blob/master/docs/development/build.md):
+make sure it has `/master/` in the URL.
 
 #### Prerequisites
 
-##### Installing Java and Maven:
+##### Installing Java and Maven
+
 - JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
   like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
-##### Other Dependencies
-- for distribution build, Python and yaml module are required
+##### Other dependencies
 
+- Distribution builds require Python 3.x and the `pyyaml` module
 
-##### Downloading the source:
+##### Downloading the source
 
 ```bash
 git clone git@github.com:apache/druid.git
 cd druid
 ```
 
-
-#### Building the source
+#### Building from source
 
 The basic command to build Druid from source is:
 
@@ -71,13 +73,21 @@ mvn clean install -Papache-release,dist,rat -DskipTests
 ```
 #### Potential issues
 
-##### Issue
+##### Missing `pyyaml`
+
 You are building Druid from source following the instructions on this page but you get
 ```
 [ERROR] Failed to execute goal org.codehaus.mojo:exec-maven-plugin:1.6.0:exec (generate-binary-license) on project distribution: Command execution failed.: Process exited with an error: 1 (Exit value: 1) -> [Help 1]
 ```
 
 Resolution: Make sure you have Python installed as well as the `yaml` module:
-```
+
+```bash
 pip install pyyaml
+```
+
+On some systems, ensure you use the Python 3.x version of `pip`:
+
+```bash
+pip3 install pyyaml
 ```

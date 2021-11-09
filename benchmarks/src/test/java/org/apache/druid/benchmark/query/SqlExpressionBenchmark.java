@@ -178,13 +178,20 @@ public class SqlExpressionBenchmark
       // 26: group by string expr with non-expr agg
       "SELECT CONCAT(string2, '-', long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
       // 27: group by string expr with expr agg
-      "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2"
+      "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 28: group by single input string low cardinality expr with expr agg
+      "SELECT CONCAT(string2, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 28: group by single input string high cardinality expr with expr agg
+      "SELECT CONCAT(string3, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
   );
 
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"false", "force"})
+  @Param({
+      "false",
+      "force"
+  })
   private String vectorize;
 
   @Param({
@@ -217,7 +224,9 @@ public class SqlExpressionBenchmark
       "24",
       "25",
       "26",
-      "27"
+      "27",
+      "28",
+      "29"
   })
   private String query;
 

@@ -61,17 +61,23 @@ public class ITRetryUtil
         if (currentTry > retryCount || callable.call() == expectedValue) {
           break;
         }
-        LOG.info(
-            "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-            currentTry, retryCount, taskMessage, delayInMillis
-        );
-        Thread.sleep(delayInMillis);
-        currentTry++;
       }
       catch (Exception e) {
         // just continue retrying if there is an exception (it may be transient!) but save the last:
         lastException = e;
       }
+
+      LOG.info(
+          "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
+          currentTry, retryCount, taskMessage, delayInMillis
+      );
+      try {
+        Thread.sleep(delayInMillis);
+      }
+      catch (InterruptedException e) {
+        // Ignore
+      }
+      currentTry++;
     }
 
     if (currentTry > retryCount) {

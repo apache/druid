@@ -67,7 +67,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
-            <version>${jackson.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

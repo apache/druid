@@ -58,7 +58,7 @@ The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
 - [`gs`](#google-cloud-storage-input-source) reads data from Google Cloud Storage.
-- [`azure`](#azure-input-source) reads data from Azure Blob Storage.
+- [`azure`](#azure-input-source) reads data from Azure Blob Storage and Azure Data Lake.
 - [`hdfs`](#hdfs-input-source) reads data from HDFS storage.
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
@@ -605,8 +605,7 @@ An example of the result is
         "logParseExceptions": false,
         "maxParseExceptions": 2147483647,
         "maxSavedParseExceptions": 0,
-        "forceGuaranteedRollup": false,
-        "buildV9Directly": true
+        "forceGuaranteedRollup": false
       }
     }
   },
@@ -894,6 +893,47 @@ Sample specs:
 ...
 ```
 
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "s3",
+        "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
+        "properties": {
+          "accessKeyId": "KLJ78979SDFdS2",
+          "secretAccessKey": "KLS89s98sKJHKJKJH8721lljkd",
+          "assumeRoleArn": "arn:aws:iam::2981002874992:role/role-s3"
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `s3`.|None|yes|
@@ -917,6 +957,8 @@ Properties Object:
 |--------|-----------|-------|---------|
 |accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's access key|None|yes if secretAccessKey is given|
 |secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 InputSource's secret key|None|yes if accessKeyId is given|
+|assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
+|assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 **Note :** *If accessKeyId and secretAccessKey are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.*
 
@@ -1004,10 +1046,8 @@ Google Cloud Storage object:
 
 > You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 
-The Azure input source is to support reading objects directly from Azure Blob store. Objects can be
-specified as list of Azure Blob store URI strings. The Azure input source is splittable and can be used
-by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read
-a single object.
+The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](#parallel-task) indexing and each worker task reads one chunk of the split data.
 
 Sample specs:
 
@@ -1066,17 +1106,17 @@ Sample specs:
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be `azure`.|None|yes|
-|uris|JSON array of URIs where Azure Blob objects to be ingested are located. Should be in form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure Blob objects to be ingested. Should be in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
-|objects|JSON array of Azure Blob objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
+|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 
-Note that the Azure input source will skip all empty objects only when `prefixes` is specified.
+Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
-Azure Blob object:
+The `objects` property is:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|bucket|Name of the Azure Blob Storage container|None|yes|
+|bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
 ### HDFS Input Source

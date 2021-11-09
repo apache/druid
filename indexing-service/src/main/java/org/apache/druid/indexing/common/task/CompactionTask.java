@@ -52,7 +52,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -157,7 +157,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final PartitionConfigurationManager partitionConfigurationManager;
 
   @JsonIgnore
-  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
   @JsonIgnore
   private final RetryPolicyFactory retryPolicyFactory;
@@ -185,7 +185,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
@@ -233,7 +233,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
-    this.segmentLoaderFactory = segmentLoaderFactory;
+    this.segmentCacheManagerFactory = segmentCacheManagerFactory;
     this.retryPolicyFactory = retryPolicyFactory;
   }
 
@@ -422,7 +422,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         metricsSpec,
         granularitySpec,
         toolbox.getCoordinatorClient(),
-        segmentLoaderFactory,
+        segmentCacheManagerFactory,
         retryPolicyFactory,
         ioConfig.isDropExisting()
     );
@@ -521,7 +521,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
-      final SegmentLoaderFactory segmentLoaderFactory,
+      final SegmentCacheManagerFactory segmentCacheManagerFactory,
       final RetryPolicyFactory retryPolicyFactory,
       final boolean dropExisting
   ) throws IOException, SegmentLoadingException
@@ -604,7 +604,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                     dataSchema,
                     interval,
                     coordinatorClient,
-                    segmentLoaderFactory,
+                    segmentCacheManagerFactory,
                     retryPolicyFactory,
                     dropExisting
                 ),
@@ -632,7 +632,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                   dataSchema,
                   segmentProvider.interval,
                   coordinatorClient,
-                  segmentLoaderFactory,
+                  segmentCacheManagerFactory,
                   retryPolicyFactory,
                   dropExisting
               ),
@@ -647,7 +647,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       DataSchema dataSchema,
       Interval interval,
       CoordinatorClient coordinatorClient,
-      SegmentLoaderFactory segmentLoaderFactory,
+      SegmentCacheManagerFactory segmentCacheManagerFactory,
       RetryPolicyFactory retryPolicyFactory,
       boolean dropExisting
   )
@@ -663,7 +663,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             null,
             toolbox.getIndexIO(),
             coordinatorClient,
-            segmentLoaderFactory,
+            segmentCacheManagerFactory,
             retryPolicyFactory,
             toolbox.getConfig()
         ),
@@ -1016,7 +1016,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   public static class Builder
   {
     private final String dataSource;
-    private final SegmentLoaderFactory segmentLoaderFactory;
+    private final SegmentCacheManagerFactory segmentCacheManagerFactory;
     private final RetryPolicyFactory retryPolicyFactory;
 
     private CompactionIOConfig ioConfig;
@@ -1035,12 +1035,12 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     public Builder(
         String dataSource,
-        SegmentLoaderFactory segmentLoaderFactory,
+        SegmentCacheManagerFactory segmentCacheManagerFactory,
         RetryPolicyFactory retryPolicyFactory
     )
     {
       this.dataSource = dataSource;
-      this.segmentLoaderFactory = segmentLoaderFactory;
+      this.segmentCacheManagerFactory = segmentCacheManagerFactory;
       this.retryPolicyFactory = retryPolicyFactory;
     }
 
@@ -1118,7 +1118,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           granularitySpec,
           tuningConfig,
           context,
-          segmentLoaderFactory,
+          segmentCacheManagerFactory,
           retryPolicyFactory
       );
     }

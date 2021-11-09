@@ -78,7 +78,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -95,7 +94,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
@@ -133,7 +131,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
-        buildV9Directly,
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
@@ -271,7 +268,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxPendingPersists(),
         getIndexSpec(),
         getIndexSpecForIntermediatePersists(),
-        true,
         isReportParseExceptions(),
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),

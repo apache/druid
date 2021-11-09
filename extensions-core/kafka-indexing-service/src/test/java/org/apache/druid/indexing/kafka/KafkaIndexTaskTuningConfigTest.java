@@ -132,7 +132,6 @@ public class KafkaIndexTaskTuningConfigTest
         new IndexSpec(),
         new IndexSpec(),
         true,
-        true,
         5L,
         null,
         null,
@@ -179,7 +178,6 @@ public class KafkaIndexTaskTuningConfigTest
         new IndexSpec(),
         new IndexSpec(),
         true,
-        true,
         5L,
         null,
         null,
@@ -204,7 +202,6 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
     Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
     Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
@@ -232,7 +229,6 @@ public class KafkaIndexTaskTuningConfigTest
         new IndexSpec(),
         new IndexSpec(),
         true,
-        true,
         5L,
         null,
         null,
@@ -257,7 +253,6 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
     Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
     Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());

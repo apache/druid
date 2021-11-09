@@ -23,6 +23,9 @@ const fs = require('fs-extra');
 const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-docs.js';
 
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 134;
+const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
+
 function unwrapMarkdownLinks(str) {
   return str.replace(/\[([^\]]+)\]\([^)]+\)/g, (_, s) => s);
 }
@@ -34,16 +37,17 @@ const readDoc = async () => {
   const functionDocs = [];
   const dataTypeDocs = [];
   for (let line of lines) {
-    const functionMatch = line.match(/^\|`(\w+)\((.*)\)`\|(.+)\|$/);
+    const functionMatch = line.match(/^\|`(\w+)\(([^|]*)\)`\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
       functionDocs.push([
         functionMatch[1],
         functionMatch[2],
         unwrapMarkdownLinks(functionMatch[3]),
+        // functionMatch[4] would be the default column but we ignore it for now
       ]);
     }
 
-    const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|(.*)\|(.*)\|$/);
+    const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
       dataTypeDocs.push([
         dataTypeMatch[1],
@@ -53,17 +57,17 @@ const readDoc = async () => {
     }
   }
 
-  // Make sure there are at least 10 functions for sanity
-  if (functionDocs.length < 10) {
+  // Make sure there are enough functions found
+  if (functionDocs.length < MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS) {
     throw new Error(
-      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length})`,
+      `Did not find enough function entries did the structure of '${readfile}' change? (found ${functionDocs.length} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
   // Make sure there are at least 10 data types for sanity
-  if (dataTypeDocs.length < 10) {
+  if (dataTypeDocs.length < MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES) {
     throw new Error(
-      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length})`,
+      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${dataTypeDocs.length} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );
   }
 
@@ -94,6 +98,7 @@ exports.SQL_DATA_TYPES = ${JSON.stringify(dataTypeDocs, null, 2)};
 exports.SQL_FUNCTIONS = ${JSON.stringify(functionDocs, null, 2)};
 `;
 
+  console.log(`Found ${dataTypeDocs.length} data types and ${functionDocs.length} functions`);
   await fs.writeFile(writefile, content, 'utf-8');
 };
 
