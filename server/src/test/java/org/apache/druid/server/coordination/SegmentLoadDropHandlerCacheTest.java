@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
@@ -188,7 +189,7 @@ public class SegmentLoadDropHandlerCacheTest
       File segmentFile = new File(destDir, "segment");
       File factoryJson = new File(destDir, "factory.json");
       try {
-        destDir.mkdirs();
+        FileUtils.mkdirp(destDir);
         segmentFile.createNewFile();
         factoryJson.createNewFile();
       }

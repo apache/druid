@@ -45,6 +45,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -137,7 +139,7 @@ public class SegmentAnalyzer
           }
           break;
         case COMPLEX:
-          analysis = analyzeComplexColumn(capabilities, columnHolder, storageAdapter.getColumnTypeName(columnName));
+          analysis = analyzeComplexColumn(capabilities, columnHolder);
           break;
         default:
           log.warn("Unknown column type[%s].", capabilities.asTypeString());
@@ -342,17 +344,19 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeComplexColumn(
       @Nullable final ColumnCapabilities capabilities,
-      @Nullable final ColumnHolder columnHolder,
-      final String typeName
+      @Nullable final ColumnHolder columnHolder
   )
   {
+    final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
+    final String typeName = typeSignature.getComplexTypeName();
+
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
-        final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+        final ComplexMetricSerde serde = typeName == null ? null : ComplexMetrics.getSerdeForType(typeName);
         if (serde == null) {
           return ColumnAnalysis.error(StringUtils.format("unknown_complex_%s", typeName));
         }
@@ -360,7 +364,7 @@ public class SegmentAnalyzer
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
           return new ColumnAnalysis(
-              capabilities == null ? ColumnType.ofComplex(typeName) : capabilities.toColumnType(),
+              capabilities.toColumnType(),
               typeName,
               hasMultipleValues,
               hasNulls,
@@ -379,7 +383,7 @@ public class SegmentAnalyzer
       }
 
       return new ColumnAnalysis(
-          capabilities == null ? ColumnType.ofComplex(typeName) : capabilities.toColumnType(),
+          capabilities.toColumnType(),
           typeName,
           hasMultipleValues,
           hasNulls,

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
@@ -341,16 +342,26 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
-        ClientCompactionTaskGranularitySpec queryGranularitySpec;
+        // Create granularitySpec to send to compaction task
+        ClientCompactionTaskGranularitySpec granularitySpec;
         if (config.getGranularitySpec() != null) {
-          queryGranularitySpec = new ClientCompactionTaskGranularitySpec(
+          granularitySpec = new ClientCompactionTaskGranularitySpec(
               config.getGranularitySpec().getSegmentGranularity(),
               config.getGranularitySpec().getQueryGranularity(),
               config.getGranularitySpec().isRollup()
 
           );
         } else {
-          queryGranularitySpec = null;
+          granularitySpec = null;
+        }
+        // Create dimensionsSpec to send to compaction task
+        ClientCompactionTaskDimensionsSpec dimensionsSpec;
+        if (config.getDimensionsSpec() != null) {
+          dimensionsSpec = new ClientCompactionTaskDimensionsSpec(
+              config.getDimensionsSpec().getDimensions()
+          );
+        } else {
+          dimensionsSpec = null;
         }
 
         Boolean dropExisting = null;
@@ -364,7 +375,8 @@ public class CompactSegments implements CoordinatorDuty
             segmentsToCompact,
             config.getTaskPriority(),
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
-            queryGranularitySpec,
+            granularitySpec,
+            dimensionsSpec,
             dropExisting,
             newAutoCompactionContext(config.getTaskContext())
         );
