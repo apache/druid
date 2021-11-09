@@ -38,9 +38,9 @@ public class UOE extends UnsupportedOperationException implements SanitizableExc
   {
     String transformedErrorMessage = errorMessageTransformFunction.apply(getMessage());
     if (Strings.isNullOrEmpty(transformedErrorMessage)) {
-      return new ISE("");
+      return new UOE("");
     } else {
-      return new ISE(transformedErrorMessage);
+      return new UOE(transformedErrorMessage);
     }
   }
 }

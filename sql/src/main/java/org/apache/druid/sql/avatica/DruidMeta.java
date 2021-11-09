@@ -65,6 +65,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DruidMeta extends MetaImpl
 {
+  /**
+   * Logs any throwable and string format message with args at the error level.
+   *
+   * @param error   the Throwable to be logged
+   * @param message the message to be logged. Can be in string format structure
+   * @param format  the format arguments for the format message string
+   * @param <T>     any type that extends throwable
+   * @return the original Throwable
+   */
+  public static <T extends Throwable> T logFailure(T error, String message, Object... format)
+  {
+    LOG.error(error, message, format);
+    return error;
+  }
+
+  /**
+   * Logs any throwable at the error level with the throwables message.
+   *
+   * @param error the throwable to be logged
+   * @param <T>   any type that extends throwable
+   * @return the original Throwable
+   */
+  public static <T extends Throwable> T logFailure(T error)
+  {
+    logFailure(error, error.getMessage());
+    return error;
+  }
+
   private static final Logger LOG = new Logger(DruidMeta.class);
 
   private final SqlLifecycleFactory sqlLifecycleFactory;
@@ -126,6 +154,8 @@ public class DruidMeta extends MetaImpl
       throw e;
     }
     catch (Throwable t) {
+      // we want to avoid sanitizing avatica specific exceptions as the avatica code can rely on them to handle issues
+      // differently
       throw errorHandler.sanitize(t);
     }
   }
@@ -193,12 +223,12 @@ public class DruidMeta extends MetaImpl
         druidStatement = getDruidStatement(statement);
       }
       catch (NoSuchStatementException e) {
-        throw ErrorHandler.logFailure(new ISE(e, e.getMessage()));
+        throw logFailure(new ISE(e, e.getMessage()));
       }
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
       if (authenticationResult == null) {
-        throw ErrorHandler.logFailure(
+        throw logFailure(
             new ForbiddenException("Authentication failed."),
             "Authentication failed for statement[%s]",
             druidStatement.getStatementId()
@@ -244,7 +274,7 @@ public class DruidMeta extends MetaImpl
       final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
       AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
       if (authenticationResult == null) {
-        throw ErrorHandler.logFailure(
+        throw logFailure(
             new ForbiddenException("Authentication failed."),
             "Authentication failed for statement[%s]",
             druidStatement.getStatementId()
@@ -360,7 +390,7 @@ public class DruidMeta extends MetaImpl
           )
       );
     }
-    catch (NoSuchConnectionException e) {
+    catch (NoSuchStatementException | NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
@@ -414,7 +444,7 @@ public class DruidMeta extends MetaImpl
       final boolean isDone = druidStatement.isDone();
       final long currentOffset = druidStatement.getCurrentOffset();
       if (currentOffset != offset) {
-        throw ErrorHandler.logFailure(new ISE(
+        throw logFailure(new ISE(
             "Requested offset[%,d] does not match currentOffset[%,d]",
             offset,
             currentOffset
@@ -422,13 +452,7 @@ public class DruidMeta extends MetaImpl
       }
       return !isDone;
     }
-    catch (NoSuchStatementException e) {
-//      if (errorHandler.hasAffectingErrorResponseTransformStrategy()) {
-//        throw errorHandler.sanitize(e);
-//      }
-      throw e;
-    }
-    catch (NoSuchConnectionException e) {
+    catch (NoSuchStatementException | NoSuchConnectionException e) {
       throw e;
     }
     catch (Throwable t) {
@@ -710,7 +734,7 @@ public class DruidMeta extends MetaImpl
       if (connectionCount.get() > config.getMaxConnections()) {
         // We aren't going to make a connection after all.
         connectionCount.decrementAndGet();
-        throw ErrorHandler.logFailure(
+        throw logFailure(
             new ISE("Too many connections"),
             "Too many connections, limit is[%,d] per broker",
             config.getMaxConnections()
@@ -726,7 +750,7 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw ErrorHandler.logFailure(new ISE("Connection[%s] already open.", connectionId));
+      throw logFailure(new ISE("Connection[%s] already open.", connectionId));
     }
 
     LOG.debug("Connection[%s] opened.", connectionId);
@@ -748,7 +772,7 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = connections.get(connectionId);
 
     if (connection == null) {
-      throw ErrorHandler.logFailure(new NoSuchConnectionException(connectionId));
+      throw logFailure(new NoSuchConnectionException(connectionId));
     }
 
     return connection.sync(
@@ -769,7 +793,7 @@ public class DruidMeta extends MetaImpl
     final DruidConnection connection = getDruidConnection(statement.connectionId);
     final DruidStatement druidStatement = connection.getStatement(statement.id);
     if (druidStatement == null) {
-      throw ErrorHandler.logFailure(new NoSuchStatementException(statement));
+      throw logFailure(new NoSuchStatementException(statement));
     }
     return druidStatement;
   }
@@ -786,7 +810,7 @@ public class DruidMeta extends MetaImpl
       return metaResultSet;
     }
     catch (Exception e) {
-      throw ErrorHandler.logFailure(new RuntimeException(e));
+      throw logFailure(new RuntimeException(e));
     }
     finally {
       closeStatement(statement);

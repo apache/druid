@@ -20,9 +20,9 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.avatica.NoSuchConnectionException;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,7 +52,7 @@ public class ErrorHandlerTest
   {
     ServerConfig serverConfig = new ServerConfig();
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
-    QueryException input = new QueryException("error", "error messagez", "error class", "host");
+    QueryInterruptedException input = new QueryInterruptedException("error", "error messagez", "error class", "host");
 
     RuntimeException output = errorHandler.sanitize(input);
     Assert.assertEquals("error messagez", output.getMessage());

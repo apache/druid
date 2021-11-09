@@ -20,14 +20,11 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.inject.Inject;
-import org.apache.calcite.avatica.NoSuchConnectionException;
-import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -35,11 +32,10 @@ import org.apache.druid.server.security.ForbiddenException;
 
 
 /**
- * ErrorHandler is a utilty class that is used to sanitize and log exceptions at the error level.
+ * ErrorHandler is a utilty class that is used to sanitize exceptions.
  */
 class ErrorHandler
 {
-  private static final Logger LOG = new Logger(DruidMeta.class);
   private final ErrorResponseTransformStrategy errorResponseTransformStrategy;
 
   @Inject
@@ -49,39 +45,9 @@ class ErrorHandler
   }
 
   /**
-   * Logs any throwable and string format message with args at the error level.
-   *
-   * @param error   the Throwable to be logged
-   * @param message the message to be logged. Can be in string format structure
-   * @param format  the format arguments for the format message string
-   * @param <T>     any type that extends throwable
-   * @return the original Throwable
-   */
-  public static <T extends Throwable> T logFailure(T error, String message, Object... format)
-  {
-    LOG.error(error, message, format);
-    return error;
-  }
-
-  /**
-   * Logs any throwable at the error level with the throwables message.
-   *
-   * @param error the throwable to be logged
-   * @param <T>   any type that extends throwable
-   * @return the original Throwable
-   */
-  public static <T extends Throwable> T logFailure(T error)
-  {
-    logFailure(error, error.getMessage());
-    return error;
-  }
-
-  /**
    * Sanitizes a Throwable. If it's a runtime exception and it's cause is sanitizable it will sanitize that cause and
    * return that cause as a sanitized RuntimeException.  This will do best effort to keep original exception type. If
    * it's a checked exception that will be turned into a QueryInterruptedException.
-   * <p>
-   * This was created to sanitize some exceptions that do not need to be logged.
    *
    * @param error The Throwable to be sanitized
    * @param <T>   Any class that extends Throwable
@@ -89,20 +55,11 @@ class ErrorHandler
    */
   public <T extends Throwable> RuntimeException sanitize(T error)
   {
-//    if (error instanceof NoSuchConnectionException) {
-//      return (NoSuchConnectionException) errorResponseTransformStrategy.transformIfNeeded(new NSCE(((NoSuchConnectionException) error).getConnectionId()));
-//    }
-    if (error instanceof NoSuchConnectionException) {
-      if (this.hasAffectingErrorResponseTransformStrategy()) {
-        return new NoSuchConnectionException("");
-      }
-      return (NoSuchConnectionException) error;
-    }
     if (error instanceof QueryException) {
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded((QueryException) error);
     }
     if (error instanceof ForbiddenException) {
-      return  (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
+      return (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
     }
     if (error instanceof ISE) {
       return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
@@ -117,7 +74,7 @@ class ErrorHandler
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
-      // could do `throw sanitize(error);` but to avoid unnecessary going down multiple levels this is avoided here.
+      // could do `throw sanitize(error);` but just sanitizing immediatley avoids unnecessary going down multiple levels
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
