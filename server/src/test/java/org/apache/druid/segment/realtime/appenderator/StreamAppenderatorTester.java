@@ -128,7 +128,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false, null, false, true);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       long maxSizeInBytes,
       final File basePersistDirectory,
@@ -164,7 +164,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, skipBytesInMemoryOverheadCheck, null, false, true);
   }
 
-  public AppenderatorTester(
+  public StreamAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,

@@ -1207,7 +1207,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     // Use a large enough threshold to make sure persist doesn't trigger
     int maxRowsInMemory = 8;
 
-    try (final AppenderatorTester tester = new AppenderatorTester(maxRowsInMemory, -1, null, true, dimensionNamesInSchema, enableInMemoryBitmap, rollup)) {
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester(maxRowsInMemory, -1, null, true, dimensionNamesInSchema, enableInMemoryBitmap, rollup)) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -1217,7 +1217,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo1", "bar", 1), Suppliers.ofInstance(Committers.nil()));
 
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
                                            .intervals(ImmutableList.of(Intervals.of("2000/2001")))
                                            .aggregators(
                                                Arrays.asList(

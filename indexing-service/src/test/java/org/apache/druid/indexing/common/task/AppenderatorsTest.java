@@ -439,6 +439,12 @@ public class AppenderatorsTest
         return reportParseExceptions;
       }
 
+      @Override
+      public boolean isEnableInMemoryBitmap()
+      {
+        return false;
+      }
+
       @Nullable
       @Override
       public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
