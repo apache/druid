@@ -52,7 +52,7 @@ public class SqlQuery
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
-      @JsonProperty("resultFormat") final ResultFormat   resultFormat,
+      @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("context") final Map<String, Object> context,
       @JsonProperty("parameters") final List<SqlParameter> parameters
