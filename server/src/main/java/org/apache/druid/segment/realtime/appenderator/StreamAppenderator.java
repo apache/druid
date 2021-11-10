@@ -270,7 +270,7 @@ public class StreamAppenderator implements Appenderator
     final IncrementalIndexAddResult addResult;
 
     try {
-      addResult = sink.add(row, !allowIncrementalPersists, tuningConfig.isRejectRowIfParseError());
+      addResult = sink.add(row, !allowIncrementalPersists);
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }

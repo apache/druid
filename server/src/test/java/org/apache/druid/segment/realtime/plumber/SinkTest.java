@@ -144,7 +144,6 @@ public class SinkTest extends InitializedNullHandlingTest
             return 0;
           }
         },
-        false,
         false
     );
 
@@ -199,7 +198,6 @@ public class SinkTest extends InitializedNullHandlingTest
             return 0;
           }
         },
-        false,
         false
     );
 
@@ -263,7 +261,7 @@ public class SinkTest extends InitializedNullHandlingTest
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
         ImmutableMap.of("field1", "value1", "dedupColumn", "v1")
-    ), false, false).getRowCount();
+    ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     // dedupColumn is null
@@ -271,7 +269,7 @@ public class SinkTest extends InitializedNullHandlingTest
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
         ImmutableMap.of("field1", "value2")
-    ), false, false).getRowCount();
+    ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     // dedupColumn is null
@@ -279,21 +277,21 @@ public class SinkTest extends InitializedNullHandlingTest
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
         ImmutableMap.of("field1", "value3")
-    ), false, false).getRowCount();
+    ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
         ImmutableMap.of("field1", "value4", "dedupColumn", "v2")
-    ), false, false).getRowCount();
+    ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
         ImmutableMap.of("field1", "value5", "dedupColumn", "v1")
-    ), false, false).getRowCount();
+    ), false).getRowCount();
     Assert.assertTrue(rows == -2);
   }
 }

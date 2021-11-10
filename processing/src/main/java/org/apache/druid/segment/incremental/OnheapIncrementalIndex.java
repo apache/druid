@@ -86,7 +86,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean rejectRowIfParseError
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, rejectRowIfParseError);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.rejectRowIfParseError = rejectRowIfParseError;
@@ -156,8 +156,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       IncrementalIndexRowResult incrementalIndexRowResult,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
-      boolean skipMaxRowsInMemoryCheck,
-      boolean rejectRowIfParseError
+      boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
     IncrementalIndexRow key = incrementalIndexRowResult.getIncrementalIndexRow();
@@ -168,16 +167,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final AggregatorFactory[] metrics = getMetrics();
     final AtomicInteger numEntries = getNumEntries();
     final AtomicLong sizeInBytes = getBytesInMemory();
-    if (rejectRowIfParseError && !incrementalIndexRowResult.getParseExceptionMessages().isEmpty()) {
+    if (shouldRowBeRejected(incrementalIndexRowResult.getParseExceptionMessages().size())) {
       return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
     }
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      if (shouldRowBeRejected(parseExceptionMessages.size())) {
+        return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
+      }
     } else {
       aggs = new Aggregator[metrics.length];
       factorizeAggs(metrics, aggs, rowContainer, row);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      if (shouldRowBeRejected(parseExceptionMessages.size())) {
+        return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
+      }
 
       final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);

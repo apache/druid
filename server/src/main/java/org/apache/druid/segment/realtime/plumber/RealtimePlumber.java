@@ -224,7 +224,7 @@ public class RealtimePlumber implements Plumber
       return Plumber.THROWAWAY;
     }
 
-    final IncrementalIndexAddResult addResult = sink.add(row, false, config.isRejectRowIfParseError());
+    final IncrementalIndexAddResult addResult = sink.add(row, false);
     if (config.isReportParseExceptions() && addResult.getParseException() != null) {
       throw addResult.getParseException();
     }

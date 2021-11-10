@@ -234,6 +234,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
 
+  private final boolean rejectRowIfParseError;
+
   private volatile DateTime maxIngestedEventTime;
 
 
@@ -252,7 +254,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final boolean rejectRowIfParseError
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -318,6 +321,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+    this.rejectRowIfParseError = rejectRowIfParseError;
   }
 
   public abstract FactsHolder getFacts();
@@ -339,9 +343,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       IncrementalIndexRowResult incrementalIndexRowResult,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
-      boolean skipMaxRowsInMemoryCheck,
-      boolean rejectRowIfParseError
+      boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException;
+
+  protected boolean shouldRowBeRejected(int numParseExceptionMessages) {
+    return rejectRowIfParseError && numParseExceptionMessages > 0;
+  }
 
   public abstract int getLastRowIndex();
 
@@ -455,7 +462,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
-    return add(row, false, false);
+    return add(row, false);
   }
 
   /**
@@ -468,11 +475,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    *
    * @param row the row of data to add
    * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
-   * @param rejectRowIfParseError whether ot not to skip adding a row for which a parsing error is found.
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck, boolean rejectRowIfParseError)
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
       throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
@@ -481,11 +487,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         incrementalIndexRowResult,
         in,
         rowSupplier,
-        skipMaxRowsInMemoryCheck,
-        rejectRowIfParseError
+        skipMaxRowsInMemoryCheck
     );
-    if (!rejectRowIfParseError || (incrementalIndexRowResult.getParseExceptionMessages().isEmpty()
-                                   && addToFactsResult.parseExceptionMessages.isEmpty())) {
+    if (!shouldRowBeRejected(incrementalIndexRowResult.getParseExceptionMessages().size()
+                             + addToFactsResult.parseExceptionMessages.size())) {
       updateMaxIngestedTime(row.getTimestamp());
     }
     @Nullable ParseException parseException = getCombinedParseException(
