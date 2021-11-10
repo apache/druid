@@ -60,7 +60,7 @@ public abstract class ExprEval<T>
         }
         return of(TypeStrategies.readNullableDouble(buffer, offset));
       default:
-        return ofType(type, TypeStrategies.readNullableTypeStrategy(buffer, offset, type.getStrategy()));
+        return ofType(type, TypeStrategies.readNullableType(buffer, offset, type.getStrategy()));
     }
   }
 
@@ -96,7 +96,7 @@ public abstract class ExprEval<T>
           eval = eval.castTo(type);
         }
         TypeStrategies.checkMaxBytes(type, strategy.estimateSizeBytesNullable(eval.value()), maxSizeBytes);
-        TypeStrategies.writeNullableTypeStrategy(buffer, offset, strategy, eval.value());
+        TypeStrategies.writeNullableType(buffer, offset, strategy, eval.value());
     }
   }
 

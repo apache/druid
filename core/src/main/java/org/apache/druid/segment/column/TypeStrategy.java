@@ -34,7 +34,7 @@ import java.util.Comparator;
  *
  * Implementations of this mechanism support reading and writing ONLY non-null values. To read and write nullable
  * values and you have enough memory to burn a full byte for every value you want to store, consider using the
- * {@link TypeStrategies#readNullableTypeStrategy} and {@link TypeStrategies#writeNullableTypeStrategy} family of
+ * {@link TypeStrategies#readNullableType} and {@link TypeStrategies#writeNullableType} family of
  * methods, which will store values with a leading byte containing either {@link NullHandling#IS_NULL_BYTE} or
  * {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
  * consider alternative approaches to tracking your nulls.

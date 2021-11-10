@@ -226,7 +226,7 @@ public class TypeStrategies
    * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
    */
   @Nullable
-  public static <T> T readNullableTypeStrategy(ByteBuffer buffer, TypeStrategy<T> strategy)
+  public static <T> T readNullableType(ByteBuffer buffer, TypeStrategy<T> strategy)
   {
     if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
       return null;
@@ -244,7 +244,7 @@ public class TypeStrategies
    * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
    * if the size is unknown.
    */
-  public static <T> void writeNullableTypeStrategy(ByteBuffer buffer, TypeStrategy<T> strategy, @Nullable T value)
+  public static <T> void writeNullableType(ByteBuffer buffer, TypeStrategy<T> strategy, @Nullable T value)
   {
     if (value == null) {
       buffer.put(NullHandling.IS_NULL_BYTE);
@@ -261,7 +261,7 @@ public class TypeStrategies
    * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
    */
   @Nullable
-  public static <T> T readNullableTypeStrategy(ByteBuffer buffer, int offset, TypeStrategy<T> strategy)
+  public static <T> T readNullableType(ByteBuffer buffer, int offset, TypeStrategy<T> strategy)
   {
     if (isNullableNull(buffer, offset)) {
       return null;
@@ -277,7 +277,7 @@ public class TypeStrategies
    * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
    * if the size is unknown.
    */
-  public static <T> int writeNullableTypeStrategy(
+  public static <T> int writeNullableType(
       ByteBuffer buffer,
       int offset,
       TypeStrategy<T> strategy,
@@ -466,7 +466,7 @@ public class TypeStrategies
       final int arrayLength = buffer.getInt();
       final Object[] array = new Object[arrayLength];
       for (int i = 0; i < arrayLength; i++) {
-        array[i] = TypeStrategies.readNullableTypeStrategy(buffer, elementStrategy);
+        array[i] = TypeStrategies.readNullableType(buffer, elementStrategy);
       }
       return array;
     }
@@ -476,7 +476,7 @@ public class TypeStrategies
     {
       buffer.putInt(value.length);
       for (Object o : value) {
-        TypeStrategies.writeNullableTypeStrategy(buffer, elementStrategy, o);
+        TypeStrategies.writeNullableType(buffer, elementStrategy, o);
       }
     }
 
