@@ -100,10 +100,10 @@ public class BuildingDimensionRangeShardSpecTest
         5
     );
     final String json = mapper.writeValueAsString(original);
-    final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUILDING_RANGE, shardSpec.getType());
+
+    final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

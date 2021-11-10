@@ -80,10 +80,9 @@ public class BuildingHashBasedNumberedShardSpecTest
         mapper
     );
     final String json = mapper.writeValueAsString(original);
-    final BuildingHashBasedNumberedShardSpec fromJson = (BuildingHashBasedNumberedShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUILDING_HASHED, shardSpec.getType());
+    final BuildingHashBasedNumberedShardSpec fromJson = (BuildingHashBasedNumberedShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

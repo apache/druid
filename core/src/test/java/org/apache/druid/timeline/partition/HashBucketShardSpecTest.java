@@ -124,7 +124,10 @@ public class HashBucketShardSpecTest
         mapper
     );
     final String json = mapper.writeValueAsString(original);
-    final HashBucketShardSpec fromJson = (HashBucketShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUCKET_HASH, shardSpec.getType());
+
+    final HashBucketShardSpec fromJson = (HashBucketShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

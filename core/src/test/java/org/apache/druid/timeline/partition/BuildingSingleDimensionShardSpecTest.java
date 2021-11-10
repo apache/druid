@@ -56,8 +56,10 @@ public class BuildingSingleDimensionShardSpecTest
     final BuildingSingleDimensionShardSpec original =
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5);
     final String json = serialize(original);
-    final BuildingSingleDimensionShardSpec fromJson =
-        (BuildingSingleDimensionShardSpec) deserialize(json, ShardSpec.class);
+    ShardSpec shardSpec = deserialize(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUILDING_SINGLE_DIM, shardSpec.getType());
+
+    final BuildingSingleDimensionShardSpec fromJson = (BuildingSingleDimensionShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

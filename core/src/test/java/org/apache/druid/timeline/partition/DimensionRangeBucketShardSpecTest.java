@@ -158,11 +158,9 @@ public class DimensionRangeBucketShardSpecTest
         StringTuple.create("end1", "end2")
     );
     final String json = mapper.writeValueAsString(original);
-    final DimensionRangeBucketShardSpec fromJson = (DimensionRangeBucketShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
-    Assert.assertEquals(original, fromJson);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUCKET_RANGE, shardSpec.getType());
+    Assert.assertEquals(original, shardSpec);
   }
 
   @Test

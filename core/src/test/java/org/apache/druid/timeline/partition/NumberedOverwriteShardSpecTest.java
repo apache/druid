@@ -47,7 +47,9 @@ public class NumberedOverwriteShardSpecTest
         (short) 3
     );
     final String json = mapper.writeValueAsString(original);
-    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.NUMBERED_OVERWRITE, shardSpec.getType());
+    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

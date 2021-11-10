@@ -103,7 +103,10 @@ public class SingleDimensionRangeBucketShardSpecTest
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final SingleDimensionRangeBucketShardSpec original = new SingleDimensionRangeBucketShardSpec(1, "dim", "start", "end");
     final String json = mapper.writeValueAsString(original);
-    final SingleDimensionRangeBucketShardSpec fromJson = (SingleDimensionRangeBucketShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUCKET_SINGLE_DIM, shardSpec.getType());
+
+    final SingleDimensionRangeBucketShardSpec fromJson = (SingleDimensionRangeBucketShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 
