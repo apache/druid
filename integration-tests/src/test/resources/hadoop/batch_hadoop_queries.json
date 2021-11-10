@@ -15,7 +15,7 @@
         "id": "merged",
         "columns": {
           "location": {
-            "typeSignature": "STRING",,
+            "typeSignature": "STRING",
             "type": "STRING",
             "size": 0,
             "hasMultipleValues": false,
