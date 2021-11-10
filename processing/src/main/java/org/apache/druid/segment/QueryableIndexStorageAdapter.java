@@ -335,9 +335,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     );
   }
 
-  /**
-   * Only called by tests
-   */
+  @VisibleForTesting
   public static FilterAnalysis analyzeFilter(
 
       @Nullable final Filter filter,

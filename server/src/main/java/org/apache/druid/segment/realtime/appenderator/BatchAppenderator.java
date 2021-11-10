@@ -465,7 +465,8 @@ public class BatchAppenderator implements Appenderator
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           null,
-          tuningConfig.isEnableInMemoryBitmap()
+          // Batch ingestions don't need query capability
+          false
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -1032,7 +1033,8 @@ public class BatchAppenderator implements Appenderator
         maxBytesTuningConfig,
         null,
         hydrants,
-        tuningConfig.isEnableInMemoryBitmap()
+        // Batch ingestions don't need query capability
+        false
     );
     retVal.finishWriting(); // this sink is not writable
     return retVal;
