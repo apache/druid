@@ -35,6 +35,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DimensionRangeBucketShardSpecTest
@@ -61,6 +62,20 @@ public class DimensionRangeBucketShardSpecTest
             DIMENSIONS,
             StringTuple.create("start1", "start2"),
             StringTuple.create("end1", "end2")
+        ).convert(5)
+    );
+  }
+
+  @Test
+  public void testConvert_withSingleDimension()
+  {
+    Assert.assertEquals(
+        new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5),
+        new DimensionRangeBucketShardSpec(
+            1,
+            Collections.singletonList("dim"),
+            StringTuple.create("start"),
+            StringTuple.create("end")
         ).convert(5)
     );
   }

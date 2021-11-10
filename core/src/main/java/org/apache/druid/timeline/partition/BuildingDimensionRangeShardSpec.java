@@ -29,7 +29,12 @@ import java.util.Objects;
 
 /**
  * See {@link BuildingShardSpec} for how this class is used.
+ * <p>
+ * Calling {@link #convert(int)} on an instance of this class creates a
+ * {@link SingleDimensionShardSpec} if there is a single dimension or a
+ * {@link DimensionRangeShardSpec} if there are multiple dimensions.
  *
+ * @see SingleDimensionShardSpec
  * @see DimensionRangeShardSpec
  */
 public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<DimensionRangeShardSpec>
@@ -68,14 +73,14 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
 
   @Nullable
   @JsonProperty("start")
-  public StringTuple getStart()
+  public StringTuple getStartTuple()
   {
     return start;
   }
 
   @Nullable
   @JsonProperty("end")
-  public StringTuple getEnd()
+  public StringTuple getEndTuple()
   {
     return end;
   }
@@ -100,8 +105,8 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
     return dimensions != null && dimensions.size() == 1
            ? new SingleDimensionShardSpec(
         dimensions.get(0),
-        firstOrNull(start),
-        firstOrNull(end),
+        StringTuple.firstOrNull(start),
+        StringTuple.firstOrNull(end),
         partitionId,
         numCorePartitions
     ) : new DimensionRangeShardSpec(
@@ -111,11 +116,6 @@ public class BuildingDimensionRangeShardSpec implements BuildingShardSpec<Dimens
         partitionId,
         numCorePartitions
     );
-  }
-
-  private String firstOrNull(StringTuple tuple)
-  {
-    return tuple == null || tuple.size() < 1 ? null : tuple.get(0);
   }
 
   @Override

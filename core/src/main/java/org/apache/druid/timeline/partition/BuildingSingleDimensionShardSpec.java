@@ -21,8 +21,13 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.data.input.StringTuple;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -30,17 +35,17 @@ import java.util.Objects;
  *
  * @see SingleDimensionShardSpec
  */
-public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<SingleDimensionShardSpec>
+public class BuildingSingleDimensionShardSpec extends BuildingDimensionRangeShardSpec
 {
   public static final String TYPE = "building_single_dim";
 
-  private final int bucketId;
   private final String dimension;
+
   @Nullable
   private final String start;
+
   @Nullable
   private final String end;
-  private final int partitionId;
 
   @JsonCreator
   public BuildingSingleDimensionShardSpec(
@@ -51,57 +56,58 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
       @JsonProperty("partitionNum") int partitionNum
   )
   {
-    this.bucketId = bucketId;
+    super(
+        bucketId,
+        dimension == null ? Collections.emptyList() : Collections.singletonList(dimension),
+        start == null ? null : StringTuple.create(start),
+        end == null ? null : StringTuple.create(end),
+        partitionNum
+    );
     this.dimension = dimension;
     this.start = start;
     this.end = end;
-    this.partitionId = partitionNum;
   }
 
-  @JsonProperty("dimension")
+  @JsonValue
+  public Map<String, Object> getSerializableObject()
+  {
+    Map<String, Object> jsonMap = new HashMap<>();
+    jsonMap.put("dimension", dimension);
+    jsonMap.put("start", start);
+    jsonMap.put("end", end);
+    jsonMap.put("bucketId", getBucketId());
+    jsonMap.put("partitionNum", getPartitionNum());
+
+    return jsonMap;
+  }
+
   public String getDimension()
   {
     return dimension;
   }
 
   @Nullable
-  @JsonProperty("start")
   public String getStart()
   {
     return start;
   }
 
   @Nullable
-  @JsonProperty("end")
   public String getEnd()
   {
     return end;
   }
 
   @Override
-  @JsonProperty("partitionNum")
-  public int getPartitionNum()
-  {
-    return partitionId;
-  }
-
-  @Override
-  @JsonProperty("bucketId")
-  public int getBucketId()
-  {
-    return bucketId;
-  }
-
-  @Override
   public SingleDimensionShardSpec convert(int numCorePartitions)
   {
-    return new SingleDimensionShardSpec(dimension, start, end, partitionId, numCorePartitions);
+    return new SingleDimensionShardSpec(dimension, start, end, getPartitionNum(), numCorePartitions);
   }
 
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new NumberedPartitionChunk<>(partitionId, 0, obj);
+    return new NumberedPartitionChunk<>(getPartitionNum(), 0, obj);
   }
 
   @Override
@@ -114,8 +120,8 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
       return false;
     }
     BuildingSingleDimensionShardSpec that = (BuildingSingleDimensionShardSpec) o;
-    return bucketId == that.bucketId &&
-           partitionId == that.partitionId &&
+    return getBucketId() == that.getBucketId() &&
+           getPartitionNum() == that.getPartitionNum() &&
            Objects.equals(dimension, that.dimension) &&
            Objects.equals(start, that.start) &&
            Objects.equals(end, that.end);
@@ -124,18 +130,18 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucketId, dimension, start, end, partitionId);
+    return Objects.hash(getBucketId(), dimension, start, end, getPartitionNum());
   }
 
   @Override
   public String toString()
   {
     return "BuildingSingleDimensionShardSpec{" +
-           "bucketId=" + bucketId +
+           "bucketId=" + getBucketId() +
            ", dimension='" + dimension + '\'' +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +
-           ", partitionNum=" + partitionId +
+           ", partitionNum=" + getPartitionNum() +
            '}';
   }
 }
