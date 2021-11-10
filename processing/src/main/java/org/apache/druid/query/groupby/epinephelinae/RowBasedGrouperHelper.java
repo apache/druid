@@ -68,6 +68,7 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -203,7 +204,8 @@ public class RowBasedGrouperHelper
 
     ColumnSelectorFactory columnSelectorFactory = createResultRowBasedColumnSelectorFactory(
         combining ? query : subquery,
-        columnSelectorRow::get
+        columnSelectorRow::get,
+        RowSignature.Finalization.UNKNOWN
     );
 
     // Apply virtual columns if we are in subquery (non-combining) mode.
@@ -341,14 +343,18 @@ public class RowBasedGrouperHelper
   /**
    * Creates a {@link ColumnSelectorFactory} that can read rows which originate as results of the provided "query".
    *
-   * @param query    a groupBy query
-   * @param supplier supplier of result rows from the query
+   * @param query        a groupBy query
+   * @param supplier     supplier of result rows from the query
+   * @param finalization whether the column capabilities reported by this factory should reflect finalized types
    */
   public static ColumnSelectorFactory createResultRowBasedColumnSelectorFactory(
       final GroupByQuery query,
-      final Supplier<ResultRow> supplier
+      final Supplier<ResultRow> supplier,
+      final RowSignature.Finalization finalization
   )
   {
+    final RowSignature signature = query.getResultRowSignature(finalization);
+
     final RowAdapter<ResultRow> adapter =
         new RowAdapter<ResultRow>()
         {
@@ -366,7 +372,7 @@ public class RowBasedGrouperHelper
           @Override
           public Function<ResultRow, Object> columnFunction(final String columnName)
           {
-            final int columnIndex = query.getResultRowSignature().indexOf(columnName);
+            final int columnIndex = signature.indexOf(columnName);
             if (columnIndex < 0) {
               return row -> null;
             } else {
@@ -378,7 +384,7 @@ public class RowBasedGrouperHelper
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        () -> query.getResultRowSignature(),
+        () -> signature,
         false
     );
   }
@@ -400,7 +406,14 @@ public class RowBasedGrouperHelper
 
     final SettableSupplier<ResultRow> rowSupplier = new SettableSupplier<>();
     final ColumnSelectorFactory columnSelectorFactory =
-        query.getVirtualColumns().wrap(RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(subquery, rowSupplier));
+        query.getVirtualColumns()
+             .wrap(
+                 RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
+                     subquery,
+                     rowSupplier,
+                     RowSignature.Finalization.UNKNOWN
+                 )
+             );
 
     final ValueMatcher filterMatcher = filter == null
                                        ? BooleanValueMatcher.of(true)
@@ -965,7 +978,12 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, final List<ColumnType> fieldTypes, int dimStart)
+    private static int compareDimsInRows(
+        RowBasedKey key1,
+        RowBasedKey key2,
+        final List<ColumnType> fieldTypes,
+        int dimStart
+    )
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
         final int cmp;
@@ -1337,7 +1355,12 @@ public class RowBasedGrouperHelper
         case LONG:
         case FLOAT:
         case DOUBLE:
-          return makeNullHandlingNumericserdeHelper(valueType.getType(), keyBufferPosition, pushLimitDown, stringComparator);
+          return makeNullHandlingNumericserdeHelper(
+              valueType.getType(),
+              keyBufferPosition,
+              pushLimitDown,
+              stringComparator
+          );
         default:
           throw new IAE("invalid type: %s", valueType);
       }
