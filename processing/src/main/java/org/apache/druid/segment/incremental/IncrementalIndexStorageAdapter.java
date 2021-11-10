@@ -34,8 +34,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.FilterAnalysisUtils;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -52,6 +52,7 @@ import java.util.Iterator;
 import java.util.Objects;
 
 /**
+ *
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
@@ -279,8 +280,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         .map(i -> new IncrementalIndexCursor(virtualColumns, descending, filter, i, actualInterval, gran));
     } else {
       final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = makeBitmapIndexSelector(virtualColumns);
-      final QueryableIndexStorageAdapter.FilterAnalysis filterAnalysis = QueryableIndexStorageAdapter
-          .analyzeFilter(filter, bitmapIndexSelector, queryMetrics);
+      final FilterAnalysisUtils.FilterAnalysis filterAnalysis = FilterAnalysisUtils.analyzeFilter(
+          filter,
+          bitmapIndexSelector,
+          queryMetrics,
+          index.getFacts().getNumRows()
+      );
 
       return Sequences.filter(
           new IncrementalIndexInMemoryBitmapEnabledCursorSequenceBuilder(

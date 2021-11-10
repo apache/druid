@@ -40,6 +40,7 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
+import org.apache.druid.segment.FilterAnalysisUtils;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -726,16 +727,16 @@ public class FilterPartitionTest extends BaseFilterTest
 
     // has bitmap index, will use it by default
     Filter normalFilter = new SelectorFilter("dim1", "HELLO");
-    QueryableIndexStorageAdapter.FilterAnalysis filterAnalysisNormal =
-        storageAdapter.analyzeFilter(normalFilter, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis filterAnalysisNormal =
+        FilterAnalysisUtils.analyzeFilter(normalFilter, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(filterAnalysisNormal.getPreFilterBitmap() != null);
     Assert.assertTrue(filterAnalysisNormal.getPostFilter() == null);
 
 
     // no bitmap index, should be a post filter
     Filter noBitmapFilter = new NoBitmapSelectorFilter("dim1", "HELLO");
-    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterAnalysis =
-        storageAdapter.analyzeFilter(noBitmapFilter, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis noBitmapFilterAnalysis =
+        FilterAnalysisUtils.analyzeFilter(noBitmapFilter, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(noBitmapFilterAnalysis.getPreFilterBitmap() == null);
     Assert.assertTrue(noBitmapFilterAnalysis.getPostFilter() != null);
 
@@ -745,8 +746,8 @@ public class FilterPartitionTest extends BaseFilterTest
         "HELLO",
         new FilterTuning(false, null, null)
     );
-    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithForceNoIndexTuningAnalysis =
-        storageAdapter.analyzeFilter(bitmapFilterWithForceNoIndexTuning, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis bitmapFilterWithForceNoIndexTuningAnalysis =
+        FilterAnalysisUtils.analyzeFilter(bitmapFilterWithForceNoIndexTuning, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPreFilterBitmap() == null);
     Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPostFilter() != null);
 
@@ -756,8 +757,8 @@ public class FilterPartitionTest extends BaseFilterTest
         "HELLO",
         new FilterTuning(true, 0, 3)
     );
-    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMaxAnalysis =
-        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis bitmapFilterWithCardinalityMaxAnalysis =
+        FilterAnalysisUtils.analyzeFilter(bitmapFilterWithCardinalityMax, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPreFilterBitmap() == null);
     Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPostFilter() != null);
 
@@ -767,8 +768,8 @@ public class FilterPartitionTest extends BaseFilterTest
         "HELLO",
         new FilterTuning(true, 0, 1000)
     );
-    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMax2Analysis =
-        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax2, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis bitmapFilterWithCardinalityMax2Analysis =
+        FilterAnalysisUtils.analyzeFilter(bitmapFilterWithCardinalityMax2, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPreFilterBitmap() != null);
     Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPostFilter() == null);
 
@@ -778,8 +779,8 @@ public class FilterPartitionTest extends BaseFilterTest
         "HELLO",
         new FilterTuning(true, 1000, null)
     );
-    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMinAnalysis =
-        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMin, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis bitmapFilterWithCardinalityMinAnalysis =
+        FilterAnalysisUtils.analyzeFilter(bitmapFilterWithCardinalityMin, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPreFilterBitmap() == null);
     Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPostFilter() != null);
 
@@ -789,8 +790,8 @@ public class FilterPartitionTest extends BaseFilterTest
         "HELLO",
         new FilterTuning(true, null, null)
     );
-    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterWithForceUseAnalysis =
-        storageAdapter.analyzeFilter(noBitmapFilterWithForceUse, bitmapIndexSelector, null);
+    FilterAnalysisUtils.FilterAnalysis noBitmapFilterWithForceUseAnalysis =
+        FilterAnalysisUtils.analyzeFilter(noBitmapFilterWithForceUse, bitmapIndexSelector, null, storageAdapter.getNumRows());
     Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPreFilterBitmap() == null);
     Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPostFilter() != null);
   }

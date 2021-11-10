@@ -86,7 +86,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       int maxRowsInMemory,
       long maxBytesInMemory,
       String dedupColumn,
-      boolean isEnableInMemoryBitmap
+      boolean enableInMemoryBitmap
   )
   {
     this(
@@ -99,7 +99,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         maxBytesInMemory,
         dedupColumn,
         Collections.emptyList(),
-        isEnableInMemoryBitmap
+        enableInMemoryBitmap
     );
   }
 
@@ -113,7 +113,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       long maxBytesInMemory,
       String dedupColumn,
       List<FireHydrant> hydrants,
-      boolean isEnableInMemoryBitmap
+      boolean enableInMemoryBitmap
   )
   {
     this.schema = schema;
@@ -124,7 +124,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.dedupColumn = dedupColumn;
-    this.enableInMemoryBitmap = isEnableInMemoryBitmap;
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
