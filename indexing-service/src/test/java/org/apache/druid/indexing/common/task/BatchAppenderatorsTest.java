@@ -467,12 +467,6 @@ public class BatchAppenderatorsTest
         return reportParseExceptions;
       }
 
-      @Override
-      public boolean isEnableInMemoryBitmap()
-      {
-        return false;
-      }
-
       @Nullable
       @Override
       public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
@@ -583,7 +577,8 @@ public class BatchAppenderatorsTest
                 null,
                 false,
                 false,
-                mode.name()
+                mode.name(),
+                false
             ),
             null,
             null,

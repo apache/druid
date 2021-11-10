@@ -364,7 +364,8 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
-        toolbox.getJsonMapper()
+        toolbox.getJsonMapper(),
+        toolbox.getConfig().isEnableInMemoryBitmap()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);

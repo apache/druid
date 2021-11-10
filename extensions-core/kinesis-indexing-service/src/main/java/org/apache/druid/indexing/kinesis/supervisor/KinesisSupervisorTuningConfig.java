@@ -77,7 +77,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -115,8 +114,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
-      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("enableInMemoryBitmap") @Nullable Boolean enableInMemoryBitmap
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod
   )
   {
     super(
@@ -145,8 +143,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod,
-        enableInMemoryBitmap
+        intermediateHandoffPeriod
     );
 
     this.workerThreads = workerThreads;
@@ -249,7 +246,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
-           ", enableInMemoryBitmap=" + isEnableInMemoryBitmap() +
            '}';
   }
 
@@ -282,8 +278,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPoll(),
-        getIntermediateHandoffPeriod(),
-        isEnableInMemoryBitmap()
+        getIntermediateHandoffPeriod()
     );
   }
 }

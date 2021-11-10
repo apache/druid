@@ -220,7 +220,6 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         null
     );
 
@@ -238,7 +237,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
         new CachePopulatorStats(),
-        TestHelper.makeJsonMapper()
+        TestHelper.makeJsonMapper(),
+        false
     );
 
     metrics = new FireDepartmentMetrics();
@@ -285,7 +285,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn(),
-        tuningConfig.isEnableInMemoryBitmap()
+        false
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -332,7 +332,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn(),
-        tuningConfig.isEnableInMemoryBitmap()
+        false
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -384,7 +384,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn(),
-        tuningConfig.isEnableInMemoryBitmap()
+        false
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

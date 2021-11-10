@@ -790,7 +790,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        toolbox.getConfig().isEnableInMemoryBitmap()
     );
   }
 

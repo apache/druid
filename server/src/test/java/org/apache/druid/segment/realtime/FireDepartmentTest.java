@@ -120,8 +120,8 @@ public class FireDepartmentTest
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
                 new CachePopulatorStats(),
-                TestHelper.makeJsonMapper()
-
+                TestHelper.makeJsonMapper(),
+                false
             )
         ),
         RealtimeTuningConfig.makeDefaultTuningConfig(new File("/tmp/nonexistent"))

@@ -1403,6 +1403,7 @@ Additional peon configs include:
 |`druid.indexer.task.restoreTasksOnRestart`|If true, MiddleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/native-batch.md#druid-input-source) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
 |`druid.indexer.server.maxChatRequests`|Maximum number of concurrent requests served by a task's chat handler. Set to 0 to disable limiting.|0|
+|`druid.indexer.task.enableInMemoryBitmap`| If true, stream ingestion will enable in memory bitmap for applicable dimensions when data is still in memory during real time writes before disk persistence triggers. Queries can leverage the bitmaps to avoid a full scan to speed up for this stage of data. |false|
 
 If the peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
 

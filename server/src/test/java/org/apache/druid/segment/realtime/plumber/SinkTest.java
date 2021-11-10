@@ -84,7 +84,6 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         null
     );
     final Sink sink = new Sink(
@@ -96,7 +95,7 @@ public class SinkTest extends InitializedNullHandlingTest
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn(),
-        tuningConfig.isEnableInMemoryBitmap()
+        false
     );
 
     sink.add(
@@ -242,8 +241,7 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "dedupColumn",
-        null
+        "dedupColumn"
     );
     final Sink sink = new Sink(
         interval,
@@ -254,7 +252,7 @@ public class SinkTest extends InitializedNullHandlingTest
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
         tuningConfig.getDedupColumn(),
-        tuningConfig.isEnableInMemoryBitmap()
+        false
     );
 
     int rows = sink.add(new MapBasedInputRow(

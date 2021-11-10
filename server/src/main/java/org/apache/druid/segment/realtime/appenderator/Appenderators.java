@@ -59,7 +59,8 @@ public class Appenderators
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     return new StreamAppenderator(
@@ -88,7 +89,8 @@ public class Appenderators
         indexMerger,
         cache,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        enableInMemoryBitmap
     );
   }
 

@@ -79,8 +79,8 @@ public class FlushingPlumber extends RealtimePlumber
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
-      ObjectMapper objectMapper
-
+      ObjectMapper objectMapper,
+      boolean enableInMemoryBitmap
   )
   {
     super(
@@ -100,7 +100,8 @@ public class FlushingPlumber extends RealtimePlumber
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
+        objectMapper,
+        enableInMemoryBitmap
     );
 
     this.flushDuration = flushDuration;

@@ -166,7 +166,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     synchronized (this) {
@@ -188,7 +189,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          enableInMemoryBitmap
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -466,12 +468,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public boolean isReportParseExceptions()
     {
       return baseConfig.isReportParseExceptions();
-    }
-
-    @Override
-    public boolean isEnableInMemoryBitmap()
-    {
-      return baseConfig.isEnableInMemoryBitmap();
     }
 
     @Override

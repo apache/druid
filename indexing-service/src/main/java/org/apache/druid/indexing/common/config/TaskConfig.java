@@ -113,6 +113,9 @@ public class TaskConfig
   @JsonProperty
   private final BatchProcessingMode batchProcessingMode;
 
+  @JsonProperty
+  private final boolean enableInMemoryBitmap;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -126,7 +129,8 @@ public class TaskConfig
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
-      @JsonProperty("batchProcessingMode") String batchProcessingMode
+      @JsonProperty("batchProcessingMode") String batchProcessingMode,
+      @JsonProperty("enableInMemoryBitmap") boolean enableInMemoryBitmap
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -169,6 +173,7 @@ public class TaskConfig
       );
     }
     log.info("Batch processing mode:[%s]", this.batchProcessingMode);
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
   }
 
   @JsonProperty
@@ -267,6 +272,11 @@ public class TaskConfig
     return batchMemoryMappedIndex;
   }
 
+  @JsonProperty
+  public boolean isEnableInMemoryBitmap()
+  {
+    return enableInMemoryBitmap;
+  }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {

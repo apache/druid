@@ -78,7 +78,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     if (realtimeAppenderator != null) {
@@ -104,7 +105,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           cacheConfig,
           cachePopulatorStats,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          enableInMemoryBitmap
       );
     }
     return realtimeAppenderator;

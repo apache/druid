@@ -136,6 +136,7 @@ public class StreamAppenderator implements Appenderator
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
+  private final boolean enableInMemoryBitmap;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -184,7 +185,8 @@ public class StreamAppenderator implements Appenderator
       IndexMerger indexMerger,
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     this.myId = id;
@@ -211,6 +213,7 @@ public class StreamAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
   }
 
   @Override
@@ -464,7 +467,7 @@ public class StreamAppenderator implements Appenderator
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           null,
-          tuningConfig.isEnableInMemoryBitmap()
+          enableInMemoryBitmap
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -1223,7 +1226,7 @@ public class StreamAppenderator implements Appenderator
             maxBytesTuningConfig,
             null,
             hydrants,
-            tuningConfig.isEnableInMemoryBitmap()
+            enableInMemoryBitmap
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);

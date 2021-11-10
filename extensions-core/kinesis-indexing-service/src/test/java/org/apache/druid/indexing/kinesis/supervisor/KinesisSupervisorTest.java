@@ -204,7 +204,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
         null
     );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
@@ -3942,7 +3941,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         42, // This property is different from tuningConfig
         null,
         null,
-        null,
         null
     );
 
@@ -4990,7 +4988,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         5000,
-        null,
         null,
         null,
         null,

@@ -57,7 +57,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("enableInMemoryBitmap") @Nullable Boolean enableInMemoryBitmap,
       @JsonProperty("extra") String extra
   )
   {
@@ -80,8 +79,7 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        enableInMemoryBitmap
+        maxSavedParseExceptions
     );
     this.extra = extra;
   }

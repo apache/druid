@@ -72,7 +72,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     throw new UOE(ERROR_MSG);

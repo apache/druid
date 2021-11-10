@@ -603,7 +603,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     );
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false,
-                                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
+                                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(), false);
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -1564,7 +1564,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         0,
         0,
-        null,
         null,
         null,
         null,

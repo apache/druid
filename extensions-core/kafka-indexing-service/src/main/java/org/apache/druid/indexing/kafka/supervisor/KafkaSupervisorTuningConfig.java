@@ -68,7 +68,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -98,8 +97,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("enableInMemoryBitmap") @Nullable Boolean enableInMemoryBitmap
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     super(
@@ -121,8 +119,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        enableInMemoryBitmap
+        maxSavedParseExceptions
     );
     this.workerThreads = workerThreads;
     this.chatThreads = chatThreads;
@@ -218,7 +215,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
-           ", enableInMemoryBitmap=" + isEnableInMemoryBitmap() +
            '}';
   }
 
@@ -244,8 +240,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        isEnableInMemoryBitmap()
+        getMaxSavedParseExceptions()
     );
   }
 }

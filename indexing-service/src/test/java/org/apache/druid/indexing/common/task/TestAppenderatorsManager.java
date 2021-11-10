@@ -67,7 +67,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean enableInMemoryBitmap
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -88,7 +89,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cacheConfig,
         cachePopulatorStats,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        enableInMemoryBitmap
     );
     return realtimeAppenderator;
   }

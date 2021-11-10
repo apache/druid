@@ -223,8 +223,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         null,
         null,
         null,
-        null,
-        enableInMemoryBitmap
+        null
     );
 
     metrics = new FireDepartmentMetrics();
@@ -320,7 +319,8 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CacheConfig(),
         new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        enableInMemoryBitmap
     );
   }
 

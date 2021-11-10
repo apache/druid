@@ -850,7 +850,6 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         handoffTimeout,
         null,
         null,
-        null,
         null
     );
     return new RealtimeIndexTask(
@@ -901,7 +900,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        false
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {

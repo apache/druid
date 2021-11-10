@@ -198,7 +198,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        toolbox.getConfig().isEnableInMemoryBitmap()
     );
   }
 

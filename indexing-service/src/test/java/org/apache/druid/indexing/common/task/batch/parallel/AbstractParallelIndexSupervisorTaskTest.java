@@ -245,7 +245,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            false
         ),
         null
     );
@@ -628,7 +629,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        false
     );
 
     objectMapper.setInjectableValues(
@@ -676,7 +678,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             null,
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            false
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         actionClient,

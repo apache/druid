@@ -30,8 +30,6 @@ public interface AppenderatorConfig extends TuningConfig
 {
   boolean isReportParseExceptions();
 
-  boolean isEnableInMemoryBitmap();
-
   int getMaxPendingPersists();
 
   boolean isSkipBytesInMemoryOverheadCheck();

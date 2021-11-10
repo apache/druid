@@ -60,6 +60,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final ObjectMapper objectMapper;
+  private final boolean enableInMemoryBitmap;
 
   @JsonCreator
   public FlushingPlumberSchool(
@@ -74,7 +75,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject ObjectMapper objectMapper
+      @JacksonInject ObjectMapper objectMapper,
+      @JsonProperty("enableInMemoryBitmap") boolean enableInMemoryBitmap
   )
   {
     super(
@@ -91,7 +93,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
+        objectMapper,
+        enableInMemoryBitmap
     );
 
     this.flushDuration = flushDuration == null ? DEFAULT_FLUSH_DURATION : flushDuration;
@@ -106,6 +109,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.objectMapper = objectMapper;
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
   }
 
   @Override
@@ -132,7 +136,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
+        objectMapper,
+        enableInMemoryBitmap
     );
   }
 

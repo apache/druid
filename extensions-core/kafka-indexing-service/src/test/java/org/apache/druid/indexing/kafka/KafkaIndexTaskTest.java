@@ -245,7 +245,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
-  private boolean enableInMemoryBitmap = false;
 
   private AppenderatorsManager appenderatorsManager;
   private String topic;
@@ -2781,8 +2780,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        enableInMemoryBitmap
+        maxSavedParseExceptions
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
@@ -2873,7 +2871,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();

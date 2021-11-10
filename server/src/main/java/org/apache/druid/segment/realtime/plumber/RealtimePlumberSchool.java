@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.cache.Cache;
@@ -59,6 +60,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final ObjectMapper objectMapper;
+  private final boolean enableInMemoryBitmap;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -75,7 +77,8 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject ObjectMapper objectMapper
+      @JacksonInject ObjectMapper objectMapper,
+      @JsonProperty("enableInMemoryBitmap") boolean enableInMemoryBitmap
   )
   {
     this.emitter = emitter;
@@ -93,6 +96,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.objectMapper = objectMapper;
+    this.enableInMemoryBitmap = enableInMemoryBitmap;
   }
 
   @Override
@@ -121,7 +125,8 @@ public class RealtimePlumberSchool implements PlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
+        objectMapper,
+        enableInMemoryBitmap
     );
   }
 
