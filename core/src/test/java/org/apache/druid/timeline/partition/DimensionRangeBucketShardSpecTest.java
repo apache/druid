@@ -148,7 +148,7 @@ public class DimensionRangeBucketShardSpecTest
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(new NamedType(
         DimensionRangeBucketShardSpec.class,
-        DimensionRangeBucketShardSpec.TYPE
+        ShardSpec.Type.BUCKET_RANGE
     ));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final DimensionRangeBucketShardSpec original = new DimensionRangeBucketShardSpec(

@@ -89,7 +89,7 @@ public class BuildingDimensionRangeShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
-        new NamedType(BuildingDimensionRangeShardSpec.class, BuildingDimensionRangeShardSpec.TYPE)
+        new NamedType(BuildingDimensionRangeShardSpec.class, ShardSpec.Type.BUILDING_RANGE)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final BuildingDimensionRangeShardSpec original = new BuildingDimensionRangeShardSpec(

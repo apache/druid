@@ -68,7 +68,7 @@ public class BuildingHashBasedNumberedShardSpecTest
   public void testSerde() throws JsonProcessingException
   {
     mapper.registerSubtypes(
-        new NamedType(BuildingHashBasedNumberedShardSpec.class, BuildingHashBasedNumberedShardSpec.TYPE)
+        new NamedType(BuildingHashBasedNumberedShardSpec.class, ShardSpec.Type.BUILDING_HASHED)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final BuildingHashBasedNumberedShardSpec original = new BuildingHashBasedNumberedShardSpec(

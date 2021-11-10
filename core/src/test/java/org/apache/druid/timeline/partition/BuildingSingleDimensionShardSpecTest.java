@@ -80,7 +80,7 @@ public class BuildingSingleDimensionShardSpecTest
   @Test
   public void testDeserializeFromMap()
   {
-    final String json = "{\"type\": \"" + BuildingSingleDimensionShardSpec.TYPE + "\","
+    final String json = "{\"type\": \"" + ShardSpec.Type.BUILDING_SINGLE_DIM + "\","
                         + " \"bucketId\":1,"
                         + " \"dimension\": \"dim\","
                         + " \"start\": \"abc\","
@@ -108,7 +108,7 @@ public class BuildingSingleDimensionShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
-        new NamedType(BuildingSingleDimensionShardSpec.class, BuildingSingleDimensionShardSpec.TYPE)
+        new NamedType(BuildingSingleDimensionShardSpec.class, ShardSpec.Type.BUILDING_SINGLE_DIM)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
 

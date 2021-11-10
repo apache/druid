@@ -49,7 +49,7 @@ public class BuildingNumberedShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    mapper.registerSubtypes(new NamedType(BuildingNumberedShardSpec.class, BuildingNumberedShardSpec.TYPE));
+    mapper.registerSubtypes(new NamedType(BuildingNumberedShardSpec.class, ShardSpec.Type.BUILDING_NUMBERED));
     final BuildingNumberedShardSpec original = new BuildingNumberedShardSpec(5);
     final String json = mapper.writeValueAsString(original);
     final BuildingNumberedShardSpec fromJson = (BuildingNumberedShardSpec) mapper.readValue(json, ShardSpec.class);
