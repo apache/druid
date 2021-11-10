@@ -774,12 +774,16 @@ public class AppenderatorImpl implements Appenderator
           );
 
           for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : theSinks.entrySet()) {
+            final DataSegment dataSegment;
             if (droppingSinks.contains(entry.getKey())) {
               log.warn("Skipping push of currently-dropping sink[%s]", entry.getKey());
               continue;
             }
-
-            final DataSegment dataSegment = mergeAndPush(
+            if (isSegmentEmpty(entry.getKey())) {
+              log.warn("segment with id [%s] found to be empty", entry.getKey().toString());
+              continue;
+            }
+            dataSegment = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
@@ -797,6 +801,21 @@ public class AppenderatorImpl implements Appenderator
         },
         pushExecutor
     );
+  }
+
+  @Override
+  public boolean isSegmentEmpty(SegmentIdWithShardSpec identifier)
+  {
+    final Sink sink = sinks.get(identifier);
+    if (sink == null) {
+      throw new ISE("No sink for identifier: %s", identifier);
+    }
+    if (!sink.finished()) {
+      log.warn("Sink with identifier: [%s] checked if empty while still writable", identifier);
+      return false;
+    }
+
+    return sink.isEmpty();
   }
 
   /**

@@ -491,7 +491,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
               .map(SegmentIdWithShardSpec::fromDataSegment)
               .collect(Collectors.toSet());
 
-          if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
+          Set<SegmentIdWithShardSpec> segmentsThatShouldBePushed = segmentIdentifiers
+              .stream()
+              .filter(s -> !appenderator.isSegmentEmpty(s))
+              .collect(Collectors.toSet());
+          if (!pushedSegments.equals(Sets.newHashSet(segmentsThatShouldBePushed))) {
             log.warn(
                 "Removing [%s] segments from deep storage because sanity check failed",
                 segmentsAndMetadata.getSegments().size()
@@ -506,7 +510,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             throw new ISE(
                 "Pushed different segments than requested. Pushed[%s], requested[%s].",
                 pushedSegments,
-                segmentIdentifiers
+                segmentsThatShouldBePushed
             );
           }
 

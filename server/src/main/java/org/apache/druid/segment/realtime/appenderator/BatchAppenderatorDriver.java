@@ -153,11 +153,16 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .stream()
         .collect(Collectors.toMap(SegmentIdWithShardSpec::fromDataSegment, Function.identity()));
 
-    if (!pushedSegmentIdToSegmentMap.keySet().equals(requestedSegmentIdsForSequences)) {
+    Set<SegmentIdWithShardSpec> segmentIdsThatShouldHaveBeenPushed = requestedSegmentIdsForSequences
+        .stream()
+        .filter(s -> !appenderator.isSegmentEmpty(s))
+        .collect(Collectors.toSet());
+
+    if (!pushedSegmentIdToSegmentMap.keySet().equals(segmentIdsThatShouldHaveBeenPushed)) {
       throw new ISE(
           "Pushed segments[%s] are different from the requested ones[%s]",
           pushedSegmentIdToSegmentMap.keySet(),
-          requestedSegmentIdsForSequences
+          segmentIdsThatShouldHaveBeenPushed
       );
     }
 
@@ -173,6 +178,9 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
           if (appendingSegment != null) {
             final DataSegment pushedSegment = pushedSegmentIdToSegmentMap.get(appendingSegment.getSegmentIdentifier());
             if (pushedSegment == null) {
+              if (appenderator.isSegmentEmpty(appendingSegment.getSegmentIdentifier())) {
+                return;
+              }
               throw new ISE("Can't find pushedSegments for segment[%s]", appendingSegment.getSegmentIdentifier());
             }
 
@@ -216,6 +224,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .values()
                 .stream()
                 .flatMap(SegmentsForSequence::allSegmentStateStream)
+                .filter(segmentWithState -> segmentWithState.getDataSegment() != null)
                 .map(segmentWithState -> Preconditions
                     .checkNotNull(
                         segmentWithState.getDataSegment(),

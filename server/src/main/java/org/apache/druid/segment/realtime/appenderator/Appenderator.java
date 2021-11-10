@@ -204,6 +204,8 @@ public interface Appenderator extends QuerySegmentWalker
       boolean useUniquePath
   );
 
+  boolean isSegmentEmpty(SegmentIdWithShardSpec identifer);
+
   /**
    * Stop any currently-running processing and clean up after ourselves. This allows currently running persists and
    * pushes to finish. This will not remove any on-disk persisted data, but it will drop any data that has not yet been

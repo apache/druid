@@ -698,11 +698,12 @@ public class BatchAppenderator implements Appenderator
               throw new ISE(e, "Failed to retrieve sinks for identifier[%s]", identifier);
             }
 
+            if (sinkForIdentifier.isEmpty()) {
+              log.warn("segment with id [%s] and path [%s] found to be empty", identifier, persistedDir);
+              continue;
+            }
             // push it:
-            final DataSegment dataSegment = mergeAndPush(
-                identifier,
-                sinkForIdentifier
-            );
+            final DataSegment dataSegment = mergeAndPush(identifier, sinkForIdentifier);
 
             // record it:
             if (dataSegment != null) {
@@ -719,6 +720,20 @@ public class BatchAppenderator implements Appenderator
         pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees
         // that segments are dropped before next add row
     );
+  }
+
+  @Override
+  public boolean isSegmentEmpty(SegmentIdWithShardSpec identifier)
+  {
+    final Sink sink = sinks.get(identifier);
+    if (sink == null) {
+      throw new ISE("No sink for identifier: %s", identifier);
+    }
+    if (!sink.finished()) {
+      throw new ISE("Sink with identifier: [%s] checked if empty while still writable", identifier);
+    }
+
+    return sink.isEmpty();
   }
 
   /**

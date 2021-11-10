@@ -580,7 +580,12 @@ public class StreamAppenderator implements Appenderator
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
-      final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
+      final int limit;
+      if (sink.isWritable()) {
+        limit = hydrants.isEmpty() ?  0 : hydrants.size() - 1;
+      } else {
+        limit = hydrants.size();
+      }
 
       // gather hydrants that have not been persisted:
       for (FireHydrant hydrant : hydrants.subList(0, limit)) {
@@ -741,7 +746,10 @@ public class StreamAppenderator implements Appenderator
               log.warn("Skipping push of currently-dropping sink[%s]", entry.getKey());
               continue;
             }
-
+            if (isSegmentEmpty(entry.getKey())) {
+              log.warn("segment with id [%s] found to be empty", entry.getKey().toString());
+              continue;
+            }
             final DataSegment dataSegment = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
@@ -760,6 +768,20 @@ public class StreamAppenderator implements Appenderator
         },
         pushExecutor
     );
+  }
+
+  @Override
+  public boolean isSegmentEmpty(SegmentIdWithShardSpec identifier)
+  {
+    final Sink sink = sinks.get(identifier);
+    if (sink == null) {
+      throw new ISE("No sink for identifier: %s", identifier);
+    }
+    if (!sink.finished()) {
+      throw new ISE("Sink with identifier: [%s] checked if empty while still writable", identifier);
+    }
+
+    return sink.isEmpty();
   }
 
   /**

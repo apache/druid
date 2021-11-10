@@ -44,6 +44,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
+import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -520,6 +521,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
           return Futures.immediateFailedFuture(new ISE("Fail test while pushing segments[%s]", identifiers));
         }
       }
+    }
+
+    @Override
+    public boolean isSegmentEmpty(SegmentIdWithShardSpec identifier)
+    {
+      return false;
     }
 
     @Override
