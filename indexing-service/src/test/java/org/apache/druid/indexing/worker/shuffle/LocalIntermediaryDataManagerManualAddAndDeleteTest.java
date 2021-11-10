@@ -279,5 +279,11 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String getType()
+    {
+      return null;
+    }
   }
 }

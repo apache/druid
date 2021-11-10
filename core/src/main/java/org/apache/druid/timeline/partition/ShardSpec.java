@@ -34,7 +34,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ShardSpec.Type.NONE, value = NoneShardSpec.class),
-    @JsonSubTypes.Type(name = ShardSpec.Type.SINGLE_DIM, value = SingleDimensionShardSpec.class),
+    @JsonSubTypes.Type(name = ShardSpec.Type.SINGLE, value = SingleDimensionShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.RANGE, value = DimensionRangeShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.LINEAR, value = LinearShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.NUMBERED, value = NumberedShardSpec.class),
@@ -148,7 +148,7 @@ public interface ShardSpec
   {
     String NONE = "none";
 
-    String SINGLE_DIM = "single";
+    String SINGLE = "single";
     String RANGE = "range";
     String LINEAR = "linear";
     String NUMBERED = "numbered";
