@@ -71,7 +71,8 @@ public class S3DataSegmentPuller implements URIDataPuller
     this.s3Client = s3Client;
   }
 
-  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir) throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir)
+      throws SegmentLoadingException
   {
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
@@ -157,6 +158,7 @@ public class S3DataSegmentPuller implements URIDataPuller
     return new FileObject()
     {
       S3Object s3Object = null;
+      S3ObjectSummary objectSummary = null;
 
       @Override
       public URI toUri()
@@ -229,8 +231,13 @@ public class S3DataSegmentPuller implements URIDataPuller
       @Override
       public long getLastModified()
       {
-        final S3ObjectSummary objectSummary =
-            S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
+        if (s3Object != null) {
+          return s3Object.getObjectMetadata().getLastModified().getTime();
+        }
+        if (objectSummary == null) {
+          objectSummary =
+              S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
+        }
         return objectSummary.getLastModified().getTime();
       }
 
