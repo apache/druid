@@ -36,7 +36,10 @@ public class SqlQuery
   public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
   {
     return parameters.stream()
-                     .map(SqlParameter::getTypedValue)
+                     // null params are not good!
+                     // we pass them to the planner, so that it can generate a proper error message.
+                     // see SqlParameterizerShuttle and RelParameterizerShuttle.
+                     .map(p -> p == null ? null : p.getTypedValue())
                      .collect(Collectors.toList());
   }
 
