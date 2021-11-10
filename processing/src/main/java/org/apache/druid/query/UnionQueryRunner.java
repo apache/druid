@@ -19,7 +19,9 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -74,25 +76,27 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
         return new MergeSequence<>(
             query.getResultOrdering(),
             Sequences.simple(
-                IntStream.range(0, unionDataSource.getDataSources().size())
-                         .mapToObj(i -> new Pair<>(i + 1, unionDataSource.getDataSources().get(i)))
-                         .map(indexBaseDataSourcePair ->
-                                  baseRunner.run(
-                                      queryPlus.withQuery(Queries.withBaseDataSource(
-                                          query,
-                                          indexBaseDataSourcePair.rhs
-                                      ).withSubQueryId(
-                                          generateSubqueryId(
-                                              query.getSubQueryId(),
-                                              // getName() works since the datasource will be a TableDataSource
-                                              indexBaseDataSourcePair.rhs.getName(),
-                                              indexBaseDataSourcePair.lhs
-                                          )
-                                      )),
-                                      responseContext
-                                  )
-                         ).collect(Collectors.toList())
+                Lists.transform(
+                    IntStream.range(0, unionDataSource.getDataSources().size())
+                             .mapToObj(i -> new Pair<>(unionDataSource.getDataSources().get(i), i + 1))
+                             .collect(Collectors.toList()),
+                    (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
+                        baseRunner.run(
+                            queryPlus.withQuery(
+                                Queries.withBaseDataSource(query, singleSourceWithIndex.lhs)
+                                       // assign the subqueryId. this will be used to validate that every query servers
+                                       // have responded per subquery in RetryQueryRunner
+                                       .withSubQueryId(generateSubqueryId(
+                                           query.getSubQueryId(),
+                                           singleSourceWithIndex.lhs.getName(),
+                                           singleSourceWithIndex.rhs
+                                       ))
+                            ),
+                            responseContext
+                        )
+                )
             )
+
         );
       }
     } else {
