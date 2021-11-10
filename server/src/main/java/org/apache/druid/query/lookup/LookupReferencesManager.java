@@ -34,6 +34,7 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -48,6 +49,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -147,13 +149,16 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @LifecycleStart
-  public void start()
+  public void start() throws IOException
   {
     if (!lifecycleLock.canStart()) {
       throw new ISE("can't start.");
     }
     try {
       LOG.debug("LookupExtractorFactoryContainerProvider starting.");
+      if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
+        FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
+      }
       loadAllLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(

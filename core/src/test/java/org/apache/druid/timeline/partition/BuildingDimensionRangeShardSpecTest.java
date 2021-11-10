@@ -58,13 +58,7 @@ public class BuildingDimensionRangeShardSpecTest
   public void testConvert_withSingleDimension()
   {
     Assert.assertEquals(
-        new SingleDimensionShardSpec(
-            "dim",
-            "start",
-            "end",
-            5,
-            10
-        ),
+        new SingleDimensionShardSpec("dim", "start", "end", 5, 10),
         new BuildingDimensionRangeShardSpec(
             1,
             Collections.singletonList("dim"),

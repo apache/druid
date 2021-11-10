@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -202,11 +203,11 @@ public class SchemalessIndexTest
         File bottomFile = new File(tmpFile, "bottom");
         File mergedFile = new File(tmpFile, "merged");
 
-        topFile.mkdirs();
+        FileUtils.mkdirp(topFile);
+        FileUtils.mkdirp(bottomFile);
+        FileUtils.mkdirp(mergedFile);
         topFile.deleteOnExit();
-        bottomFile.mkdirs();
         bottomFile.deleteOnExit();
-        mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
         indexMerger.persist(top, topFile, INDEX_SPEC, null);
@@ -257,7 +258,7 @@ public class SchemalessIndexTest
 
         File mergedFile = new File(tmpFile, "merged");
 
-        mergedFile.mkdirs();
+        FileUtils.mkdirp(mergedFile);
         mergedFile.deleteOnExit();
 
         QueryableIndex index = indexIO.loadIndex(
@@ -295,7 +296,7 @@ public class SchemalessIndexTest
 
         File mergedFile = new File(tmpFile, "merged");
 
-        mergedFile.mkdirs();
+        FileUtils.mkdirp(mergedFile);
         mergedFile.deleteOnExit();
 
         List<QueryableIndex> indexesToMerge = new ArrayList<>();
@@ -387,7 +388,7 @@ public class SchemalessIndexTest
 
           File tmpFile = File.createTempFile("billy", "yay");
           tmpFile.delete();
-          tmpFile.mkdirs();
+          FileUtils.mkdirp(tmpFile);
           tmpFile.deleteOnExit();
 
           indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
@@ -453,7 +454,7 @@ public class SchemalessIndexTest
     for (Pair<String, AggregatorFactory[]> file : files) {
       IncrementalIndex index = makeIncrementalIndex(file.lhs, file.rhs);
       File theFile = new File(tmpFile, file.lhs);
-      theFile.mkdirs();
+      FileUtils.mkdirp(theFile);
       theFile.deleteOnExit();
       filesToMap.add(theFile);
       indexMerger.persist(index, theFile, INDEX_SPEC, null);
@@ -471,7 +472,7 @@ public class SchemalessIndexTest
       File tmpFile = File.createTempFile("yay", "boo");
       tmpFile.delete();
       File mergedFile = new File(tmpFile, "merged");
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
@@ -536,7 +537,7 @@ public class SchemalessIndexTest
       File tmpFile = File.createTempFile("yay", "who");
       tmpFile.delete();
       File mergedFile = new File(tmpFile, "merged");
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);

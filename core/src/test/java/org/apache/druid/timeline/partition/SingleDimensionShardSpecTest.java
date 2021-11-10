@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -161,6 +162,25 @@ public class SingleDimensionShardSpecTest
     testSerde(new SingleDimensionShardSpec("dim", "abc", null, 5, 10));
     testSerde(new SingleDimensionShardSpec("dim", null, "xyz", 10, 1));
     testSerde(new SingleDimensionShardSpec("dim", "abc", "xyz", 10, null));
+  }
+
+  @Test
+  public void testDeserialize() throws JsonProcessingException
+  {
+    final String json = "{\"type\": \"single\","
+                        + " \"dimension\": \"dim\","
+                        + " \"start\": \"abc\","
+                        + "\"end\": \"xyz\","
+                        + "\"partitionNum\": 5,"
+                        + "\"numCorePartitions\": 10}";
+    ShardSpec shardSpec = OBJECT_MAPPER.readValue(json, ShardSpec.class);
+    Assert.assertTrue(shardSpec instanceof SingleDimensionShardSpec);
+
+    SingleDimensionShardSpec singleDimShardSpec = (SingleDimensionShardSpec) shardSpec;
+    Assert.assertEquals(
+        new SingleDimensionShardSpec("dim", "abc", "xyz", 5, 10),
+        singleDimShardSpec
+    );
   }
 
   private void testSerde(SingleDimensionShardSpec shardSpec) throws IOException

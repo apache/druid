@@ -35,6 +35,7 @@ public class RowWalker<T>
   private final Iterable<T> rowIterable;
   private final ToLongFunction<T> timestampFunction;
 
+  @Nullable
   private Iterator<T> rowIterator;
 
   @Nullable
@@ -60,13 +61,16 @@ public class RowWalker<T>
 
   public void advance()
   {
-    if (rowIterator.hasNext()) {
+    if (rowIterator == null) {
+      throw new IllegalStateException("cannot call advance when isDone == true");
+    } else if (rowIterator.hasNext()) {
       current = rowIterator.next();
 
       if (current == null) {
         throw new NullPointerException("null row encountered in walker");
       }
     } else {
+      rowIterator = null;
       current = null;
     }
   }

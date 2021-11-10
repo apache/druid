@@ -32,7 +32,12 @@ import java.util.Objects;
 
 /**
  * See {@link BucketNumberedShardSpec} for how this class is used.
+ * <p>
+ * Calling {@link #convert(int)} on an instance of this class creates a
+ * {@link BuildingSingleDimensionShardSpec} if there is a single dimension
+ * or {@link BuildingDimensionRangeShardSpec} if there are multiple dimensions.
  *
+ * @see BuildingSingleDimensionShardSpec
  * @see BuildingDimensionRangeShardSpec
  */
 public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingDimensionRangeShardSpec>
@@ -100,7 +105,20 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
   @Override
   public BuildingDimensionRangeShardSpec convert(int partitionId)
   {
-    return new BuildingDimensionRangeShardSpec(bucketId, dimensions, start, end, partitionId);
+    return dimensions != null && dimensions.size() == 1
+           ? new BuildingSingleDimensionShardSpec(
+        bucketId,
+        dimensions.get(0),
+        StringTuple.firstOrNull(start),
+        StringTuple.firstOrNull(end),
+        partitionId
+    ) : new BuildingDimensionRangeShardSpec(
+        bucketId,
+        dimensions,
+        start,
+        end,
+        partitionId
+    );
   }
 
   @Override

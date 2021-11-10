@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,7 +52,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -79,13 +79,15 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final boolean ROUND = true;
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     HllSketchModule.registerSerde();
-    for (Module mod : new HllSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-      TestHelper.JSON_MAPPER.registerModule(mod);
-    }
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
