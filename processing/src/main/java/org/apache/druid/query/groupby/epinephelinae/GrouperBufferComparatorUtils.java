@@ -28,7 +28,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -126,7 +126,8 @@ public class GrouperBufferComparatorUtils
       List<DimensionSpec> dimensions,
       Grouper.BufferComparator[] dimComparators,
       boolean includeTimestamp,
-      boolean sortByDimsFirst
+      boolean sortByDimsFirst,
+      int keySize
   )
   {
     int dimCount = dimensions.size();
@@ -147,8 +148,9 @@ public class GrouperBufferComparatorUtils
         int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
         if (aggIndex >= 0) {
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
-          final ValueType valueType = aggregatorFactories[aggIndex].getType();
-          final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
+          final ColumnType valueType = aggregatorFactories[aggIndex].getType();
+          // Aggregators start after dimensions
+          final int aggOffset = keySize + aggregatorOffsets[aggIndex];
 
           aggCount++;
 
@@ -156,10 +158,12 @@ public class GrouperBufferComparatorUtils
             throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
           }
 
-          comparators.add(makeNullHandlingBufferComparatorForNumericData(
-              aggOffset,
-              makeNumericBufferComparator(valueType, aggOffset, true, stringComparator)
-          ));
+          comparators.add(
+              makeNullHandlingBufferComparatorForNumericData(
+                  aggOffset,
+                  makeNumericBufferComparator(valueType, aggOffset, true, stringComparator)
+              )
+          );
           needsReverses.add(needsReverse);
         }
       }
@@ -320,13 +324,13 @@ public class GrouperBufferComparatorUtils
   }
 
   private static Grouper.BufferComparator makeNumericBufferComparator(
-      ValueType valueType,
+      ColumnType valueType,
       int keyBufferPosition,
       boolean pushLimitDown,
       @Nullable StringComparator stringComparator
   )
   {
-    switch (valueType) {
+    switch (valueType.getType()) {
       case LONG:
         return makeBufferComparatorForLong(keyBufferPosition, pushLimitDown, stringComparator);
       case FLOAT:

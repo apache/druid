@@ -131,7 +131,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
   public void forceGuaranteedRollupWithSingleDimPartitionsMissingDimension()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("partitionDimension must be specified");
+    expectedException.expectMessage("partitionDimensions must be specified");
 
     new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(

@@ -202,7 +202,13 @@ public class RealtimePlumber implements Plumber
   @Override
   public Object startJob()
   {
-    computeBaseDir(schema).mkdirs();
+    try {
+      FileUtils.mkdirp(computeBaseDir(schema));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     initializeExecutors();
     handoffNotifier.start();
     Object retVal = bootstrapSinksFromDisk();

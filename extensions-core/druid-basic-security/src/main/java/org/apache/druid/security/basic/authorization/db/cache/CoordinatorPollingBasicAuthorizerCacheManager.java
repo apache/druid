@@ -296,7 +296,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private void writeUserMapToDisk(String prefix, byte[] userMapBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
-    cacheDir.mkdirs();
+    FileUtils.mkdirp(cacheDir);
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
     FileUtils.writeAtomically(
         userMapFile,
@@ -310,7 +310,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private void writeGroupMappingMapToDisk(String prefix, byte[] groupMappingBytes) throws IOException
   {
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
-    cacheDir.mkdirs();
+    FileUtils.mkdirp(cacheDir);
     File groupMapFile = new File(commonCacheConfig.getCacheDirectory(), getGroupMappingRoleMapFilename(prefix));
     FileUtils.writeAtomically(
         groupMapFile,

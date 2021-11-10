@@ -150,7 +150,7 @@ public class IndexMergerV9CompatibilityTest
     }
     tmpDir = FileUtils.createTempDir();
     persistTmpDir = new File(tmpDir, "persistDir");
-    org.apache.commons.io.FileUtils.forceMkdir(persistTmpDir);
+    FileUtils.mkdirp(persistTmpDir);
     String[] files = new String[] {"00000.smoosh", "meta.smoosh", "version.bin"};
     for (String file : files) {
       new ByteSource()

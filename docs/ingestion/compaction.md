@@ -36,7 +36,7 @@ By default, compaction does not modify the underlying data of the segments. Howe
 - Over time you don't need fine-grained granularity for older data so you want use compaction to change older segments to a coarser query granularity. This reduces the storage space required for older data. For example from `minute` to `hour`, or `hour` to `day`. You cannot go from coarser granularity to finer granularity.
 - You can change the dimension order to improve sorting and reduce segment size.
 - You can remove unused columns in compaction or implement an aggregation metric for older data.
-- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](index.md#perfect-rollup-vs-best-effort-rollup).
+- You can change segment rollup from dynamic partitioning with best-effort rollup to hash or range partitioning with perfect rollup. For more information on rollup, see [perfect vs best-effort rollup](./rollup.md#perfect-rollup-vs-best-effort-rollup).
 
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
@@ -82,7 +82,7 @@ If you want to control dimension ordering or ensure specific values for dimensio
 
 ### Rollup
 Druid only rolls up the output segment when `rollup` is set for all input segments.
-See [Roll-up](../ingestion/index.md#rollup) for more details.
+See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
 
 ## Setting up manual compaction
@@ -109,7 +109,7 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`id`|Task id|No|
 |`dataSource`|Data source name to compact|Yes|
 |`ioConfig`|I/O configuration for compaction task. See [Compaction I/O configuration](#compaction-io-configuration) for details.|Yes|
-|`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one.|No|
+|`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
 |`metricsSpec`|Custom metrics spec. The compaction task uses the specified metrics spec rather than generating one.|No|
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
 |`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
@@ -181,6 +181,17 @@ Druid supports two supported `inputSpec` formats:
      |`type`|Task type. Should be `segments`|Yes|
      |`segments`|A list of segment IDs|Yes|
 
+
+### Compaction dimensions spec
+You can optionally use the `dimensionsSpec` object to configure the dimensions of the compacted segments.
+
+`dimensionsSpec` takes the following keys:
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`dimensions`| A list of dimension names or objects. Cannot have the same column in both `dimensions` and `dimensionExclusions`. Defaults to `null`, which preserves the original dimensions.|No|
+|`dimensionExclusions`| The names of dimensions to exclude from compaction. Only names are supported here, not objects. This list is only used if the dimensions list is null or empty; otherwise it is ignored. Defaults to `[]`.|No|
+
 ### Compaction granularity spec
 
 You can optionally use the `granularitySpec` object to configure the segment granularity and the query granularity of the compacted segments. Their syntax is as follows:
@@ -192,7 +203,8 @@ You can optionally use the `granularitySpec` object to configure the segment gra
     ,
     "granularitySpec": {
       "segmentGranularity": <time_period>,
-      "queryGranularity": <time_period>
+      "queryGranularity": <time_period>,
+      "rollup": true
     }
     ...
 ```
@@ -202,9 +214,10 @@ You can optionally use the `granularitySpec` object to configure the segment gra
 |Field|Description|Required|
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`queryGranularity`|Time chunking period for the query granularity. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values. Not supported for automatic compaction.|No|
+|`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
+|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
-For example, to set the segment granularity to "day" and the query granularity to "hour":
+For example, to set the segment granularity to "day", the query granularity to "hour", and enabling rollup:
 ```json
 {
   "type" : "compact",
@@ -213,11 +226,12 @@ For example, to set the segment granularity to "day" and the query granularity t
     "type": "compact",
     "inputSpec": {
       "type": "interval",
-      "interval": "2017-01-01/2018-01-01",
+      "interval": "2017-01-01/2018-01-01"
     },
     "granularitySpec": {
       "segmentGranularity":"day",
-      "queryGranularity":"hour"
+      "queryGranularity":"hour",
+      "rollup": true
     }
   }
 }

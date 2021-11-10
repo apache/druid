@@ -28,4 +28,13 @@ druid_azure_container=<OVERRIDE_THIS>
 
 druid_extensions_loadList=["druid-azure-extensions","druid-hdfs-storage"]
 
-druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-azure:2.8.5"]
+#
+# Please replace <LIB_VERSIONS> with corresponding libs
+# Sample hadoop 2 config
+# druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-aws:2.8.5"]
+#
+# Sample hadoop 3 config
+# druid_indexer_task_defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client-api:3.2.2", "org.apache.hadoop:hadoop-client-runtime:3.2.2", "org.apache.hadoop:hadoop-azure:3.2.2"]
+#
+
+druid_indexer_task_defaultHadoopCoordinates=<LIB_VERSIONS>

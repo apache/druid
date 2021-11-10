@@ -167,6 +167,9 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 #### Metadata store information
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`sys.segments`](../querying/sql.md#segments-table) table.
+
 ##### GET
 
 * `/druid/coordinator/v1/metadata/segments`
@@ -187,7 +190,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of datasources with at least one used segment in the cluster.
+Returns a list of the names of datasources with at least one used segment in the cluster, retrieved from the metadata database. Users should call this API to get the eventual state that the system will be in.
 
 * `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
@@ -239,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster.
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
@@ -867,6 +870,11 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 ##### GET
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
+
 * `/druid/v2/datasources`
 
 Returns a list of queryable datasources.
@@ -926,6 +934,11 @@ Returns segment information lists including server locations for the given query
 ### Router
 
 #### GET
+
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

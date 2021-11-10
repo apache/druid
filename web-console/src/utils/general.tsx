@@ -29,6 +29,12 @@ import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
 
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
@@ -154,6 +160,13 @@ export function oneOf<T>(thing: T, ...options: T[]): boolean {
   return options.includes(thing);
 }
 
+export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => {
+    if (x.type == null) return false;
+    return options.includes(x.type);
+  };
+}
+
 // ----------------------------
 
 export function countBy<T>(
@@ -225,11 +238,6 @@ export function uniq(array: readonly string[]): string[] {
       return true;
     }
   });
-}
-
-export function parseList(list: string): string[] {
-  if (!list) return [];
-  return list.split(',');
 }
 
 // ----------------------------
@@ -401,4 +409,8 @@ export function stringifyValue(value: unknown): string {
     default:
       return String(value);
   }
+}
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
 }

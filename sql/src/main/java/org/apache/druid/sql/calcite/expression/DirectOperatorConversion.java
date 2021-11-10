@@ -26,6 +26,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 
+/**
+ * Conversion for SQL operators that map 1-1 onto native functions.
+ */
 public class DirectOperatorConversion implements SqlOperatorConversion
 {
   private final SqlOperator operator;

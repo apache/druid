@@ -71,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.util.Arrays;
@@ -116,10 +117,22 @@ public class OverlordResourceTest
           @Override
           public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
-            if (resource.getName().equals("allow")) {
-              return new Access(true);
-            } else {
-              return new Access(false);
+            final String username = authenticationResult.getIdentity();
+            switch (resource.getName()) {
+              case "allow":
+                return new Access(true);
+              case Datasources.WIKIPEDIA:
+                // Only "Wiki Reader" can read "wikipedia"
+                return new Access(
+                    action == Action.READ && Users.WIKI_READER.equals(username)
+                );
+              case Datasources.BUZZFEED:
+                // Only "Buzz Reader" can read "buzzfeed"
+                return new Access(
+                    action == Action.READ && Users.BUZZ_READER.equals(username)
+                );
+              default:
+                return new Access(false);
             }
           }
 
@@ -842,6 +855,104 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testGetTasksRequiresDatasourceRead()
+  {
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    // Setup mocks to return completed, active, known, pending and running tasks
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_5", Datasources.WIKIPEDIA),
+            createTaskInfo("id_6", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_1", Datasources.WIKIPEDIA),
+            createTaskInfo("id_2", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_1", null),
+            new MockTaskRunnerWorkItem("id_4", null)
+        )
+    ).atLeastOnce();
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_4", null)
+        )
+    );
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_1", null)
+        )
+    );
+
+    // Replay all mocks
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that only the tasks of read access datasource are returned
+    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
+        .getTasks(null, null, null, null, null, req)
+        .getEntity();
+    Assert.assertEquals(2, responseObjects.size());
+    for (TaskStatusPlus taskStatus : responseObjects) {
+      Assert.assertEquals(Datasources.WIKIPEDIA, taskStatus.getDataSource());
+    }
+  }
+
+  @Test
+  public void testGetTasksFilterByDatasourceRequiresReadAccess()
+  {
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    // Setup mocks to return completed, active, known, pending and running tasks
+    EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_5", Datasources.WIKIPEDIA),
+            createTaskInfo("id_6", Datasources.BUZZFEED)
+        )
+    );
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+        ImmutableList.of(
+            createTaskInfo("id_1", Datasources.WIKIPEDIA),
+            createTaskInfo("id_2", Datasources.BUZZFEED)
+        )
+    );
+
+    // Replay all mocks
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that only the tasks of read access datasource are returned
+    expectedException.expect(WebApplicationException.class);
+    overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req);
+  }
+
+  @Test
   public void testGetNullCompleteTask()
   {
     expectAuthorizationTokenCheck();
@@ -923,6 +1034,27 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
     Task task = NoopTask.create();
+    overlordResource.taskPost(task, req);
+  }
+
+  @Test
+  public void testTaskPostDeniesDatasourceReadUser()
+  {
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    // Verify that taskPost fails for user who has only datasource read access
+    Task task = NoopTask.create(Datasources.WIKIPEDIA);
+    expectedException.expect(ForbiddenException.class);
+    expectedException.expect(ForbiddenException.class);
     overlordResource.taskPost(task, req);
   }
 
@@ -1317,7 +1449,12 @@ public class OverlordResourceTest
 
   private void expectAuthorizationTokenCheck()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+    expectAuthorizationTokenCheck(Users.DRUID);
+  }
+
+  private void expectAuthorizationTokenCheck(String username)
+  {
+    AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
@@ -1358,6 +1495,36 @@ public class OverlordResourceTest
         return null;
       }
     };
+  }
+
+  private TaskInfo<Task, TaskStatus> createTaskInfo(String taskId, String datasource)
+  {
+    return new TaskInfo<>(
+        taskId,
+        DateTime.now(ISOChronology.getInstanceUTC()),
+        TaskStatus.success(taskId),
+        datasource,
+        getTaskWithIdAndDatasource(taskId, datasource)
+    );
+  }
+
+  /**
+   * Usernames to use in the tests.
+   */
+  private static class Users
+  {
+    private static final String DRUID = "druid";
+    private static final String WIKI_READER = "Wiki Reader";
+    private static final String BUZZ_READER = "Buzz Reader";
+  }
+
+  /**
+   * Datasource names to use in the tests.
+   */
+  private static class Datasources
+  {
+    private static final String WIKIPEDIA = "wikipedia";
+    private static final String BUZZFEED = "buzzfeed";
   }
 
   private static class MockTaskRunnerWorkItem extends TaskRunnerWorkItem

@@ -1084,7 +1084,7 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
-        TaskStatus.failure(task.getId()),
+        TaskStatus.failure(task.getId(), "Dummy task status failure err message"),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
     Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
@@ -1122,7 +1122,7 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
-        TaskStatus.failure(task.getId()),
+        TaskStatus.failure(task.getId(), "Dummy task status failure for testing"),
         TaskLocation.create("rogue-worker", 1, 2)
     ), rogueWorkerHolder);
     Assert.assertEquals(task.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());

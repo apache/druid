@@ -40,8 +40,8 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -56,8 +56,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Function;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -72,30 +70,19 @@ public class ScanQueryResultOrderingTest
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
 
-  private static final RowAdapter<Object[]> ROW_ADAPTER = new RowAdapter<Object[]>()
-  {
-    @Override
-    public ToLongFunction<Object[]> timestampFunction()
-    {
+  private static final RowAdapter<Object[]> ROW_ADAPTER = columnName -> {
+    if (ID_COLUMN.equals(columnName)) {
+      return row -> row[1];
+    } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return row -> ((DateTime) row[0]).getMillis();
-    }
-
-    @Override
-    public Function<Object[], Object> columnFunction(String columnName)
-    {
-      if (ID_COLUMN.equals(columnName)) {
-        return row -> row[1];
-      } else if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-        return timestampFunction()::applyAsLong;
-      } else {
-        return row -> null;
-      }
+    } else {
+      return row -> null;
     }
   };
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .addTimeColumn()
-                                                                .add(ID_COLUMN, ValueType.LONG)
+                                                                .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(

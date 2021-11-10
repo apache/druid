@@ -461,7 +461,7 @@ public class SegmentMetadataQueryTest
             ),
             "quality_uniques",
             new ColumnAnalysis(
-                "hyperUnique",
+                "COMPLEX<hyperUnique>",
                 false,
                 true,
                 0,

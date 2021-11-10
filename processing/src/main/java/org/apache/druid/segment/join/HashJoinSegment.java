@@ -20,14 +20,15 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -43,6 +44,8 @@ import java.util.Optional;
  */
 public class HashJoinSegment implements SegmentReference
 {
+  private static final Logger log = new Logger(HashJoinSegment.class);
+
   private final SegmentReference baseSegment;
   private final Filter baseFilter;
   private final List<JoinableClause> clauses;
@@ -131,14 +134,16 @@ public class HashJoinSegment implements SegmentReference
         }).orElse(true);
       }
       if (acquireFailed) {
-        CloseQuietly.close(closer);
+        CloseableUtils.closeAndWrapExceptions(closer);
         return Optional.empty();
       } else {
         return Optional.of(closer);
       }
     }
-    catch (Exception ex) {
-      CloseQuietly.close(closer);
+    catch (Throwable e) {
+      // acquireReferences is not permitted to throw exceptions.
+      CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
+      log.warn(e, "Exception encountered while trying to acquire reference");
       return Optional.empty();
     }
   }

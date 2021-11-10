@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -210,17 +211,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  private void loadLocalCache()
+  private void loadLocalCache() throws IOException
   {
     final long start = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
-    if (!baseDir.isDirectory()) {
-      if (baseDir.exists()) {
-        throw new ISE("[%s] exists but not a directory.", baseDir);
-      } else if (!baseDir.mkdirs()) {
-        throw new ISE("Failed to create directory[%s].", baseDir);
-      }
-    }
+    FileUtils.mkdirp(baseDir);
 
     List<DataSegment> cachedSegments = new ArrayList<>();
     File[] segmentsToLoad = baseDir.listFiles();

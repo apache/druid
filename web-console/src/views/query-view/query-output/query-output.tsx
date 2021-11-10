@@ -39,6 +39,8 @@ import {
   filterMap,
   oneOf,
   prettyPrintSql,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
 } from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
@@ -99,9 +101,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (pagination.page) {
-      setPagination(changePage(pagination, 0));
-    }
+    setPagination(pagination => {
+      return pagination.page ? changePage(pagination, 0) : pagination;
+    });
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -396,6 +398,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
         ofText={hasMoreResults ? '' : 'of'}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={queryResult.rows.length > SMALL_TABLE_PAGE_SIZE}
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
           return {

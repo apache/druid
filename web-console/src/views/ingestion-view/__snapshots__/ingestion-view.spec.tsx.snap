@@ -186,7 +186,7 @@ exports[`tasks view matches snapshot 1`] = `
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
         defaultPage={0}
-        defaultPageSize={20}
+        defaultPageSize={25}
         defaultResized={Array []}
         defaultSortDesc={false}
         defaultSortMethod={[Function]}
@@ -246,9 +246,6 @@ exports[`tasks view matches snapshot 1`] = `
         pageJumpText="jump to page"
         pageSizeOptions={
           Array [
-            5,
-            10,
-            20,
             25,
             50,
             100,
@@ -265,7 +262,7 @@ exports[`tasks view matches snapshot 1`] = `
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
-        showPagination={true}
+        showPagination={false}
         showPaginationBottom={true}
         showPaginationTop={false}
         sortable={true}
@@ -491,7 +488,7 @@ exports[`tasks view matches snapshot 1`] = `
         defaultFilterMethod={[Function]}
         defaultFiltered={Array []}
         defaultPage={0}
-        defaultPageSize={20}
+        defaultPageSize={25}
         defaultResized={Array []}
         defaultSortDesc={false}
         defaultSortMethod={[Function]}
@@ -562,9 +559,6 @@ exports[`tasks view matches snapshot 1`] = `
         pageJumpText="jump to page"
         pageSizeOptions={
           Array [
-            5,
-            10,
-            20,
             25,
             50,
             100,
@@ -582,7 +576,7 @@ exports[`tasks view matches snapshot 1`] = `
         rowsText="rows"
         showPageJump={true}
         showPageSizeOptions={true}
-        showPagination={true}
+        showPagination={false}
         showPaginationBottom={true}
         showPaginationTop={false}
         sortable={true}

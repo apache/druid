@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -59,11 +60,11 @@ public class RowBasedStorageAdapterTest
 
   private static final RowSignature ROW_SIGNATURE =
       RowSignature.builder()
-                  .add(ValueType.FLOAT.name(), ValueType.FLOAT)
-                  .add(ValueType.DOUBLE.name(), ValueType.DOUBLE)
-                  .add(ValueType.LONG.name(), ValueType.LONG)
-                  .add(ValueType.STRING.name(), ValueType.STRING)
-                  .add(ValueType.COMPLEX.name(), ValueType.COMPLEX)
+                  .add(ValueType.FLOAT.name(), ColumnType.FLOAT)
+                  .add(ValueType.DOUBLE.name(), ColumnType.DOUBLE)
+                  .add(ValueType.LONG.name(), ColumnType.LONG)
+                  .add(ValueType.STRING.name(), ColumnType.STRING)
+                  .add(ValueType.COMPLEX.name(), ColumnType.UNKNOWN_COMPLEX)
                   .add(UNKNOWN_TYPE_NAME, null)
                   .build();
 
@@ -197,7 +198,10 @@ public class RowBasedStorageAdapterTest
             if (valueType == null || valueType == ValueType.COMPLEX) {
               return i -> null;
             } else {
-              return i -> DimensionHandlerUtils.convertObjectToType(i, valueType);
+              return i -> DimensionHandlerUtils.convertObjectToType(
+                  i,
+                  ROW_SIGNATURE.getColumnType(columnName).orElse(null)
+              );
             }
           }
         }
@@ -377,7 +381,7 @@ public class RowBasedStorageAdapterTest
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
     // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete.
-    Assert.assertEquals(ValueType.COMPLEX, capabilities.getType());
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
   }
 
@@ -398,24 +402,21 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getColumnTypeName()
+  public void test_getColumnTypeString()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       if (UNKNOWN_TYPE_NAME.equals(columnName)) {
-        Assert.assertNull(columnName, adapter.getColumnTypeName(columnName));
+        Assert.assertNull(columnName, adapter.getColumnCapabilities(columnName));
       } else {
-        Assert.assertEquals(columnName, ValueType.valueOf(columnName).name(), adapter.getColumnTypeName(columnName));
+        Assert.assertEquals(
+            columnName,
+            ValueType.valueOf(columnName).name(),
+            adapter.getColumnCapabilities(columnName).asTypeString()
+        );
       }
     }
-  }
-
-  @Test
-  public void test_getColumnTypeName_nonexistent()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertNull(adapter.getColumnTypeName("nonexistent"));
   }
 
   @Test
@@ -499,7 +500,7 @@ public class RowBasedStorageAdapterTest
                 new ExpressionVirtualColumn(
                     "vc",
                     "\"LONG\" + 1",
-                    ValueType.LONG,
+                    ColumnType.LONG,
                     ExprMacroTable.nil()
                 )
             )
