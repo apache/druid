@@ -88,40 +88,46 @@ public class ScanQueryResultOrderingTest
   private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000T01"), 101},
-              new Object[]{DateTimes.of("2000T01"), 80},
-              new Object[]{DateTimes.of("2000T01"), 232},
-              new Object[]{DateTimes.of("2000T01"), 12},
-              new Object[]{DateTimes.of("2000T02"), 808},
-              new Object[]{DateTimes.of("2000T02"), 411},
-              new Object[]{DateTimes.of("2000T02"), 383},
-              new Object[]{DateTimes.of("2000T05"), 22}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 101},
+                  new Object[]{DateTimes.of("2000T01"), 80},
+                  new Object[]{DateTimes.of("2000T01"), 232},
+                  new Object[]{DateTimes.of("2000T01"), 12},
+                  new Object[]{DateTimes.of("2000T02"), 808},
+                  new Object[]{DateTimes.of("2000T02"), 411},
+                  new Object[]{DateTimes.of("2000T02"), 383},
+                  new Object[]{DateTimes.of("2000T05"), 22}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000T01"), 333},
-              new Object[]{DateTimes.of("2000T01"), 222},
-              new Object[]{DateTimes.of("2000T01"), 444},
-              new Object[]{DateTimes.of("2000T01"), 111},
-              new Object[]{DateTimes.of("2000T03"), 555},
-              new Object[]{DateTimes.of("2000T03"), 999},
-              new Object[]{DateTimes.of("2000T03"), 888},
-              new Object[]{DateTimes.of("2000T05"), 777}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000T01"), 333},
+                  new Object[]{DateTimes.of("2000T01"), 222},
+                  new Object[]{DateTimes.of("2000T01"), 444},
+                  new Object[]{DateTimes.of("2000T01"), 111},
+                  new Object[]{DateTimes.of("2000T03"), 555},
+                  new Object[]{DateTimes.of("2000T03"), 999},
+                  new Object[]{DateTimes.of("2000T03"), 888},
+                  new Object[]{DateTimes.of("2000T05"), 777}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
-          ImmutableList.of(
-              new Object[]{DateTimes.of("2000-01-02T00"), 7},
-              new Object[]{DateTimes.of("2000-01-02T02"), 9},
-              new Object[]{DateTimes.of("2000-01-02T03"), 8}
+          Sequences.simple(
+              ImmutableList.of(
+                  new Object[]{DateTimes.of("2000-01-02T00"), 7},
+                  new Object[]{DateTimes.of("2000-01-02T02"), 9},
+                  new Object[]{DateTimes.of("2000-01-02T03"), 8}
+              )
           ),
           ROW_ADAPTER,
           ROW_SIGNATURE

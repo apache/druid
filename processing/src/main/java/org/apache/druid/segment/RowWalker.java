@@ -19,11 +19,14 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.function.ToLongFunction;
 
 /**
@@ -32,61 +35,69 @@ import java.util.function.ToLongFunction;
  */
 public class RowWalker<T>
 {
-  private final Iterable<T> rowIterable;
+  private final Sequence<T> rowSequence;
   private final ToLongFunction<T> timestampFunction;
 
-  @Nullable
-  private Iterator<T> rowIterator;
+  @Nullable // null = closed
+  private Yielder<T> rowYielder;
 
-  @Nullable
-  private T current = null;
-
-  RowWalker(final Iterable<T> rowIterable, final RowAdapter<T> rowAdapter)
+  RowWalker(final Sequence<T> rowSequence, final RowAdapter<T> rowAdapter)
   {
-    this.rowIterable = rowIterable;
+    this.rowSequence = rowSequence;
     this.timestampFunction = rowAdapter.timestampFunction();
-
-    reset();
+    this.rowYielder = Yielders.each(rowSequence);
   }
 
   public boolean isDone()
   {
-    return current == null;
+    return rowYielder == null || rowYielder.isDone();
   }
 
   public T currentRow()
   {
-    return Preconditions.checkNotNull(current, "cannot call currentRow when isDone == true");
+    if (isDone()) {
+      throw new ISE("cannot call currentRow when isDone == true");
+    }
+
+    return rowYielder.get();
   }
 
   public void advance()
   {
-    if (rowIterator == null) {
-      throw new IllegalStateException("cannot call advance when isDone == true");
-    } else if (rowIterator.hasNext()) {
-      current = rowIterator.next();
-
-      if (current == null) {
-        throw new NullPointerException("null row encountered in walker");
-      }
+    if (isDone()) {
+      throw new ISE("cannot call advance when isDone == true");
     } else {
-      rowIterator = null;
-      current = null;
+      rowYielder = rowYielder.next(null);
     }
   }
 
   public void reset()
   {
-    rowIterator = rowIterable.iterator();
-    advance();
+    close();
+    rowYielder = Yielders.each(rowSequence);
   }
 
   public void skipToDateTime(final DateTime timestamp, final boolean descending)
   {
-    while (current != null && (descending
-                               ? timestamp.isBefore(timestampFunction.applyAsLong(current))
-                               : timestamp.isAfter(timestampFunction.applyAsLong(current)))) {
+    while (!isDone() && (descending
+                         ? timestamp.isBefore(timestampFunction.applyAsLong(rowYielder.get()))
+                         : timestamp.isAfter(timestampFunction.applyAsLong(rowYielder.get())))) {
       advance();
+    }
+  }
+
+  public void close()
+  {
+    if (rowYielder != null) {
+      try {
+        rowYielder.close();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        rowYielder = null;
+      }
     }
   }
 }
