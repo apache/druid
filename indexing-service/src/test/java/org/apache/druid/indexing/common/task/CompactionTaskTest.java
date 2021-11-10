@@ -237,8 +237,8 @@ public class CompactionTaskTest
     AGGREGATORS.add(new CountAggregatorFactory("agg_0"));
     AGGREGATORS.add(new LongSumAggregatorFactory("agg_1", "long_dim_1"));
     AGGREGATORS.add(new LongMaxAggregatorFactory("agg_2", "long_dim_2"));
-    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3"));
-    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
+    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3", null));
+    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4", null));
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
       SEGMENT_MAP.put(

@@ -77,13 +77,15 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       SerializablePair.createNullHandlingComparator(Double::compare, true);
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
   private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleFirstAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -91,6 +93,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
     this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
   }
 
@@ -102,7 +105,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new DoubleFirstAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -116,7 +119,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new DoubleFirstBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -156,7 +159,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new DoubleFirstAggregatorFactory(name, name)
+    return new DoubleFirstAggregatorFactory(name, name, timeColumn)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -223,7 +226,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override
@@ -256,20 +259,28 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
+    byte[] timeColumnBytes = StringUtils.toUtf8(timeColumn);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length + timeColumnBytes.length)
                      .put(AggregatorUtil.DOUBLE_FIRST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
+                     .put(timeColumnBytes)
                      .array();
   }
 
@@ -307,13 +318,13 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
 
     DoubleFirstAggregatorFactory that = (DoubleFirstAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name);
+    return fieldName.equals(that.fieldName) && timeColumn.equals(that.timeColumn) && name.equals(that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name);
+    return Objects.hash(fieldName, name, timeColumn);
   }
 
   @Override
@@ -322,6 +333,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
     return "DoubleFirstAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            '}';
   }
 }

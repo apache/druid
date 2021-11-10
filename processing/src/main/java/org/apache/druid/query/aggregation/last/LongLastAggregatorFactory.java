@@ -75,18 +75,21 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   };
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
 
   @JsonCreator
   public LongLastAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
   }
 
   @Override
@@ -97,7 +100,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new LongLastAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -111,7 +114,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new LongLastBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -151,7 +154,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongLastAggregatorFactory(name, name)
+    return new LongLastAggregatorFactory(name, name, timeColumn)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -216,7 +219,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongLastAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new LongLastAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override
@@ -249,20 +252,28 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
+    byte[] timeColumnBytes = StringUtils.toUtf8(timeColumn);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length + timeColumnBytes.length)
                      .put(AggregatorUtil.LONG_LAST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
+                     .put(timeColumnBytes)
                      .array();
   }
 
@@ -298,13 +309,13 @@ public class LongLastAggregatorFactory extends AggregatorFactory
 
     LongLastAggregatorFactory that = (LongLastAggregatorFactory) o;
 
-    return name.equals(that.name) && fieldName.equals(that.fieldName);
+    return name.equals(that.name) && timeColumn.equals(that.timeColumn) && fieldName.equals(that.fieldName);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName);
+    return Objects.hash(name, fieldName, timeColumn);
   }
 
   @Override
@@ -313,6 +324,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
     return "LongLastAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            '}';
   }
 }
