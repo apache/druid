@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.TypeSignature;
@@ -364,7 +365,7 @@ public class SegmentAnalyzer
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
           return new ColumnAnalysis(
-              capabilities.toColumnType(),
+              ColumnTypeFactory.ofType(typeSignature),
               typeName,
               hasMultipleValues,
               hasNulls,
@@ -383,7 +384,7 @@ public class SegmentAnalyzer
       }
 
       return new ColumnAnalysis(
-          capabilities.toColumnType(),
+          ColumnTypeFactory.ofType(typeSignature),
           typeName,
           hasMultipleValues,
           hasNulls,
