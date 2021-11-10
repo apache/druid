@@ -220,6 +220,78 @@ public class TypeStrategies
   }
 
   /**
+   * Read a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
+   * move the underlying position by the size of the value read.
+   *
+   * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
+   */
+  @Nullable
+  public static <T> T readNullableTypeStrategy(ByteBuffer buffer, TypeStrategy<T> strategy)
+  {
+    if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
+      return null;
+    }
+    return strategy.read(buffer);
+  }
+
+
+  /**
+   * Write a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
+   * move the underlying position by the size of the value written. If the value is null, only the null byte will be
+   * set - to {@link NullHandling#IS_NULL_BYTE}.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
+   * if the size is unknown.
+   */
+  public static <T> void writeNullableTypeStrategy(ByteBuffer buffer, TypeStrategy<T> strategy, @Nullable T value)
+  {
+    if (value == null) {
+      buffer.put(NullHandling.IS_NULL_BYTE);
+      return;
+    }
+    buffer.put(NullHandling.IS_NOT_NULL_BYTE);
+    strategy.write(buffer, value);
+  }
+
+  /**
+   * Read a potentially null value from the {@link ByteBuffer} at the requested position. This will not permanently
+   * move the underlying {@link ByteBuffer#position()}.
+   *
+   * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
+   */
+  @Nullable
+  public static <T> T readNullableTypeStrategy(ByteBuffer buffer, int offset, TypeStrategy<T> strategy)
+  {
+    if (isNullableNull(buffer, offset)) {
+      return null;
+    }
+    return strategy.read(buffer, offset + VALUE_OFFSET);
+  }
+
+  /**
+   * Write a potentially null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
+   * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
+   *
+   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
+   * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
+   * if the size is unknown.
+   */
+  public static <T> int writeNullableTypeStrategy(
+      ByteBuffer buffer,
+      int offset,
+      TypeStrategy<T> strategy,
+      @Nullable T value
+  )
+  {
+    if (value == null) {
+      return TypeStrategies.writeNull(buffer, offset);
+    }
+    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
+    return Byte.BYTES + strategy.write(buffer, offset + TypeStrategies.VALUE_OFFSET, value);
+  }
+
+  /**
    * Throw an {@link ISE} for consistent error messaging if the size to be written is greater than the max size
    */
   public static void checkMaxBytes(TypeSignature<?> type, int sizeBytes, int maxSizeBytes)
@@ -394,7 +466,7 @@ public class TypeStrategies
       final int arrayLength = buffer.getInt();
       final Object[] array = new Object[arrayLength];
       for (int i = 0; i < arrayLength; i++) {
-        array[i] = elementStrategy.readNullable(buffer);
+        array[i] = TypeStrategies.readNullableTypeStrategy(buffer, elementStrategy);
       }
       return array;
     }
@@ -404,7 +476,7 @@ public class TypeStrategies
     {
       buffer.putInt(value.length);
       for (Object o : value) {
-        elementStrategy.writeNullable(buffer, o);
+        TypeStrategies.writeNullableTypeStrategy(buffer, elementStrategy, o);
       }
     }
 

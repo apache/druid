@@ -29,19 +29,23 @@ import java.util.Comparator;
  * TypeStrategy provides value comparison and binary serialization for Druid types. This can be obtained for ANY Druid
  * type via {@link TypeSignature#getStrategy()}.
  *
- * Implementations of this mechanism support writing both null and non-null values. When using the 'nullable' family
- * of the read and write methods, values are stored such that the leading byte contains either
- * {@link NullHandling#IS_NULL_BYTE} or {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. The default
- * implementations of these methods use masking to check the null bit, so flags may be used in the upper bits of the
- * null byte.
+ * IMPORTANT!!! DO NOT USE THIS FOR WRITING COLUMNS, THERE ARE VERY LIKELY FAR BETTER WAYS TO DO THIS. However, if you
+ * need to store a single value or small number of values, continue reading.
+ *
+ * Implementations of this mechanism support reading and writing ONLY non-null values. To read and write nullable
+ * values and you have enough memory to burn a full byte for every value you want to store, consider using the
+ * {@link TypeStrategies#readNullableTypeStrategy} and {@link TypeStrategies#writeNullableTypeStrategy} family of
+ * methods, which will store values with a leading byte containing either {@link NullHandling#IS_NULL_BYTE} or
+ * {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
+ * consider alternative approaches to tracking your nulls.
  *
  * This mechanism allows using the natural {@link ByteBuffer#position()} and modify the underlying position as they
  * operate, and also random access reads are specific offets, which do not modify the underlying position. If a method
  * accepts an offset parameter, it does not modify the position, if not, it does.
  *
  * The only methods implementors are required to provide are {@link #read(ByteBuffer)},
- * {@link #write(ByteBuffer, Object)} and {@link #estimateSizeBytes(Object)}, the rest provide default implementations
- * which set the null/not null byte, and reset buffer positions as appropriate, but may be overridden if a more
+ * {@link #write(ByteBuffer, Object)} and {@link #estimateSizeBytes(Object)}, default implementations are provided
+ * to set and reset buffer positions as appropriate for the offset based methods, but may be overridden if a more
  * optimized implementation is needed.
  */
 public interface TypeStrategy<T> extends Comparator<T>
@@ -69,6 +73,11 @@ public interface TypeStrategy<T> extends Comparator<T>
   /**
    * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
    * the underlying position by the size of the value read.
+   *
+   * The contract of this method is that any value returned from this method MUST be completely detached from the
+   * underlying {@link ByteBuffer}, since it might outlive the memory location being allocated to hold the object.
+   * In other words, if an object is memory mapped, it must be copied on heap, or relocated to another memory location
+   * that is owned by the caller with {@link #write}.
    */
   T read(ByteBuffer buffer);
 
@@ -83,41 +92,13 @@ public interface TypeStrategy<T> extends Comparator<T>
   void write(ByteBuffer buffer, T value);
 
   /**
-   * Read a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
-   * move the underlying position by the size of the value read.
-   */
-  @Nullable
-  default T readNullable(ByteBuffer buffer)
-  {
-    if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
-      return null;
-    }
-    return read(buffer);
-  }
-
-  /**
-   * Write a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
-   * move the underlying position by the size of the value written. If the value is null, only the null byte will be
-   * set - to {@link NullHandling#IS_NULL_BYTE}.
-   *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link #estimateSizeBytesNullable(Object)} to determine the required size of a value before writing if the size
-   * is unknown.
-   */
-  default void writeNullable(ByteBuffer buffer, @Nullable T value)
-  {
-    if (value == null) {
-      buffer.put(NullHandling.IS_NULL_BYTE);
-      return;
-    }
-    buffer.put(NullHandling.IS_NOT_NULL_BYTE);
-    write(buffer, value);
-  }
-
-  /**
    * Read a non-null value from the {@link ByteBuffer} at the requested position. This will not permanently move the
    * underlying {@link ByteBuffer#position()}.
    *
+   * The contract of this method is that any value returned from this method MUST be completely detached from the
+   * underlying {@link ByteBuffer}, since it might outlive the memory location being allocated to hold the object.
+   * In other words, if an object is memory mapped, it must be copied on heap, or relocated to another memory location
+   * that is owned by the caller with {@link #write}.
    */
   default T read(ByteBuffer buffer, int offset)
   {
@@ -144,35 +125,5 @@ public interface TypeStrategy<T> extends Comparator<T>
     final int size = buffer.position() - offset;
     buffer.position(oldPosition);
     return size;
-  }
-
-  /**
-   * Read a potentially null value from the {@link ByteBuffer} at the requested position. This will not permanently
-   * move the underlying {@link ByteBuffer#position()}.
-   */
-  @Nullable
-  default T readNullable(ByteBuffer buffer, int offset)
-  {
-    if (TypeStrategies.isNullableNull(buffer, offset)) {
-      return null;
-    }
-    return read(buffer, offset + TypeStrategies.VALUE_OFFSET);
-  }
-
-  /**
-   * Write a potentially null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
-   * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
-   *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link #estimateSizeBytesNullable(Object)} to determine the required size of a value before writing if the size
-   * is unknown.
-   */
-  default int writeNullable(ByteBuffer buffer, int offset, @Nullable T value)
-  {
-    if (value == null) {
-      return TypeStrategies.writeNull(buffer, offset);
-    }
-    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-    return Byte.BYTES + write(buffer, offset + TypeStrategies.VALUE_OFFSET, value);
   }
 }
