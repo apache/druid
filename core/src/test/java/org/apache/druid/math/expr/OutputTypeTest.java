@@ -77,10 +77,18 @@ public class OutputTypeTest extends InitializedNullHandlingTest
 
     assertOutputType("!'true'", inspector, ExpressionType.LONG);
     assertOutputType("!1", inspector, ExpressionType.LONG);
-    assertOutputType("!1.1", inspector, ExpressionType.DOUBLE);
     assertOutputType("!x", inspector, ExpressionType.LONG);
     assertOutputType("!y", inspector, ExpressionType.LONG);
-    assertOutputType("!z", inspector, ExpressionType.DOUBLE);
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      assertOutputType("!1.1", inspector, ExpressionType.DOUBLE);
+      assertOutputType("!z", inspector, ExpressionType.DOUBLE);
+    }
+    finally {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+    }
+    assertOutputType("!1.1", inspector, ExpressionType.LONG);
+    assertOutputType("!z", inspector, ExpressionType.LONG);
   }
 
   @Test
@@ -122,25 +130,46 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     assertOutputType("y_!=y", inspector, ExpressionType.LONG);
     assertOutputType("y_ && y", inspector, ExpressionType.LONG);
     assertOutputType("y_ || y", inspector, ExpressionType.LONG);
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      assertOutputType("z>y_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z<y", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z<=y", inspector, ExpressionType.DOUBLE);
+      assertOutputType("y>=z", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z==y", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z!=y", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z && y", inspector, ExpressionType.DOUBLE);
+      assertOutputType("y || z", inspector, ExpressionType.DOUBLE);
 
-    assertOutputType("z>y_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z<y", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z<=y", inspector, ExpressionType.DOUBLE);
-    assertOutputType("y>=z", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z==y", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z!=y", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z && y", inspector, ExpressionType.DOUBLE);
-    assertOutputType("y || z", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z>z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z<z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z<=z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z_>=z", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z==z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z!=z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z && z_", inspector, ExpressionType.DOUBLE);
+      assertOutputType("z_ || z", inspector, ExpressionType.DOUBLE);
+    }
+    finally {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+    }
+    assertOutputType("z>y_", inspector, ExpressionType.LONG);
+    assertOutputType("z<y", inspector, ExpressionType.LONG);
+    assertOutputType("z<=y", inspector, ExpressionType.LONG);
+    assertOutputType("y>=z", inspector, ExpressionType.LONG);
+    assertOutputType("z==y", inspector, ExpressionType.LONG);
+    assertOutputType("z!=y", inspector, ExpressionType.LONG);
+    assertOutputType("z && y", inspector, ExpressionType.LONG);
+    assertOutputType("y || z", inspector, ExpressionType.LONG);
 
-    assertOutputType("z>z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z<z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z<=z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z_>=z", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z==z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z!=z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z && z_", inspector, ExpressionType.DOUBLE);
-    assertOutputType("z_ || z", inspector, ExpressionType.DOUBLE);
-
+    assertOutputType("z>z_", inspector, ExpressionType.LONG);
+    assertOutputType("z<z_", inspector, ExpressionType.LONG);
+    assertOutputType("z<=z_", inspector, ExpressionType.LONG);
+    assertOutputType("z_>=z", inspector, ExpressionType.LONG);
+    assertOutputType("z==z_", inspector, ExpressionType.LONG);
+    assertOutputType("z!=z_", inspector, ExpressionType.LONG);
+    assertOutputType("z && z_", inspector, ExpressionType.LONG);
+    assertOutputType("z_ || z", inspector, ExpressionType.LONG);
     assertOutputType("1*(2 + 3.0)", inspector, ExpressionType.DOUBLE);
   }
 

@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.segment.column.Types;
@@ -45,9 +46,9 @@ public class VectorProcessors
       Expr.VectorInputBindingInspector inspector,
       Expr left,
       Expr right,
-      Supplier<ExprVectorProcessor<long[]>> longProcessor,
-      Supplier<ExprVectorProcessor<double[]>> doubleProcessor,
-      Supplier<ExprVectorProcessor<String[]>> stringProcessor
+      Supplier<ExprVectorProcessor<?>> longProcessor,
+      Supplier<ExprVectorProcessor<?>> doubleProcessor,
+      Supplier<ExprVectorProcessor<?>> stringProcessor
   )
   {
     final ExpressionType leftType = left.getOutputType(inspector);
@@ -532,14 +533,25 @@ public class VectorProcessors
         }
       };
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
-      processor = new DoubleOutDoubleInFunctionVectorValueProcessor(expr.buildVectorized(inspector), maxVectorSize)
-      {
-        @Override
-        public double apply(double input)
+      if (ExpressionProcessing.useLegacyLogicalOperators()) {
+        processor = new DoubleOutDoubleInFunctionVectorValueProcessor(expr.buildVectorized(inspector), maxVectorSize)
         {
-          return Evals.asDouble(!Evals.asBoolean(input));
-        }
-      };
+          @Override
+          public double apply(double input)
+          {
+            return Evals.asDouble(!Evals.asBoolean(input));
+          }
+        };
+      } else {
+        processor = new LongOutDoubleInFunctionVectorValueProcessor(expr.buildVectorized(inspector), maxVectorSize)
+        {
+          @Override
+          public long apply(double input)
+          {
+            return Evals.asLong(!Evals.asBoolean(input));
+          }
+        };
+      }
     }
     if (processor == null) {
       throw Exprs.cannotVectorize();
@@ -603,13 +615,13 @@ public class VectorProcessors
             return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<double[]>(
-            ExpressionType.DOUBLE,
+        () -> new BivariateFunctionVectorProcessor<double[], double[], long[]>(
+            ExpressionType.LONG,
             left.buildVectorized(inspector),
             right.buildVectorized(inspector)
         )
         {
-          final double[] output = new double[maxVectorSize];
+          final long[] output = new long[maxVectorSize];
           final boolean[] outputNulls = new boolean[maxVectorSize];
 
           @Override
@@ -628,37 +640,38 @@ public class VectorProcessors
               final boolean rightNull = rightNulls != null && rightNulls[i];
               if (leftNull) {
                 if (rightNull) {
-                  output[i] = 0.0;
+                  output[i] = 0;
                   outputNulls[i] = true;
                   return;
                 }
                 final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asDouble(bool);
+                output[i] = Evals.asLong(bool);
                 outputNulls[i] = !bool;
                 return;
               } else if (rightNull) {
                 final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asDouble(bool);
+                output[i] = Evals.asLong(bool);
                 outputNulls[i] = !bool;
                 return;
               }
             }
-            output[i] = Evals.asDouble(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
           }
 
           @Override
-          public ExprEvalVector<double[]> asEval()
+          public ExprEvalVector<long[]> asEval()
           {
-            return new ExprEvalDoubleVector(output, outputNulls);
+            return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<String[]>(
-            ExpressionType.STRING,
+        () -> new BivariateFunctionVectorProcessor<String[], String[], long[]>(
+            ExpressionType.LONG,
             left.buildVectorized(inspector),
             right.buildVectorized(inspector)
         )
         {
-          final String[] output = new String[maxVectorSize];
+          final long[] output = new long[maxVectorSize];
+          final boolean[] outputNulls = new boolean[maxVectorSize];
 
           @Override
           public void processIndex(
@@ -675,24 +688,26 @@ public class VectorProcessors
             final boolean rightNull = rightInput[i] == null;
             if (leftNull) {
               if (rightNull) {
-                output[i] = null;
+                outputNulls[i] = true;
                 return;
               }
               final boolean bool = Evals.asBoolean(rightInput[i]);
-              output[i] = bool ? Boolean.toString(true) : null;
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
               return;
             } else if (rightNull) {
               final boolean bool = Evals.asBoolean(leftInput[i]);
-              output[i] = bool ? Boolean.toString(true) : null;
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
               return;
             }
-            output[i] = Boolean.toString(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
           }
 
           @Override
-          public ExprEvalVector<String[]> asEval()
+          public ExprEvalVector<long[]> asEval()
           {
-            return new ExprEvalStringVector(output);
+            return new ExprEvalLongVector(output, outputNulls);
           }
         }
     );
@@ -701,7 +716,6 @@ public class VectorProcessors
   public static <T> ExprVectorProcessor<T> and(Expr.VectorInputBindingInspector inputTypes, Expr left, Expr right)
   {
     final int maxVectorSize = inputTypes.getMaxVectorSize();
-
     return makeSymmetricalProcessor(
         inputTypes,
         left,
@@ -755,13 +769,13 @@ public class VectorProcessors
             return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<double[]>(
+        () -> new BivariateFunctionVectorProcessor<double[], double[], long[]>(
             ExpressionType.DOUBLE,
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes)
         )
         {
-          final double[] output = new double[maxVectorSize];
+          final long[] output = new long[maxVectorSize];
           final boolean[] outputNulls = new boolean[maxVectorSize];
 
           @Override
@@ -785,32 +799,33 @@ public class VectorProcessors
                   return;
                 }
                 final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asDouble(bool);
+                output[i] = Evals.asLong(bool);
                 outputNulls[i] = bool;
                 return;
               } else if (rightNull) {
                 final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asDouble(bool);
+                output[i] = Evals.asLong(bool);
                 outputNulls[i] = bool;
                 return;
               }
             }
-            output[i] = Evals.asDouble(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
           }
 
           @Override
-          public ExprEvalVector<double[]> asEval()
+          public ExprEvalVector<long[]> asEval()
           {
-            return new ExprEvalDoubleVector(output, outputNulls);
+            return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<String[]>(
+        () -> new BivariateFunctionVectorProcessor<String[], String[], long[]>(
             ExpressionType.STRING,
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes)
         )
         {
-          final String[] output = new String[maxVectorSize];
+          final long[] output = new long[maxVectorSize];
+          final boolean[] outputNulls = new boolean[maxVectorSize];
 
           @Override
           public void processIndex(
@@ -827,24 +842,26 @@ public class VectorProcessors
             final boolean rightNull = rightInput[i] == null;
             if (leftNull) {
               if (rightNull) {
-                output[i] = null;
+                outputNulls[i] = true;
                 return;
               }
               final boolean bool = Evals.asBoolean(rightInput[i]);
-              output[i] = !bool ? Boolean.toString(false) : null;
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
               return;
             } else if (rightNull) {
               final boolean bool = Evals.asBoolean(leftInput[i]);
-              output[i] = !bool ? Boolean.toString(false) : null;
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
               return;
             }
-            output[i] = Boolean.toString(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
           }
 
           @Override
-          public ExprEvalVector<String[]> asEval()
+          public ExprEvalVector<long[]> asEval()
           {
-            return new ExprEvalStringVector(output);
+            return new ExprEvalLongVector(output, outputNulls);
           }
         }
     );

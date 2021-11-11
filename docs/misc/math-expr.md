@@ -250,6 +250,14 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 
+## Other functions
+
+| function | description |
+| --- | --- |
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
+
 
 ## Vectorization Support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
@@ -267,34 +275,31 @@ supported features:
 * string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
 
-
-## Other functions
-
-| function | description |
-| --- | --- |
-| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
-| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
-| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
-
 ## Legacy logical operator mode
-In earlier releases of Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, but this behavior has been changed so that these operations output 'homogeneous' boolean values.
+Prior to the 0.23 release of Apache Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, but this behavior has been changed so that these operations output 'homogeneous' boolean values - `LONG` values of `0` for `true` and `1` for `false`. Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values: 
+* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
+* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
 
 Old behavior:
 * `100 && 11` -> `11`
 * `0.7 || 0.3` -> `0.3`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `'troo'`
 
 Current behavior:
 * `100 && 11` -> `1`
-* `0.7 || 0.3` -> `1.0`
+* `0.7 || 0.3` -> `1`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `0`
 
 Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
 
 For the "or" operator:
-* `true || null`, `null || true`, -> `true`
+* `true || null`, `null || true`, -> `1`
 * `false || null`, `null || false`, `null || null`-> `null`
 
 For the "and" operator:
 * `true && null`, `null && true`, `null && null` -> `null`
-* `false && null`, `null && false` -> `false`
+* `false && null`, `null && false` -> `0`
 
-To revert to the behavior of previous Druid versions, `druid.generic.useLegacyLogicalOperators` can be set to `true` in your Druid configuration.
+To revert to the behavior of previous Druid versions, `druid.expressions.useLegacyLogicalOperators` can be set to `true` in your Druid configuration.
