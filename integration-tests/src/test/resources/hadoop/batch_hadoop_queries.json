@@ -25,7 +25,7 @@
             "errorMessage": null
           },
           "user_id_sketch": {
-            "type": "thetaSketch",
+            "type": "COMPLEX<thetaSketch>",
             "size": 0,
             "hasMultipleValues": false,
             "hasNulls": true,
@@ -35,7 +35,7 @@
             "errorMessage": null
           },
           "other_metric": {
-            "type": "thetaSketch",
+            "type": "COMPLEX<thetaSketch>",
             "size": 0,
             "hasMultipleValues": false,
             "hasNulls": true,

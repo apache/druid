@@ -97,6 +97,15 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
     };
   }
 
+  @DataProvider
+  public static Object[][] circuitBreakerResources()
+  {
+    return new Object[][]{
+        {new HashedPartitionsSpec(3, null, null)},
+        {new SingleDimensionPartitionsSpec(1000, null, "page", false)},
+    };
+  }
+
   @Test
   public void testLegacyITHadoopIndexTest() throws Exception
   {
@@ -162,6 +171,16 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString(0)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
 
           return spec;
         }
@@ -190,6 +209,127 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           new Pair<>(false, false)
       );
     }
+  }
+
+  /**
+   * Test that ingestion fails when maxIntervalsIngested is breached
+   *
+   * @param partitionsSpec
+   * @throws Exception
+   */
+  @Test(dataProvider = "circuitBreakerResources")
+  public void testIndexDataIntervalsCircuitBreaker(DimensionBasedPartitionsSpec partitionsSpec) throws Exception
+  {
+    String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
+    String reindexDatasource = REINDEX_DATASOURCE + "_" + UUID.randomUUID();
+
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(partitionsSpec)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString(0)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_INTERVALS_INGESTED%%",
+            jsonMapper.writeValueAsString(0)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENTS_INGESTED%%",
+            jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+        );
+
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        new Pair<>(false, false),
+        false
+    );
+  }
+
+  /**
+   * Test that hadoop batch ingest fails when the maxSegmentsIngested circuit breaker is breached.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testIndexDataHashedPartitioningSegmentCircuitBreaker() throws Exception
+  {
+    String indexDatasource = INDEX_DATASOURCE + "_" + UUID.randomUUID();
+    final Function<String, String> specPathsTransform = spec -> {
+      try {
+        String path = "/batch_index/json";
+        spec = StringUtils.replace(
+            spec,
+            "%%INPUT_PATHS%%",
+            path
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%PARTITIONS_SPEC%%",
+            jsonMapper.writeValueAsString(
+                new HashedPartitionsSpec(3, null, null)
+            )
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString(600000)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_INTERVALS_INGESTED%%",
+            jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%MAX_SEGMENTS_INGESTED%%",
+            jsonMapper.writeValueAsString(0)
+        );
+
+        return spec;
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    doIndexTest(
+        indexDatasource,
+        INDEX_TASK,
+        specPathsTransform,
+        INDEX_QUERIES_RESOURCE,
+        false,
+        false,
+        false,
+        new Pair<>(false, false),
+        false
+    );
   }
 
   /**
@@ -224,6 +364,16 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString(600000)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
           );
 
           return spec;
@@ -282,6 +432,16 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
               jsonMapper.writeValueAsString(1)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_INTERVALS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%MAX_SEGMENTS_INGESTED%%",
+              jsonMapper.writeValueAsString(Integer.MAX_VALUE)
           );
 
           return spec;
