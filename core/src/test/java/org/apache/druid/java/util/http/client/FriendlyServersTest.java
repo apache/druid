@@ -52,6 +52,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tests with servers that are at least moderately well-behaving.
@@ -105,6 +106,81 @@ public class FriendlyServersTest
 
       Assert.assertEquals(200, response.getStatus().getCode());
       Assert.assertEquals("hello!", response.getContent());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  @Test
+  public void testFriendlyProxyHttpServer() throws Exception
+  {
+    final AtomicReference<String> requestContent = new AtomicReference<>();
+
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            while (!Thread.currentThread().isInterrupted()) {
+              try (
+                  Socket clientSocket = serverSocket.accept();
+                  BufferedReader in = new BufferedReader(
+                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                  );
+                  OutputStream out = clientSocket.getOutputStream()
+              ) {
+                StringBuilder request = new StringBuilder();
+                String line;
+                while (!"".equals((line = in.readLine()))) {
+                  request.append(line).append("\r\n");
+                }
+                requestContent.set(request.toString());
+                out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+
+                while (!in.readLine().equals("")) {
+                  // skip lines
+                }
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+              }
+              catch (Exception e) {
+                Assert.fail(e.toString());
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig
+          .builder()
+          .withHttpProxyConfig(
+              new HttpClientProxyConfig("localhost", serverSocket.getLocalPort(), "bob", "sally")
+          )
+          .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final StatusResponseHolder response = client
+          .go(
+              new Request(
+                  HttpMethod.GET,
+                  new URL("http://anotherHost:8080/")
+              ),
+              StatusResponseHandler.getInstance()
+          ).get();
+
+      Assert.assertEquals(200, response.getStatus().getCode());
+      Assert.assertEquals("hello!", response.getContent());
+
+      Assert.assertEquals(
+          "CONNECT anotherHost:8080 HTTP/1.1\r\nProxy-Authorization: Basic Ym9iOnNhbGx5\r\n",
+          requestContent.get()
+      );
     }
     finally {
       exec.shutdownNow();

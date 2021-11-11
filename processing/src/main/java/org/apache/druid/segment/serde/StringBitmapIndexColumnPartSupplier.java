@@ -28,14 +28,16 @@ import org.apache.druid.segment.data.GenericIndexed;
 import javax.annotation.Nullable;
 
 /**
+ * Provides {@link BitmapIndex} for some dictionary encoded column, where the dictionary and bitmaps are stored in some
+ * {@link GenericIndexed}.
  */
-public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
+public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
 {
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
   private final GenericIndexed<String> dictionary;
 
-  public BitmapIndexColumnPartSupplier(
+  public StringBitmapIndexColumnPartSupplier(
       BitmapFactory bitmapFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
       GenericIndexed<String> dictionary

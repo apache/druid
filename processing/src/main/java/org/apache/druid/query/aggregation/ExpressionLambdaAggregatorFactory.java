@@ -39,12 +39,12 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.math.expr.SettableObjectBinding;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.virtual.ExpressionPlan;
 import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -92,12 +92,9 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   private final Supplier<Expr> finalizeExpression;
   private final HumanReadableBytes maxSizeBytes;
 
-  private final Supplier<SettableObjectBinding> compareBindings =
-      Suppliers.memoize(() -> new SettableObjectBinding(2));
-  private final Supplier<SettableObjectBinding> combineBindings =
-      Suppliers.memoize(() -> new SettableObjectBinding(2));
-  private final Supplier<SettableObjectBinding> finalizeBindings =
-      Suppliers.memoize(() -> new SettableObjectBinding(1));
+  private final Supplier<SettableObjectBinding> compareBindings;
+  private final Supplier<SettableObjectBinding> combineBindings;
+  private final Supplier<SettableObjectBinding> finalizeBindings;
   private final Supplier<Expr.InputBindingInspector> finalizeInspector;
 
   @JsonCreator
@@ -145,12 +142,12 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     this.initialValue = Suppliers.memoize(() -> {
       Expr parsed = Parser.parse(initialValue, macroTable);
       Preconditions.checkArgument(parsed.isLiteral(), "initial value must be constant");
-      return parsed.eval(ExprUtils.nilBindings());
+      return parsed.eval(InputBindings.nilBindings());
     });
     this.initialCombineValue = Suppliers.memoize(() -> {
       Expr parsed = Parser.parse(this.initialCombineValueExpressionString, macroTable);
       Preconditions.checkArgument(parsed.isLiteral(), "initial combining value must be constant");
-      return parsed.eval(ExprUtils.nilBindings());
+      return parsed.eval(InputBindings.nilBindings());
     });
     this.foldExpression = Parser.lazyParse(foldExpressionString, macroTable);
     this.combineExpression = Parser.lazyParse(combineExpressionString, macroTable);
@@ -159,6 +156,29 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         () -> InputBindings.inspectorFromTypeMap(
             ImmutableMap.of(FINALIZE_IDENTIFIER, this.initialCombineValue.get().type())
         )
+    );
+    this.compareBindings = Suppliers.memoize(
+        () -> new SettableObjectBinding(2).withInspector(
+            InputBindings.inspectorFromTypeMap(
+                ImmutableMap.of(
+                    COMPARE_O1, this.initialCombineValue.get().type(),
+                    COMPARE_O2, this.initialCombineValue.get().type()
+                )
+            )
+        )
+    );
+    this.combineBindings = Suppliers.memoize(
+        () -> new SettableObjectBinding(2).withInspector(
+            InputBindings.inspectorFromTypeMap(
+                ImmutableMap.of(
+                    accumulatorId, this.initialCombineValue.get().type(),
+                    name, this.initialCombineValue.get().type()
+                )
+            )
+        )
+    );
+    this.finalizeBindings = Suppliers.memoize(
+        () -> new SettableObjectBinding(1).withInspector(finalizeInspector.get())
     );
     this.finalizeExpression = Parser.lazyParse(finalizeExpressionString, macroTable);
     this.maxSizeBytes = maxSizeBytes != null ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
@@ -285,11 +305,13 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       return (o1, o2) ->
           compareExpr.eval(compareBindings.get().withBinding(COMPARE_O1, o1).withBinding(COMPARE_O2, o2)).asInt();
     }
-    switch (initialValue.get().type().getType()) {
+    switch (initialCombineValue.get().type().getType()) {
       case LONG:
         return LongSumAggregator.COMPARATOR;
       case DOUBLE:
         return DoubleSumAggregator.COMPARATOR;
+      case COMPLEX:
+        return Types.getStrategy(initialCombineValue.get().type().getComplexTypeName());
       default:
         return Comparators.naturalNullsFirst();
     }

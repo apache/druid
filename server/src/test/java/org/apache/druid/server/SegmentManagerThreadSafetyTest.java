@@ -58,7 +58,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -187,7 +186,7 @@ public class SegmentManagerThreadSafetyTest
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
+    FileUtils.mkdirp(segmentDir);
 
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, new TestSegmentizerFactory());

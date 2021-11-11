@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.tdigestsketch.sql;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -66,12 +67,15 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new TDigestSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     TDigestSketchModule.registerSerde();
-    for (Module mod : new TDigestSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-    }
 
     final QueryableIndex index =
         IndexBuilder.create(CalciteTests.getJsonMapper())

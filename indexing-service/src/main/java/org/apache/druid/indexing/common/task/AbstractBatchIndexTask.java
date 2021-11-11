@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -56,6 +57,8 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -479,14 +482,22 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig,
-      GranularitySpec granularitySpec
+      IngestionSpec ingestionSpec
   )
   {
     if (storeCompactionState) {
-      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final Map<String, Object> granularitySpecMap = granularitySpec.asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap, granularitySpecMap);
+      TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
+      GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
+      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
+                                      ? null
+                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions(), null, null);
+      final CompactionState compactionState = new CompactionState(
+          tuningConfig.getPartitionsSpec(),
+          dimensionsSpec,
+          tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
+          granularitySpec.asMap(toolbox.getJsonMapper())
+      );
       return segments -> segments
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))

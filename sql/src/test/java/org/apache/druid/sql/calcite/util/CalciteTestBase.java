@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.BeforeClass;
@@ -36,5 +37,6 @@ public abstract class CalciteTestBase
   {
     Calcites.setSystemProperties();
     NullHandling.initializeForTests();
+    ExpressionProcessing.initializeForTests(null);
   }
 }

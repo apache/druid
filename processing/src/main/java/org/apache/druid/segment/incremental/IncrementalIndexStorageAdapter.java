@@ -240,21 +240,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public String getColumnTypeName(String column)
-  {
-    final String metricType = index.getMetricType(column);
-    if (metricType != null) {
-      return metricType;
-    }
-    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    if (columnCapabilities != null) {
-      return columnCapabilities.asTypeString();
-    } else {
-      return null;
-    }
-  }
-
-  @Override
   public DateTime getMaxIngestedEventTime()
   {
     return index.getMaxIngestedEventTime();
