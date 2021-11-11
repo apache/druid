@@ -38,7 +38,6 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   @VisibleForTesting
   static final String NUM_SHARDS = "numShards";
 
-  private static final String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
   private static final HashPartitionFunction DEFAULT_HASH_FUNCTION = HashPartitionFunction.MURMUR3_32_ABS;
 
   @Nullable
@@ -55,15 +54,15 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
   @JsonCreator
   public HashedPartitionsSpec(
-      @JsonProperty(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
+      @JsonProperty(TARGET_ROWS_PER_SEGMENT) @Nullable Integer targetRowsPerSegment,
       @JsonProperty(NUM_SHARDS) @Nullable Integer numShards,
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty(PARTITION_DIMENSIONS) @Nullable List<String> partitionDimensions,
       @JsonProperty("partitionFunction") @Nullable HashPartitionFunction partitionFunction,
 
       // Deprecated properties preserved for backward compatibility:
-      @Deprecated @JsonProperty(DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE) @Nullable
+      @Deprecated @JsonProperty(TARGET_PARTITION_SIZE) @Nullable
           Integer targetPartitionSize,  // prefer targetRowsPerSegment
-      @Deprecated @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable
+      @Deprecated @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable
           Integer maxRowsPerSegment  // prefer targetRowsPerSegment
   )
   {
@@ -74,14 +73,14 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
 
     // targetRowsPerSegment, targetPartitionSize, and maxRowsPerSegment are aliases
     Property<Integer> target = Checks.checkAtMostOneNotNull(
-        DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        TARGET_ROWS_PER_SEGMENT,
         adjustedTargetRowsPerSegment,
-        DimensionBasedPartitionsSpec.TARGET_PARTITION_SIZE,
+        TARGET_PARTITION_SIZE,
         adjustedTargetPartitionSize
     );
     target = Checks.checkAtMostOneNotNull(
         target,
-        new Property<>(PartitionsSpec.MAX_ROWS_PER_SEGMENT, adjustedMaxRowsPerSegment)
+        new Property<>(MAX_ROWS_PER_SEGMENT, adjustedMaxRowsPerSegment)
     );
 
     // targetRowsPerSegment/targetPartitionSize/maxRowsPerSegment and numShards are incompatible

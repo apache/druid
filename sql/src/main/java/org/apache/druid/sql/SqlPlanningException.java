@@ -65,7 +65,7 @@ public class SqlPlanningException extends BadQueryException
     this(PlanningError.VALIDATION_ERROR, e.getMessage());
   }
 
-  private SqlPlanningException(PlanningError planningError, String errorMessage)
+  public SqlPlanningException(PlanningError planningError, String errorMessage)
   {
     this(planningError.errorCode, errorMessage, planningError.errorClass);
   }

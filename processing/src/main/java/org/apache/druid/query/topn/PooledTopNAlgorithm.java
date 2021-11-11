@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.historical.HistoricalColumnSelector;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -784,7 +784,7 @@ public class PooledTopNAlgorithm
       if (resultsBufHolder != null) {
         resultsBufHolder.get().clear();
       }
-      CloseQuietly.close(resultsBufHolder);
+      CloseableUtils.closeAndWrapExceptions(resultsBufHolder);
     }
   }
 

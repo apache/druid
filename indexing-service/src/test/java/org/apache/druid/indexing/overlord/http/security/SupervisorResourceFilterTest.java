@@ -72,18 +72,18 @@ public class SupervisorResourceFilterTest
   }
 
   @Test
-  public void testGetWhenUserHasWriteAccess()
+  public void testGetWhenUserHasReadAccess()
   {
-    setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.WRITE, true);
+    setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.READ, true);
     ContainerRequest filteredRequest = resourceFilter.filter(containerRequest);
     Assert.assertNotNull(filteredRequest);
     verifyMocks();
   }
 
   @Test
-  public void testGetWhenUserHasNoWriteAccess()
+  public void testGetWhenUserHasNoReadAccess()
   {
-    setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.WRITE, false);
+    setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.READ, false);
 
     ForbiddenException expected = null;
     try {

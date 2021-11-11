@@ -31,8 +31,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -127,13 +127,13 @@ public class DoublesSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("doublesSketch", null)
                     .add("doublesSketchMerge", null)
-                    .add("doublesSketch-access", ValueType.COMPLEX)
-                    .add("doublesSketch-finalize", ValueType.LONG)
-                    .add("doublesSketchMerge-access", ValueType.COMPLEX)
-                    .add("doublesSketchMerge-finalize", ValueType.LONG)
+                    .add("doublesSketch-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketch-finalize", ColumnType.LONG)
+                    .add("doublesSketchMerge-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketchMerge-finalize", ColumnType.LONG)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

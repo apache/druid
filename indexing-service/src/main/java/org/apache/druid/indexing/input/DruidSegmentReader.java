@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.DimFilter;
@@ -54,10 +53,11 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.File;
@@ -208,10 +208,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       @Override
       public void close() throws IOException
       {
-        Closer closer = Closer.create();
-        closer.register(rowYielder);
-        closer.register(segmentFile);
-        closer.close();
+        CloseableUtils.closeAll(rowYielder, segmentFile);
       }
     };
   }
@@ -224,9 +221,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     private static final IntermediateRowColumnProcessorFactory INSTANCE = new IntermediateRowColumnProcessorFactory();
 
     @Override
-    public ValueType defaultType()
+    public ColumnType defaultType()
     {
-      return ValueType.STRING;
+      return ColumnType.STRING;
     }
 
     @Override

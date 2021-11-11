@@ -26,8 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -53,7 +51,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -63,20 +60,17 @@ public class GroupByStrategyV1 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
 
   @Inject
   public GroupByStrategyV1(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByQueryEngine engine,
-      QueryWatcher queryWatcher,
-      @Global NonBlockingPool<ByteBuffer> bufferPool
+      QueryWatcher queryWatcher
   )
   {
     this.configSupplier = configSupplier;
     this.engine = engine;
     this.queryWatcher = queryWatcher;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -108,7 +102,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         query,
         null,
         configSupplier.get(),
-        bufferPool,
         baseRunner.run(
             QueryPlus.wrap(
                 new GroupByQuery.Builder(query)
@@ -217,7 +210,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         ),
         subquery,
         configSupplier.get(),
-        bufferPool,
         subqueryResult
     );
 
@@ -229,7 +221,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
         outerQuery,
         null,
         configSupplier.get(),
-        bufferPool,
         Sequences.concat(
             Sequences.map(
                 Sequences.simple(outerQuery.getIntervals()),
@@ -274,7 +265,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
       final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
-    return new GroupByMergedQueryRunner<>(queryProcessingPool, configSupplier, queryWatcher, bufferPool, queryRunners);
+    return new GroupByMergedQueryRunner<>(queryProcessingPool, configSupplier, queryWatcher, queryRunners);
   }
 
   @Override

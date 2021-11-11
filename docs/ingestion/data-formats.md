@@ -29,7 +29,7 @@ This page lists all default and core extension data formats supported by Druid.
 For additional data formats supported with community extensions,
 please see our [community extensions list](../development/extensions.md#community-extensions).
 
-## Formatting the Data
+## Formatting data
 
 The following samples show data formats that are natively supported in Druid:
 
@@ -67,12 +67,12 @@ Note that the CSV and TSV data do not contain column heads. This becomes importa
 
 Besides text formats, Druid also supports binary formats such as [Orc](#orc) and [Parquet](#parquet) formats.
 
-## Custom Formats
+## Custom formats
 
-Druid supports custom data formats and can use the `Regex` parser or the `JavaScript` parsers to parse these formats. Please note that using any of these parsers for
-parsing data will not be as efficient as writing a native Java parser or using an external stream processor. We welcome contributions of new Parsers.
+Druid supports custom data formats and can use the Regex parser or the JavaScript parsers to parse these formats. Using any of these parsers for
+parsing data is less efficient than writing a native Java parser or using an external stream processor. We welcome contributions of new parsers.
 
-## Input Format
+## Input format
 
 > The Input Format is a new way to specify the data format of your input data which was introduced in 0.17.0.
 Unfortunately, the Input Format doesn't support all data formats or ingestion methods supported by Druid yet.
@@ -87,7 +87,7 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `json`. | yes |
+| type | String | Set value to `json`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
 | featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson library. Those features will be applied when parsing the input JSON data. | no |
 
@@ -107,7 +107,7 @@ Configure the CSV `inputFormat` to load CSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `csv`. | yes |
+| type | String | Set value to `csv`. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
@@ -130,7 +130,7 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `tsv`. | yes |
+| type | String | Set value to `tsv`. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default = `\t`) |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
@@ -151,11 +151,24 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 }
 ```
 
-### KAFKA
+### Kafka
 
-The `inputFormat` to load complete kafka record including header, key and value. An example is:
+Configure the Kafka `inputFormat` to load complete kafka records including header, key, and value. 
 
-```json
+> That Kafka inputFormat is currently designated as experimental.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `kafka`. | yes |
+| headerLabelPrefix | String | Custom label prefix for all the header columns. | no (default = "kafka.header.") |
+| timestampColumnName | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
+| keyColumnName | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
+| headerFormat | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
+| keyFormat | [InputFormat](#input-format) | Any existing `inputFormat` used to parse the Kafka key. It only processes the first entry of the input format. For details, see [Specifying data format](../development/extensions-core/kafka-ingestion.md#specifying-data-format). | no |
+| valueFormat | [InputFormat](#input-format) | `valueFormat` can be any existing `inputFormat` to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-ingestion.md#specifying-data-format). | yes |
+
+For example:
+```
 "ioConfig": {
   "inputFormat": {
       "type": "kafka",
@@ -179,47 +192,28 @@ The `inputFormat` to load complete kafka record including header, key and value.
 }
 ```
 
-The KAFKA `inputFormat` has the following components:
+Note the following behaviors:
+- If there are conflicts between column names, Druid uses the column names from the payload and ignores the column name from the header or key. This behavior makes it easier to migrate to the the Kafka `inputFormat` from another Kafka ingestion spec without losing data.
+- The Kafka input format fundamentally blends information from the header, key, and value objects from a Kafka record to create a row in Druid. It extracts individual records from the value. Then it augments each value with the corresponding key or header columns.
+- The Kafka input format by default exposes Kafka timestamp `timestampColumnName` to make it available for use as the primary timestamp column. Alternatively you can choose timestamp column from either the key or value payload.
 
-> Note that KAFKA inputFormat is currently designated as experimental.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `kafka`. | yes |
-| headerLabelPrefix | String | A custom label prefix for all the header columns. | no (default = "kafka.header.") |
-| timestampColumnName | String | Specifies the name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| keyColumnName | String | Specifies the name of the column for the kafka record's key.| no (default = "kafka.key") |
-| headerFormat | Object | headerFormat specifies how to parse the kafka headers. Current supported type is "string". Since header values are bytes, the current parser by defaults reads it as UTF-8 encoded strings. There is flexibility to change this behavior by implementing your very own parser based on the encoding style. The 'encoding' type in KafkaStringHeaderFormat class needs to change with the custom implementation. | no |
-| keyFormat | [InputFormat](#input-format) | keyFormat can be any existing inputFormat to parse the kafka key. The current behavior is to only process the first entry of the input format. See [the below section](../development/extensions-core/kafka-ingestion.md#specifying-data-format) for details about specifying the input format. | no |
-| valueFormat | [InputFormat](#input-format) | valueFormat can be any existing inputFormat to parse the kafka value payload. See [the below section](../development/extensions-core/kafka-ingestion.md#specifying-data-format) for details about specifying the input format. | yes |
-
+For example, the following `timestampSpec` uses the default Kafka timestamp from the Kafka record:
 ```
-> For any conflicts in dimension/metric names, this inputFormat will prefer kafka value's column names.
-> This will enable seemless porting of existing kafka ingestion inputFormat to this new format, with additional columns from kafka header and key.
-
-> Kafka input format fundamentally blends information from header, key and value portions of a kafka record to create a druid row. It does this by 
-> exploding individual records from the value and augmenting each of these values with the selected key/header columns.
-
-> Kafka input format also by default exposes kafka timestamp (timestampColumnName), which can be used as the primary timestamp column. 
-> One can also choose timestamp column from either key or value payload, if there is no timestamp available then the default kafka timestamp is our savior.
-> eg.,
-
-    // Below timestampSpec chooses kafka's default timestamp that is available in kafka record
     "timestampSpec":
     {
         "column": "kafka.timestamp",
         "format": "millis"
     }
+```
     
-    // Assuming there is a timestamp field in the header and we have "kafka.header." as a desired prefix for header columns,
-    // below example chooses header's timestamp as a primary timestamp column
+If you are using "kafka.header." as the prefix for Kafka header columns and there is a timestamp field in the header, the header timestamp serves as the primary timestamp column. For example:
+```
     "timestampSpec":
     {
         "column": "kafka.header.timestamp",
         "format": "millis"
     }
 ```
-
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)). 
@@ -229,7 +223,7 @@ Configure the ORC `inputFormat` to load ORC data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `orc`. | yes |
+| type | String | Set value to `orc`. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
 | binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
@@ -262,8 +256,8 @@ Configure the Parquet `inputFormat` to load Parquet data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `parquet` to read Parquet file| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|type| String| Set value to `parquet`.| yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 For example:
@@ -297,8 +291,8 @@ Configure the Avro `inputFormat` to load Avro data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `avro_stream` to read Avro serialized data| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|type| String| Set value to `avro_stream`. | yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro record. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 |`avroBytesDecoder`| JSON Object |Specifies how to decode bytes to Avro record. | yes |
 | binaryAsString | Boolean | Specifies if the bytes Avro column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
@@ -412,7 +406,7 @@ This Avro bytes decoder first extracts `subject` and `id` from the input message
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `schema_repo`. | no |
+| type | String | Set value to `schema_repo`. | no |
 | subjectAndIdConverter | JSON Object | Specifies how to extract the subject and id from message bytes. | yes |
 | schemaRepository | JSON Object | Specifies how to look up the Avro schema from subject and id. | yes |
 
@@ -422,7 +416,7 @@ This section describes the format of the `subjectAndIdConverter` object for the 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `avro_1124`. | no |
+| type | String | Set value to `avro_1124`. | no |
 | topic | String | Specifies the topic of your Kafka stream. | yes |
 
 
@@ -432,8 +426,8 @@ This section describes the format of the `schemaRepository` object for the `sche
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `avro_1124_rest_client`. | no |
-| url | String | Specifies the endpoint url of your Avro-1124 schema repository. | yes |
+| type | String | Set value to `avro_1124_rest_client`. | no |
+| url | String | Specifies the endpoint URL of your Avro-1124 schema repository. | yes |
 
 ###### Confluent Schema Registry-based Avro Bytes Decoder
 
@@ -442,10 +436,10 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `schema_registry`. | no |
-| url | String | Specifies the url endpoint of the Schema Registry. | yes |
+| type | String | Set value to `schema_registry`. | no |
+| url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
-| urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
+| urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 | headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
@@ -504,9 +498,9 @@ Configure the Avro OCF `inputFormat` to load Avro OCF data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `avro_ocf` to read Avro OCF file| yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro records. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|schema| JSON Object |Define a reader schema to be used when parsing Avro records, this is useful when parsing multiple versions of Avro OCF file data | no (default will decode using the writer schema contained in the OCF file) |
+|type| String|  Set value to `avro_ocf`. | yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|schema| JSON Object |Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data. | no (default will decode using the writer schema contained in the OCF file) |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 For example:
@@ -553,7 +547,7 @@ Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-|type| String| This should be set to `protobuf` to read Protobuf serialized data| yes |
+|type| String| Set value to `protobuf`. | yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
 |`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
 
@@ -645,7 +639,7 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `string` in general, or `hadoopyString` when used in a Hadoop indexing job. | yes |
+| type | String | Set value to `string` for most cases. Otherwise use `hadoopyString` for Hadoop indexing. | yes |
 | parseSpec | JSON Object | Specifies the format, timestamp, and dimensions of the data. | yes |
 
 ### Avro Hadoop Parser
@@ -664,7 +658,7 @@ See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Reso
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `avro_hadoop`. | yes |
+| type | String | Set value to `avro_hadoop`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
@@ -718,8 +712,8 @@ The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.m
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
-|type      | String      | This should say `orc`                                                                  | yes|
-|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data (`timeAndDims` and `orc` format) and a `flattenSpec` (`orc` format) | yes|
+| type | String | Set value to `orc`. | yes |
+|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data (`timeAndDims` and `orc` format) and a `flattenSpec` (`orc` format). | yes|
 
 The parser supports two `parseSpec` formats: `orc` and `timeAndDims`.
 
@@ -959,8 +953,8 @@ JSON path expressions for all supported types.
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
-| type      | String      | This should say `parquet`.| yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Valid parseSpec formats are `timeAndDims` and `parquet` | yes |
+| type      | String      | Set value to `parquet`. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Valid parseSpec formats are `timeAndDims` and `parquet`. | yes |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
 When the time dimension is a [DateType column](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md),
@@ -1109,7 +1103,7 @@ Note that the `int96` Parquet value type is not supported with this parser.
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
-| type      | String      | This should say `parquet-avro`. | yes |
+| type      | String      | Set value to `parquet-avro`. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data, and optionally, a flatten spec. Should be `avro`. | yes |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no(default = false) |
 
@@ -1182,7 +1176,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Avro data 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `avro_stream`. | no |
+| type | String | Set value to `avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies [`avroBytesDecoder`](#Avro Bytes Decoder) to decode bytes to Avro record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
@@ -1222,9 +1216,9 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Protocol b
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `protobuf`. | yes |
+| type | String | Set value to `protobuf`. | yes |
 | `protoBytesDecoder` | JSON Object | Specifies how to decode bytes to Protobuf record. | yes |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options.  Note that timeAndDims parseSpec is no longer supported. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](#json-parsespec) for more configuration options. Note that `timeAndDims` `parseSpec` is no longer supported. | yes |
 
 Sample spec:
 
@@ -1273,9 +1267,9 @@ This Protobuf bytes decoder first read a descriptor file, and then parse it to g
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `file`. | yes |
+| type | String | Set value to `file`. | yes |
 | descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
 
 Sample spec:
 
@@ -1294,10 +1288,10 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `schema_registry`. | yes |
-| url | String | Specifies the url endpoint of the Schema Registry. | yes |
+| type | String | Set value to `schema_registry`. | yes |
+| url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
-| urls | Array<String> | Specifies the url endpoints of the multiple Schema Registry instances. | yes(if `url` is not provided) |
+| urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md).  | no |
 | headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
@@ -1366,7 +1360,7 @@ Use this with the String Parser to load JSON.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `json`. | no |
+| format | String |`json`| no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
@@ -1393,7 +1387,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `jsonLowercase`. | yes |
+| format | String | `jsonLowercase` | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -1403,7 +1397,7 @@ Use this with the String Parser to load CSV. Strings are parsed using the com.op
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `csv`. | yes |
+| format | String | `csv` | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default = ctrl+A) |
@@ -1448,7 +1442,7 @@ the delimiter is a tab, so this will load TSV.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `tsv`. | yes |
+| format | String | `tsv` | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | delimiter | String | A custom delimiter for data values. | no (default = \t) |
@@ -1537,7 +1531,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `timeAndDims`. | yes |
+| format | String | `timeAndDims` | yes |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
@@ -1547,7 +1541,7 @@ Use this with the Hadoop ORC Parser to load ORC files.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `orc`. | no |
+| format | String |  `orc`| no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
@@ -1558,7 +1552,7 @@ Use this with the Hadoop Parquet Parser to load Parquet files.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| format | String | This should say `parquet`. | no |
+| format | String |  `parquet`| no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |

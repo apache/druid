@@ -122,16 +122,14 @@ public class OverlordResourceTest
               case "allow":
                 return new Access(true);
               case Datasources.WIKIPEDIA:
-                // All users can read wikipedia but only writer can write
+                // Only "Wiki Reader" can read "wikipedia"
                 return new Access(
-                    action == Action.READ
-                    || (action == Action.WRITE && Users.WIKI_WRITER.equals(username))
+                    action == Action.READ && Users.WIKI_READER.equals(username)
                 );
               case Datasources.BUZZFEED:
-                // All users can read buzzfeed but only writer can write
+                // Only "Buzz Reader" can read "buzzfeed"
                 return new Access(
-                    action == Action.READ
-                    || (action == Action.WRITE && Users.BUZZ_WRITER.equals(username))
+                    action == Action.READ && Users.BUZZ_READER.equals(username)
                 );
               default:
                 return new Access(false);
@@ -857,11 +855,11 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testGetTasksRequiresDatasourceWrite()
+  public void testGetTasksRequiresDatasourceRead()
   {
-    // Setup mocks for a user who has write access to "wikipedia"
-    // and read access to "buzzfeed"
-    expectAuthorizationTokenCheck(Users.WIKI_WRITER);
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
 
     // Setup mocks to return completed, active, known, pending and running tasks
     EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
@@ -907,7 +905,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
 
-    // Verify that only the tasks of write access datasource are returned
+    // Verify that only the tasks of read access datasource are returned
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, null, req)
         .getEntity();
@@ -918,11 +916,11 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testGetTasksFilterByDatasourceRequiresWrite()
+  public void testGetTasksFilterByDatasourceRequiresReadAccess()
   {
-    // Setup mocks for a user who has write access to "wikipedia"
-    // and read access to "buzzfeed"
-    expectAuthorizationTokenCheck(Users.WIKI_WRITER);
+    // Setup mocks for a user who has read access to "wikipedia"
+    // and no access to "buzzfeed"
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
 
     // Setup mocks to return completed, active, known, pending and running tasks
     EasyMock.expect(taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(null, null, null)).andStubReturn(
@@ -949,7 +947,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
 
-    // Verify that only the tasks of write access datasource are returned
+    // Verify that only the tasks of read access datasource are returned
     expectedException.expect(WebApplicationException.class);
     overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req);
   }
@@ -1042,7 +1040,7 @@ public class OverlordResourceTest
   @Test
   public void testTaskPostDeniesDatasourceReadUser()
   {
-    expectAuthorizationTokenCheck(Users.WIKI_WRITER);
+    expectAuthorizationTokenCheck(Users.WIKI_READER);
 
     EasyMock.replay(
         taskRunner,
@@ -1054,7 +1052,7 @@ public class OverlordResourceTest
     );
 
     // Verify that taskPost fails for user who has only datasource read access
-    Task task = NoopTask.create(Datasources.BUZZFEED);
+    Task task = NoopTask.create(Datasources.WIKIPEDIA);
     expectedException.expect(ForbiddenException.class);
     expectedException.expect(ForbiddenException.class);
     overlordResource.taskPost(task, req);
@@ -1516,8 +1514,8 @@ public class OverlordResourceTest
   private static class Users
   {
     private static final String DRUID = "druid";
-    private static final String WIKI_WRITER = "Wiki Writer";
-    private static final String BUZZ_WRITER = "Buzz Writer";
+    private static final String WIKI_READER = "Wiki Reader";
+    private static final String BUZZ_READER = "Buzz Reader";
   }
 
   /**

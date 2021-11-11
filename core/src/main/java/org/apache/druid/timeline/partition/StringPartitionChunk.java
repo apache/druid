@@ -19,23 +19,37 @@
 
 package org.apache.druid.timeline.partition;
 
+import org.apache.druid.data.input.StringTuple;
+
+import java.util.Objects;
+
 /**
  */
 public class StringPartitionChunk<T> implements PartitionChunk<T>
 {
-  private final String start;
-  private final String end;
+  private final StringTuple start;
+  private final StringTuple end;
   private final int chunkNumber;
   private final T object;
 
-  public static <T> StringPartitionChunk<T> make(String start, String end, int chunkNumber, T obj)
+  public static <T> StringPartitionChunk<T> makeForSingleDimension(String start, String end, int chunkNumber, T obj)
   {
-    return new StringPartitionChunk<T>(start, end, chunkNumber, obj);
+    return new StringPartitionChunk<>(
+        start == null ? null : StringTuple.create(start),
+        end == null ? null : StringTuple.create(end),
+        chunkNumber,
+        obj
+    );
   }
 
-  public StringPartitionChunk(
-      String start,
-      String end,
+  public static <T> StringPartitionChunk<T> make(StringTuple start, StringTuple end, int chunkNumber, T obj)
+  {
+    return new StringPartitionChunk<>(start, end, chunkNumber, obj);
+  }
+
+  private StringPartitionChunk(
+      StringTuple start,
+      StringTuple end,
       int chunkNumber,
       T object
   )
@@ -58,7 +72,7 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     if (chunk instanceof StringPartitionChunk) {
       StringPartitionChunk<T> stringChunk = (StringPartitionChunk<T>) chunk;
 
-      return !stringChunk.isStart() && stringChunk.start.equals(end);
+      return !stringChunk.isStart() && Objects.equals(stringChunk.start, end);
     }
 
     return false;
@@ -111,8 +125,8 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
   @Override
   public int hashCode()
   {
-    int result = start != null ? start.hashCode() : 0;
-    result = 31 * result + (end != null ? end.hashCode() : 0);
+    int result = Objects.hashCode(start);
+    result = 31 * result + Objects.hashCode(end);
     result = 31 * result + (object != null ? object.hashCode() : 0);
     return result;
   }

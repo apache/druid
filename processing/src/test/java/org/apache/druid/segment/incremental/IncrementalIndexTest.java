@@ -102,7 +102,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensions() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -122,7 +122,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -135,7 +135,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void controlTest() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -162,7 +162,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testUnparseableNumerics() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
 
     IncrementalIndexAddResult result;
     result = index.add(
@@ -228,7 +228,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         Lists.newArrayList("billy", "joe"),
         ImmutableMap.of("billy", "A", "joe", "B")
     );
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(row);
     index.add(row);
     index.add(row);

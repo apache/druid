@@ -22,7 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 public class StringDimensionSchema extends DimensionSchema
 {
@@ -57,8 +57,8 @@ public class StringDimensionSchema extends DimensionSchema
 
   @Override
   @JsonIgnore
-  public ValueType getValueType()
+  public ColumnType getColumnType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 }

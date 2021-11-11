@@ -1049,6 +1049,44 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testAssertionErrorThrowsErrorWithFilterResponse() throws Exception
+  {
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig() {
+          @Override
+          public boolean isShowDetailedJettyErrors()
+          {
+            return true;
+          }
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
+          }
+        }
+    );
+
+    String errorMessage = "could not assert";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new Error(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertNull(exception.getMessage());
+    Assert.assertNull(exception.getHost());
+    Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.UNKNOWN_EXCEPTION);
+    Assert.assertNull(exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
   public void testTooManyRequests() throws Exception
   {
     sleep = true;

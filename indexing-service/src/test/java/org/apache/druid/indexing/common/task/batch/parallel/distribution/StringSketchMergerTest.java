@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -54,15 +55,15 @@ public class StringSketchMergerTest
   @Test
   public void mergesCorrectly()
   {
-    String string1 = "a";
+    StringTuple string1 = StringTuple.create("a");
     StringSketch sketch1 = new StringSketch();
     sketch1.put(string1);
 
-    String string2 = "mn";
+    StringTuple string2 = StringTuple.create("mn");
     StringSketch sketch2 = new StringSketch();
     sketch2.put(string2);
 
-    String string3 = "z";
+    StringTuple string3 = StringTuple.create("z");
     StringSketch sketch3 = new StringSketch();
     sketch3.put(string3);
 

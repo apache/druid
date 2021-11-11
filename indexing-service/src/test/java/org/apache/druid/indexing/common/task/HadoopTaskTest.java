@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
-import org.apache.hadoop.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -146,7 +145,7 @@ public class HadoopTaskTest
       // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
       Assert.assertNull(classLoader.getParent());
     }
-    Assert.assertFalse(classLoader instanceof ApplicationClassLoader);
+    Assert.assertFalse(classLoader.getClass().getSimpleName().equals("ApplicationClassLoader"));
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
     final ClassLoader appLoader = HadoopDruidIndexerConfig.class.getClassLoader();

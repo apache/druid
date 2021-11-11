@@ -52,6 +52,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -60,12 +61,12 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
 import org.apache.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -239,9 +240,9 @@ public class IndexIO
 
       ColumnCapabilities capabilities1 = adapter1.getCapabilities(dim1Name);
       ColumnCapabilities capabilities2 = adapter2.getCapabilities(dim2Name);
-      ValueType dim1Type = capabilities1.getType();
-      ValueType dim2Type = capabilities2.getType();
-      if (dim1Type != dim2Type) {
+      ColumnType dim1Type = capabilities1.toColumnType();
+      ColumnType dim2Type = capabilities2.toColumnType();
+      if (!Objects.equals(dim1Type, dim2Type)) {
         throw new SegmentValidationException(
             "Dim [%s] types not equal. Expected %d found %d",
             dim1Name,
@@ -452,7 +453,7 @@ public class IndexIO
                 )
             )
             .setBitmapIndex(
-                new BitmapIndexColumnPartSupplier(
+                new StringBitmapIndexColumnPartSupplier(
                     new ConciseBitmapFactory(),
                     index.getBitmapIndexes().get(dimension),
                     index.getDimValueLookup(dimension)

@@ -19,7 +19,11 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ForwardingList;
+import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,21 +35,14 @@ import java.util.stream.Collectors;
 /**
  * List of range partition boundaries.
  */
-public class PartitionBoundaries extends ForwardingList<String> implements List<String>
+public class PartitionBoundaries extends ForwardingList<StringTuple> implements List<StringTuple>
 {
-  private final List<String> delegate;
-
-  // For jackson
-  @SuppressWarnings("unused")
-  private PartitionBoundaries()
-  {
-    delegate = new ArrayList<>();
-  }
+  private final List<StringTuple> delegate;
 
   /**
    * @param partitions Elements corresponding to evenly-spaced fractional ranks of the distribution
    */
-  public PartitionBoundaries(String... partitions)
+  public PartitionBoundaries(StringTuple... partitions)
   {
     if (partitions.length == 0) {
       delegate = Collections.emptyList();
@@ -53,7 +50,7 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
     }
 
     // Future improvement: Handle skewed partitions better (e.g., many values are repeated).
-    List<String> partitionBoundaries = Arrays.stream(partitions)
+    List<StringTuple> partitionBoundaries = Arrays.stream(partitions)
                                              .distinct()
                                              .collect(Collectors.toCollection(ArrayList::new));
 
@@ -70,8 +67,59 @@ public class PartitionBoundaries extends ForwardingList<String> implements List<
     delegate = Collections.unmodifiableList(partitionBoundaries);
   }
 
+  /**
+   * This constructor supports an array of Objects and not just an array of
+   * StringTuples for backward compatibility. Older versions of this class
+   * are serialized as a String array.
+   *
+   * @param partitions array of StringTuples or array of String
+   */
+  @JsonCreator
+  private PartitionBoundaries(Object[] partitions)
+  {
+    delegate = Arrays.stream(partitions)
+                     .map(this::toStringTuple)
+                     .collect(Collectors.toList());
+  }
+
+  @JsonValue
+  public Object getSerializableObject()
+  {
+    boolean isSingleDim = true;
+    for (StringTuple tuple : delegate) {
+      if (tuple != null && tuple.size() != 1) {
+        isSingleDim = false;
+        break;
+      }
+    }
+
+    if (isSingleDim) {
+      return delegate.stream().map(StringTuple::firstOrNull).collect(Collectors.toList());
+    } else {
+      return delegate;
+    }
+  }
+
+  /**
+   * Converts the given item to a StringTuple.
+   */
+  private StringTuple toStringTuple(Object item)
+  {
+    if (item == null || item instanceof StringTuple) {
+      return (StringTuple) item;
+    } else if (item instanceof String) {
+      return StringTuple.create((String) item);
+    } else if (item instanceof String[]) {
+      return StringTuple.create((String[]) item);
+    } else if (item instanceof List) {
+      return StringTuple.create((String[]) ((List) item).toArray(new String[0]));
+    } else {
+      throw new IAE("Item must either be a String or StringTuple");
+    }
+  }
+
   @Override
-  protected List<String> delegate()
+  protected List<StringTuple> delegate()
   {
     return delegate;
   }

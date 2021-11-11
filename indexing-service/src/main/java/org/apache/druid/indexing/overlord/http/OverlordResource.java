@@ -575,11 +575,11 @@ public class OverlordResource
       }
     }
     // early authorization check if datasource != null
-    // fail fast if user not authorized to write to datasource
+    // fail fast if user not authorized to access datasource
     if (dataSource != null) {
       final ResourceAction resourceAction = new ResourceAction(
           new Resource(dataSource, ResourceType.DATASOURCE),
-          Action.WRITE
+          Action.READ
       );
       final Access authResult = AuthorizationUtils.authorizeResourceAction(
           req,
@@ -987,7 +987,7 @@ public class OverlordResource
         );
       }
       return Collections.singletonList(
-          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.WRITE)
+          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;
