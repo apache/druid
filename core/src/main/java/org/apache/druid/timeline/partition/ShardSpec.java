@@ -162,7 +162,7 @@ public interface ShardSpec
     String BUILDING_RANGE = "building_range";
 
     String BUCKET_HASH = "bucket_hash";
-    String BUCKET_SINGLE_DIM = "single_dim";
+    String BUCKET_SINGLE_DIM = "bucket_single_dim";
     String BUCKET_RANGE = "bucket_range";
   }
 }
