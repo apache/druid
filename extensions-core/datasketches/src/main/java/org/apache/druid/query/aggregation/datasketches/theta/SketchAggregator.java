@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -122,7 +123,10 @@ public class SketchAggregator implements Aggregator
     } else if (update instanceof List) {
       for (Object entry : (List) update) {
         if (entry != null) {
-          union.update(entry.toString());
+          final String asString = entry.toString();
+          if (!NullHandling.isNullOrEquivalent(asString)) {
+            union.update(asString);
+          }
         }
       }
     } else {

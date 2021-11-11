@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -49,8 +50,11 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       final String expression
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createSumAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
+    if (valueType == null) {
+      return null;
+    }
+    return Aggregation.create(createSumAggregatorFactory(valueType.getType(), name, fieldName, expression, macroTable));
   }
 
   static AggregatorFactory createSumAggregatorFactory(

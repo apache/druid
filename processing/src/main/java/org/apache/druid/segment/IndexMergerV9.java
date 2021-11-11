@@ -209,7 +209,7 @@ public class IndexMergerV9 implements IndexMerger
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
                                                                               : defaultSegmentWriteOutMediumFactory;
@@ -859,7 +859,7 @@ public class IndexMergerV9 implements IndexMerger
       );
     }
 
-    org.apache.commons.io.FileUtils.forceMkdir(outDir);
+    FileUtils.mkdirp(outDir);
 
     log.debug("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return multiphaseMerge(
@@ -985,7 +985,7 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    org.apache.commons.io.FileUtils.forceMkdir(outDir);
+    FileUtils.mkdirp(outDir);
 
     List<File> tempDirs = new ArrayList<>();
 
@@ -1227,7 +1227,7 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
-    org.apache.commons.io.FileUtils.forceMkdir(outDir);
+    FileUtils.mkdirp(outDir);
 
     final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes, null);
 

@@ -89,7 +89,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 
     final File tmpOutDir = new File(config.getStorageDirectory(), makeIntermediateDir());
     log.debug("Creating intermediate directory[%s] for segment[%s].", tmpOutDir.toString(), segment.getId());
-    org.apache.commons.io.FileUtils.forceMkdir(tmpOutDir);
+    FileUtils.mkdirp(tmpOutDir);
 
     try {
       final File tmpIndexFile = new File(tmpOutDir, INDEX_FILENAME);
@@ -99,7 +99,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
                                              .withSize(size)
                                              .withBinaryVersion(SegmentUtils.getVersionFromDir(dataSegmentFile));
 
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
       final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
 
       if (!tmpIndexFile.renameTo(indexFileTarget)) {

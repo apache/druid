@@ -95,7 +95,7 @@ public class TestBroker implements Closeable
 
   public int getPort()
   {
-    return server.socketServer().config().port();
+    return server.socketServer().config().advertisedListeners().apply(0).port();
   }
 
   public KafkaProducer<byte[], byte[]> newProducer()

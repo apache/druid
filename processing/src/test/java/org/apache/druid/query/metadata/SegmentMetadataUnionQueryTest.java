@@ -36,6 +36,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
@@ -101,6 +102,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,

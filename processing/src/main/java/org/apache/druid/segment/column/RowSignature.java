@@ -51,19 +51,19 @@ public class RowSignature implements ColumnInspector
 {
   private static final RowSignature EMPTY = new RowSignature(Collections.emptyList());
 
-  private final Map<String, ValueType> columnTypes = new HashMap<>();
+  private final Map<String, ColumnType> columnTypes = new HashMap<>();
   private final Object2IntMap<String> columnPositions = new Object2IntOpenHashMap<>();
   private final List<String> columnNames;
 
-  private RowSignature(final List<Pair<String, ValueType>> columnTypeList)
+  private RowSignature(final List<Pair<String, ColumnType>> columnTypeList)
   {
     this.columnPositions.defaultReturnValue(-1);
 
     final ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
 
     for (int i = 0; i < columnTypeList.size(); i++) {
-      final Pair<String, ValueType> pair = columnTypeList.get(i);
-      final ValueType existingType = columnTypes.get(pair.lhs);
+      final Pair<String, ColumnType> pair = columnTypeList.get(i);
+      final ColumnType existingType = columnTypes.get(pair.lhs);
 
       if (columnTypes.containsKey(pair.lhs) && existingType != pair.rhs) {
         // It's ok to add the same column twice as long as the type is consistent.
@@ -103,7 +103,7 @@ public class RowSignature implements ColumnInspector
    * Returns the type of the column named {@code columnName}, or empty if the type is unknown or the column does
    * not exist.
    */
-  public Optional<ValueType> getColumnType(final String columnName)
+  public Optional<ColumnType> getColumnType(final String columnName)
   {
     return Optional.ofNullable(columnTypes.get(columnName));
   }
@@ -113,7 +113,7 @@ public class RowSignature implements ColumnInspector
    *
    * @throws IndexOutOfBoundsException if columnNumber is not within our row length
    */
-  public Optional<ValueType> getColumnType(final int columnNumber)
+  public Optional<ColumnType> getColumnType(final int columnNumber)
   {
     return Optional.ofNullable(columnTypes.get(getColumnName(columnNumber)));
   }
@@ -188,6 +188,7 @@ public class RowSignature implements ColumnInspector
       }
       final String columnName = columnNames.get(i);
       s.append(columnName).append(":").append(columnTypes.get(columnName));
+
     }
     return s.append("}").toString();
   }
@@ -206,7 +207,7 @@ public class RowSignature implements ColumnInspector
 
   public static class Builder
   {
-    private final List<Pair<String, ValueType>> columnTypeList;
+    private final List<Pair<String, ColumnType>> columnTypeList;
 
     private Builder()
     {
@@ -215,11 +216,10 @@ public class RowSignature implements ColumnInspector
 
     /**
      * Add a column to this signature.
-     *
-     * @param columnName name, must be nonnull
+     *  @param columnName name, must be nonnull
      * @param columnType type, may be null if unknown
      */
-    public Builder add(final String columnName, @Nullable final ValueType columnType)
+    public Builder add(final String columnName, @Nullable final ColumnType columnType)
     {
       // Name must be nonnull, but type can be null (if the type is unknown)
       Preconditions.checkNotNull(columnName, "'columnName' must be non-null");
@@ -238,7 +238,7 @@ public class RowSignature implements ColumnInspector
 
     public Builder addTimeColumn()
     {
-      return add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG);
+      return add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
     }
 
     public Builder addDimensions(final List<DimensionSpec> dimensions)
@@ -250,24 +250,57 @@ public class RowSignature implements ColumnInspector
       return this;
     }
 
-    public Builder addAggregators(final List<AggregatorFactory> aggregators)
+    /**
+     * Adds aggregations to a signature.
+     *
+     * {@link Finalization#YES} will add finalized types and {@link Finalization#NO} will add intermediate types.
+     * {@link Finalization#UNKNOWN} will add the intermediate / finalized type when they are the same. Otherwise, it
+     * will add a null type.
+     *
+     * @param aggregators  list of aggregation functions
+     * @param finalization whether the aggregator results will be finalized
+     */
+    public Builder addAggregators(final List<AggregatorFactory> aggregators, final Finalization finalization)
     {
       for (final AggregatorFactory aggregator : aggregators) {
-        final ValueType type = aggregator.getType();
-        
-        if (type.equals(aggregator.getFinalizedType())) {
-          add(aggregator.getName(), type);
-        } else {
-          // Use null if the type depends on whether or not the aggregator is finalized, since
-          // we don't know if it will be finalized or not. So null (i.e. unknown) is the proper
-          // thing to do (currently).
-          add(aggregator.getName(), null);
+        final ColumnType type;
+
+        switch (finalization) {
+          case YES:
+            type = aggregator.getFinalizedType();
+            break;
+
+          case NO:
+            type = aggregator.getType();
+            break;
+
+          default:
+            assert finalization == Finalization.UNKNOWN;
+
+            if (aggregator.getType().equals(aggregator.getFinalizedType())) {
+              type = aggregator.getType();
+            } else {
+              // Use null if the type depends on whether the aggregator is finalized, since we don't know if
+              // it will be finalized or not.
+              type = null;
+            }
+            break;
         }
+
+        add(aggregator.getName(), type);
       }
 
       return this;
     }
 
+    /**
+     * Adds post-aggregators to a signature.
+     *
+     * Note: to ensure types are computed properly, post-aggregators must be added *after* any columns that they
+     * depend on, and they must be added in the order that the query engine will compute them. This method assumes
+     * that post-aggregators are computed in order, and that they can refer to earlier post-aggregators but not
+     * to later ones.
+     */
     public Builder addPostAggregators(final List<PostAggregator> postAggregators)
     {
       for (final PostAggregator postAggregator : postAggregators) {
@@ -277,8 +310,9 @@ public class RowSignature implements ColumnInspector
             "postAggregators must have nonnull names"
         );
 
-        // unlike aggregators, the type we see here is what we get, no further finalization will occur
-        add(name, postAggregator.getType());
+        // It's OK to call getType in the order that post-aggregators appear, because post-aggregators are only
+        // allowed to refer to *earlier* post-aggregators (not later ones; the order is meaningful).
+        add(name, postAggregator.getType(build()));
       }
 
       return this;
@@ -288,5 +322,23 @@ public class RowSignature implements ColumnInspector
     {
       return new RowSignature(columnTypeList);
     }
+  }
+
+  public enum Finalization
+  {
+    /**
+     * Aggregation results will be finalized.
+     */
+    YES,
+
+    /**
+     * Aggregation results will not be finalized.
+     */
+    NO,
+
+    /**
+     * Aggregation results may or may not be finalized.
+     */
+    UNKNOWN
   }
 }

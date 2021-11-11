@@ -510,6 +510,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -781,6 +787,7 @@ PT30M
 PT30S
 PT5S
 PT80S
+SASL
 SegmentWriteOutMediumFactory
 UNABLE_TO_CONNECT_TO_STREAM
 UNHEALTHY_SUPERVISOR
@@ -973,10 +980,21 @@ column_1
 column_n
 com.opencsv
 ctrl
+headerFormat
+headerLabelPrefix
 jsonLowercase
+kafka
+KafkaStringHeaderFormat
+kafka.header.
+kafka.key
+kafka.timestamp
+keyColumnName
+keyFormat
 listDelimiter
+timestampColumnName
 timestampSpec
 urls
+valueFormat
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1275,6 +1293,8 @@ bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1300,6 +1320,9 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1681,6 +1704,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1702,6 +1726,7 @@ LoggingEmitter
 Los_Angeles
 MDC
 NoopServiceEmitter
+NUMA
 ONLY_EVENTS
 P1D
 P1W
@@ -1750,6 +1775,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1914,3 +1940,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+

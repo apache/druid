@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class SingleDimensionPartitionsSpecTest
 {
@@ -66,6 +67,57 @@ public class SingleDimensionPartitionsSpecTest
                         + "}";
     SingleDimensionPartitionsSpec spec = deserialize(serialized);
     Assert.assertEquals(SPEC, spec);
+  }
+
+  @Test
+  public void testDeserializeWithUnrecognizedProperty()
+  {
+    // Verify that single_dim spec does not recognize any extra fields from
+    // MultiDimensionPartitionsSpec
+    String json = "{"
+                  + "\"type\":\"single_dim\""
+                  + ",\"targetPartitionSize\":100"
+                  + ",\"partitionDimension\":\"dim1\""
+                  + ",\"partitionDimensions\":[\"dim2\"]"
+                  + "}";
+
+    try {
+      deserialize(json);
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "UnrecognizedPropertyException: Unrecognized field \"partitionDimensions\""
+      ));
+    }
+  }
+
+  @Test
+  public void testGetSerializableObjectContainsNoExtraField()
+  {
+    // This test verifies a serialized SingleDimensionPartitionsSpec has no field
+    // from the parent MultiDimensionPartitionsSpec
+    verifySerializableFields(SPEC);
+    verifySerializableFields(
+        new SingleDimensionPartitionsSpec(
+            null,
+            null,
+            "abc",
+            false,
+            100,
+            null
+        )
+    );
+  }
+
+  private void verifySerializableFields(SingleDimensionPartitionsSpec spec)
+  {
+    Map<String, Object> jsonMap = spec.getSerializableObject();
+
+    Assert.assertEquals(4, jsonMap.size());
+    Assert.assertTrue(jsonMap.containsKey(PartitionsSpec.MAX_ROWS_PER_SEGMENT));
+    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT));
+    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.ASSUME_GROUPED));
+    Assert.assertTrue(jsonMap.containsKey("partitionDimension"));
   }
 
   @Test
@@ -114,7 +166,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .targetPartitionSize(0)
-        .testIllegalArgumentException("targetPartitionSize must be greater than 0");
+        .testIllegalArgumentException("targetRowsPerSegment must be greater than 0");
   }
 
   @Test
@@ -130,7 +182,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .targetPartitionSize(Integer.MAX_VALUE)
-        .testIllegalArgumentException("targetPartitionSize is too large");
+        .testIllegalArgumentException("targetRowsPerSegment is too large");
   }
 
   @Test
@@ -154,7 +206,7 @@ public class SingleDimensionPartitionsSpecTest
   {
     new Tester()
         .maxPartitionSize(0)
-        .testIllegalArgumentException("maxPartitionSize must be greater than 0");
+        .testIllegalArgumentException("maxRowsPerSegment must be greater than 0");
   }
 
   @Test

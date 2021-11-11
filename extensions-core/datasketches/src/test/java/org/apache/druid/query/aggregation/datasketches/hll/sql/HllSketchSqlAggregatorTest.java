@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,12 +52,13 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -77,13 +79,15 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final boolean ROUND = true;
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     HllSketchModule.registerSerde();
-    for (Module mod : new HllSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-      TestHelper.JSON_MAPPER.registerModule(mod);
-    }
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -122,10 +126,17 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
+    final HllSketchApproxCountDistinctSqlAggregator approxCountDistinctSqlAggregator =
+        new HllSketchApproxCountDistinctSqlAggregator();
+
     return new DruidOperatorTable(
         ImmutableSet.of(
-            new HllSketchApproxCountDistinctSqlAggregator(),
-            new HllSketchObjectSqlAggregator()
+            approxCountDistinctSqlAggregator,
+            new HllSketchObjectSqlAggregator(),
+
+            // Use APPROX_COUNT_DISTINCT_DS_HLL as APPROX_COUNT_DISTINCT impl for these tests.
+            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)),
+            new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)
         ),
         ImmutableSet.of(
             new HllSketchSetUnionOperatorConversion(),
@@ -142,6 +153,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     // Can't vectorize due to SUBSTRING expression.
     cannotVectorize();
 
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
+                       + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn, using generic A.C.D.
+                       + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression, using COUNT DISTINCT
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
+                       + "FROM druid.foo";
+
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -155,15 +176,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     testQuery(
-        "SELECT\n"
-        + "  SUM(cnt),\n"
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
-        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
-        + "FROM druid.foo",
+        sql,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -173,13 +186,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "substring(\"dim2\", 0, 1)",
-                          ValueType.STRING,
+                          ColumnType.STRING,
                           TestExprMacroTable.INSTANCE
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
                           "concat(substring(\"dim2\", 0, 1),'x')",
-                          ValueType.STRING,
+                          ColumnType.STRING,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -410,13 +423,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "concat(\"dim2\",'hello')",
-                          ValueType.STRING,
+                          ColumnType.STRING,
                           TestExprMacroTable.INSTANCE
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
                           "pow(abs((\"m1\" + 100)),2)",
-                          ValueType.DOUBLE,
+                          ColumnType.DOUBLE,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -620,8 +633,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(

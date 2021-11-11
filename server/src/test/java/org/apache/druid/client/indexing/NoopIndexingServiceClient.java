@@ -51,6 +51,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )

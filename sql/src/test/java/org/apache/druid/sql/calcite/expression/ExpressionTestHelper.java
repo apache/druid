@@ -301,7 +301,7 @@ class ExpressionTestHelper
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
-                rowSignature,
+                () -> rowSignature,
                 false
             ),
             VirtualColumns.create(virtualColumns)
