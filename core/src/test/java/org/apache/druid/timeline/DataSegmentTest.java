@@ -94,11 +94,6 @@ public class DataSegmentTest
         return true;
       }
 
-      @Override
-      public String getType()
-      {
-        return null;
-      }
     };
   }
 

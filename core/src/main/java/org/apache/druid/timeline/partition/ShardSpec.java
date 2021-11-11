@@ -127,7 +127,10 @@ public interface ShardSpec
    * Get the type name of this ShardSpec.
    */
   @JsonIgnore
-  String getType();
+  default String getType()
+  {
+    return Type.UNKNOWN;
+  }
 
   /**
    * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
@@ -146,6 +149,7 @@ public interface ShardSpec
    */
   interface Type
   {
+    String UNKNOWN = "unknown";
     String NONE = "none";
 
     String SINGLE = "single";

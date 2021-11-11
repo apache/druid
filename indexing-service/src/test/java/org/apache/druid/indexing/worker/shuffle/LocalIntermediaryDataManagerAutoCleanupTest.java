@@ -176,11 +176,5 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
     {
       throw new UnsupportedOperationException();
     }
-
-    @Override
-    public String getType()
-    {
-      return null;
-    }
   }
 }
