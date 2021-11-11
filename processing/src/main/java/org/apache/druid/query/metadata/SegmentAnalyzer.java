@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.TypeSignature;
@@ -194,7 +195,8 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.asTypeString(),
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -250,7 +252,8 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.asTypeString(),
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -328,7 +331,8 @@ public class SegmentAnalyzer
     }
 
     return new ColumnAnalysis(
-        capabilities.asTypeString(),
+        capabilities.toColumnType(),
+        capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
         capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
@@ -347,8 +351,6 @@ public class SegmentAnalyzer
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
     final String typeName = typeSignature.getComplexTypeName();
 
-    // serialize using asTypeString (which is also used for JSON so can easily round-trip complex type info back into ColumnType)
-    final String serdeTypeName = typeSignature.asTypeString();
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
@@ -363,7 +365,8 @@ public class SegmentAnalyzer
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
           return new ColumnAnalysis(
-              serdeTypeName,
+              ColumnTypeFactory.ofType(typeSignature),
+              typeName,
               hasMultipleValues,
               hasNulls,
               0,
@@ -381,7 +384,8 @@ public class SegmentAnalyzer
       }
 
       return new ColumnAnalysis(
-          serdeTypeName,
+          ColumnTypeFactory.ofType(typeSignature),
+          typeName,
           hasMultipleValues,
           hasNulls,
           size,
