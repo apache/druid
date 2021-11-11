@@ -35,8 +35,6 @@ import java.util.Objects;
  */
 public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
 {
-  public static final String TYPE = "bucket_single_dim";
-
   private final int bucketId;
   private final String dimension;
   @Nullable
@@ -107,6 +105,12 @@ public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardS
       }
       throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
     };
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUCKET_SINGLE_DIM;
   }
 
   @Override
