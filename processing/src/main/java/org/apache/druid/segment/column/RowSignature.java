@@ -277,7 +277,7 @@ public class RowSignature implements ColumnInspector
           default:
             assert finalization == Finalization.UNKNOWN;
 
-            if (aggregator.getType() == aggregator.getFinalizedType()) {
+            if (aggregator.getType().equals(aggregator.getFinalizedType())) {
               type = aggregator.getType();
             } else {
               // Use null if the type depends on whether the aggregator is finalized, since we don't know if
