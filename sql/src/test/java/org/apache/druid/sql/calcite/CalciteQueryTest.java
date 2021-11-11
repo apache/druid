@@ -1008,6 +1008,55 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testSafeDivideExpressions() throws Exception
+  {
+    List<Object[]> expected;
+    if (useDefault) {
+      expected = ImmutableList.of(
+          new Object[]{0.0F,0L,0.0,7.0F},
+          new Object[]{1.0F,1L,1.0,3253230.0F},
+          new Object[]{0.0F,0L,0.0,0.0F},
+          new Object[]{0.0F,0L,0.0,0.0F},
+          new Object[]{0.0F,0L,0.0,0.0F},
+          new Object[]{0.0F,0L,0.0,0.0F}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{null,null,null,7.0F},
+          new Object[]{1.0F,1L,1.0,3253230.0F},
+          new Object[]{0.0F,0L,0,0.0F},
+          new Object[]{null,null,null,null},
+          new Object[]{null,null,null,null},
+          new Object[]{null,null,null,null}
+      );
+    }
+    testQuery(
+        "SELECT\n"
+        + "SAFE_DIVIDE(f1, f2),\n"
+        + "SAFE_DIVIDE(l1, l2),\n"
+        + "SAFE_DIVIDE(d2, d1),\n"
+        + "SAFE_DIVIDE(l1, f1)\n"
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0","v1","v2","v3")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "safe_divide(\"f1\",\"f2\")", ColumnType.FLOAT),
+                      expressionVirtualColumn("v1", "safe_divide(\"l1\",\"l2\")", ColumnType.LONG),
+                      expressionVirtualColumn("v2", "safe_divide(\"d2\",\"d1\")", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v3", "safe_divide(\"l1\",\"f1\")", ColumnType.FLOAT)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        expected
+    );
+  }
 
   @Test
   public void testExplainSelectConstantExpression() throws Exception

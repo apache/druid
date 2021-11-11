@@ -1165,6 +1165,46 @@ public interface Function
     }
   }
 
+  class SafeDivide extends BivariateMathFunction
+  {
+    public static final String NAME = "safe_divide";
+
+    @Override
+    public String name()
+    {
+      return NAME ;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.integerMathFunction(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    protected ExprEval eval(final long x, final long y)
+    {
+      if(y==0) {
+        return ExprEval.of(0);
+      }
+      return ExprEval.of(x / y);
+    }
+
+    @Override
+    protected ExprEval eval(final double x, final double y)
+    {
+      if(y==0) {
+        return ExprEval.of(0);
+      }
+      return ExprEval.of(x/y);
+    }
+
+  }
+
   class Div extends BivariateMathFunction
   {
     @Override

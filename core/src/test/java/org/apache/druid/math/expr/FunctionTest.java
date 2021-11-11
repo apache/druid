@@ -733,6 +733,16 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSafeDivide()
+  {
+    // happy path maths
+    assertExpr("safe_divide(3, 1)", 3L);
+    assertExpr("safe_divide(4.5, 2)", 2.25);
+    assertExpr("safe_divide(3, 0)", 0L);
+    assertExpr("safe_divide(3.7, 0.0)", 0L);
+  }
+
+  @Test
   public void testBitwise()
   {
     // happy path maths
