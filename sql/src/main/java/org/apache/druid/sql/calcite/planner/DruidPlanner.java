@@ -21,11 +21,12 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -43,19 +44,13 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rel.externalize.RelJsonWriter;
-import org.apache.calcite.rel.externalize.RelWriterImpl;
-import org.apache.calcite.rel.externalize.RelXmlWriter;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplain;
-import org.apache.calcite.sql.SqlExplainFormat;
-import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -75,7 +70,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
-import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
@@ -83,13 +77,11 @@ import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import javax.annotation.Nullable;
 
 import java.io.Closeable;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class DruidPlanner implements Closeable
 {
@@ -264,7 +256,7 @@ public class DruidPlanner implements Closeable
     );
 
     if (explain != null) {
-      return planDruidExplanation(druidRel);
+      return planExplanation(druidRel, explain, true);
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
@@ -332,7 +324,7 @@ public class DruidPlanner implements Closeable
     }
 
     if (explain != null) {
-      return planExplanation(bindableRel, explain);
+      return planExplanation(bindableRel, explain, false);
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext(
@@ -381,40 +373,27 @@ public class DruidPlanner implements Closeable
    */
   private PlannerResult planExplanation(
       final RelNode rel,
-      final SqlExplain explain
+      final SqlExplain explain,
+      final boolean isDruidConventionExplanation
   )
   {
-    final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+    String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
     String resources;
     try {
+      if (isDruidConventionExplanation && rel instanceof DruidRel) {
+        DruidRel<?> druidRel = (DruidRel<?>) rel;
+        if (true) {
+          explanation = explainSqlPlanAsNativeQueries(druidRel);
+        } else {
+          explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+        }
+      }
       resources = jsonMapper.writeValueAsString(plannerContext.getResources());
     }
     catch (JsonProcessingException jpe) {
       // this should never happen, we create the Resources here, not a user
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
       resources = null;
-    }
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation, resources})));
-    return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
-  }
-
-  /**
-   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode}
-   */
-  private PlannerResult planDruidExplanation(
-      final DruidRel<?> rel
-  )
-  {
-    String resources = null;
-    String explanation = null;
-    try {
-      explanation = dumpDruidPlan(rel);
-      resources = jsonMapper.writeValueAsString(plannerContext.getResources());
-    }
-    catch (JsonProcessingException jpe) {
-      // this should never happen, we create the Resources here, not a user
-      log.error(jpe, "Encountered exception while serializing Resources for explain output");
     }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
         Sequences.simple(ImmutableList.of(new Object[]{explanation, resources})));
@@ -430,39 +409,36 @@ public class DruidPlanner implements Closeable
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
    */
-  public static String dumpDruidPlan(DruidRel<?> rel) throws JsonProcessingException
+  public static String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
   {
-    List<Map<String, Object>> nativeQueries;
-
     // Only if rel is an instance of DruidUnionRel, do we run multiple native queries corresponding to single SQL query
     // Also, DruidUnionRel can only be a top level node, so we don't need to check for this condition in the subsequent
     // child nodes
+    List<DruidQuery> druidQueryList;
     if (rel instanceof DruidUnionRel) {
-      nativeQueries = new ArrayList<>();
-      for (RelNode childRel : rel.getInputs()) {
-        DruidRel<?> druidChildRel = (DruidRel<?>) childRel;
-        if (childRel instanceof DruidUnionRel) { // Failsafe block, shouldn't be encountered
-          log.error("DruidUnionRel can only be the outermost Rel. This error shouldn't be encountered");
+      druidQueryList = rel.getInputs().stream().map(childRel -> (DruidRel<?>) childRel).map(childRel -> {
+        if (childRel instanceof DruidUnionRel) {
+          log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
           // TODO: Throw an error here
         }
-        DruidQuery query1 = druidChildRel.toDruidQuery(false); // Finalize aggregations
-        nativeQueries.add(ImmutableMap.of(
-            "query",
-            query1.getQuery(),
-            "signature",
-            query1.getOutputRowSignature().toString()
-        ));
-      }
+        return childRel.toDruidQuery(false);
+      }).collect(Collectors.toList());
     } else {
-      DruidQuery query = rel.toDruidQuery(false);
-      nativeQueries = ImmutableList.of(ImmutableMap.of(
-          "query",
-          query.getQuery(),
-          "signature",
-          query.getOutputRowSignature().toString()
-      ));
+      druidQueryList = ImmutableList.of(rel.toDruidQuery(false));
     }
-    return rel.getQueryMaker().getJsonMapper().writeValueAsString(nativeQueries);
+
+    ObjectMapper objectMapper = rel.getQueryMaker().getJsonMapper();
+    ArrayNode nativeQueriesArrayNode = objectMapper.createArrayNode();
+
+    for (DruidQuery druidQuery : druidQueryList) {
+      Query<?> nativeQuery = druidQuery.getQuery();
+      ObjectNode objectNode = objectMapper.createObjectNode();
+      objectNode.put("query", objectMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.put("signature", druidQuery.getOutputRowSignature().toString());
+      nativeQueriesArrayNode.add(objectNode);
+    }
+
+    return objectMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 
   /**
