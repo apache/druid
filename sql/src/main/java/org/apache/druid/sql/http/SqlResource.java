@@ -194,11 +194,12 @@ public class SqlResource
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
       throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
-    catch (Exception e) {
+    // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
+    catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Exception exceptionToReport;
+      final Throwable exceptionToReport;
 
       if (e instanceof RelOptPlanner.CannotPlanException) {
         exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
