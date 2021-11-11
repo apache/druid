@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -42,13 +43,19 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.externalize.RelJsonWriter;
+import org.apache.calcite.rel.externalize.RelWriterImpl;
+import org.apache.calcite.rel.externalize.RelXmlWriter;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplain;
+import org.apache.calcite.sql.SqlExplainFormat;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -65,15 +72,23 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
+import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class DruidPlanner implements Closeable
@@ -249,7 +264,7 @@ public class DruidPlanner implements Closeable
     );
 
     if (explain != null) {
-      return planExplanation(druidRel, explain);
+      return planDruidExplanation(druidRel);
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
@@ -385,6 +400,72 @@ public class DruidPlanner implements Closeable
   }
 
   /**
+   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode}
+   */
+  private PlannerResult planDruidExplanation(
+      final DruidRel<?> rel
+  )
+  {
+    String resources = null;
+    String explanation = null;
+    try {
+      explanation = dumpDruidPlan(rel);
+      resources = jsonMapper.writeValueAsString(plannerContext.getResources());
+    }
+    catch (JsonProcessingException jpe) {
+      // this should never happen, we create the Resources here, not a user
+      log.error(jpe, "Encountered exception while serializing Resources for explain output");
+    }
+    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
+        Sequences.simple(ImmutableList.of(new Object[]{explanation, resources})));
+    return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
+  }
+
+  /**
+   * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
+   * and not indicative of the native Druid Queries which will get executed
+   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implictly cast it
+   *
+   * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
+   * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
+   * @throws JsonProcessingException
+   */
+  public static String dumpDruidPlan(DruidRel<?> rel) throws JsonProcessingException
+  {
+    List<Map<String, Object>> nativeQueries;
+
+    // Only if rel is an instance of DruidUnionRel, do we run multiple native queries corresponding to single SQL query
+    // Also, DruidUnionRel can only be a top level node, so we don't need to check for this condition in the subsequent
+    // child nodes
+    if (rel instanceof DruidUnionRel) {
+      nativeQueries = new ArrayList<>();
+      for (RelNode childRel : rel.getInputs()) {
+        DruidRel<?> druidChildRel = (DruidRel<?>) childRel;
+        if (childRel instanceof DruidUnionRel) { // Failsafe block, shouldn't be encountered
+          log.error("DruidUnionRel can only be the outermost Rel. This error shouldn't be encountered");
+          // TODO: Throw an error here
+        }
+        DruidQuery query1 = druidChildRel.toDruidQuery(false); // Finalize aggregations
+        nativeQueries.add(ImmutableMap.of(
+            "query",
+            query1.getQuery(),
+            "signature",
+            query1.getOutputRowSignature().toString()
+        ));
+      }
+    } else {
+      DruidQuery query = rel.toDruidQuery(false);
+      nativeQueries = ImmutableList.of(ImmutableMap.of(
+          "query",
+          query.getQuery(),
+          "signature",
+          query.getOutputRowSignature().toString()
+      ));
+    }
+    return rel.getQueryMaker().getJsonMapper().writeValueAsString(nativeQueries);
+  }
+
+  /**
    * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
@@ -393,7 +474,6 @@ public class DruidPlanner implements Closeable
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
-   *
    * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
    */
   @Nullable

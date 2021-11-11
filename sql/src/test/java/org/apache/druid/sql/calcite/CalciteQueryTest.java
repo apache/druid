@@ -8956,6 +8956,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExplainUnionAllOfQueries() throws Exception
+  {
+    skipVectorize(); // Required otherwise results of the EXPLAIN change
+    String query = "EXPLAIN PLAN FOR (SELECT dim1 FROM druid.foo UNION ALL SELECT dim1 from druid.foo2)";
+    String resources = "[{\"name\":\"foo2\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    String explanation = "[{\"query\":{\"dataSource\":{\"type\":\"union\",\"dataSources\":[{\"type\":\"table\",\"name\":\"foo\"},{\"type\":\"table\",\"name\":\"foo2\"}]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},\"signature\":\"{dim1:STRING}\"}]";
+    testQuery(query, ImmutableList.of(), ImmutableList.of(new Object[]{explanation, resources}));
+  }
+
+  @Test
+  public void testExplainUnionOfMultipleNativeQueries() throws Exception
+  {
+    skipVectorize();
+    String query = "EXPLAIN PLAN FOR ((SELECT dim1 FROM druid.foo) UNION ALL (SELECT dim1 FROM druid.foo4 where dim1 in (SELECT dim1 FROM druid.foo)))";
+    String explanation = "["
+                         + "{\"query\":{\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},\"signature\":\"{dim1:STRING}\"}"
+                         + ",{\"query\":{\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"table\",\"name\":\"foo4\"},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}},\"rightPrefix\":\"j0.\",\"condition\":\"(\\\"dim1\\\" == \\\"j0.d0\\\")\",\"joinType\":\"INNER\",\"leftFilter\":null},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},\"signature\":\"{dim1:STRING}\"}]";
+    String resources = "[{\"name\":\"foo4\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    testQuery(query, ImmutableList.of(), ImmutableList.of(new Object[]{explanation, resources}));
+  }
+
+  @Test
   public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
