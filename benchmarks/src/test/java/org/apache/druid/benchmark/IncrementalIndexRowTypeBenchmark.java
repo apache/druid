@@ -63,7 +63,7 @@ public class IncrementalIndexRowTypeBenchmark
   private String indexType;
 
   private AppendableIndexSpec appendableIndexSpec;
-  IncrementalIndex<?> incIndex;
+  IncrementalIndex incIndex;
   private static AggregatorFactory[] aggs;
   static final int DIMENSION_COUNT = 8;
 
@@ -131,7 +131,7 @@ public class IncrementalIndexRowTypeBenchmark
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private IncrementalIndex<?> makeIncIndex()
+  private IncrementalIndex makeIncIndex()
   {
     return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(aggs)

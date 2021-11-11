@@ -203,7 +203,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      RowSignature.empty(),
+      RowSignature::empty,
       false
   );
 
@@ -743,7 +743,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ColumnType.LONG).build(),
+            RowSignature.builder().add("x", ColumnType.LONG)::build,
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -766,7 +766,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ColumnType.DOUBLE).build(),
+            RowSignature.builder().add("x", ColumnType.DOUBLE)::build,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -789,7 +789,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            RowSignature.builder().add("x", ColumnType.FLOAT).build(),
+            RowSignature.builder().add("x", ColumnType.FLOAT)::build,
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)

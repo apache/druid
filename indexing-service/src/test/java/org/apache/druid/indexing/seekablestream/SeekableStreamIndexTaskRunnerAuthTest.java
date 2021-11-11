@@ -92,11 +92,11 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           final String username = authenticationResult.getIdentity();
 
           // Allow access to a Datasource if
-          // - any user requests Read access
+          // - Datasource Read User requests Read access
           // - or, Datasource Write User requests Write access
           if (resource.getType().equals(ResourceType.DATASOURCE)) {
             return new Access(
-                action == Action.READ
+                (action == Action.READ && username.equals(Users.DATASOURCE_READ))
                 || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
             );
           }
@@ -118,13 +118,6 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         null
     );
     SeekableStreamIndexTaskTuningConfig tuningConfig = mock(SeekableStreamIndexTaskTuningConfig.class);
-    /*expect(tuningConfig.getIntermediateHandoffPeriod()).andReturn(Period.minutes(10));
-    expect(tuningConfig.isLogParseExceptions()).andReturn(false);
-    expect(tuningConfig.getMaxParseExceptions()).andReturn(1000);
-    expect(tuningConfig.getMaxSavedParseExceptions()).andReturn(100);
-
-    replay(tuningConfig);*/
-
     SeekableStreamIndexTaskIOConfig<String, String> ioConfig = new TestSeekableStreamIndexTaskIOConfig();
 
     // Initiliaze task and task runner
@@ -136,7 +129,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   @Test
   public void testGetStatusHttp()
   {
-    verifyOnlyDatasourceWriteUserCanAccess(taskRunner::getStatusHTTP);
+    verifyOnlyDatasourceReadUserCanAccess(taskRunner::getStatusHTTP);
   }
 
   @Test
@@ -180,7 +173,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   @Test
   public void testGetEndOffsets()
   {
-    verifyOnlyDatasourceWriteUserCanAccess(taskRunner::getCurrentOffsets);
+    verifyOnlyDatasourceReadUserCanAccess(taskRunner::getCurrentOffsets);
   }
 
   @Test
@@ -199,7 +192,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   @Test
   public void testGetCheckpointsHttp()
   {
-    verifyOnlyDatasourceWriteUserCanAccess(taskRunner::getCheckpointsHTTP);
+    verifyOnlyDatasourceReadUserCanAccess(taskRunner::getCheckpointsHTTP);
   }
 
 
@@ -214,6 +207,22 @@ public class SeekableStreamIndexTaskRunnerAuthTest
 
     // Verify that no other user can access
     HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ);
+    replay(blockedRequest);
+    expectedException.expect(ForbiddenException.class);
+    method.accept(blockedRequest);
+  }
+
+  private void verifyOnlyDatasourceReadUserCanAccess(
+      Consumer<HttpServletRequest> method
+  )
+  {
+    // Verify that datasource read user can access
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_READ);
+    replay(allowedRequest);
+    method.accept(allowedRequest);
+
+    // Verify that no other user can access
+    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE);
     replay(blockedRequest);
     expectedException.expect(ForbiddenException.class);
     method.accept(blockedRequest);

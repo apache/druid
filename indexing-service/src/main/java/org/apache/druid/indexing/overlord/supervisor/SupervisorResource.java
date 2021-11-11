@@ -65,7 +65,7 @@ import java.util.stream.Collectors;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
-  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_WRITE_RA_GENERATOR =
+  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
       supervisorSpec -> {
         if (supervisorSpec.getSpec() == null) {
           return null;
@@ -75,7 +75,7 @@ public class SupervisorResource
         }
         return Iterables.transform(
             supervisorSpec.getSpec().getDataSources(),
-            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         );
       };
 
@@ -376,7 +376,7 @@ public class SupervisorResource
             AuthorizationUtils.filterAuthorizedResources(
                 req,
                 manager.getSupervisorHistory(),
-                SPEC_DATASOURCE_WRITE_RA_GENERATOR,
+                SPEC_DATASOURCE_READ_RA_GENERATOR,
                 authorizerMapper
             )
         ).build()
@@ -400,7 +400,7 @@ public class SupervisorResource
                     AuthorizationUtils.filterAuthorizedResources(
                         req,
                         historyForId,
-                        SPEC_DATASOURCE_WRITE_RA_GENERATOR,
+                        SPEC_DATASOURCE_READ_RA_GENERATOR,
                         authorizerMapper
                     )
                 );

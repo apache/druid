@@ -19,27 +19,42 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import org.apache.druid.java.util.common.logger.Logger;
-
-import java.io.Closeable;
-import java.io.IOException;
+import java.util.Iterator;
 
 /**
+ * Simple Sequence based on an Iterable, created using {@link Sequences#simple}.
  */
-public class CloseQuietly
+public class SimpleSequence<T> extends BaseSequence<T, Iterator<T>>
 {
-  private static final Logger log = new Logger(CloseQuietly.class);
+  private final Iterable<T> iterable;
 
-  public static void close(Closeable closeable)
+  SimpleSequence(final Iterable<T> iterable)
   {
-    if (closeable == null) {
-      return;
-    }
-    try {
-      closeable.close();
-    }
-    catch (IOException e) {
-      log.error(e, "IOException thrown while closing Closeable.");
-    }
+    super(
+        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        {
+          @Override
+          public Iterator<T> make()
+          {
+            return iterable.iterator();
+          }
+
+          @Override
+          public void cleanup(Iterator<T> iterFromMake)
+          {
+
+          }
+        }
+    );
+
+    this.iterable = iterable;
+  }
+
+  /**
+   * Retrieve the original Iterable.
+   */
+  public Iterable<T> getIterable()
+  {
+    return iterable;
   }
 }

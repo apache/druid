@@ -120,9 +120,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
 
-  final IncrementalIndex<?> index;
+  final IncrementalIndex index;
 
-  public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
+  public IncrementalIndexStorageAdapter(IncrementalIndex index)
   {
     this.index = index;
   }
@@ -237,21 +237,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         index.getCapabilities(column),
         SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
     );
-  }
-
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final String metricType = index.getMetricType(column);
-    if (metricType != null) {
-      return metricType;
-    }
-    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    if (columnCapabilities != null) {
-      return columnCapabilities.asTypeString();
-    } else {
-      return null;
-    }
   }
 
   @Override

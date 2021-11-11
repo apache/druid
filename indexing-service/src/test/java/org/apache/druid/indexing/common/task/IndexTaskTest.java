@@ -90,14 +90,6 @@ import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Authorizer;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -119,7 +111,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -2611,81 +2602,6 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig
       );
     }
-  }
-
-  @Test
-  public void testAuthorizeRequestForDatasourceWrite() throws Exception
-  {
-    // Need to run this only once
-    if (lockGranularity == LockGranularity.SEGMENT) {
-      return;
-    }
-
-    // Create auth mapper which allows datasourceReadUser to read datasource
-    // and datasourceWriteUser to write to datasource
-    final String datasourceWriteUser = "datasourceWriteUser";
-    final String datasourceReadUser = "datasourceReadUser";
-    AuthorizerMapper authorizerMapper = new AuthorizerMapper(null) {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return (authenticationResult, resource, action) -> {
-          final String username = authenticationResult.getIdentity();
-          if (!resource.getType().equals(ResourceType.DATASOURCE) || username == null) {
-            return new Access(false);
-          } else if (action == Action.WRITE) {
-            return new Access(username.equals(datasourceWriteUser));
-          } else {
-            return new Access(username.equals(datasourceReadUser));
-          }
-        };
-      }
-    };
-
-    // Create test target
-    final IndexTask indexTask = new IndexTask(
-        null,
-        null,
-        createDefaultIngestionSpec(
-            jsonMapper,
-            temporaryFolder.newFolder(),
-            null,
-            null,
-            createTuningConfigWithMaxRowsPerSegment(2, true),
-            false,
-            false
-        ),
-        null
-    );
-
-    // Verify that datasourceWriteUser is successfully authorized
-    HttpServletRequest writeUserRequest = EasyMock.mock(HttpServletRequest.class);
-    expectAuthorizationTokenCheck(datasourceWriteUser, writeUserRequest);
-    EasyMock.replay(writeUserRequest);
-    indexTask.authorizeRequestForDatasourceWrite(writeUserRequest, authorizerMapper);
-
-    // Verify that datasourceReadUser is not successfully authorized
-    HttpServletRequest readUserRequest = EasyMock.mock(HttpServletRequest.class);
-    expectAuthorizationTokenCheck(datasourceReadUser, readUserRequest);
-    EasyMock.replay(readUserRequest);
-    expectedException.expect(ForbiddenException.class);
-    indexTask.authorizeRequestForDatasourceWrite(readUserRequest, authorizerMapper);
-  }
-
-  private void expectAuthorizationTokenCheck(String username, HttpServletRequest request)
-  {
-    AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .atLeastOnce();
-
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
-    EasyMock.expectLastCall().anyTimes();
-
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
   }
 
   @Test

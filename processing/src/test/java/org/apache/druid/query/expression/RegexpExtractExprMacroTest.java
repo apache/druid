@@ -128,14 +128,14 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
     }
 
-    final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.withSuppliers(ImmutableMap.of("a", () -> null)));
+    final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.nilBindings());
     Assert.assertNull(result.value());
   }
 
   @Test
   public void testEmptyStringPatternOnNull()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, '')", InputBindings.withSuppliers(ImmutableMap.of("a", () -> null)));
+    final ExprEval<?> result = eval("regexp_extract(a, '')", InputBindings.nilBindings());
     Assert.assertNull(result.value());
   }
 }

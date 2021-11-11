@@ -33,14 +33,14 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class RangeBucketShardSpecTest
+public class SingleDimensionRangeBucketShardSpecTest
 {
   @Test
   public void testConvert()
   {
     Assert.assertEquals(
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5),
-        new RangeBucketShardSpec(1, "dim", "start", "end").convert(5)
+        new SingleDimensionRangeBucketShardSpec(1, "dim", "start", "end").convert(5)
     );
   }
 
@@ -49,7 +49,7 @@ public class RangeBucketShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(1, 0, "test"),
-        new RangeBucketShardSpec(1, "dim", "start", "end").createChunk("test")
+        new SingleDimensionRangeBucketShardSpec(1, "dim", "start", "end").createChunk("test")
     );
   }
 
@@ -57,9 +57,9 @@ public class RangeBucketShardSpecTest
   public void testShardSpecLookup()
   {
     final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new RangeBucketShardSpec(0, "dim", null, "c"),
-        new RangeBucketShardSpec(1, "dim", "f", "i"),
-        new RangeBucketShardSpec(2, "dim", "i", null)
+        new SingleDimensionRangeBucketShardSpec(0, "dim", null, "c"),
+        new SingleDimensionRangeBucketShardSpec(1, "dim", "f", "i"),
+        new SingleDimensionRangeBucketShardSpec(2, "dim", "i", null)
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
@@ -99,17 +99,17 @@ public class RangeBucketShardSpecTest
   public void testSerde() throws JsonProcessingException
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
-    mapper.registerSubtypes(new NamedType(RangeBucketShardSpec.class, RangeBucketShardSpec.TYPE));
+    mapper.registerSubtypes(new NamedType(SingleDimensionRangeBucketShardSpec.class, SingleDimensionRangeBucketShardSpec.TYPE));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
-    final RangeBucketShardSpec original = new RangeBucketShardSpec(1, "dim", "start", "end");
+    final SingleDimensionRangeBucketShardSpec original = new SingleDimensionRangeBucketShardSpec(1, "dim", "start", "end");
     final String json = mapper.writeValueAsString(original);
-    final RangeBucketShardSpec fromJson = (RangeBucketShardSpec) mapper.readValue(json, ShardSpec.class);
+    final SingleDimensionRangeBucketShardSpec fromJson = (SingleDimensionRangeBucketShardSpec) mapper.readValue(json, ShardSpec.class);
     Assert.assertEquals(original, fromJson);
   }
 
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(RangeBucketShardSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(SingleDimensionRangeBucketShardSpec.class).usingGetClass().verify();
   }
 }

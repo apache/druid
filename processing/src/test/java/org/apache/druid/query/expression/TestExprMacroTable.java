@@ -43,7 +43,11 @@ public class TestExprMacroTable extends ExprMacroTable
             new TimestampShiftExprMacro(),
             new TrimExprMacro.BothTrimExprMacro(),
             new TrimExprMacro.LeftTrimExprMacro(),
-            new TrimExprMacro.RightTrimExprMacro()
+            new TrimExprMacro.RightTrimExprMacro(),
+            new HyperUniqueExpressions.HllCreateExprMacro(),
+            new HyperUniqueExpressions.HllAddExprMacro(),
+            new HyperUniqueExpressions.HllEstimateExprMacro(),
+            new HyperUniqueExpressions.HllRoundEstimateExprMacro()
         )
     );
   }

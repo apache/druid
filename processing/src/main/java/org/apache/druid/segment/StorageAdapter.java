@@ -66,13 +66,6 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
-  /**
-   * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.
-   * @param column column name
-   * @return type name
-   */
-  @Nullable
-  String getColumnTypeName(String column);
   int getNumRows();
   DateTime getMaxIngestedEventTime();
   Metadata getMetadata();

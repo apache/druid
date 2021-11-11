@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -70,12 +71,15 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new ApproximateHistogramDruidModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     ApproximateHistogramDruidModule.registerSerde();
-    for (Module mod : new ApproximateHistogramDruidModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-    }
 
     final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
                                              .tmpDir(temporaryFolder.newFolder())

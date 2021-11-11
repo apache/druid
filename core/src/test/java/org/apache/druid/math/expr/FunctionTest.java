@@ -25,9 +25,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ObjectByteStrategy;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -44,6 +48,12 @@ public class FunctionTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private Expr.ObjectBinding bindings;
+
+  @BeforeClass
+  public static void setupClass()
+  {
+    Types.registerStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypesTest.PairObjectByteStrategy());
+  }
 
   @Before
   public void setup()
@@ -64,7 +74,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("of", 0F)
         .put("a", new String[] {"foo", "bar", "baz", "foobar"})
         .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
-        .put("c", new Double[] {3.1, 4.2, 5.3});
+        .put("c", new Double[] {3.1, 4.2, 5.3})
+        .put("someComplex", new TypesTest.NullableLongPair(1L, 2L));
     bindings = InputBindings.withMap(builder.build());
   }
 
@@ -281,7 +292,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayAppend()
   {
     assertArrayExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, NullHandling.defaultLongValue()});
     assertArrayExpr("array_append([], 1)", new String[]{"1"});
     assertArrayExpr("array_append(<LONG>[], 1)", new Long[]{1L});
   }
@@ -300,11 +311,11 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArraySetAdd()
   {
     assertArrayExpr("array_set_add([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{null, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
     assertArrayExpr("array_set_add([1, 2, 2], 1)", new Long[]{1L, 2L});
     assertArrayExpr("array_set_add([], 1)", new String[]{"1"});
     assertArrayExpr("array_set_add(<LONG>[], 1)", new Long[]{1L});
-    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{null});
+    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{NullHandling.defaultLongValue()});
   }
 
   @Test
@@ -358,7 +369,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayPrepend()
   {
     assertArrayExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
-    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
+    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
     assertArrayExpr("array_prepend(1, [])", new String[]{"1"});
     assertArrayExpr("array_prepend(1, <LONG>[])", new Long[]{1L});
     assertArrayExpr("array_prepend(1, <DOUBLE>[])", new Double[]{1.0});
@@ -790,6 +801,66 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("repeat('hello', -1)", null);
     assertExpr("repeat(null, 10)", null);
     assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+  @Test
+  public void testComplexDecode()
+  {
+    TypesTest.NullableLongPair expected = new TypesTest.NullableLongPair(1L, 2L);
+    ObjectByteStrategy strategy = Types.getStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName());
+    assertExpr(
+        StringUtils.format(
+            "complex_decode_base64('%s', '%s')",
+            TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+            StringUtils.encodeBase64String(strategy.toBytes(expected))
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testComplexDecodeNull()
+  {
+    assertExpr(
+        StringUtils.format(
+            "complex_decode_base64('%s', null)",
+            TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
+        ),
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseWrongArgCount()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[complex_decode_base64] needs 2 arguments");
+    assertExpr(
+        "complex_decode_base64(string)",
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseArg0BadType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[complex_decode_base64] first argument must be constant 'STRING' expression containing a valid complex type name");
+    assertExpr(
+        "complex_decode_base64(1, string)",
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseArg0Unknown()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[complex_decode_base64] first argument must be a valid complex type name, unknown complex type [COMPLEX<unknown>]");
+    assertExpr(
+        "complex_decode_base64('unknown', string)",
+        null
+    );
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)

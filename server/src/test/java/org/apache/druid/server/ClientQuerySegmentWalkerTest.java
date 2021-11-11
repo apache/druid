@@ -1436,7 +1436,7 @@ public class ClientQuerySegmentWalkerTest
             ReferenceCountingSegment.wrapSegment(
                 new RowBasedSegment<>(
                     SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC.getPartitionNum()),
-                    dataSource.getRows(),
+                    Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),
                     dataSource.getRowSignature()
                 ),

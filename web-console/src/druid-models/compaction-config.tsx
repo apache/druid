@@ -85,6 +85,15 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           A target row count for each partition. Each partition will have a row count close to the
           target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
         </p>
+        <p>
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
+          properties.
+        </p>
       </>
     ),
   },
@@ -103,8 +112,16 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           of 500MB~1GB.
         </p>
         <p>
-          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code>. Only one
-          of these properties can be used.
+          <Code>maxRowsPerSegment</Code> renamed to <Code>targetRowsPerSegment</Code>
+        </p>
+        <p>
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
+          properties.
         </p>
       </>
     ),
@@ -127,6 +144,11 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           Directly specify the number of shards to create. If this is specified and
           &apos;intervals&apos; is specified in the granularitySpec, the index task can skip the
           determine intervals/partitions pass through the data.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows across partitions and find the best partitioning. Leave blank to
+          show all properties.
         </p>
       </>
     ),
@@ -157,10 +179,16 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
-      <p>
-        Target number of rows to include in a partition, should be a number that targets segments of
-        500MB~1GB.
-      </p>
+      <>
+        <p>
+          Target number of rows to include in a partition, should be a number that targets segments
+          of 500MB~1GB.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
+        </p>
+      </>
     ),
   },
   {
@@ -173,7 +201,15 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
-    info: <p>Maximum number of rows to include in a partition.</p>,
+    info: (
+      <>
+        <p>Maximum number of rows to include in a partition.</p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
+        </p>
+      </>
+    ),
   },
   {
     name: 'tuningConfig.partitionsSpec.assumeGrouped',

@@ -71,7 +71,7 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
   const value = localStorageGet(key);
   if (!value) return;
   try {
-    return JSON.parse(value);
+    return JSONBig.parse(value);
   } catch {
     return;
   }

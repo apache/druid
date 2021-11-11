@@ -22,13 +22,17 @@ package org.apache.druid.indexing.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
@@ -42,10 +46,23 @@ import java.util.List;
 public class TaskConfig
 {
   private static final Logger log = new Logger(TaskConfig.class);
+  private static final String HADOOP_LIB_VERSIONS = "hadoop.indexer.libs.version";
+  public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES;
 
-  public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
-      "org.apache.hadoop:hadoop-client:2.8.5"
-  );
+  static {
+    try {
+      DEFAULT_DEFAULT_HADOOP_COORDINATES =
+          ImmutableList.copyOf(Lists.newArrayList(IOUtils.toString(
+              TaskConfig.class.getResourceAsStream("/"
+                                                   + HADOOP_LIB_VERSIONS),
+              StandardCharsets.UTF_8
+          ).split(",")));
+
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Unable to read file %s from classpath ", HADOOP_LIB_VERSIONS);
+    }
+  }
 
   // This enum controls processing mode of batch ingestion "segment creation" phase (i.e. appenderator logic)
   public enum BatchProcessingMode
