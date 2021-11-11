@@ -285,12 +285,14 @@ Old behavior:
 * `0.7 || 0.3` -> `0.3`
 * `100 && 0` -> `0`
 * `'troo' && 'true'` -> `'troo'`
+* `'troo' || 'true'` -> `'true'`
 
 Current behavior:
 * `100 && 11` -> `1`
 * `0.7 || 0.3` -> `1`
 * `100 && 0` -> `0`
 * `'troo' && 'true'` -> `0`
+* `'troo' || 'true'` -> `1`
 
 Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
 
