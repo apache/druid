@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -140,23 +140,13 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     }
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    if (isInputThetaSketch) {
-      return SketchModule.THETA_SKETCH_MERGE_AGG;
-    } else {
-      return SketchModule.THETA_SKETCH_BUILD_AGG;
-    }
-  }
-
   /**
    * actual type is {@link SketchHolder}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType()
   {
-    return ValueType.COMPLEX;
+    return isInputThetaSketch ? SketchModule.MERGE_TYPE : SketchModule.BUILD_TYPE;
   }
 
   /**
@@ -166,12 +156,12 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    * if {@link #shouldFinalize} is NOT set, type is {@link SketchHolder}
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getFinalizedType()
   {
     if (shouldFinalize && errorBoundsStdDev == null) {
-      return ValueType.DOUBLE;
+      return ColumnType.DOUBLE;
     }
-    return ValueType.COMPLEX;
+    return getType();
   }
 
   @Override

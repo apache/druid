@@ -43,7 +43,6 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -165,9 +164,7 @@ public class ThreadingTaskRunner
                           final ThreadingTaskRunnerWorkItem taskWorkItem;
 
                           try {
-                            if (!attemptDir.mkdirs()) {
-                              throw new IOE("Could not create directories: %s", attemptDir);
-                            }
+                            FileUtils.mkdirp(attemptDir);
 
                             final File taskFile = new File(taskDir, "task.json");
                             final File reportsFile = new File(attemptDir, "report.json");
@@ -197,7 +194,7 @@ public class ThreadingTaskRunner
                             Thread.currentThread()
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
-                            TaskStatus taskStatus = null;
+                            TaskStatus taskStatus;
                             final TaskToolbox toolbox = toolboxFactory.build(task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
@@ -212,12 +209,13 @@ public class ThreadingTaskRunner
                             }
                             catch (Throwable t) {
                               LOGGER.error(t, "Exception caught while running the task.");
+                              taskStatus = TaskStatus.failure(
+                                  task.getId(),
+                                  "Failed with an exception. See indexer logs for more details."
+                              );
                             }
                             finally {
                               taskWorkItem.setState(RunnerTaskState.NONE);
-                              if (taskStatus == null) {
-                                taskStatus = TaskStatus.failure(task.getId());
-                              }
                               Thread.currentThread().setName(priorThreadName);
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);

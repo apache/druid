@@ -51,6 +51,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -103,6 +104,13 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
 
   @Override
   public TaskPayloadResponse getTaskPayload(String taskId)
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
   {
     return null;
   }

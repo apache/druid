@@ -19,16 +19,19 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class BuildingSingleDimensionShardSpecTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = setupObjectMapper();
+
   @Test
   public void testConvert()
   {
@@ -48,25 +51,88 @@ public class BuildingSingleDimensionShardSpecTest
   }
 
   @Test
-  public void testSerde() throws JsonProcessingException
+  public void testSerde()
+  {
+    final BuildingSingleDimensionShardSpec original =
+        new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5);
+    final String json = serialize(original);
+    final BuildingSingleDimensionShardSpec fromJson =
+        (BuildingSingleDimensionShardSpec) deserialize(json, ShardSpec.class);
+    Assert.assertEquals(original, fromJson);
+  }
+
+  @Test
+  public void testGetSerializableObject()
+  {
+    BuildingSingleDimensionShardSpec shardSpec =
+        new BuildingSingleDimensionShardSpec(1, "dim", "abc", "xyz", 5);
+
+    // Verify the fields of the serializable object
+    Map<String, Object> jsonMap = shardSpec.getSerializableObject();
+    Assert.assertEquals(5, jsonMap.size());
+    Assert.assertEquals(1, jsonMap.get("bucketId"));
+    Assert.assertEquals("dim", jsonMap.get("dimension"));
+    Assert.assertEquals("abc", jsonMap.get("start"));
+    Assert.assertEquals("xyz", jsonMap.get("end"));
+    Assert.assertEquals(5, jsonMap.get("partitionNum"));
+  }
+
+  @Test
+  public void testDeserializeFromMap()
+  {
+    final String json = "{\"type\": \"" + BuildingSingleDimensionShardSpec.TYPE + "\","
+                        + " \"bucketId\":1,"
+                        + " \"dimension\": \"dim\","
+                        + " \"start\": \"abc\","
+                        + " \"end\": \"xyz\","
+                        + " \"partitionNum\": 5}";
+
+    BuildingSingleDimensionShardSpec shardSpec =
+        (BuildingSingleDimensionShardSpec) deserialize(json, ShardSpec.class);
+    Assert.assertEquals(
+        new BuildingSingleDimensionShardSpec(1, "dim", "abc", "xyz", 5),
+        shardSpec
+    );
+  }
+
+  @Test
+  public void testEquals()
+  {
+    Assert.assertEquals(
+        new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4),
+        new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4)
+    );
+  }
+
+  private static ObjectMapper setupObjectMapper()
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
         new NamedType(BuildingSingleDimensionShardSpec.class, BuildingSingleDimensionShardSpec.TYPE)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
-    final BuildingSingleDimensionShardSpec original = new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5);
-    final String json = mapper.writeValueAsString(original);
-    final BuildingSingleDimensionShardSpec fromJson = (BuildingSingleDimensionShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
-    Assert.assertEquals(original, fromJson);
+
+    return mapper;
   }
 
-  @Test
-  public void testEquals()
+  private String serialize(Object object)
   {
-    EqualsVerifier.forClass(BuildingSingleDimensionShardSpec.class).usingGetClass().verify();
+    try {
+      return OBJECT_MAPPER.writeValueAsString(object);
+    }
+    catch (Exception e) {
+      throw new ISE("Error while serializing");
+    }
   }
+
+  private <T> T deserialize(String json, Class<T> clazz)
+  {
+    try {
+      return OBJECT_MAPPER.readValue(json, clazz);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Error while deserializing");
+    }
+  }
+
 }

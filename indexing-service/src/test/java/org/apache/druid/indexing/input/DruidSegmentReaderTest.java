@@ -46,12 +46,10 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -82,7 +80,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public void setUp() throws IOException
   {
     // Write a segment with two rows in it, with columns: s (string), d (double), cnt (long), met_s (complex).
-    final IncrementalIndex<?> incrementalIndex =
+    final IncrementalIndex incrementalIndex =
         IndexBuilder.create()
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -589,16 +587,10 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
   {
     return new DruidSegmentInputEntity(
-        new SegmentLoader()
+        new SegmentCacheManager()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public Segment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+          public boolean isSegmentCached(DataSegment segment)
           {
             throw new UnsupportedOperationException("unused");
           }
@@ -613,6 +605,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           public void cleanup(DataSegment segment)
           {
             throw new UnsupportedOperationException("unused");
+          }
+
+          @Override
+          public boolean reserve(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public boolean release(DataSegment segment)
+          {
+            throw new UnsupportedOperationException();
           }
         },
         DataSegment.builder()

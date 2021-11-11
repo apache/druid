@@ -20,7 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -32,12 +32,12 @@ import javax.annotation.Nullable;
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
     implements ExprVectorProcessor<TOutput>
 {
-  private final ExprType outputType;
+  private final ExpressionType outputType;
   private final ExprVectorProcessor<TLeftInput> left;
   private final ExprVectorProcessor<TRightInput> right;
 
   public BivariateFunctionVectorProcessor(
-      ExprType outputType,
+      ExpressionType outputType,
       ExprVectorProcessor<TLeftInput> left,
       ExprVectorProcessor<TRightInput> right
   )
@@ -75,7 +75,7 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
   public abstract ExprEvalVector<TOutput> asEval();
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
     return outputType;
   }

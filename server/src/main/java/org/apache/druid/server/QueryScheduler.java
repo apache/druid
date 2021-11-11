@@ -64,12 +64,26 @@ public class QueryScheduler implements QueryWatcher
   private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
+
   /**
-   * mapping of query id to set of futures associated with the query
+   * mapping of query id to set of futures associated with the query.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryDatasources} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, ListenableFuture<?>> queryFutures;
+
   /**
-   * mapping of query id to set of datasource names that are being queried, used for authorization
+   * mapping of query id to set of datasource names that are being queried, used for authorization.
+   * This map is synchronized as there are 2 threads, query execution thread and query canceling thread,
+   * that can access the map at the same time.
+   *
+   * The updates (additions and removals) on this and {@link #queryFutures} are racy
+   * as those updates are not being done atomically on those 2 maps,
+   * but it is OK in most cases since they will be cleaned up once the query is done.
    */
   private final SetMultimap<String, String> queryDatasources;
 

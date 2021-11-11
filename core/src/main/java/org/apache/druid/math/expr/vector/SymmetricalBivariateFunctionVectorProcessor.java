@@ -19,12 +19,12 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 public abstract class SymmetricalBivariateFunctionVectorProcessor<T> extends BivariateFunctionVectorProcessor<T, T, T>
 {
   public SymmetricalBivariateFunctionVectorProcessor(
-      ExprType outputType,
+      ExpressionType outputType,
       ExprVectorProcessor<T> left,
       ExprVectorProcessor<T> right
   )

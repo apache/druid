@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -135,20 +136,20 @@ public interface Expr extends Cacheable
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression.
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
    *
    * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
    * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
    * the entire expression. Otherwise, all vectorizable expressions must produce an output type to correctly operate
    * with the vectorized engine.
    *
-   * Outside of the context of vectorized expressions, a return value of null can also indicate that the given type
+   * Outside the context of vectorized expressions, a return value of null can also indicate that the given type
    * information was not enough to resolve the output type, so the expression must be evaluated using default
    * {@link #eval} handling where types are only known after evaluation, through {@link ExprEval#type}, such as
    * transform expressions at ingestion time
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inspector)
+  default ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -188,14 +189,14 @@ public interface Expr extends Cacheable
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but could be other
      * things depending on the backing adapter)
      */
     @Nullable
-    ExprType getType(String name);
+    ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -203,7 +204,7 @@ public interface Expr extends Cacheable
     {
       boolean numeric = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
@@ -213,7 +214,7 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
      */
@@ -224,14 +225,17 @@ public interface Expr extends Cacheable
 
     default boolean areSameTypes(List<Expr> args)
     {
-      ExprType currentType = null;
+      ExpressionType currentType = null;
       boolean allSame = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
         if (currentType == null) {
           currentType = argType;
         }
-        allSame &= argType == currentType;
+        allSame &= Objects.equals(argType, currentType);
       }
       return allSame;
     }
@@ -242,7 +246,7 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -251,17 +255,17 @@ public interface Expr extends Cacheable
     {
       boolean scalar = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isScalar();
+        scalar &= argType.isPrimitive();
       }
       return scalar;
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
      * value of true.
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
@@ -303,7 +307,7 @@ public interface Expr extends Cacheable
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
@@ -314,7 +318,7 @@ public interface Expr extends Cacheable
 
   /**
    * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
-   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * the vectorized column selector interfaces, and includes {@link ExpressionType} information about all input bindings
    * which exist
    */
   interface VectorInputBinding extends VectorInputBindingInspector
@@ -383,13 +387,15 @@ public interface Expr extends Cacheable
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

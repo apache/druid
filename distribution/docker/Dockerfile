@@ -18,7 +18,7 @@
 #
 
 ARG JDK_VERSION=8
-FROM maven:3-jdk-11-slim as builder
+FROM maven:3.8.1-jdk-11-slim as builder
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
 ARG BUILD_FROM_SOURCE="true"

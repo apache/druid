@@ -61,6 +61,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -90,19 +91,19 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCacheStrategy() throws Exception
   {
-    doTestCacheStrategy(ValueType.STRING, "val1");
-    doTestCacheStrategy(ValueType.FLOAT, 2.1f);
-    doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
-    doTestCacheStrategy(ValueType.LONG, 2L);
+    doTestCacheStrategy(ColumnType.STRING, "val1");
+    doTestCacheStrategy(ColumnType.FLOAT, 2.1f);
+    doTestCacheStrategy(ColumnType.DOUBLE, 2.1d);
+    doTestCacheStrategy(ColumnType.LONG, 2L);
   }
 
   @Test
   public void testCacheStrategyOrderByPostAggs() throws Exception
   {
-    doTestCacheStrategyOrderByPost(ValueType.STRING, "val1");
-    doTestCacheStrategyOrderByPost(ValueType.FLOAT, 2.1f);
-    doTestCacheStrategyOrderByPost(ValueType.DOUBLE, 2.1d);
-    doTestCacheStrategyOrderByPost(ValueType.LONG, 2L);
+    doTestCacheStrategyOrderByPost(ColumnType.STRING, "val1");
+    doTestCacheStrategyOrderByPost(ColumnType.FLOAT, 2.1f);
+    doTestCacheStrategyOrderByPost(ColumnType.DOUBLE, 2.1d);
+    doTestCacheStrategyOrderByPost(ColumnType.LONG, 2L);
   }
 
   @Test
@@ -315,11 +316,11 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("dim", ValueType.STRING)
-                    .add("rows", ValueType.LONG)
-                    .add("index", ValueType.DOUBLE)
+                    .add("dim", ColumnType.STRING)
+                    .add("rows", ColumnType.LONG)
+                    .add("index", ColumnType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", ValueType.LONG)
+                    .add("const", ColumnType.LONG)
                     .build(),
         new TopNQueryQueryToolChest(null, null).resultArraySignature(query)
     );
@@ -420,7 +421,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     return collector;
   }
 
-  private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
+  private void doTestCacheStrategy(final ColumnType valueType, final Object dimValue) throws IOException
   {
     CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy =
         new TopNQueryQueryToolChest(null, null).getCacheStrategy(
@@ -435,7 +436,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
                 Granularities.ALL,
                 ImmutableList.of(
                     new CountAggregatorFactory("metric1"),
-                    getComplexAggregatorFactoryForValueType(valueType)
+                    getComplexAggregatorFactoryForValueType(valueType.getType())
                 ),
                 ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 null
@@ -450,7 +451,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
                 ImmutableMap.of(
                     "test", dimValue,
                     "metric1", 2,
-                    "complexMetric", getIntermediateComplexValue(valueType, dimValue)
+                    "complexMetric", getIntermediateComplexValue(valueType.getType(), dimValue)
                 )
             )
         )
@@ -487,7 +488,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
     final Result<TopNResultValue> typeAdjustedResult2;
-    if (valueType == ValueType.FLOAT) {
+    if (valueType.is(ValueType.FLOAT)) {
       typeAdjustedResult2 = new Result<>(
           DateTimes.utc(123L),
           new TopNResultValue(
@@ -501,7 +502,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
               )
           )
       );
-    } else if (valueType == ValueType.LONG) {
+    } else if (valueType.is(ValueType.LONG)) {
       typeAdjustedResult2 = new Result<>(
           DateTimes.utc(123L),
           new TopNResultValue(
@@ -533,7 +534,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 
-  private void doTestCacheStrategyOrderByPost(final ValueType valueType, final Object dimValue) throws IOException
+  private void doTestCacheStrategyOrderByPost(final ColumnType valueType, final Object dimValue) throws IOException
   {
     CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy =
         new TopNQueryQueryToolChest(null, null).getCacheStrategy(
@@ -570,7 +571,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
             )
         );
 
-    HyperLogLogCollector collector = getIntermediateHllCollector(valueType, dimValue);
+    HyperLogLogCollector collector = getIntermediateHllCollector(valueType.getType(), dimValue);
 
     final Result<TopNResultValue> result1 = new Result<>(
         // test timestamps that result in integer size millis

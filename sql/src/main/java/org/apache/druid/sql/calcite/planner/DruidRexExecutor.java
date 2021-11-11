@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -74,10 +75,12 @@ public class DruidRexExecutor implements RexExecutor
         final Expr expr = Parser.parse(druidExpression.getExpression(), plannerContext.getExprMacroTable());
 
         final ExprEval exprResult = expr.eval(
-            name -> {
-              // Sanity check. Bindings should not be used for a constant expression.
-              throw new UnsupportedOperationException();
-            }
+            InputBindings.forFunction(
+                name -> {
+                  // Sanity check. Bindings should not be used for a constant expression.
+                  throw new UnsupportedOperationException();
+                }
+            )
         );
 
         final RexNode literal;
@@ -119,13 +122,22 @@ public class DruidRexExecutor implements RexExecutor
           if (exprResult.isNumericNull()) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
-            if (exprResult.type() == ExprType.LONG) {
+            if (exprResult.type().is(ExprType.LONG)) {
               bigDecimal = BigDecimal.valueOf(exprResult.asLong());
 
             } else {
               // if exprResult evaluates to Nan or infinity, this will throw a NumberFormatException.
               // If you find yourself in such a position, consider casting the literal to a BIGINT so that
               // the query can execute.
+              double exprResultDouble = exprResult.asDouble();
+              if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
+                String expression = druidExpression.getExpression();
+                throw new IAE("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                    expression,
+                    Double.toString(exprResultDouble),
+                    expression,
+                    expression);
+              }
               bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
             }
             literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);

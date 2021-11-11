@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -67,7 +68,7 @@ abstract class UnaryExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return expr.getOutputType(inspector);
   }
@@ -125,10 +126,10 @@ class UnaryMinusExpr extends UnaryExpr
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);
     }
-    if (ret.type() == ExprType.LONG) {
+    if (ret.type().is(ExprType.LONG)) {
       return ExprEval.of(-ret.asLong());
     }
-    if (ret.type() == ExprType.DOUBLE) {
+    if (ret.type().is(ExprType.DOUBLE)) {
       return ExprEval.of(-ret.asDouble());
     }
     throw new IAE("unsupported type " + ret.type());
@@ -169,17 +170,17 @@ class UnaryNotExpr extends UnaryExpr
       return ExprEval.of(null);
     }
     // conforming to other boolean-returning binary operators
-    ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
-    return ExprEval.ofBoolean(!ret.asBoolean(), retType);
+    ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
+    return ExprEval.ofBoolean(!ret.asBoolean(), retType.getType());
   }
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.is(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }

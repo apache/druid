@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -120,6 +121,7 @@ public class DataSegmentTest
         new NumberedShardSpec(3, 0),
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo")), null, null),
             ImmutableMap.of(),
             ImmutableMap.of()
         ),
@@ -142,6 +144,7 @@ public class DataSegmentTest
     Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
+    Assert.assertEquals(4, ((Map) objectMap.get("lastCompactionState")).size());
 
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 
@@ -154,6 +157,7 @@ public class DataSegmentTest
     Assert.assertEquals(segment.getShardSpec(), deserializedSegment.getShardSpec());
     Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(segment.getId(), deserializedSegment.getId());
+    Assert.assertEquals(segment.getLastCompactionState(), deserializedSegment.getLastCompactionState());
 
     deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, segment.compareTo(deserializedSegment));
@@ -162,6 +166,100 @@ public class DataSegmentTest
     Assert.assertEquals(0, deserializedSegment.compareTo(segment));
 
     deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
+    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+  }
+
+  @Test
+  public void testDeserializationDataSegmentLastCompactionStateWithoutDimensionsSpec() throws Exception
+  {
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+    DataSegment segment = new DataSegment(
+        "something",
+        interval,
+        "1",
+        loadSpec,
+        Arrays.asList("dim1", "dim2"),
+        Arrays.asList("met1", "met2"),
+        new NumberedShardSpec(3, 0),
+        new CompactionState(
+            new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            null,
+            ImmutableMap.of(),
+            ImmutableMap.of()
+        ),
+        TEST_VERSION,
+        1
+    );
+    String lastCompactionStateWithoutDimensionsSpec = "{"
+                                                      + "\"dataSource\": \"something\","
+                                                      + "\"interval\": \"2011-10-01T00:00:00.000Z/2011-10-02T00:00:00.000Z\","
+                                                      + "\"version\": \"1\","
+                                                      + "\"loadSpec\": {"
+                                                      + " \"something\": \"or_other\""
+                                                      + "},"
+                                                      + "\"dimensions\": \"dim1,dim2\","
+                                                      + "\"metrics\": \"met1,met2\","
+                                                      + "\"shardSpec\": {"
+                                                      + " \"type\": \"numbered\","
+                                                      + " \"partitionNum\": 3,"
+                                                      + " \"partitions\": 0"
+                                                      + "},"
+                                                      + "\"lastCompactionState\": {"
+                                                      + " \"partitionsSpec\": {"
+                                                      + "  \"type\": \"hashed\","
+                                                      + "  \"numShards\": null,"
+                                                      + "  \"partitionDimensions\": [\"dim1\"],"
+                                                      + "  \"partitionFunction\": \"murmur3_32_abs\","
+                                                      + "  \"maxRowsPerSegment\": 100000"
+                                                      + " },"
+                                                      + " \"indexSpec\": {},"
+                                                      + " \"granularitySpec\": {}"
+                                                      + "},"
+                                                      + "\"binaryVersion\": 9,"
+                                                      + "\"size\": 1,"
+                                                      + "\"identifier\": \"something_2011-10-01T00:00:00.000Z_2011-10-02T00:00:00.000Z_1_3\""
+                                                      + "}";
+
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        lastCompactionStateWithoutDimensionsSpec,
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertEquals(11, objectMap.size());
+    Assert.assertEquals("something", objectMap.get("dataSource"));
+    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assert.assertEquals("1", objectMap.get("version"));
+    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
+    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assert.assertEquals(1, objectMap.get("size"));
+    Assert.assertEquals(3, ((Map) objectMap.get("lastCompactionState")).size());
+
+    DataSegment deserializedSegment = MAPPER.readValue(lastCompactionStateWithoutDimensionsSpec, DataSegment.class);
+    Assert.assertEquals(segment.getDataSource(), deserializedSegment.getDataSource());
+    Assert.assertEquals(segment.getInterval(), deserializedSegment.getInterval());
+    Assert.assertEquals(segment.getVersion(), deserializedSegment.getVersion());
+    Assert.assertEquals(segment.getLoadSpec(), deserializedSegment.getLoadSpec());
+    Assert.assertEquals(segment.getDimensions(), deserializedSegment.getDimensions());
+    Assert.assertEquals(segment.getMetrics(), deserializedSegment.getMetrics());
+    Assert.assertEquals(segment.getShardSpec(), deserializedSegment.getShardSpec());
+    Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
+    Assert.assertEquals(segment.getId(), deserializedSegment.getId());
+    Assert.assertEquals(segment.getLastCompactionState(), deserializedSegment.getLastCompactionState());
+    Assert.assertNotNull(segment.getLastCompactionState());
+    Assert.assertNull(segment.getLastCompactionState().getDimensionsSpec());
+    Assert.assertNotNull(deserializedSegment.getLastCompactionState());
+    Assert.assertNull(deserializedSegment.getLastCompactionState().getDimensionsSpec());
+
+    deserializedSegment = MAPPER.readValue(lastCompactionStateWithoutDimensionsSpec, DataSegment.class);
+    Assert.assertEquals(0, segment.compareTo(deserializedSegment));
+
+    deserializedSegment = MAPPER.readValue(lastCompactionStateWithoutDimensionsSpec, DataSegment.class);
+    Assert.assertEquals(0, deserializedSegment.compareTo(segment));
+
+    deserializedSegment = MAPPER.readValue(lastCompactionStateWithoutDimensionsSpec, DataSegment.class);
     Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
@@ -232,6 +330,7 @@ public class DataSegmentTest
   {
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
         Collections.singletonMap("test", "map"),
         Collections.singletonMap("test2", "map2")
     );

@@ -30,6 +30,7 @@ public interface BitmapIndex
 {
   int getCardinality();
 
+  @Nullable
   String getValue(int index);
 
   boolean hasNulls();

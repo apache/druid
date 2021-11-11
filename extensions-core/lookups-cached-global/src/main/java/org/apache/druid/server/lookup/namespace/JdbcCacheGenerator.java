@@ -20,6 +20,7 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.google.common.base.Strings;
+import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -28,13 +29,15 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.utils.JvmUtils;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,6 +48,10 @@ import java.util.concurrent.ConcurrentMap;
 public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNamespace>
 {
   private static final Logger LOG = new Logger(JdbcCacheGenerator.class);
+  private static final String NO_SUITABLE_DRIVER_FOUND_ERROR = "No suitable driver found";
+  private static final String JDBC_DRIVER_JAR_FILES_MISSING_ERROR =
+      "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory";
+  private static final long MAX_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
   private final ConcurrentMap<CacheScheduler.EntryImpl<JdbcExtractionNamespace>, DBI> dbiCache =
       new ConcurrentHashMap<>();
 
@@ -59,7 +66,6 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
     final Long lastDBUpdate;
-    final List<Pair<String, String>> pairs;
     final long dbQueryStart;
 
     try {
@@ -67,21 +73,20 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
         return null;
       }
-      dbQueryStart = System.currentTimeMillis();
-
-      LOG.debug("Updating %s", entryId);
-      pairs = getLookupPairs(entryId, namespace);
     }
     catch (UnableToObtainConnectionException e) {
-      if (e.getMessage().contains("No suitable driver found")) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
         throw new ISE(
             e,
-            "JDBC driver JAR files missing from extensions/druid-lookups-cached-global directory"
+            JDBC_DRIVER_JAR_FILES_MISSING_ERROR
         );
       } else {
         throw e;
       }
     }
+    dbQueryStart = System.currentTimeMillis();
+
+    LOG.debug("Updating %s", entryId);
 
     final String newVersion;
     if (lastDBUpdate != null) {
@@ -90,13 +95,37 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       newVersion = StringUtils.format("%d", dbQueryStart);
     }
     final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, newVersion);
-    try {
+
+    final long startNs = System.nanoTime();
+    try (
+        Handle handle = getHandle(entryId, namespace);
+        ResultIterator<Pair<String, String>> pairs = getLookupPairs(handle, namespace)) {
       final Map<String, String> cache = versionedCache.getCache();
-      for (Pair<String, String> pair : pairs) {
-        cache.put(pair.lhs, pair.rhs);
-      }
-      LOG.info("Finished loading %d values for %s", cache.size(), entryId);
+      final MapPopulator.PopulateResult populateResult = MapPopulator.populateAndWarnAtByteLimit(
+          pairs,
+          cache,
+          (long) (MAX_MEMORY * namespace.getMaxHeapPercentage() / 100.0),
+          null == entryId ? null : entryId.toString()
+      );
+      final long duration = System.nanoTime() - startNs;
+      LOG.info(
+          "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
+          populateResult.getEntries(),
+          populateResult.getBytes(),
+          entryId,
+          duration
+      );
       return versionedCache;
+    }
+    catch (UnableToObtainConnectionException e) {
+      if (e.getMessage().contains(NO_SUITABLE_DRIVER_FOUND_ERROR)) {
+        throw new ISE(
+            e,
+            JDBC_DRIVER_JAR_FILES_MISSING_ERROR
+        );
+      } else {
+        throw e;
+      }
     }
     catch (Throwable t) {
       try {
@@ -109,23 +138,28 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     }
   }
 
-  private List<Pair<String, String>> getLookupPairs(
+  private Handle getHandle(
       final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key,
       final JdbcExtractionNamespace namespace
   )
   {
     final DBI dbi = ensureDBI(key, namespace);
+    return dbi.open();
+  }
+
+  private ResultIterator<Pair<String, String>> getLookupPairs(
+      final Handle handle,
+      final JdbcExtractionNamespace namespace
+  )
+  {
     final String table = namespace.getTable();
     final String filter = namespace.getFilter();
     final String valueColumn = namespace.getValueColumn();
     final String keyColumn = namespace.getKeyColumn();
 
-    return dbi.withHandle(
-        handle -> handle
-            .createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
-            .map((index, r, ctx) -> new Pair<>(r.getString(keyColumn), r.getString(valueColumn)))
-            .list()
-    );
+    return handle.createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
+            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(keyColumn), r1.getString(valueColumn)))
+            .iterator();
   }
 
   private static String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)

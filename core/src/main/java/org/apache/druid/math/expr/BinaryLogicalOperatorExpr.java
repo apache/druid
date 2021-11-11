@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -64,11 +65,11 @@ class BinLtExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -121,11 +122,11 @@ class BinLeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -178,11 +179,11 @@ class BinGtExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -234,11 +235,11 @@ class BinGeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -290,11 +291,11 @@ class BinEqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -346,11 +347,11 @@ class BinNeqExpr extends BinaryEvalOpExprBase
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExprType implicitCast = super.getOutputType(inspector);
-    if (ExprType.STRING.equals(implicitCast)) {
-      return ExprType.LONG;
+    ExpressionType implicitCast = super.getOutputType(inspector);
+    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
+      return ExpressionType.LONG;
     }
     return implicitCast;
   }
@@ -386,42 +387,42 @@ class BinAndExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (NullHandling.useLegacyLogicalOperators()) {
+    if (ExpressionProcessing.useLegacyLogicalOperators()) {
       return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
     }
 
     // if left is false, always false
     if (leftVal.value() != null && !leftVal.asBoolean()) {
-      return ExprEval.ofBoolean(false, leftVal.type());
+      return ExprEval.ofBoolean(false, leftVal.type().getType());
     }
     ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || leftVal.type() == ExprType.STRING) {
+    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
       // true/null, null/true, null/null -> null
       // false/null, null/false -> false
       if (leftVal.value() == null) {
         rightVal = right.eval(bindings);
         if (rightVal.value() == null || rightVal.asBoolean()) {
-          return ExprEval.ofNull(rightVal.type());
+          return ExprEval.ofType(rightVal.type(), null);
         }
-        return ExprEval.ofBoolean(false, rightVal.type());
+        return ExprEval.ofBoolean(false, rightVal.type().getType());
       } else {
         // left value must be true
         rightVal = right.eval(bindings);
         if (rightVal.value() == null) {
-          return ExprEval.ofNull(leftVal.type());
+          return ExprEval.ofType(leftVal.type(), null);
         }
       }
     } else {
       rightVal = right.eval(bindings);
     }
-    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    return ExprEval.ofBoolean(leftVal.asBoolean() && rightVal.asBoolean(), type);
+    ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+    return ExprEval.ofBoolean(leftVal.asBoolean() && rightVal.asBoolean(), type.getType());
   }
 
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return !NullHandling.useLegacyLogicalOperators() &&
+    return !ExpressionProcessing.useLegacyLogicalOperators() &&
            inspector.areSameTypes(left, right) &&
            inspector.canVectorize(left, right);
   }
@@ -450,37 +451,37 @@ class BinOrExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (NullHandling.useLegacyLogicalOperators()) {
+    if (ExpressionProcessing.useLegacyLogicalOperators()) {
       return leftVal.asBoolean() ? leftVal : right.eval(bindings);
     }
 
     // if left is true, always true
     if (leftVal.value() != null && leftVal.asBoolean()) {
-      return ExprEval.ofBoolean(true, leftVal.type());
+      return ExprEval.ofBoolean(true, leftVal.type().getType());
     }
 
     final ExprEval rightVal;
-    if (NullHandling.sqlCompatible() || leftVal.type() == ExprType.STRING) {
+    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
       // true/null, null/true -> true
       // false/null, null/false, null/null -> null
       if (leftVal.value() == null) {
         rightVal = right.eval(bindings);
         if (rightVal.value() == null || !rightVal.asBoolean()) {
-          return ExprEval.ofNull(rightVal.type());
+          return ExprEval.ofType(rightVal.type(), null);
         }
-        return ExprEval.ofBoolean(true, rightVal.type());
+        return ExprEval.ofBoolean(true, rightVal.type().getType());
       } else {
         // leftval is false
         rightVal = right.eval(bindings);
         if (rightVal.value() == null) {
-          return ExprEval.ofNull(leftVal.type());
+          return ExprEval.ofType(leftVal.type(), null);
         }
       }
     } else {
       rightVal = right.eval(bindings);
     }
-    ExprType type = ExprTypeConversion.autoDetect(leftVal, rightVal);
-    return ExprEval.ofBoolean(leftVal.asBoolean() || rightVal.asBoolean(), type);
+    ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+    return ExprEval.ofBoolean(leftVal.asBoolean() || rightVal.asBoolean(), type.getType());
   }
 
 
@@ -488,7 +489,7 @@ class BinOrExpr extends BinaryOpExprBase
   public boolean canVectorize(InputBindingInspector inspector)
   {
 
-    return !NullHandling.useLegacyLogicalOperators() &&
+    return !ExpressionProcessing.useLegacyLogicalOperators() &&
            inspector.areSameTypes(left, right) &&
            inspector.canVectorize(left, right);
   }

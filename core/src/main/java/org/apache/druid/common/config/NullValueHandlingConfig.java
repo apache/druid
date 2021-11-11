@@ -25,18 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class NullValueHandlingConfig
 {
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
-  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.generic.useLegacyLogicalOperators";
 
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;
 
-  @JsonProperty("useLegacyLogicalOperators")
-  private final boolean useLegacyLogicalOperators;
 
   @JsonCreator
   public NullValueHandlingConfig(
-      @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull,
-      @JsonProperty("useLegacyLogicalOperators") Boolean useLegacyLogicalOperators
+      @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull
   )
   {
     if (useDefaultValuesForNull == null) {
@@ -44,22 +40,10 @@ public class NullValueHandlingConfig
     } else {
       this.useDefaultValuesForNull = useDefaultValuesForNull;
     }
-    if (useLegacyLogicalOperators == null) {
-      this.useLegacyLogicalOperators = Boolean.parseBoolean(
-          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false")
-      );
-    } else {
-      this.useLegacyLogicalOperators = useLegacyLogicalOperators;
-    }
   }
 
   public boolean isUseDefaultValuesForNull()
   {
     return useDefaultValuesForNull;
-  }
-
-  public boolean isUseLegacyLogicalOperators()
-  {
-    return useLegacyLogicalOperators;
   }
 }

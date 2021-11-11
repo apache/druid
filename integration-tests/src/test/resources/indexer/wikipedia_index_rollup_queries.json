@@ -1,0 +1,56 @@
+[
+  {
+    "description": "rows count",
+    "query":{
+      "queryType" : "timeseries",
+      "dataSource": "%%DATASOURCE%%",
+      "granularity":"day",
+      "intervals":[
+        "2013-08-31T00:00/2013-09-01T00:00"
+      ],
+      "filter": {
+        "type": "selector",
+        "dimension": "language",
+        "value": "en",
+        "extractionFn": null
+      },
+      "aggregations":[
+        {
+          "type": "count",
+          "name": "count"
+        }
+      ]
+    },
+    "expectedResults":[
+      {
+        "timestamp" : "2013-08-31T00:00:00.000Z",
+        "result" : {
+          "count":%%EXPECTED_COUNT_RESULT%%
+        }
+      }
+    ]
+  },
+  {
+    "description": "scan with filter",
+    "query":{
+      "queryType" : "scan",
+      "dataSource": "%%DATASOURCE%%",
+      "granularity":"day",
+      "intervals":[
+        "2013-08-31T00:00/2013-09-01T00:00"
+      ],
+      "filter": {
+        "type": "selector",
+        "dimension": "language",
+        "value": "en",
+        "extractionFn": null
+      },
+      "columns": [
+        "added"
+      ],
+      "resultFormat":"compactedList"
+    },
+    "expectedResults": %%EXPECTED_SCAN_RESULT%%,
+    "fieldsToTest": ["events"]
+  }
+]

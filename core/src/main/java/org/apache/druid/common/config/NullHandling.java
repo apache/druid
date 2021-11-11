@@ -58,13 +58,7 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new NullValueHandlingConfig(null, null);
-  }
-
-  @VisibleForTesting
-  public static void initializeForLegacyLogicalOperationsTests(boolean useLegacy)
-  {
-    INSTANCE = new NullValueHandlingConfig(null, useLegacy);
+    INSTANCE = new NullValueHandlingConfig(null);
   }
 
   /**
@@ -82,15 +76,6 @@ public class NullHandling
   public static boolean sqlCompatible()
   {
     return !replaceWithDefault();
-  }
-
-  public static boolean useLegacyLogicalOperators()
-  {
-    // this should only be null in a unit test context, in production this will be injected by the null handling module
-    if (INSTANCE == null) {
-      throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
-    }
-    return INSTANCE.isUseLegacyLogicalOperators();
   }
 
   @Nullable

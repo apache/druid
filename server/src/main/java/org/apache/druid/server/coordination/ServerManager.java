@@ -238,7 +238,7 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  <T> QueryRunner<T> buildQueryRunnerForSegment(
+  protected <T> QueryRunner<T> buildQueryRunnerForSegment(
       final Query<T> query,
       final SegmentDescriptor descriptor,
       final QueryRunnerFactory<T, Query<T>> factory,

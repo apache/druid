@@ -33,7 +33,7 @@ Additionally, it provides an InputFormat for reading Avro OCF files when using
 [native batch indexing](../../ingestion/native-batch.md), see [Avro OCF](../../ingestion/data-formats.md#avro-ocf)
 for details on how to ingest OCF files.
 
-Make sure to [include](../../development/extensions.md#loading-extensions) `druid-avro-extensions` as an extension.
+Make sure to [include](../../development/extensions.md#loading-extensions) `druid-avro-extensions` in the extensions load list.
 
 ### Avro Types
 

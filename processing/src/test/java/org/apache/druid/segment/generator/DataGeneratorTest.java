@@ -658,7 +658,7 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
         .withRollup(false)
         .build();
 
-    IncrementalIndex<?> index = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
         .setSortFacts(false)
         .setMaxRowCount(1_000_000)

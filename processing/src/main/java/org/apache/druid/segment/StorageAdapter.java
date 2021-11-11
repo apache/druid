@@ -66,14 +66,20 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
-  /**
-   * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.
-   * @param column column name
-   * @return type name
-   */
-  @Nullable
-  String getColumnTypeName(String column);
   int getNumRows();
   DateTime getMaxIngestedEventTime();
   Metadata getMetadata();
+
+  /**
+   * Returns true if this storage adapter can filter some rows out. The actual column cardinality can be lower than
+   * what {@link #getDimensionCardinality} returns if this returns true. Dimension selectors for such storage adapter
+   * can return non-contiguous dictionary IDs because the dictionary IDs in filtered rows will not be returned.
+   * Note that the number of rows accessible via this storage adapter will not necessarily decrease because of
+   * the built-in filters. For inner joins, for example, the number of joined rows can be larger than
+   * the number of rows in the base adapter even though this method returns true.
+   */
+  default boolean hasBuiltInFilters()
+  {
+    return false;
+  }
 }

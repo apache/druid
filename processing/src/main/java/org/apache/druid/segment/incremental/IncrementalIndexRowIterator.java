@@ -48,7 +48,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   private final RowPointer currentRowPointer;
   private final TimeAndDimsPointer markedRowPointer;
 
-  IncrementalIndexRowIterator(IncrementalIndex<?> incrementalIndex)
+  IncrementalIndexRowIterator(IncrementalIndex incrementalIndex)
   {
     this.timeAndDimsIterator = incrementalIndex.getFacts().persistIterable().iterator();
     this.currentRowPointer = makeRowPointer(incrementalIndex, currentRowHolder, currentRowNumCounter);
@@ -58,7 +58,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   }
 
   private static RowPointer makeRowPointer(
-      IncrementalIndex<?> incrementalIndex,
+      IncrementalIndex incrementalIndex,
       IncrementalIndexRowHolder rowHolder,
       RowNumCounter rowNumCounter
   )
