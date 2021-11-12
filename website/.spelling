@@ -1043,8 +1043,10 @@ leaveIntermediate
 logParseExceptions
 mapred.map.tasks
 mapreduce.job.maps
+maxIntervalsIngested
 maxParseExceptions
 maxPartitionSize
+maxSegmentsIngested
 maxSplitSize
 metadataUpdateSpec
 numBackgroundPersistThreads
@@ -1097,9 +1099,11 @@ InputSource
 DruidInputSource
 maxColumnsToMerge
 maxInputSegmentBytesPerTask
+maxIntervalsIngested
 maxNumConcurrentSubTasks
 maxNumSegmentsToMerge
 maxRetry
+maxSegmentsIngested
 pushTimeout
 reportParseExceptions
 secretAccessKey
