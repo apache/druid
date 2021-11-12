@@ -879,8 +879,8 @@ Submit your query as the value of a "query" field in the JSON object within the 
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
 |`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
-|`typesHeader`|Whether or not to include type information in the header. Only applicable when `header` is `true`. See [Responses](#responses) for details.|`false`|
-|`sqlTypesHeader`|Whether or not to include type information in the header. Only applicable when `header` is `true`. See [Responses](#responses) for details.|`false`|
+|`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
+|`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
 |`context`|JSON object containing [connection context parameters](#connection-context).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](#data-types) for a list of supported SQL types.|`[]` (empty)|
 
@@ -966,9 +966,9 @@ or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHea
 `sqlTypesHeader` at once. Both parameters require that `header` is also set.
 
 To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
-`X-Druid-SQL-Header-Included: yes` if `header` was set to true and if the version of Druid you are talking to
-understands the `typesHeader` and `sqlTypesHeader` parameters. This happens even if you do not set `typesHeader`
-or `sqlTypesHeader`.
+`X-Druid-SQL-Header-Included: yes` if `header` was set to true and if the version of Druid the client is connected to
+understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP response header is present irrespective of
+whether `typesHeader` or `sqlTypesHeader` are set or not.
 
 Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
 This query id will be assigned the value of `sqlQueryId` from the [connection context parameters](#connection-context)
