@@ -143,7 +143,7 @@ export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
         "druid.dynamic.config.provider": {
           "type": "environment",
           "variables": {
-            "sasl.jaas.config": "KAFKA_JAAS_CONFIG"
+            "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
             "ssl.key.password": "SSL_KEY_PASSWORD",
             "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
             "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
