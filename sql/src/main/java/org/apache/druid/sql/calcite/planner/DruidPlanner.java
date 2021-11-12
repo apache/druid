@@ -409,7 +409,7 @@ public class DruidPlanner implements Closeable
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
    */
-  public static String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
+  private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
   {
     // Only if rel is an instance of DruidUnionRel, do we run multiple native queries corresponding to single SQL query
     // Also, DruidUnionRel can only be a top level node, so we don't need to check for this condition in the subsequent
@@ -427,18 +427,17 @@ public class DruidPlanner implements Closeable
       druidQueryList = ImmutableList.of(rel.toDruidQuery(false));
     }
 
-    ObjectMapper objectMapper = rel.getQueryMaker().getJsonMapper();
-    ArrayNode nativeQueriesArrayNode = objectMapper.createArrayNode();
+    ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
 
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
-      ObjectNode objectNode = objectMapper.createObjectNode();
-      objectNode.put("query", objectMapper.convertValue(nativeQuery, ObjectNode.class));
+      ObjectNode objectNode = jsonMapper.createObjectNode();
+      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
       objectNode.put("signature", druidQuery.getOutputRowSignature().toString());
       nativeQueriesArrayNode.add(objectNode);
     }
 
-    return objectMapper.writeValueAsString(nativeQueriesArrayNode);
+    return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 
   /**
