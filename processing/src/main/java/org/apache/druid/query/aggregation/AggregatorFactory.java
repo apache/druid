@@ -27,6 +27,7 @@ import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -219,7 +220,13 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getType();
+  public ColumnType getColumnType()
+  {
+    if (getType() == ValueType.COMPLEX) {
+      return ColumnType.ofComplex(getComplexTypeName());
+    }
+    return ColumnTypeFactory.ofValueType(getType());
+  }
 
   /**
    * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
@@ -228,7 +235,47 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getFinalizedType();
+  public ColumnType getFinalizedColumnType()
+  {
+    if (getFinalizedType() == ValueType.COMPLEX) {
+      return ColumnType.UNKNOWN_COMPLEX;
+    }
+    return ColumnTypeFactory.ofValueType(getFinalizedType());
+  }
+
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getColumnType()} instead.
+   */
+  @Deprecated
+  public ValueType getType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getColumnType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getFinalizedColumnType()} instead.
+   */
+  @Deprecated
+  public ValueType getFinalizedType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getFinalizedColumnType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getColumnType()} instead.
+   */
+  @Deprecated
+  public String getComplexTypeName()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getColumnType'"
+    );
+  }
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.

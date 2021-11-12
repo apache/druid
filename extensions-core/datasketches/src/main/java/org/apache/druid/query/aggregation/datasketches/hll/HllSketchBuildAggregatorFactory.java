@@ -56,7 +56,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }

@@ -200,13 +200,13 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
    * and {@link DistinctCountAggregator#get} returns an integer for the number of set bits in the bitmap.
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return ColumnType.LONG;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return ColumnType.LONG;
   }

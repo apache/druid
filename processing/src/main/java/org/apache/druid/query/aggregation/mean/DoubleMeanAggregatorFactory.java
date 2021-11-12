@@ -83,13 +83,13 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
    * actual type is {@link DoubleMeanHolder}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return ColumnType.DOUBLE;
   }

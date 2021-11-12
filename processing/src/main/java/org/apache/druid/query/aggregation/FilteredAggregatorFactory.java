@@ -187,15 +187,15 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
-    return delegate.getType();
+    return delegate.getColumnType();
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
-    return delegate.getFinalizedType();
+    return delegate.getFinalizedColumnType();
   }
 
   @Override

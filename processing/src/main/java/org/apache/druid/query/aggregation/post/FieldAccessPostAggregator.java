@@ -109,7 +109,7 @@ public class FieldAccessPostAggregator implements PostAggregator
     final ColumnType type;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
-      type = aggregators.get(fieldName).getType();
+      type = aggregators.get(fieldName).getColumnType();
     } else {
       type = null;
     }

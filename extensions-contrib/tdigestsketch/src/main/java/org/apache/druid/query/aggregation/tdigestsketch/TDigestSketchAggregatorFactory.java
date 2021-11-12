@@ -216,13 +216,13 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
    * actual type is {@link MergingDigest}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return TYPE;
   }

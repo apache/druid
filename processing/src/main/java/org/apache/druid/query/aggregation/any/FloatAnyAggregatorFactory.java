@@ -207,13 +207,13 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return ColumnType.FLOAT;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return ColumnType.FLOAT;
   }

@@ -190,13 +190,13 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
    * actual type is {@link ByteBuffer} containing {@link BloomKFilter}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return TYPE;
   }

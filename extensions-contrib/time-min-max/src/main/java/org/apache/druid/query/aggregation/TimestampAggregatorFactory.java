@@ -200,7 +200,7 @@ public abstract class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return ColumnType.LONG;
   }
@@ -209,7 +209,7 @@ public abstract class TimestampAggregatorFactory extends AggregatorFactory
    * actual type is {@link DateTime}
    */
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return FINALIZED_TYPE;
   }

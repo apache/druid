@@ -220,13 +220,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
    * actual type is {@link SerializablePairLongString}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return ColumnType.STRING;
   }

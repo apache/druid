@@ -327,7 +327,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link ApproximateHistogram}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getColumnType()
   {
     return TYPE;
   }
@@ -336,7 +336,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
    * actual type is {@link ApproximateHistogram} if {@link #finalizeAsBase64Binary} is set, else {@link Histogram}
    */
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getFinalizedColumnType()
   {
     return finalizeAsBase64Binary ? TYPE : HistogramAggregatorFactory.TYPE;
   }
