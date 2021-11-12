@@ -1179,28 +1179,35 @@ public interface Function
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExpressionTypeConversion.integerMathFunction(
-          args.get(0).getOutputType(inspector),
-          args.get(1).getOutputType(inspector)
-      );
+      ExpressionType type = ExpressionType.DOUBLE;
+      for (Expr arg : args) {
+        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
+      }
+      return ExpressionType.asArrayType(type);
     }
 
     @Override
     protected ExprEval eval(final long x, final long y)
     {
       if(y==0) {
-        return ExprEval.of(0);
+        if(x!=0){
+          return ExprEval.ofLong(NullHandling.defaultLongValue());
+        }
+        return ExprEval.ofLong(0);
       }
-      return ExprEval.of(x / y);
+      return ExprEval.ofLong(x / y);
     }
 
     @Override
     protected ExprEval eval(final double x, final double y)
     {
-      if(y==0) {
-        return ExprEval.of(0);
+      if(y==0||Double.isNaN(y)) {
+        if(x!=0){
+          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+        }
+        return ExprEval.ofDouble(0);
       }
-      return ExprEval.of(x/y);
+      return ExprEval.ofDouble(x/y);
     }
 
   }

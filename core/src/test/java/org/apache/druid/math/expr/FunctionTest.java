@@ -738,8 +738,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     // happy path maths
     assertExpr("safe_divide(3, 1)", 3L);
     assertExpr("safe_divide(4.5, 2)", 2.25);
-    assertExpr("safe_divide(3, 0)", 0L);
-    assertExpr("safe_divide(3.7, 0.0)", 0L);
+    assertExpr("safe_divide(3, 0)", NullHandling.defaultLongValue());
+    assertExpr("safe_divide(1, 0.0)", NullHandling.defaultDoubleValue());
+    // NaN and Infinity cases
+    assertExpr("safe_divide(NaN, 0.0)", NullHandling.defaultDoubleValue());
+    assertExpr("safe_divide(0, NaN)", NullHandling.defaultDoubleValue());
+    assertExpr("safe_divide(0, POSITIVE_INFINITY)", 0L);
+    assertExpr("safe_divide(POSITIVE_INFINITY,0)", 0L);
   }
 
   @Test
