@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.bloom.sql;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -32,7 +34,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.BloomFilterSerializersModule;
+import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -77,9 +79,14 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
-    CalciteTests.getJsonMapper().registerModule(new BloomFilterSerializersModule());
     InputRowParser parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("t", "iso", null),

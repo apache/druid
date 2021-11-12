@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -35,6 +35,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
   private final boolean isNullUnlessAggregated;
+  private final ExpressionType outputType;
 
   public ExpressionLambdaBufferAggregator(
       Expr lambda,
@@ -46,6 +47,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   {
     this.lambda = lambda;
     this.initialValue = initialValue;
+    this.outputType = initialValue.type();
     this.bindings = bindings;
     this.isNullUnlessAggregated = isNullUnlessAggregated;
     this.maxSizeBytes = maxSizeBytes;
@@ -64,7 +66,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    ExprEval<?> acc = ExprEval.deserialize(buf, position + 1, getType(buf, position));
+    ExprEval<?> acc = ExprEval.deserialize(buf, position, outputType);
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);
     ExprEval.serialize(buf, position, newAcc, maxSizeBytes);
@@ -79,35 +81,30 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     if (isNullUnlessAggregated && (buf.get(position) & NOT_AGGREGATED_BIT) != 0) {
       return null;
     }
-    return ExprEval.deserialize(buf, position + 1, getType(buf, position)).value();
+    return ExprEval.deserialize(buf, position, outputType).value();
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) ExprEval.deserialize(buf, position + 1, getType(buf, position)).asDouble();
+    return (float) ExprEval.deserialize(buf, position, outputType).asDouble();
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position + 1, getType(buf, position)).asDouble();
+    return ExprEval.deserialize(buf, position, outputType).asDouble();
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return ExprEval.deserialize(buf, position + 1, getType(buf, position)).asLong();
+    return ExprEval.deserialize(buf, position, outputType).asLong();
   }
 
   @Override
   public void close()
   {
     // nothing to close
-  }
-
-  private static ExprType getType(ByteBuffer buf, int position)
-  {
-    return ExprType.fromByte((byte) (buf.get(position) & IS_AGGREGATED_MASK));
   }
 }

@@ -28,6 +28,13 @@
     "type"
   ],
   "jetty/numOpenConnections": [],
+  "jetty/threadPool/total": [],
+  "jetty/threadPool/idle": [],
+  "jetty/threadPool/busy": [],
+  "jetty/threadPool/isLowOnThreads": [],
+  "jetty/threadPool/min": [],
+  "jetty/threadPool/max": [],
+  "jetty/threadPool/queueSize": [],
   "query/cache/delta/numEntries": [],
   "query/cache/delta/sizeBytes": [],
   "query/cache/delta/hits": [],

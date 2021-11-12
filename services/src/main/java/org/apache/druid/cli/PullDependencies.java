@@ -285,8 +285,8 @@ public class PullDependencies implements Runnable
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
-      org.apache.commons.io.FileUtils.forceMkdir(extensionsDir);
-      org.apache.commons.io.FileUtils.forceMkdir(hadoopDependenciesDir);
+      FileUtils.mkdirp(extensionsDir);
+      FileUtils.mkdirp(hadoopDependenciesDir);
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);

@@ -20,11 +20,14 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -41,6 +44,12 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   ByteBuffer buffer = ByteBuffer.allocate(1 << 16);
+
+  @BeforeClass
+  public static void setup()
+  {
+    Types.registerStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypesTest.PairObjectByteStrategy());
+  }
 
   @Test
   public void testStringSerde()
@@ -109,10 +118,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.STRING_ARRAY,
-        28,
+        15,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
+    assertExpr(0, ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
   }
 
   @Test
@@ -130,7 +139,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.LONG_ARRAY,
-        30,
+        14,
         10
     ));
     assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
@@ -143,10 +152,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.LONG_ARRAY,
-        NullHandling.sqlCompatible() ? 33 : 30,
+        14,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
+    assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
   }
 
   @Test
@@ -164,7 +173,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.DOUBLE_ARRAY,
-        30,
+        14,
         10
     ));
     assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
@@ -177,86 +186,144 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expectMessage(StringUtils.format(
         "Unable to serialize [%s], size [%s] is larger than max [%s]",
         ExpressionType.DOUBLE_ARRAY,
-        NullHandling.sqlCompatible() ? 33 : 30,
+        14,
         10
     ));
-    assertEstimatedBytes(ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
+    assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
+  }
+
+  @Test
+  public void testComplexEval()
+  {
+    final ExpressionType complexType = ExpressionType.fromColumnType(TypesTest.NULLABLE_TEST_PAIR_TYPE);
+    assertExpr(0, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)));
+    assertExpr(1024, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)));
+  }
+
+  @Test
+  public void testComplexEvalTooBig()
+  {
+    final ExpressionType complexType = ExpressionType.fromColumnType(TypesTest.NULLABLE_TEST_PAIR_TYPE);
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage(StringUtils.format(
+        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        complexType.asTypeString(),
+        23,
+        10
+    ));
+    assertExpr(0, ExprEval.ofComplex(complexType, new TypesTest.NullableLongPair(1234L, 5678L)), 10);
   }
 
   @Test
   public void test_coerceListToArray()
   {
     Assert.assertNull(ExprEval.coerceListToArray(null, false));
-    Assert.assertArrayEquals(new Object[0], (Object[]) ExprEval.coerceListToArray(ImmutableList.of(), false));
-    Assert.assertArrayEquals(new String[]{null}, (String[]) ExprEval.coerceListToArray(null, true));
-    Assert.assertArrayEquals(new String[]{null}, (String[]) ExprEval.coerceListToArray(ImmutableList.of(), true));
+
+    NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray(ImmutableList.of(), false);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[0], coerced.rhs);
+
+    coerced = ExprEval.coerceListToArray(null, true);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{null}, coerced.rhs);
+
+    coerced = ExprEval.coerceListToArray(ImmutableList.of(), true);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{null}, coerced.rhs);
 
     List<Long> longList = ImmutableList.of(1L, 2L, 3L);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(longList, false));
+    coerced = ExprEval.coerceListToArray(longList, false);
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, coerced.rhs);
 
     List<Integer> intList = ImmutableList.of(1, 2, 3);
-    Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExprEval.coerceListToArray(intList, false));
+    ExprEval.coerceListToArray(intList, false);
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{1L, 2L, 3L}, coerced.rhs);
 
     List<Float> floatList = ImmutableList.of(1.0f, 2.0f, 3.0f);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(floatList, false));
+    coerced = ExprEval.coerceListToArray(floatList, false);
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{1.0, 2.0, 3.0}, coerced.rhs);
 
     List<Double> doubleList = ImmutableList.of(1.0, 2.0, 3.0);
-    Assert.assertArrayEquals(new Double[]{1.0, 2.0, 3.0}, (Double[]) ExprEval.coerceListToArray(doubleList, false));
+    coerced = ExprEval.coerceListToArray(doubleList, false);
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{1.0, 2.0, 3.0}, coerced.rhs);
 
     List<String> stringList = ImmutableList.of("a", "b", "c");
-    Assert.assertArrayEquals(new String[]{"a", "b", "c"}, (String[]) ExprEval.coerceListToArray(stringList, false));
+    coerced = ExprEval.coerceListToArray(stringList, false);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, coerced.rhs);
 
     List<String> withNulls = new ArrayList<>();
     withNulls.add("a");
     withNulls.add(null);
     withNulls.add("c");
-    Assert.assertArrayEquals(new String[]{"a", null, "c"}, (String[]) ExprEval.coerceListToArray(withNulls, false));
+    coerced = ExprEval.coerceListToArray(withNulls, false);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{"a", null, "c"}, coerced.rhs);
 
     List<Long> withNumberNulls = new ArrayList<>();
     withNumberNulls.add(1L);
     withNumberNulls.add(null);
     withNumberNulls.add(3L);
 
-    Assert.assertArrayEquals(new Long[]{1L, null, 3L}, (Long[]) ExprEval.coerceListToArray(withNumberNulls, false));
+    coerced = ExprEval.coerceListToArray(withNumberNulls, false);
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, coerced.lhs);
+    Assert.assertArrayEquals(new Object[]{1L, null, 3L}, coerced.rhs);
 
     List<Object> withStringMix = ImmutableList.of(1L, "b", 3L);
+    coerced = ExprEval.coerceListToArray(withStringMix, false);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new String[]{"1", "b", "3"},
-        (String[]) ExprEval.coerceListToArray(withStringMix, false)
+        new Object[]{"1", "b", "3"},
+        coerced.rhs
     );
 
     List<Number> withIntsAndLongs = ImmutableList.of(1, 2L, 3);
+    coerced = ExprEval.coerceListToArray(withIntsAndLongs, false);
+    Assert.assertEquals(ExpressionType.LONG_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new Long[]{1L, 2L, 3L},
-        (Long[]) ExprEval.coerceListToArray(withIntsAndLongs, false)
+        new Object[]{1L, 2L, 3L},
+        coerced.rhs
     );
 
     List<Number> withFloatsAndLongs = ImmutableList.of(1, 2L, 3.0f);
+    coerced = ExprEval.coerceListToArray(withFloatsAndLongs, false);
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withFloatsAndLongs, false)
+        new Object[]{1.0, 2.0, 3.0},
+        coerced.rhs
     );
 
     List<Number> withDoublesAndLongs = ImmutableList.of(1, 2L, 3.0);
+    coerced = ExprEval.coerceListToArray(withDoublesAndLongs, false);
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withDoublesAndLongs, false)
+        new Object[]{1.0, 2.0, 3.0},
+        coerced.rhs
     );
 
     List<Number> withFloatsAndDoubles = ImmutableList.of(1L, 2.0f, 3.0);
+    coerced = ExprEval.coerceListToArray(withFloatsAndDoubles, false);
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, 3.0},
-        (Double[]) ExprEval.coerceListToArray(withFloatsAndDoubles, false)
+        new Object[]{1.0, 2.0, 3.0},
+        coerced.rhs
     );
 
     List<String> withAllNulls = new ArrayList<>();
     withAllNulls.add(null);
     withAllNulls.add(null);
     withAllNulls.add(null);
+    coerced = ExprEval.coerceListToArray(withAllNulls, false);
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, coerced.lhs);
     Assert.assertArrayEquals(
-        new String[]{null, null, null},
-        (String[]) ExprEval.coerceListToArray(withAllNulls, false)
+        new Object[]{null, null, null},
+        coerced.rhs
     );
+
   }
 
   @Test
@@ -299,27 +366,21 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
           expected.asArray(),
-          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).asArray()
+          ExprEval.deserialize(buffer, position, expected.type()).asArray()
       );
       Assert.assertArrayEquals(
           expected.asArray(),
-          ExprEval.deserialize(buffer, position).asArray()
+          ExprEval.deserialize(buffer, position, expected.type()).asArray()
       );
     } else {
       Assert.assertEquals(
           expected.value(),
-          ExprEval.deserialize(buffer, position + 1, ExprType.fromByte(buffer.get(position))).value()
+          ExprEval.deserialize(buffer, position, expected.type()).value()
       );
       Assert.assertEquals(
           expected.value(),
-          ExprEval.deserialize(buffer, position).value()
+          ExprEval.deserialize(buffer, position, expected.type()).value()
       );
     }
-    assertEstimatedBytes(expected, maxSizeBytes);
-  }
-
-  private void assertEstimatedBytes(ExprEval eval, int maxSizeBytes)
-  {
-    ExprEval.estimateAndCheckMaxBytes(eval, maxSizeBytes);
   }
 }

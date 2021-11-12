@@ -97,6 +97,13 @@ Available Metrics
 |Metric|Description|Normal Value|
 |------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
+|`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to threadPoolNumIdleThreads + threadPoolNumBusyThreads.|
+|`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to threadPoolNumTotalThreads. Non zero number means there is less work to do than configured capacity.|
+|`jetty/threadPool/busy`|Number of busy threads that has work to do from the worker queue.|Less than or equal to threadPoolNumTotalThreads.|
+|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue.|0|
+|`jetty/threadPool/min`|Number of minimum threads allocatable.|druid.server.http.numThreads plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
+|`jetty/threadPool/max`|Number of maximum threads allocatable.|druid.server.http.numThreads plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
+|`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than druid.server.http.queueSize|
 
 ### Cache
 
