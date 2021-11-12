@@ -935,7 +935,7 @@ parameter, like:
 ```
 
 You can additionally request a header with information about column names by setting `header` to true in your request.
-When you set `header` to true, you can optionally inclue `typesHeader` and `sqlTypesHeader` as well, which gives
+When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
 you information about [Druid runtime and SQL types](#data-types) respectively. You can request all these headers
 with a request like:
 
