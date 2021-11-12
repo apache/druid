@@ -29,6 +29,9 @@
     "expectedResults": [
       {
         "status": "SUCCESS"
+      },
+      {
+        "status": "FAILED"
       }
     ]
   }
