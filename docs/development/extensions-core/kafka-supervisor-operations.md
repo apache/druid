@@ -134,7 +134,7 @@ Note that the supervisor must be running for this endpoint to be available.
 
 The `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` operation terminates a supervisor and causes all 
 associated indexing tasks managed by this supervisor to immediately stop and begin
-publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
+publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved
 with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can it's configuration
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
 spec to the create API.

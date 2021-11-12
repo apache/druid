@@ -132,18 +132,18 @@ If you want to ingest data from other fields in addition to the Kafka message co
 - the event key field
 - event headers
 - the Kafka event timestamp
-- the Kafka event value that stores the message content.
+- the Kafka event value that stores the payload.
 
 > The Kafka inputFormat is currently designated as experimental.
 
 For example, consider the following structure for a message that represents a fictitious wiki edit in a development environment:
 - **Event headers**: {"environment": "development"}
 - **Event key**: {"key: "wiki-edit"}
-- **Event value**: \<JSON object with message contents of the change details\>
+- **Event value**: \<JSON object with event payload containing the change details\>
 - **Event timestamp**: "Nov. 10, 2021 at 14:06"
 
 When you use the `kafka` input format, you configure the way that Druid names the dimensions created from the Kafka message:
-- `headerLabelPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with named dimensions. The default is `kafka.header`. Considering the header from the example, Druid maps the header to the following column: `kafka.header.enviornment`.
+- `headerLabelPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with named dimensions. The default is `kafka.header`. Considering the header from the example, Druid maps the header to the following column: `kafka.header.environment`.
 - `timestampColumnName`: Supply a custom name for the Kafka timestamp in the Druid schema to avoid conflicts with other time columns. The default is `kafka.timestamp`.
 - `keyColumnName`: Supply the name for the Kafka key column in Druid. The default is `kafka.key`.
 Additionally, you must provide information about how Druid should parse the data in the Kafka message:
