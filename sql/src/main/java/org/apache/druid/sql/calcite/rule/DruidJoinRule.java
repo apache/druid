@@ -231,7 +231,7 @@ public class DruidJoinRule extends RelOptRule
    * If this condition is an AND of some combination of (1) literals; (2) equality conditions of the form
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  private static Optional<ConditionAnalysis> analyzeCondition(
+  private Optional<ConditionAnalysis> analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
       DruidRel<?> right
