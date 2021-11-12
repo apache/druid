@@ -11211,6 +11211,41 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
+  @Test
+  public void testGroupByOnVirtualColumnTimeFloor()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v",
+                "timestamp_floor(__time, 'P1D')",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setDimensions(
+            new DefaultDimensionSpec("v", "v", ColumnType.LONG)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "v", 1301616000000L, "rows", 13L), // 04-01
+        makeRow(query, "2011-04-01", "v", 1301702400000L, "rows", 13L)  // 04-02
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
 
   @Test
   public void testGroupByWithExpressionAggregator()

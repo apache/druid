@@ -34,6 +34,7 @@ public class ExpressionProcessingConfig
 
   @JsonProperty("useLegacyLogicalOperators")
   private final boolean useLegacyLogicalOperators;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
