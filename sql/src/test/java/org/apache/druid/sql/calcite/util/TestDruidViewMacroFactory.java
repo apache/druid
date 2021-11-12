@@ -33,6 +33,6 @@ public class TestDruidViewMacroFactory implements DruidViewMacroFactory
       String viewSql
   )
   {
-    return new DruidViewMacro(plannerFactory, escalator, viewSql, CalciteTests.DRUID_SCHEMA_NAME);
+    return new DruidViewMacro(plannerFactory, viewSql, CalciteTests.DRUID_SCHEMA_NAME);
   }
 }
