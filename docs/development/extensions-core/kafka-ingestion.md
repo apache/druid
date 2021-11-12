@@ -32,7 +32,7 @@ Kafka indexing tasks read events using Kafka's own partition and offset mechanis
   - ensure that scalability and replication requirements are maintained.
 
 
-This topic covers how to submit a supervisor spec to ingest data from Kafka. See the following for more information:
+This topic covers how to submit a supervisor spec to ingest event data, also known as message data, from Kafka. See the following for more information:
 - For a reference of Kafka supervisor spec configuration options, see the [Kafka supervisor reference](./kafka-supervisor-reference.md).
 - For operations reference information to help run and maintain Apache Kafka supervisors, see [Kafka supervisor operations](./kafka-supervisor-operations.md).
 - For a walk-through, see the [Loading from Apache Kafka](../../tutorials/tutorial-kafka.md) tutorial.
@@ -53,15 +53,15 @@ To use the Kafka indexing service, load the `druid-kafka-indexing-service` exten
 ## Define a supervisor spec
 Similar to the ingestion spec for batch ingestion, the supervisor spec configures the data ingestion for Kafka streaming ingestion. A supervisor spec has the following sections:
 - `dataSchema` to specify the Druid datasource name, primary timestamp, dimensions, metrics, transforms, and any necessary filters.
-- `ioConfig` to configure Kafka connection settings and configure how Druid parses the data. Kafka-specific connection details go in the `consumerProperties`. For more information, see the [Kafka supervisor reference](./kafka-supervisor-reference.md).
+- `ioConfig` to configure Kafka connection settings and configure how Druid parses the data. Kafka-specific connection details go in the `consumerProperties`. The `ioConfig` is also where you define the input format (`inputFormat`) of your Kafka data. For supported formats for Kafka and information on how to configure the input format, see [Data formats](../../ingestion/data-formats.md).  
 - `tuningConfig` to control various tuning parameters specific to each ingestion method.
 For a full description of all the fields and parameters in a Kafka supervisor spec, see the [Kafka supervisor reference](./kafka-supervisor-reference.md).
-For information on how to configure the input format, see [Data formats](../../ingestion/data-formats.md).
+
 
 The following sections contain examples to help you get started with supervisor specs.
 
 ### JSON input format supervisor spec example
-The following example demonstrates a supervisor spec for Kafka that uses the `JSON` input format. In this case Druid parses the message contents in JSON format from the value field:
+The following example demonstrates a supervisor spec for Kafka that uses the `JSON` input format. In this case Druid parses the event contents in JSON format:
 
 ```json
 {
@@ -129,9 +129,10 @@ The following example demonstrates a supervisor spec for Kafka that uses the `JS
 
 ### Kafka input format supervisor spec example
 If you want to ingest data from other fields in addition to the Kafka message contents, you can use the `kafka` input format. The `kafka` input format lets you ingest:
-- the message key field
-- message headers
-- the Kafka message timestamp.
+- the event key field
+- event headers
+- the Kafka event timestamp
+- the Kafka event value that stores the message content.
 
 > The Kafka inputFormat is currently designated as experimental.
 
