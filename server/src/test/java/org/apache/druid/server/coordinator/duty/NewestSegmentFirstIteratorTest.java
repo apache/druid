@@ -93,6 +93,7 @@ public class NewestSegmentFirstIteratorTest
         null,
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(
@@ -131,6 +132,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null,
         null,
         null
@@ -173,6 +175,7 @@ public class NewestSegmentFirstIteratorTest
         ),
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(
@@ -211,6 +214,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null,
         null,
         null
@@ -253,6 +257,7 @@ public class NewestSegmentFirstIteratorTest
         ),
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(
@@ -291,6 +296,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null,
         null,
         null
@@ -333,6 +339,7 @@ public class NewestSegmentFirstIteratorTest
         ),
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(
@@ -373,6 +380,7 @@ public class NewestSegmentFirstIteratorTest
         ),
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(
@@ -411,6 +419,7 @@ public class NewestSegmentFirstIteratorTest
             null,
             null
         ),
+        null,
         null,
         null,
         null

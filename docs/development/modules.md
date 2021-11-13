@@ -356,6 +356,22 @@ druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
 druid.coordinator.cleanupMetadata.period=PT10S
 ```
 
+### Routing data through a HTTP proxy for your extension
+
+You can add the ability for the `HttpClient` of your extension to connect through an HTTP proxy. 
+
+To support proxy connection for your extension's HTTP client:
+1. Add `HttpClientProxyConfig` as a `@JsonProperty` to the HTTP config class of your extension. 
+2. In the extension's module class, add `HttpProxyConfig` config to `HttpClientConfig`. 
+For example, where `config` variable is the extension's HTTP config from step 1:
+```
+final HttpClientConfig.Builder builder = HttpClientConfig
+    .builder()
+    .withNumConnections(1)
+    .withReadTimeout(config.getReadTimeout().toStandardDuration())
+    .withHttpProxyConfig(config.getProxyConfig());
+```
+
 ### Bundle your extension with all the other Druid extensions
 
 When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.

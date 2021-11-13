@@ -27,7 +27,16 @@ import java.util.List;
  */
 public interface DimensionBasedPartitionsSpec extends PartitionsSpec
 {
+  String PARTITION_DIMENSIONS = "partitionDimensions";
+
   String TARGET_ROWS_PER_SEGMENT = "targetRowsPerSegment";
+  String MAX_PARTITION_SIZE = "maxPartitionSize";
+  String ASSUME_GROUPED = "assumeGrouped";
+
+  /**
+   * Message denoting that this spec is forceGuaranteedRollup compatible.
+   */
+  String FORCE_GUARANTEED_ROLLUP_COMPATIBLE = "";
 
   // Deprecated properties preserved for backward compatibility:
   @Deprecated

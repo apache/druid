@@ -61,12 +61,12 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
 import org.apache.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -453,7 +453,7 @@ public class IndexIO
                 )
             )
             .setBitmapIndex(
-                new BitmapIndexColumnPartSupplier(
+                new StringBitmapIndexColumnPartSupplier(
                     new ConciseBitmapFactory(),
                     index.getBitmapIndexes().get(dimension),
                     index.getDimValueLookup(dimension)

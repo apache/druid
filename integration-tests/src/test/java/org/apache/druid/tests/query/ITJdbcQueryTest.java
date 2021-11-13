@@ -21,6 +21,7 @@ package org.apache.druid.tests.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -163,7 +164,7 @@ public class ITJdbcQueryTest
         );
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
       }
     }
   }
@@ -185,7 +186,7 @@ public class ITJdbcQueryTest
         }
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
       }
     }
   }
@@ -208,7 +209,18 @@ public class ITJdbcQueryTest
         }
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
+      }
+    }
+  }
+
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position\\[0] is not bound")
+  public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
+  {
+    for (String url : connections) {
+      try (Connection connection = DriverManager.getConnection(url, connectionProperties);
+           PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
+           ResultSet resultSet = statement.executeQuery()) {
       }
     }
   }

@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorProcessor;
@@ -76,7 +77,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     TimestampFloorExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      this.granularity = computeGranularity(args, ExprUtils.nilBindings());
+      this.granularity = computeGranularity(args, InputBindings.nilBindings());
     }
 
     /**

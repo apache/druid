@@ -259,7 +259,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
 
     try {
       indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
@@ -488,10 +488,10 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
-      secondFile.mkdirs();
-      thirdFile.mkdirs();
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
 
       indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
       indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);

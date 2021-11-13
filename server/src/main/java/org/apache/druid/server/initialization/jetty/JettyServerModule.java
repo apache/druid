@@ -109,6 +109,7 @@ public class JettyServerModule extends JerseyServletModule
 
   private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
+  private static QueuedThreadPool jettyServerThreadPool = null;
 
   @Override
   protected void configureServlets()
@@ -229,6 +230,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     threadPool.setDaemon(true);
+    jettyServerThreadPool = threadPool;
 
     final Server server = new Server(threadPool);
 
@@ -528,6 +530,16 @@ public class JettyServerModule extends JerseyServletModule
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
+      if (jettyServerThreadPool != null) {
+        emitter.emit(builder.build("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
+        emitter.emit(builder.build("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+        emitter.emit(builder.build("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
+        emitter.emit(builder.build("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
+        emitter.emit(builder.build("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
+        emitter.emit(builder.build("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
+        emitter.emit(builder.build("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
+      }
+
       return true;
     }
   }
@@ -577,5 +589,11 @@ public class JettyServerModule extends JerseyServletModule
   public int getActiveConnections()
   {
     return ACTIVE_CONNECTIONS.get();
+  }
+
+  @VisibleForTesting
+  public static void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  {
+    jettyServerThreadPool = threadPool;
   }
 }

@@ -27,6 +27,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -102,7 +103,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
       if (expr.isLiteral()) {
         // Evaluate the expression to get out the array elements.
         // We can safely pass a noop ObjectBinding if the expression is literal.
-        ExprEval<?> exprEval = expr.eval(name -> null);
+        ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
         String[] arrayElements = exprEval.asStringArray();
         if (arrayElements == null || arrayElements.length == 0) {
           // If arrayElements is empty which means rightExpr is an empty array,

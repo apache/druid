@@ -88,7 +88,7 @@ public class ITSqlCancelTest
       queryResponseFutures.add(
           sqlClient.queryAsync(
               sqlHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery(QUERY, null, false, ImmutableMap.of("sqlQueryId", queryId), null)
+              new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of("sqlQueryId", queryId), null)
           )
       );
     }
@@ -125,7 +125,7 @@ public class ITSqlCancelTest
     final Future<StatusResponseHolder> queryResponseFuture = sqlClient
         .queryAsync(
             sqlHelper.getQueryURL(config.getRouterUrl()),
-            new SqlQuery(QUERY, null, false, ImmutableMap.of("sqlQueryId", "validId"), null)
+            new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of("sqlQueryId", "validId"), null)
         );
 
     // Wait until the sqlLifecycle is authorized and registered
