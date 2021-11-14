@@ -65,6 +65,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -209,6 +211,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(QueryScheduler.class)
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
+                binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
               }
             }
         )
@@ -890,7 +893,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               rootSchema,
-              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              new NativeQueryMakerFactory(
+                  CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                  CalciteTests.getJsonMapper()
+              ),
               operatorTable,
               macroTable,
               plannerConfig,
@@ -980,7 +986,10 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
                 rootSchema,
-                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                new NativeQueryMakerFactory(
+                    CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                    CalciteTests.getJsonMapper()
+                ),
                 operatorTable,
                 macroTable,
                 plannerConfig,

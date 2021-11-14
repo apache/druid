@@ -17,32 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.druid.server.security.ResourceAction;
 
 import java.util.Set;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Interface for {@link org.apache.calcite.sql.SqlOperator} that need authorization in order to execute.
+ *
+ * Checked by {@link org.apache.druid.sql.calcite.planner.SqlResourceCollectorShuttle}.
  */
-public class ValidationResult
+public interface AuthorizableOperator
 {
-  private final Set<ResourceAction> resourceActions;
-
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
-  {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
-
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
-  }
+  Set<ResourceAction> computeResources(SqlCall call);
 }

@@ -17,36 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.rule;
+package org.apache.druid.sql.calcite.external;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
-import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.run.QueryFeature;
 
-public class DruidTableScanRule extends RelOptRule
+/**
+ * Rule that converts an {@link ExternalTableScan} to a call to {@link DruidQueryRel#scanExternal}.
+ *
+ * This class is exercised in CalciteInsertDmlTest but is not currently exposed to end users.
+ */
+public class ExternalTableScanRule extends RelOptRule
 {
   private final PlannerContext plannerContext;
 
-  public DruidTableScanRule(final PlannerContext plannerContext)
+  public ExternalTableScanRule(final PlannerContext plannerContext)
   {
-    super(operand(LogicalTableScan.class, any()));
+    super(operand(ExternalTableScan.class, any()));
     this.plannerContext = plannerContext;
+  }
+
+  @Override
+  public boolean matches(RelOptRuleCall call)
+  {
+    if (plannerContext.getQueryMaker().feature(QueryFeature.CAN_READ_EXTERNAL_DATA)) {
+      return super.matches(call);
+    } else {
+      return false;
+    }
   }
 
   @Override
   public void onMatch(final RelOptRuleCall call)
   {
-    final LogicalTableScan scan = call.rel(0);
-    final RelOptTable table = scan.getTable();
-    final DruidTable druidTable = table.unwrap(DruidTable.class);
-    if (druidTable != null) {
-      call.transformTo(
-          DruidQueryRel.scanTable(scan, table, druidTable, plannerContext)
-      );
-    }
+    final ExternalTableScan scan = call.rel(0);
+    call.transformTo(DruidQueryRel.scanExternal(scan, plannerContext));
   }
 }

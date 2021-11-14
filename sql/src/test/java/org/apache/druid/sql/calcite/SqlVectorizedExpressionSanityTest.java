@@ -44,6 +44,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -132,7 +133,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
+        new NativeQueryMakerFactory(
+            CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
+            CalciteTests.getJsonMapper()
+        ),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -183,8 +187,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
         final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
     ) {
-      final PlannerResult vectorPlan = vectorPlanner.plan(query);
-      final PlannerResult nonVectorPlan = nonVectorPlanner.plan(query);
+      final PlannerResult vectorPlan = vectorPlanner.plan();
+      final PlannerResult nonVectorPlan = nonVectorPlanner.plan();
       final Sequence<Object[]> vectorSequence = vectorPlan.run();
       final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
       Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);

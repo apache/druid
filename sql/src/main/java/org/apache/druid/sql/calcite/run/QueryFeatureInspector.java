@@ -17,32 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
-
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-
-import java.util.Set;
+package org.apache.druid.sql.calcite.run;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Gives the SQL-to-Druid query translator information about what features are supporetd by the {@link QueryMaker}
+ * that will execute the query.
  */
-public class ValidationResult
+public interface QueryFeatureInspector
 {
-  private final Set<ResourceAction> resourceActions;
-
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
-  {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
-
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
-  }
+  /**
+   * Returns whether a feature is present or not.
+   */
+  boolean feature(QueryFeature feature);
 }
