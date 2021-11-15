@@ -25,6 +25,8 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -111,6 +113,8 @@ public class DruidSchema extends AbstractSchema
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   private final ConcurrentMap<String, DruidTable> tables = new ConcurrentHashMap<>();
+
+  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -440,7 +444,7 @@ public class DruidSchema extends AbstractSchema
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS)
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
@@ -691,7 +695,7 @@ public class DruidSchema extends AbstractSchema
         if (segmentId == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final RowSignature rowSignature = analysisToRowSignature(analysis);
+          final RowSignature rowSignature = analysisToRowSignature(analysis); // Intern here
           log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
           segmentMetadataInfo.compute(
               dataSource,
@@ -773,7 +777,7 @@ public class DruidSchema extends AbstractSchema
       }
     }
 
-    final RowSignature.Builder builder = RowSignature.builder();
+    final RowSignature.Builder builder = RowSignature.builder(); // Intern here
     columnTypes.forEach(builder::add);
 
     final TableDataSource tableDataSource;
@@ -791,7 +795,8 @@ public class DruidSchema extends AbstractSchema
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DruidTable(tableDataSource, ROW_SIGNATURE_INTERNER.intern(builder.build()), isJoinable, isBroadcast);
+    // return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
   }
 
   @VisibleForTesting
@@ -877,7 +882,7 @@ public class DruidSchema extends AbstractSchema
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
-    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder(); // Intern here
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
       if (entry.getValue().isError()) {
         // Skip columns with analysis errors.
@@ -893,7 +898,8 @@ public class DruidSchema extends AbstractSchema
 
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
-    return rowSignatureBuilder.build();
+    return ROW_SIGNATURE_INTERNER.intern(rowSignatureBuilder.build());
+    // return rowSignatureBuilder.build();
   }
 
   /**
