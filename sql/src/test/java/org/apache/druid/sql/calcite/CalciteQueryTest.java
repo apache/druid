@@ -1032,7 +1032,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       expected = ImmutableList.of(
           new Object[]{null, null, null, 7.0F},
           new Object[]{1.0F, 1L, 1.0, 3253230.0F},
-          new Object[]{0.0F, 0L, 0.0, 0.0F},
+          new Object[]{0.0F, 0L, 0, 0.0F},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null}
