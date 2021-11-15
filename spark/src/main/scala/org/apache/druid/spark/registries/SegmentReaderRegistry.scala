@@ -29,8 +29,10 @@ import org.apache.druid.spark.{MAPPER, baseInjectableValues}
 import org.apache.druid.spark.configuration.Configuration
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.utils.DeepStorageConstructorHelpers
-import org.apache.druid.storage.azure.{AzureByteSource, AzureByteSourceFactory, AzureDataSegmentPuller, AzureLoadSpec}
-import org.apache.druid.storage.google.{GoogleDataSegmentPuller, GoogleLoadSpec, GoogleStorageDruidModule}
+import org.apache.druid.storage.azure.{AzureByteSource, AzureByteSourceFactory,
+  AzureDataSegmentPuller, AzureLoadSpec}
+import org.apache.druid.storage.google.{GoogleDataSegmentPuller, GoogleLoadSpec,
+  GoogleStorageDruidModule}
 import org.apache.druid.storage.hdfs.{HdfsDataSegmentPuller, HdfsLoadSpec}
 import org.apache.druid.storage.s3.{S3DataSegmentPuller, S3LoadSpec, S3StorageDruidModule}
 import org.apache.druid.utils.CompressionUtils
