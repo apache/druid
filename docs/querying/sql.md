@@ -418,7 +418,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of [0,3] (default: 2). |
 |`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
 |`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of [0,3] (default: 2). |
-|`SAFE_DIVIDE(x,y)`|Returns the division of x by y guarded on division by 0 |
+|`SAFE_DIVIDE(x,y)`|Returns the division of x by y guarded on division by 0.In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
 
 
 ### String functions

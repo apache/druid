@@ -169,6 +169,11 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     assertOutputType("hypot(y,y_)", inspector, ExpressionType.DOUBLE);
     assertOutputType("hypot(y,z_)", inspector, ExpressionType.DOUBLE);
     assertOutputType("hypot(z,z_)", inspector, ExpressionType.DOUBLE);
+
+    assertOutputType("safe_divide(y,y_)", inspector, ExpressionType.LONG);
+    assertOutputType("safe_divide(y,z_)", inspector, ExpressionType.DOUBLE);
+    assertOutputType("safe_divide(z,z_)", inspector, ExpressionType.DOUBLE);
+
   }
 
   @Test
