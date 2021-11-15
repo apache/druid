@@ -67,6 +67,7 @@ import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -487,7 +488,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequestForDatasourceWrite(req, authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, List<String>> events = new HashMap<>();
 
     boolean needsBuildSegments = false;
@@ -562,7 +563,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequestForDatasourceWrite(req, authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full)).build();
   }
 
@@ -594,7 +595,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    authorizeRequestForDatasourceWrite(req, authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     return Response.ok(doGetLiveReports(full)).build();
   }
 

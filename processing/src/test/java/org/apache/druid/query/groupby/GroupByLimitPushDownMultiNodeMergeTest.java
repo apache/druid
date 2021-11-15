@@ -607,8 +607,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,
@@ -625,8 +624,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            NOOP_QUERYWATCHER,
-            bufferPool
+            NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             druidProcessingConfig,

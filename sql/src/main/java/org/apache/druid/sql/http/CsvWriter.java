@@ -20,6 +20,9 @@
 package org.apache.druid.sql.http;
 
 import com.opencsv.CSVWriter;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -59,9 +62,35 @@ public class CsvWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames)
+  public void writeHeader(
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  )
   {
-    writer.writeNext(columnNames.toArray(new String[0]), false);
+    final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);
+
+    writer.writeNext(signature.getColumnNames().toArray(new String[0]), false);
+
+    if (includeTypes) {
+      final String[] types = new String[rowType.getFieldCount()];
+
+      for (int i = 0; i < signature.size(); i++) {
+        types[i] = signature.getColumnType(i).get().asTypeString();
+      }
+
+      writer.writeNext(types, false);
+    }
+
+    if (includeSqlTypes) {
+      final String[] sqlTypes = new String[rowType.getFieldCount()];
+
+      for (int i = 0; i < signature.size(); i++) {
+        sqlTypes[i] = rowType.getFieldList().get(i).getType().getSqlTypeName().getName();
+      }
+
+      writer.writeNext(sqlTypes, false);
+    }
   }
 
   @Override

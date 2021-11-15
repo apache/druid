@@ -44,6 +44,8 @@
         "label": "Stream ingestion",
         "ids": [
           "development/extensions-core/kafka-ingestion",
+          "development/extensions-core/kafka-supervisor-reference",
+          "development/extensions-core/kafka-supervisor-operations",
           "development/extensions-core/kinesis-ingestion",
           "ingestion/standalone-realtime"
         ]

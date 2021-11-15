@@ -275,6 +275,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
+      null,
       Collections.singletonMap("test", "map"),
       Collections.singletonMap("test2", "map2")
   );
@@ -1244,15 +1245,15 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(client, request, responseHandler);
 
-    // Verify that no row is returned for Datasource Read user
+    // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
         .toList();
     Assert.assertTrue(rows.isEmpty());
 
-    // Verify that 2 rows are is returned for Datasource Write user
+    // Verify that 2 rows are returned for Datasource Read user
     rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .scan(createDataContext(Users.DATASOURCE_READ))
         .toList();
     Assert.assertEquals(2, rows.size());
 
@@ -1363,15 +1364,15 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(client, request, responseHandler);
 
-    // Verify that no row is returned for Datasource Read user
+    // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
         .toList();
     Assert.assertTrue(rows.isEmpty());
 
     // Verify that 1 row is returned for Datasource Write user
     rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .scan(createDataContext(Users.DATASOURCE_READ))
         .toList();
     Assert.assertEquals(1, rows.size());
 
@@ -1451,13 +1452,13 @@ public class SystemSchemaTest extends CalciteTestBase
           final String username = authenticationResult.getIdentity();
 
           // Allow access to a Datasource if
-          // - any user requests Read access
           // - Super User or Datasource Write User requests Write access
+          // - Super User or Datasource Read User requests Read access
           if (resource.getType().equals(ResourceType.DATASOURCE)) {
             return new Access(
-                action == Action.READ
-                || username.equals(Users.SUPER)
-                || username.equals(Users.DATASOURCE_WRITE)
+                username.equals(Users.SUPER)
+                || (action == Action.READ && username.equals(Users.DATASOURCE_READ))
+                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
             );
           }
 

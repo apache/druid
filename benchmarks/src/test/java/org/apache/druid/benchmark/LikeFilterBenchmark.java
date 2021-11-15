@@ -40,7 +40,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -138,7 +138,7 @@ public class LikeFilterBenchmark
                       ),
         GenericIndexed.STRING_STRATEGY
     );
-    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
+    final BitmapIndex bitmapIndex = new StringBitmapIndexColumnPartSupplier(
         bitmapFactory,
         GenericIndexed.fromIterable(
             FluentIterable.from(ints)

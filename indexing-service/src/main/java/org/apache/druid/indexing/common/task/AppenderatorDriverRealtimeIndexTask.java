@@ -45,6 +45,7 @@ import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -83,6 +84,7 @@ import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CloseableUtils;
@@ -298,13 +300,20 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
@@ -529,7 +538,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    authorizeRequestForDatasourceWrite(req, authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
@@ -555,7 +564,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @Context final HttpServletRequest req
   )
   {
-    authorizeRequestForDatasourceWrite(req, authorizerMapper);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         parseExceptionHandler.getSavedParseExceptions()
     );

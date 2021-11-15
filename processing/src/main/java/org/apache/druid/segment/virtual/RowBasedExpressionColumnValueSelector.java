@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * Expression column value selector that examines a set of 'unknown' type input bindings on a row by row basis,
  * transforming the expression to handle multi-value list typed inputs as they are encountered.
  *
- * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link String[]}, so
+ * Currently, string dimensions are the only bindings which might appear as a {@link String} or a {@link Object[]}, so
  * numbers are eliminated from the set of 'unknown' bindings to check as they are encountered.
  */
 public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValueSelector
@@ -94,7 +94,7 @@ public class RowBasedExpressionColumnValueSelector extends ExpressionColumnValue
   {
     Object binding = bindings.get(x);
     if (binding != null) {
-      if (binding instanceof String[]) {
+      if (binding instanceof Object[] && ((Object[]) binding).length > 0) {
         return true;
       } else if (binding instanceof Number) {
         ignoredColumns.add(x);

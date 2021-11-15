@@ -44,7 +44,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -173,7 +173,7 @@ public class ExtractionDimFilterTest
     @Override
     public BitmapIndex getBitmapIndex(String dimension)
     {
-      return new BitmapIndexColumnPartSupplier(
+      return new StringBitmapIndexColumnPartSupplier(
           factory,
           GenericIndexed.fromIterable(Collections.singletonList(foo1BitMap), serdeFactory.getObjectStrategy()),
           GenericIndexed.fromIterable(Collections.singletonList("foo1"), GenericIndexed.STRING_STRATEGY)

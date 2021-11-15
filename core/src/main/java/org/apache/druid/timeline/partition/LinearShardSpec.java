@@ -80,6 +80,12 @@ public final class LinearShardSpec implements ShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.LINEAR;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

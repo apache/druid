@@ -340,6 +340,8 @@ public class QueryMaker
           coercedValue = Arrays.asList((Long[]) value);
         } else if (value instanceof Double[]) {
           coercedValue = Arrays.asList((Double[]) value);
+        } else if (value instanceof Object[]) {
+          coercedValue = Arrays.asList((Object[]) value);
         } else {
           throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }

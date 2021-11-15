@@ -392,8 +392,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             processingConfig,
@@ -10965,7 +10964,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         (query1, future) -> {
           return;
         },
-        ImmutableList.<QueryRunner<ResultRow>>of(runner, runner)
+        ImmutableList.of(runner, runner)
     );
 
     QueryRunner<ResultRow> mergingRunner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(ceqr));
@@ -11441,6 +11440,91 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByWithExpressionAggregatorWithComplex()
+  {
+    cannotVectorize();
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(Collections.emptyList())
+        .setAggregatorSpecs(
+            new CardinalityAggregatorFactory(
+                "car",
+                ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                false
+            ),
+            new ExpressionLambdaAggregatorFactory(
+                "carExpr",
+                ImmutableSet.of("quality"),
+                null,
+                "hyper_unique()",
+                null,
+                null,
+                "hyper_unique_add(quality, __acc)",
+                "hyper_unique_add(carExpr, __acc)",
+                null,
+                "hyper_unique_estimate(o)",
+                null,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9, "carExpr", QueryRunnerTestHelper.UNIQUES_9)
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-cardinality");
+  }
+
+  @Test
+  public void testGroupByWithExpressionAggregatorWithComplexOnSubquery()
+  {
+    final GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("index", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setDimensions(Collections.emptyList())
+        .setAggregatorSpecs(
+            new CardinalityAggregatorFactory(
+                "car",
+                ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                false
+            ),
+            new ExpressionLambdaAggregatorFactory(
+                "carExpr",
+                ImmutableSet.of("quality"),
+                null,
+                "hyper_unique()",
+                null,
+                null,
+                "hyper_unique_add(quality, __acc)",
+                null,
+                null,
+                "hyper_unique_estimate(o)",
+                null,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(query, "1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9, "carExpr", QueryRunnerTestHelper.UNIQUES_9)
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-cardinality");
   }
 
   @Test

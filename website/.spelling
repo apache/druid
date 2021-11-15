@@ -510,6 +510,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -1287,6 +1293,8 @@ bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1312,6 +1320,9 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1693,6 +1704,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1763,6 +1775,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1926,3 +1939,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+

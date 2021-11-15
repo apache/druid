@@ -23,6 +23,7 @@ export * from './druid-lookup';
 export * from './druid-query';
 export * from './formatter';
 export * from './general';
+export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
 export * from './object-change';
 export * from './query-cursor';

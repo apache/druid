@@ -33,10 +33,8 @@ import java.util.Objects;
  *
  * @see BuildingSingleDimensionShardSpec
  */
-public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
+public class SingleDimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
 {
-  public static final String TYPE = "bucket_single_dim";
-
   private final int bucketId;
   private final String dimension;
   @Nullable
@@ -45,7 +43,7 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   private final String end;
 
   @JsonCreator
-  public RangeBucketShardSpec(
+  public SingleDimensionRangeBucketShardSpec(
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("start") @Nullable String start,
@@ -101,12 +99,18 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   {
     return (long timestamp, InputRow row) -> {
       for (ShardSpec spec : shardSpecs) {
-        if (((RangeBucketShardSpec) spec).isInChunk(row)) {
+        if (((SingleDimensionRangeBucketShardSpec) spec).isInChunk(row)) {
           return spec;
         }
       }
       throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
     };
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUCKET_SINGLE_DIM;
   }
 
   @Override
@@ -118,7 +122,7 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    RangeBucketShardSpec bucket = (RangeBucketShardSpec) o;
+    SingleDimensionRangeBucketShardSpec bucket = (SingleDimensionRangeBucketShardSpec) o;
     return bucketId == bucket.bucketId &&
            Objects.equals(dimension, bucket.dimension) &&
            Objects.equals(start, bucket.start) &&
@@ -134,7 +138,7 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   @Override
   public String toString()
   {
-    return "RangeBucket{" +
+    return "SingleDimensionRangeBucketShardSpec{" +
            ", bucketId=" + bucketId +
            ", dimension='" + dimension + '\'' +
            ", start='" + start + '\'' +

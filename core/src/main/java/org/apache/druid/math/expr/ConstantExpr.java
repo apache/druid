@@ -22,9 +22,12 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.segment.column.ObjectByteStrategy;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -82,7 +85,7 @@ abstract class ConstantExpr<T> implements Expr
   @Override
   public BindingAnalysis analyzeInputs()
   {
-    return new BindingAnalysis();
+    return BindingAnalysis.EMTPY;
   }
 
   @Override
@@ -181,60 +184,6 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 }
 
-class LongArrayExpr extends ConstantExpr<Long[]>
-{
-  LongArrayExpr(@Nullable Long[] value)
-  {
-    super(ExpressionType.LONG_ARRAY, value);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Arrays.toString(value);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return ExprEval.ofLongArray(value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
-  }
-
-  @Override
-  public String stringify()
-  {
-    if (value.length == 0) {
-      return "<LONG>[]";
-    }
-    return StringUtils.format("<LONG>%s", toString());
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    LongArrayExpr that = (LongArrayExpr) o;
-    return Arrays.equals(value, that.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Arrays.hashCode(value);
-  }
-}
-
 class DoubleExpr extends ConstantExpr<Double>
 {
   DoubleExpr(Double value)
@@ -318,60 +267,6 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 }
 
-class DoubleArrayExpr extends ConstantExpr<Double[]>
-{
-  DoubleArrayExpr(@Nullable Double[] value)
-  {
-    super(ExpressionType.DOUBLE_ARRAY, value);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Arrays.toString(value);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return ExprEval.ofDoubleArray(value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
-  }
-
-  @Override
-  public String stringify()
-  {
-    if (value.length == 0) {
-      return "<DOUBLE>[]";
-    }
-    return StringUtils.format("<DOUBLE>%s", toString());
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DoubleArrayExpr that = (DoubleArrayExpr) o;
-    return Arrays.equals(value, that.value);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Arrays.hashCode(value);
-  }
-}
-
 class StringExpr extends ConstantExpr<String>
 {
   StringExpr(@Nullable String value)
@@ -424,23 +319,19 @@ class StringExpr extends ConstantExpr<String>
   }
 }
 
-class StringArrayExpr extends ConstantExpr<String[]>
+class ArrayExpr extends ConstantExpr<Object[]>
 {
-  StringArrayExpr(@Nullable String[] value)
+  public ArrayExpr(ExpressionType outputType, @Nullable Object[] value)
   {
-    super(ExpressionType.STRING_ARRAY, value);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Arrays.toString(value);
+    super(outputType, value);
+    Preconditions.checkArgument(outputType.isArray());
+    ExpressionType.checkNestedArrayAllowed(outputType);
   }
 
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofStringArray(value);
+    return ExprEval.ofArray(outputType, value);
   }
 
   @Override
@@ -452,21 +343,105 @@ class StringArrayExpr extends ConstantExpr<String[]>
   @Override
   public String stringify()
   {
-    if (value.length == 0) {
-      return "<STRING>[]";
+    if (value == null) {
+      return NULL_LITERAL;
     }
+    if (value.length == 0) {
+      return outputType.asTypeString() + "[]";
+    }
+    if (outputType.getElementType().is(ExprType.STRING)) {
+      return StringUtils.format(
+          "%s[%s]",
+          outputType.asTypeString(),
+          ARG_JOINER.join(
+              Arrays.stream(value)
+                    .map(s -> s == null
+                              ? NULL_LITERAL
+                              // escape as javascript string since string literals are wrapped in single quotes
+                              : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript((String) s))
+                    )
+                    .iterator()
+          )
+      );
+    } else if (outputType.getElementType().isNumeric()) {
+      return outputType.asTypeString() + Arrays.toString(value);
+    } else if (outputType.getElementType().is(ExprType.COMPLEX)) {
+      Object[] stringified = new Object[value.length];
+      for (int i = 0; i < value.length; i++) {
+        stringified[i] = new ComplexExpr((ExpressionType) outputType.getElementType(), value[i]).stringify();
+      }
+      // use array function to rebuild since we can't stringify complex types directly
+      return StringUtils.format("array(%s)", Arrays.toString(stringified));
+    } else if (outputType.getElementType().isArray()) {
+      // use array function to rebuild since the parser can't yet recognize nested arrays e.g. [['foo', 'bar'],['baz']]
+      Object[] stringified = new Object[value.length];
+      for (int i = 0; i < value.length; i++) {
+        stringified[i] = new ArrayExpr((ExpressionType) outputType.getElementType(), (Object[]) value[i]).stringify();
+      }
+      return StringUtils.format("array(%s)", Arrays.toString(stringified));
+    }
+    throw new IAE("cannot stringify array type %s", outputType);
+  }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ArrayExpr that = (ArrayExpr) o;
+    return outputType.equals(that.outputType) && Arrays.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(outputType, Arrays.hashCode(value));
+  }
+
+  @Override
+  public String toString()
+  {
+    return Arrays.toString(value);
+  }
+}
+
+class ComplexExpr extends ConstantExpr<Object>
+{
+  protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
+  {
+    super(outputType, value);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    return ExprEval.ofComplex(outputType, value);
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return false;
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value == null) {
+      return StringUtils.format("complex_decode_base64('%s', %s)", outputType.getComplexTypeName(), NULL_LITERAL);
+    }
+    ObjectByteStrategy strategy = Types.getStrategy(outputType.getComplexTypeName());
+    if (strategy == null) {
+      throw new IAE("Cannot stringify type[%s]", outputType.asTypeString());
+    }
     return StringUtils.format(
-        "<STRING>[%s]",
-        ARG_JOINER.join(
-            Arrays.stream(value)
-                  .map(s -> s == null
-                            ? NULL_LITERAL
-                            // escape as javascript string since string literals are wrapped in single quotes
-                            : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(s))
-                  )
-                  .iterator()
-        )
+        "complex_decode_base64('%s', '%s')",
+        outputType.getComplexTypeName(),
+        StringUtils.encodeBase64String(strategy.toBytes(value))
     );
   }
 
@@ -479,13 +454,13 @@ class StringArrayExpr extends ConstantExpr<String[]>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    StringArrayExpr that = (StringArrayExpr) o;
-    return Arrays.equals(value, that.value);
+    ComplexExpr that = (ComplexExpr) o;
+    return outputType.equals(that.outputType) && Objects.equals(value, that.value);
   }
 
   @Override
   public int hashCode()
   {
-    return Arrays.hashCode(value);
+    return Objects.hash(outputType, value);
   }
 }

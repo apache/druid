@@ -123,7 +123,7 @@ public class ContainsExprMacroTest extends MacroTestBase
       expectException(IllegalArgumentException.class, "Function[contains_string] substring must be a string literal");
     }
 
-    final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.withSuppliers(ImmutableMap.of("a", () -> null)));
+    final ExprEval<?> result = eval("contains_string(a, null)", InputBindings.nilBindings());
     Assert.assertEquals(
         ExprEval.ofBoolean(true, ExprType.LONG).value(),
         result.value()
@@ -133,7 +133,7 @@ public class ContainsExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearchOnNull()
   {
-    final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.withSuppliers(ImmutableMap.of("a", () -> null)));
+    final ExprEval<?> result = eval("contains_string(a, '')", InputBindings.nilBindings());
     Assert.assertEquals(
         ExprEval.ofBoolean(!NullHandling.sqlCompatible(), ExprType.LONG).value(),
         result.value()

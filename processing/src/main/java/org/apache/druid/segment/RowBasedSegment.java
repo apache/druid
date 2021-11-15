@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -48,20 +49,21 @@ public class RowBasedSegment<RowType> implements Segment
    * field, even if it doesn't appear in "rowSignature".
    *
    * @param segmentId    segment identifier; will be returned by {@link #getId()}
-   * @param rowIterable  objects that comprise this segment
+   * @param rowSequence  objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
+   *                     is required. Otherwise, does not need to be re-iterable.
    * @param rowAdapter   adapter used for reading these objects
    * @param rowSignature signature of the columns in these objects
    */
   public RowBasedSegment(
       final SegmentId segmentId,
-      final Iterable<RowType> rowIterable,
+      final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature
   )
   {
     this.segmentId = Preconditions.checkNotNull(segmentId, "segmentId");
     this.storageAdapter = new RowBasedStorageAdapter<>(
-        rowIterable,
+        rowSequence,
         rowAdapter,
         rowSignature
     );
