@@ -19,7 +19,8 @@
 
 package org.apache.druid.spark.utils
 
-import org.apache.druid.query.filter.{AndDimFilter, BoundDimFilter, DimFilter, RegexDimFilter}
+import org.apache.druid.query.filter.{AndDimFilter, BoundDimFilter, DimFilter, FalseDimFilter,
+  InDimFilter, NotDimFilter, RegexDimFilter, SelectorDimFilter}
 import org.apache.druid.query.ordering.StringComparators
 import org.apache.spark.sql.sources.{And, EqualNullSafe, EqualTo, GreaterThan, GreaterThanOrEqual,
   In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains, StringEndsWith,
@@ -28,9 +29,15 @@ import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import scala.collection.JavaConverters.{asScalaSetConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{asScalaSetConverter, seqAsJavaListConverter,
+  setAsJavaSetConverter}
 
 class FilterUtilsSuite extends AnyFunSuite with Matchers {
+  private val testSchema = StructType(Seq[StructField](
+    StructField("count", LongType),
+    StructField("name", StringType)
+  ))
+
   test("mapFilters should convert a Spark filter into an equivalent Druid filter") {
     val testSchema = StructType(Seq[StructField](
       StructField("count", LongType)
@@ -55,11 +62,6 @@ class FilterUtilsSuite extends AnyFunSuite with Matchers {
   }
 
   test("mapFilters should map multiple Spark filters into an equivalent Druid filter") {
-    val testSchema = StructType(Seq[StructField](
-      StructField("count", LongType),
-      StructField("name", StringType)
-    ))
-
     val druidFilter = FilterUtils.mapFilters(
       Array[SparkFilter](GreaterThan("count", 5), LessThanOrEqual("name", "foo")),
       testSchema
@@ -96,11 +98,6 @@ class FilterUtilsSuite extends AnyFunSuite with Matchers {
   }
 
   test("mapFilters should map a complex Spark filter into an equivalent Druid filter") {
-    val testSchema = StructType(Seq[StructField](
-      StructField("count", LongType),
-      StructField("name", StringType)
-    ))
-
     val druidFilter = FilterUtils.mapFilters(
       Array[SparkFilter](And(GreaterThan("count", 5), StringStartsWith("name", "abc"))),
       testSchema
@@ -128,12 +125,89 @@ class FilterUtilsSuite extends AnyFunSuite with Matchers {
     expected should equal(druidFilter)
   }
 
-  test("isSupportedFilter should correctly identify supported and unsupported filters") {
-    val testSchema = StructType(Seq[StructField](
-      StructField("count", LongType),
-      StructField("name", StringType)
-    ))
+  test("mapFilters should correctly map a Spark IsNull filter into an equivalent Druid filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
 
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](IsNull("name")), testSchema
+    ).get
+    druidFilter.getRequiredColumns.asScala should contain theSameElementsAs Seq("name")
+
+    // scalastyle:off null
+    val expected = new SelectorDimFilter("name", null, null, null)
+    // scalastyle:on
+
+    expected should equal(druidFilter)
+  }
+
+  test("mapFilters should correctly map a Spark IsNotNull filter into an equivalent Druid filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
+
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](IsNotNull("name")), testSchema
+    ).get
+    druidFilter.getRequiredColumns.asScala should contain theSameElementsAs Seq("name")
+
+    // scalastyle:off null
+    val expected = new NotDimFilter(
+      new SelectorDimFilter("name", null, null, null)
+    )
+    // scalastyle:on
+
+    expected should equal(druidFilter)
+  }
+
+  test("mapFilters should correctly map a Spark In filter with null into an equivalent Druid filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
+
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](In("name", Array("a", "b", null))), testSchema // scalastyle:ignore null
+    ).get
+    druidFilter.getRequiredColumns.asScala should contain theSameElementsAs Seq("name")
+
+    // scalastyle:off null
+    val expected = new InDimFilter("name", Set[String]("a", "b").asJava, null, null)
+    // scalastyle:on
+
+    expected should equal(druidFilter)
+  }
+
+  test("mapFilters should correctly map a Spark In filter with only null into a short-circuit filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
+
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](In("name", Array(null))), testSchema // scalastyle:ignore null
+    ).get
+
+    FalseDimFilter.instance() should equal(druidFilter)
+  }
+
+  test("mapFilters should correctly map a Spark EqualNullSafe null filter into an equivalent Druid filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
+
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](EqualNullSafe("name", null)), testSchema // scalastyle:ignore null
+    ).get
+    druidFilter.getRequiredColumns.asScala should contain theSameElementsAs Seq("name")
+
+    // scalastyle:off null
+    val expected = new SelectorDimFilter("name", null, null, null)
+    // scalastyle:on null
+
+    expected should equal(druidFilter)
+  }
+
+  test("mapFilters should correctly map a Spark EqualTo null filter into a short-circuit filter") {
+    NullHandlingUtils.initializeDruidNullHandling(false)
+
+    val druidFilter = FilterUtils.mapFilters(
+      Array[SparkFilter](EqualTo("name", null)), testSchema // scalastyle:ignore null
+    ).get
+
+    FalseDimFilter.instance() should equal(druidFilter)
+  }
+
+  test("isSupportedFilter should correctly identify supported and unsupported filters") {
     FilterUtils.isSupportedFilter(And(EqualTo("count", 1), LessThan("name", "abc")), testSchema) shouldBe true
     FilterUtils.isSupportedFilter(And(EqualTo("count", 1), IsNull("name")), testSchema) shouldBe false
 
@@ -163,6 +237,25 @@ class FilterUtilsSuite extends AnyFunSuite with Matchers {
     FilterUtils.isSupportedFilter(LessThanOrEqual("count", 17), testSchema) shouldBe true
     FilterUtils.isSupportedFilter(GreaterThan("name", "bar"), testSchema) shouldBe true
     FilterUtils.isSupportedFilter(GreaterThanOrEqual("count", -8), testSchema) shouldBe true
+  }
+
+  test("isSupportedFilter should correctly identify IsNull and IsNotNull filters as supported when using " +
+    "SQL-compatible null handling") {
+    FilterUtils.isSupportedFilter(And(EqualTo("count", 1), IsNull("name")), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(Or(EqualTo("count", 1), IsNull("name")), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(Not(IsNull("count")), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(IsNull("count"), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(IsNotNull("count"), testSchema, true) shouldBe true
+  }
+
+  test("isSupportedFilter should correctly identify In, EqualNullSafe, and EqualTo filters on null as " +
+    "supported when using SQL-compatible null handling") {
+    // scalastyle:off null
+    FilterUtils.isSupportedFilter(In("name", Array[Any]("a", "b", null)), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(In("name", Array[Any](null)), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(EqualNullSafe("name", null), testSchema, true) shouldBe true
+    FilterUtils.isSupportedFilter(EqualTo("name", null), testSchema, true) shouldBe true
+    // scalastyle:on
   }
 
   test("getTimeFilterBounds should handle upper and lower bounds") {

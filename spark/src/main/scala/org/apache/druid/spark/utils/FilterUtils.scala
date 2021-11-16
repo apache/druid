@@ -20,8 +20,8 @@
 package org.apache.druid.spark.utils
 
 import org.apache.druid.java.util.common.{ISE, JodaUtils}
-import org.apache.druid.query.filter.{AndDimFilter, BoundDimFilter, DimFilter, InDimFilter,
-  NotDimFilter, OrDimFilter, RegexDimFilter, SelectorDimFilter}
+import org.apache.druid.query.filter.{AndDimFilter, BoundDimFilter, DimFilter, FalseDimFilter,
+  InDimFilter, NotDimFilter, OrDimFilter, RegexDimFilter, SelectorDimFilter}
 import org.apache.druid.query.ordering.{StringComparator, StringComparators}
 import org.apache.spark.sql.sources.{And, EqualNullSafe, EqualTo, Filter, GreaterThan,
   GreaterThanOrEqual, In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains,
@@ -68,8 +68,11 @@ object FilterUtils {
         new OrDimFilter(List(mapFilter(left, schema), mapFilter(right, schema)).asJava)
       case Not(condition) =>
         new NotDimFilter(mapFilter(condition, schema))
+      case IsNull(field) =>
+        new SelectorDimFilter(field, null, null, null)
+      case IsNotNull(field) => new NotDimFilter(new SelectorDimFilter(field, null, null, null))
       case In(field, values) =>
-        new InDimFilter(field, values.map(_.toString).toSet.asJava, null, null)
+        new InDimFilter(field, values.filter(_ != null).map(_.toString).toSet.asJava, null, null)
       case StringContains(field, value) =>
         // Not 100% sure what Spark's expectations are for regex, case insensitive, etc.
         // and not sure the relative efficiency of various Druid dim filters
@@ -85,7 +88,13 @@ object FilterUtils {
         // new LikeDimFilter(field, s"%$value", null, null, null)
         new RegexDimFilter(field, s"$value$$", null, null)
       case EqualTo(field, value) =>
-        new SelectorDimFilter(field, value.toString, null, null)
+        if (value == null) {
+          FalseDimFilter.instance()
+        } else {
+          new SelectorDimFilter(field, value.toString, null, null)
+        }
+      case EqualNullSafe(field, value) =>
+        new SelectorDimFilter(field, Option(value).map(_.toString).orNull, null, null)
       case LessThan(field, value) =>
         new BoundDimFilter(
           field,
@@ -157,24 +166,37 @@ object FilterUtils {
     * @param schema The schema of the DataFrame to be filtered by FILTER.
     * @return True iff FILTER can be pushed down to the InputPartitionReaders.
     */
-  private[spark] def isSupportedFilter(filter: Filter, schema: StructType): Boolean = {
+  private[spark] def isSupportedFilter(
+                                        filter: Filter,
+                                        schema: StructType,
+                                        useSQLCompatibleNulls: Boolean = false
+                                      ): Boolean = {
     // If the filter references columns we don't know about, we can't push it down
     if (!filter.references.forall(schema.fieldNames.contains(_))) {
       false
     } else {
       filter match {
         // scalastyle:off null
-        case and: And => isSupportedFilter(and.left, schema) && isSupportedFilter(and.right, schema)
-        case or: Or => isSupportedFilter(or.left, schema) && isSupportedFilter(or.right, schema)
-        case not: Not => isSupportedFilter(not.child, schema)
-        case _: IsNull => false // Setting null-related filters to false for now
-        case _: IsNotNull => false // Setting null-related filters to false for now
-        case in: In => checkAllDataTypesSupported(filter, schema) && !in.values.contains(null)
+        case and: And => isSupportedFilter(and.left, schema, useSQLCompatibleNulls) &&
+          isSupportedFilter(and.right, schema, useSQLCompatibleNulls)
+        case or: Or => isSupportedFilter(or.left, schema, useSQLCompatibleNulls) &&
+          isSupportedFilter(or.right, schema, useSQLCompatibleNulls)
+        case not: Not => isSupportedFilter(not.child, schema, useSQLCompatibleNulls)
+        // If we're using SQL-compatible nulls, we can filter for null.
+        // Otherwise, callers should explictly filter for '' or 0 depending on the column type.
+        // If we ever support pushing down filters on complex types, we'll need to add handling here.
+        case _: IsNull => useSQLCompatibleNulls
+        case _: IsNotNull => useSQLCompatibleNulls
+        case in: In => checkAllDataTypesSupported(filter, schema) &&
+          (useSQLCompatibleNulls || !in.values.contains(null))
         case _: StringContains => checkStringsOnly(filter, schema)
         case _: StringStartsWith => checkStringsOnly(filter, schema)
         case _: StringEndsWith => checkStringsOnly(filter, schema)
-        case equalTo: EqualTo => checkAllDataTypesSupported(filter, schema) && equalTo.value != null
-        case equalNullSafe: EqualNullSafe => checkAllDataTypesSupported(filter, schema) && equalNullSafe.value != null
+        // Hopefully Spark is smart enough to short-circuit for foo = NULL queries but if not, I guess we can
+        case equalTo: EqualTo => checkAllDataTypesSupported(filter, schema) &&
+          (useSQLCompatibleNulls || equalTo.value != null)
+        case equalNullSafe: EqualNullSafe => checkAllDataTypesSupported(filter, schema) &&
+          (useSQLCompatibleNulls || equalNullSafe.value != null)
         case _: LessThan => checkAllDataTypesSupported(filter, schema)
         case _: LessThanOrEqual => checkAllDataTypesSupported(filter, schema)
         case _: GreaterThan => checkAllDataTypesSupported(filter, schema)

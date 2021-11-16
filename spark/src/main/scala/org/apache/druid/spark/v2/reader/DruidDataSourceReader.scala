@@ -137,7 +137,8 @@ class DruidDataSourceReader(
 
   override def pushFilters(filters: Array[Filter]): Array[Filter] = {
     readSchema()
-    filters.partition(FilterUtils.isSupportedFilter(_, schema.get)) match {
+    val useSqlCompatibleNullHandling = !conf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
+    filters.partition(FilterUtils.isSupportedFilter(_, schema.get, useSqlCompatibleNullHandling)) match {
       case (supported, unsupported) =>
         this.filters = supported
         unsupported
