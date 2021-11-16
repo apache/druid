@@ -84,16 +84,28 @@ class DruidColumnarInputPartitionReader(
   }
 
   override def close(): Unit = {
-    resultBatch.close()
-    columnVectors.foreach(_.close())
-    if (Option(cursor).nonEmpty){
-      cursor.close()
-    }
-    if (Option(queryableIndex).nonEmpty) {
-      queryableIndex.close()
-    }
-    if (Option(tmpDir).nonEmpty) {
-      FileUtils.deleteDirectory(tmpDir)
+    try {
+      resultBatch.close()
+      columnVectors.foreach(_.close())
+      if (Option(cursor).nonEmpty) {
+        cursor.close()
+      }
+      if (Option(queryableIndex).nonEmpty) {
+        queryableIndex.close()
+      }
+      if (Option(tmpDir).nonEmpty) {
+        FileUtils.deleteDirectory(tmpDir)
+      }
+    } catch {
+      case e: Exception =>
+        // Since we're just going to rethrow e and tearing down the JVM will clean up the result batch, column vectors,
+        // cursor, and queryable index even if we can't, the only leak we have to worry about is the temp file. Spark
+        // should clean up temp files as well, but rather than rely on that we'll try to take care of it ourselves.
+        logWarn("Encountered exception attempting to close a DruidColumnarInputPartitionReader!")
+        if (Option(tmpDir).nonEmpty && tmpDir.exists()) {
+          FileUtils.deleteDirectory(tmpDir)
+        }
+        throw e
     }
   }
 

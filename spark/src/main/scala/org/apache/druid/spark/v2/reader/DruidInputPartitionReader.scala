@@ -72,14 +72,26 @@ class DruidInputPartitionReader(
   }
 
   override def close(): Unit = {
-    if (Option(firehose).nonEmpty) {
-      firehose.close()
-    }
-    if (Option(queryableIndex).nonEmpty) {
-      queryableIndex.close()
-    }
-    if (Option(tmpDir).nonEmpty) {
-      FileUtils.deleteDirectory(tmpDir)
+    try {
+      if (Option(firehose).nonEmpty) {
+        firehose.close()
+      }
+      if (Option(queryableIndex).nonEmpty) {
+        queryableIndex.close()
+      }
+      if (Option(tmpDir).nonEmpty) {
+        FileUtils.deleteDirectory(tmpDir)
+      }
+    } catch {
+      case e: Exception =>
+        // Since we're just going to rethrow e and tearing down the JVM will clean up the firehose and queryable index
+        // even if we can't, the only leak we have to worry about is the temp file. Spark should clean up temp files as
+        // well, but rather than rely on that we'll try to take care of it ourselves.
+        logWarn("Encountered exception attempting to close a DruidInputPartitionReader!")
+        if (Option(tmpDir).nonEmpty && tmpDir.exists()) {
+          FileUtils.deleteDirectory(tmpDir)
+        }
+        throw e
     }
   }
 }
