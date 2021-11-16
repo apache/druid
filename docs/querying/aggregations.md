@@ -446,8 +446,8 @@ possible output of the aggregator is:
 | `["dim2"]`               | 2      | (10)                  |
 | `[]`                     | 3      | (11)                  |  
 
-As illustrated in the example, the output number can be thought of as an unsigned _n_ bit number where _n_ is the number of dimensions passed to the aggregator. 
-The bit at position X is set in this number to 0 if a dimension at position X in the aggregator input is included in the sub-grouping. Otherwise, this bit 
+As the example illustrates, you can think of the output number as an unsigned _n_ bit number where _n_ is the number of dimensions passed to the aggregator. 
+Druid sets the bit at position X for the number to 0 if the sub-grouping includes a dimension at position X in the aggregator input. Otherwise, Druid set this bit to 1. 
 is set to 1.
 
 ```json
