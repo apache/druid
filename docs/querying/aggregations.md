@@ -61,7 +61,7 @@ Computes the sum of values as a 64-bit, signed integer.
 
 #### `doubleSum` aggregator
 
-Computes and stores the sum of values as 64-bit floating point value. Similar to `longSum`.
+Computes and stores the sum of values as a 64-bit floating point value. Similar to `longSum`.
 
 ```json
 { "type" : "doubleSum", "name" : <output_name>, "fieldName" : <metric_name> }
