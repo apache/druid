@@ -32,7 +32,7 @@ The following JSON fields can be used in a query to operate on dimension values.
 
 ## DimensionSpec
 
-A `DimensionSpec` defines how dimension values get transformed prior to aggregation.
+A `DimensionSpec` defines how to transform dimension values prior to aggregation.
 
 ### Default DimensionSpec
 
