@@ -27,8 +27,9 @@ title: "Aggregations"
 > language. For information about aggregators available in SQL, refer to the
 > [SQL documentation](sql.md#aggregation-functions).
 
-Aggregations specified at ingestion time, from within the ingestion spec, provide a way to summarize data before it enters Apache Druid.
-Aggregations are also used at query time.
+You can use aggregations:
+-  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
+-  at query time to summarize result data.
 
 The following sections list the types of aggregations available at ingestion and query time.
 
