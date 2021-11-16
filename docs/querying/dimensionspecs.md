@@ -81,7 +81,7 @@ Then the groupBy/topN processing pipeline "explodes" all multi-value dimensions 
 
 In addition to "query filter", which efficiently selects the rows to be processed, you can use the filtered dimension spec to filter for specific values within the values of a multi-value dimension. These dimension specs take a delegate `DimensionSpec` and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
 
-The following filtered dimension spec acts as a whitelist or blacklist for values as per the `isWhitelist` attribute value.
+The following filtered dimension spec defines the values to include or exclude as per the `isWhitelist` attribute value.
 
 ```json
 { "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
