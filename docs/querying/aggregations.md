@@ -137,7 +137,7 @@ To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator]
 
 ### First / Last aggregator
 
-(Double/Float/Long) First and Last aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
+(Double/Float/Long) Do not use First and Last aggregators in an ingestion spec. They are only supported for queries.
 
 Note that queries with first/last aggregators on a segment created with rollup enabled return the rolled up value, and not the last value within the raw ingested data.
 
