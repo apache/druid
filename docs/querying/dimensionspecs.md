@@ -75,7 +75,7 @@ A filtered `DimensionSpec` is only useful for multi-value dimensions. Say you ha
 
 This happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. 
 
-> See the section on "Multi-value columns" in [segment](../design/segments.md) for more details.
+See the section on "Multi-value columns" in [segment](../design/segments.md) for more details.
 
 Then the groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
 
