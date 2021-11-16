@@ -73,7 +73,7 @@ Please refer to the [Output Types](#output-types) section for more details.
 
 A filtered `DimensionSpec` is only useful for multi-value dimensions. Say you have a row in Apache Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with a [query filter](filters.md) for a value of "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
-This happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. 
+This happens because Druid uses the "query filter" internally on bitmaps to match the row to include in query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which matches the row with dimension value ["v1", "v2", "v3"]. 
 
 See the section on "Multi-value columns" in [segment](../design/segments.md) for more details.
 
