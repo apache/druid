@@ -293,7 +293,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         );
       }
     };
-
+    druidSchemaMemory.addSegment();
   }
 
   @After
