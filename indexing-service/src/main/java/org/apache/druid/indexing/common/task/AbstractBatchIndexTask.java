@@ -60,6 +60,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -492,9 +493,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
                                       ? null
                                       : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions(), null, null);
+      // We only need to store filter since that is the only field auto compaction support
+      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null
+                                          ? null
+                                          : new TransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter(), null).asMap(toolbox.getJsonMapper());
       final CompactionState compactionState = new CompactionState(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
+          transformSpec,
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())
       );

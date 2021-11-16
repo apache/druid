@@ -82,6 +82,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -105,6 +106,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        transformSpec,
         context
     );
     return runTask(taskId, taskQuery);
