@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
