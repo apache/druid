@@ -31,7 +31,7 @@ You can use aggregations:
 -  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
 -  at query time to summarize result data.
 
-The following sections list the types of aggregations available at ingestion and query time.
+The following sections list the available aggregate functions. Unless otherwise noted, aggregations are available at both ingestion and query time.
 
 ### Count aggregator
 
