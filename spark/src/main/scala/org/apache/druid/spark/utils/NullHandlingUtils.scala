@@ -23,7 +23,7 @@ import org.apache.druid.common.config.{NullHandling, NullValueHandlingConfig}
 
 /**
   * Utility class for initializing a Druid NullValueHandlingConfig. In a Druid cluster, this is handled via injection
-  * and in unit tests defautl value null handling is initialized via NullHandling.initializeForTests(), but we need
+  * and in unit tests default value null handling is initialized via NullHandling.initializeForTests(), but we need
   * to use reflection here to handle the case where we want to set SQL-compatible null handling.
   */
 object NullHandlingUtils {
