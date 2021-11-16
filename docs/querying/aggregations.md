@@ -69,7 +69,7 @@ Computes and stores the sum of values as a 64-bit floating point value. Similar 
 
 #### `floatSum` aggregator
 
-Computes and stores the sum of values as 32-bit floating point value. Similar to `longSum` and `doubleSum`.
+Computes and stores the sum of values as a 32-bit floating point value. Similar to `longSum` and `doubleSum`.
 
 ```json
 { "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
