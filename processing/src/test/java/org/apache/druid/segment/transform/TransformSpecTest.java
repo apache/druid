@@ -29,11 +29,15 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -205,6 +209,16 @@ public class TransformSpecTest extends InitializedNullHandlingTest
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
   }
+
+  @Test
+  public void testAsMap()
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final TransformSpec spec = new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
+    final Map<String, Object> map = spec.asMap(objectMapper);
+
+  }
+
 
   @Test
   public void testSerde() throws Exception

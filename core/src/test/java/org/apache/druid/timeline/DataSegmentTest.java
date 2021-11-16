@@ -122,6 +122,7 @@ public class DataSegmentTest
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo")), null, null),
+
             ImmutableMap.of(),
             ImmutableMap.of()
         ),
