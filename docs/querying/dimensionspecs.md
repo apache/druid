@@ -87,7 +87,7 @@ The following filtered dimension spec acts as a whitelist or blacklist for value
 { "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
 ```
 
-The following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist use case.
+The following filtered dimension spec retains only the values matching a regex.  You should use the `listFiltered` function for inclusion and exclusion use cases because it is faster.
 
 ```json
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
