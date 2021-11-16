@@ -2267,10 +2267,10 @@ public class CompactionTaskTest
     }
   }
 
-
   private static class ExtensionDimensionHandler extends DoubleDimensionHandler
   {
     private static final String TYPE_NAME = "extension-double";
+
     public ExtensionDimensionHandler(String dimensionName)
     {
       super(dimensionName);
