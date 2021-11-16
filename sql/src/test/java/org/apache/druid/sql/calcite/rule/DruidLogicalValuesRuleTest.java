@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -44,6 +45,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
+
+import java.math.BigDecimal;
 
 @RunWith(Enclosed.class)
 public class DruidLogicalValuesRuleTest
@@ -106,7 +109,8 @@ public class DruidLogicalValuesRuleTest
   {
     private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);
     private static final DateTimeZone TIME_ZONE = DateTimes.inferTzFromString("Asia/Seoul");
-    private static final RexBuilder REX_BUILDER = new RexBuilder(new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE));
+    private static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
+    private static final RexBuilder REX_BUILDER = new RexBuilder(TYPE_FACTORY);
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -185,6 +189,17 @@ public class DruidLogicalValuesRuleTest
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage("Unsupported type[TIME_WITH_LOCAL_TIME_ZONE]");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+    }
+
+    @Test
+    public void testGetCastedValuesFromFloatToNumeric()
+    {
+      RexLiteral literal = REX_BUILDER.makeExactLiteral(
+          new BigDecimal("123.0"),
+          TYPE_FACTORY.createSqlType(SqlTypeName.INTEGER)
+      );
+      Object value = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+      Assert.assertEquals(value, 123L);
     }
   }
 }

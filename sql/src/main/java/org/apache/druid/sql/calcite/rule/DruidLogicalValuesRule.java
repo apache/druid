@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -110,6 +111,13 @@ public class DruidLogicalValuesRule extends RelOptRule
       case SMALLINT:
       case INTEGER:
       case BIGINT:
+        // Safegaurd in case the internal implementaion of the RexLiteral for numbers change
+        Object maybeBigDecimalImpl = literal.getValue();
+        if (maybeBigDecimalImpl instanceof BigDecimal) {
+          return ((BigDecimal) maybeBigDecimalImpl).longValue();
+        }
+        // This might return incorrect value if the literal was created from float.
+        // For example, representation of the form 123.0 can return 1230
         return literal.getValueAs(Long.class);
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
