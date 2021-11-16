@@ -346,6 +346,13 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonProperty
   @Nullable
+  public ClientCompactionTaskTransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @Nullable
   public AggregatorFactory[] getMetricsSpec()
   {
     return metricsSpec;

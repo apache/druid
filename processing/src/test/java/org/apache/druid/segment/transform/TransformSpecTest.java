@@ -42,6 +42,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Map;
 
 public class TransformSpecTest extends InitializedNullHandlingTest
@@ -214,9 +215,17 @@ public class TransformSpecTest extends InitializedNullHandlingTest
   public void testAsMap()
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final TransformSpec spec = new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
+    String dimension = "dim1";
+    String value = "foo";
+    final TransformSpec spec = new TransformSpec(new SelectorDimFilter(dimension, value, null), null);
     final Map<String, Object> map = spec.asMap(objectMapper);
-
+    Assert.assertNotNull(map);
+    Assert.assertEquals(0, ((List) map.get("transforms")).size());
+    Assert.assertEquals(4, ((Map) map.get("filter")).size());
+    Assert.assertEquals(dimension, ((Map) map.get("filter")).get("dimension"));
+    Assert.assertEquals(value, ((Map) map.get("filter")).get("value"));
+    TransformSpec actual = objectMapper.convertValue(map, TransformSpec.class);
+    Assert.assertEquals(spec, actual);
   }
 
 
