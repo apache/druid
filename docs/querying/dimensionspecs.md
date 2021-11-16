@@ -65,7 +65,7 @@ Returns dimension values transformed using the given [extraction function](#extr
 }
 ```
 
-`outputType` may also be specified in an `ExtractionDimensionSpec` to apply type conversion to results before merging. If left unspecified, the `outputType` defaults to STRING.
+You can specify an `outputType` in an `ExtractionDimensionSpec` to apply type conversion to results before merging. The `outputType` defaults to STRING when not specified.
 
 Please refer to the [Output Types](#output-types) section for more details.
 
