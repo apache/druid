@@ -47,7 +47,7 @@ Returns dimension values as is and optionally renames the dimension.
 }
 ```
 
-When specifying a `DimensionSpec` on a numeric column, you should include the type of the column in the `outputType` field. If left unspecified, the `outputType` defaults to STRING.
+When specifying a `DimensionSpec` on a numeric column, you should include the type of the column in the `outputType` field. The `outputType` defaults to STRING when not specified.
 
 See [Output Types](#output-types) for more details.
 
