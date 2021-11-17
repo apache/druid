@@ -366,13 +366,11 @@ public class CompactSegments implements CoordinatorDuty
         }
 
         // Create transformSpec to send to compaction task
-        ClientCompactionTaskTransformSpec transformSpec;
+        ClientCompactionTaskTransformSpec transformSpec = null;
         if (config.getTransformSpec() != null) {
           transformSpec = new ClientCompactionTaskTransformSpec(
               config.getTransformSpec().getFilter()
           );
-        } else {
-          transformSpec = null;
         }
 
         Boolean dropExisting = null;
