@@ -945,12 +945,6 @@ public class Druids
       this.orderBy = orderBys;
       return this;
     }
-
-    public ScanQueryBuilder orderBy(ScanQuery.OrderBy... orderBys)
-    {
-      this.orderBy = Arrays.asList(orderBys);
-      return this;
-    }
   }
 
   public static ScanQueryBuilder newScanQueryBuilder()
