@@ -27,8 +27,10 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
 /**
@@ -36,7 +38,19 @@ import java.util.SortedSet;
  */
 public class SegmentReplicantLookup
 {
-  public static SegmentReplicantLookup make(DruidCluster cluster, boolean replicateAfterLoadTimeout)
+  public static SegmentReplicantLookup make(
+      DruidCluster cluster,
+      boolean replicateAfterLoadTimeout
+  )
+  {
+    return make(cluster, Collections.emptyMap(), replicateAfterLoadTimeout);
+  }
+
+  public static SegmentReplicantLookup make(
+      DruidCluster cluster,
+      Map<String, Set<SegmentId>> unloadingSegments,
+      boolean replicateAfterLoadTimeout
+  )
   {
     final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
 
@@ -74,21 +88,24 @@ public class SegmentReplicantLookup
       }
     }
 
-    return new SegmentReplicantLookup(segmentsInCluster, loadingSegments, cluster);
+    return new SegmentReplicantLookup(segmentsInCluster, loadingSegments, unloadingSegments, cluster);
   }
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
+  private final Map<String, Set<SegmentId>> unloadingSegments;
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
       Table<SegmentId, String, Integer> segmentsInCluster,
       Table<SegmentId, String, Integer> loadingSegments,
+      Map<String, Set<SegmentId>> unloadingSegments,
       DruidCluster cluster
   )
   {
     this.segmentsInCluster = segmentsInCluster;
     this.loadingSegments = loadingSegments;
+    this.unloadingSegments = unloadingSegments;
     this.cluster = cluster;
   }
 
@@ -155,5 +172,10 @@ public class SegmentReplicantLookup
       }
     }
     return perTier;
+  }
+
+  public boolean isUnloadingInProcess(String tier, SegmentId segmentId)
+  {
+    return unloadingSegments.getOrDefault(tier, Collections.emptySet()).contains(segmentId);
   }
 }

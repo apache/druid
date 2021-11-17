@@ -92,6 +92,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -943,12 +944,17 @@ public class DruidCoordinator
     @Override
     public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
     {
+      Map<String, Set<SegmentId>> unloadingSegments = prepareUnloadingSegments();
       List<ImmutableDruidServer> currentServers = prepareCurrentServers();
 
       startPeonsForNewServers(currentServers);
 
       cluster = prepareCluster(params, currentServers);
-      segmentReplicantLookup = SegmentReplicantLookup.make(cluster, getDynamicConfigs().getReplicateAfterLoadTimeout());
+      segmentReplicantLookup = SegmentReplicantLookup.make(
+          cluster,
+          unloadingSegments,
+          getDynamicConfigs().getReplicateAfterLoadTimeout()
+      );
 
       stopPeonsForDisappearedServers(currentServers);
 
@@ -957,6 +963,25 @@ public class DruidCoordinator
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
                    .build();
+    }
+
+    Map<String, Set<SegmentId>> prepareUnloadingSegments()
+    {
+      final Map<String, Set<SegmentId>> unloadingSegments = new HashMap<>();
+      for (DruidServer server : serverInventoryView.getInventory()) {
+        LoadQueuePeon peon = loadManagementPeons.get(server.getName());
+        if (peon != null) {
+          for (DataSegment segment : peon.getSegmentsMarkedToDrop()) {
+            unloadingSegments.computeIfAbsent(server.getTier(), ignored -> new HashSet<>())
+                             .add(segment.getId());
+          }
+          for (DataSegment segment : peon.getSegmentsToDrop()) {
+            unloadingSegments.computeIfAbsent(server.getTier(), ignored -> new HashSet<>())
+                             .add(segment.getId());
+          }
+        }
+      }
+      return unloadingSegments;
     }
 
     List<ImmutableDruidServer> prepareCurrentServers()

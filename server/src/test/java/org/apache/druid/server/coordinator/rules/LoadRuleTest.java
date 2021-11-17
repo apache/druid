@@ -49,6 +49,7 @@ import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -746,6 +747,63 @@ public class LoadRuleTest
     Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "tier1"));
 
     EasyMock.verify(throttler, mockPeon);
+  }
+
+  /**
+   * 2 servers with a segment, segment marked to drop on server2.
+   * CostBalancerStrategy should pick server1 to drop but the drop should not happen.
+   */
+  @Test
+  public void testDropConflict()
+  {
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy);
+
+    EasyMock.replay(throttler, mockBalancerStrategy);
+
+    final LoadQueuePeonTester peon1 = new LoadQueuePeonTester();
+    final LoadQueuePeonTester peon2 = new LoadQueuePeonTester();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of("hot", 1));
+
+    DataSegment dataSegment = createDataSegment("ds1");
+    DruidServer server1 = createServer("hot");
+    server1.addDataSegment(dataSegment);
+    DruidServer server2 = createServer("hot");
+    server2.addDataSegment(dataSegment);
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier(
+            "hot",
+            new ServerHolder(server1.toImmutableDruidServer(), peon1),
+            new ServerHolder(server2.toImmutableDruidServer(), peon2)
+        )
+        .build();
+
+    Map<String, Set<SegmentId>> unloadingSegments = new HashMap<>();
+    unloadingSegments.computeIfAbsent("hot", k -> new HashSet<>()).add(dataSegment.getId());
+    peon2.markSegmentToDrop(dataSegment);
+
+    Assert.assertEquals(
+        server1.getName(),
+        balancerStrategy.pickServersToDrop(dataSegment, druidCluster.getHistoricalsByTier("hot"))
+                        .next().getServer().getName()
+    );
+
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, unloadingSegments, false))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withUsedSegmentsInTest(dataSegment)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
+        .build();
+
+    CoordinatorStats stats1 = rule.run(null, params, dataSegment);
+
+    Assert.assertEquals(0L, stats1.getTieredStat(LoadRule.DROPPED_COUNT, "hot"));
   }
 
   /**

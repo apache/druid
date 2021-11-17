@@ -283,13 +283,16 @@ public class BalanceSegments implements CoordinatorDuty
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         (toServer.getSegment(segmentId) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
 
       LoadPeonCallback callback = null;
       try {
         ConcurrentMap<SegmentId, BalancerSegmentHolder> movingSegments =
             currentlyMovingSegments.get(toServer.getTier());
-        movingSegments.put(segmentId, segment);
+        if (movingSegments.putIfAbsent(segmentId, segment) != null) {
+          return false;
+        }
+        log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
+
         callback = () -> movingSegments.remove(segmentId);
         coordinator.moveSegment(
             params,

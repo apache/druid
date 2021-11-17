@@ -403,10 +403,18 @@ public abstract class LoadRule implements Rule
       final String tier = entry.getKey();
 
       final NavigableSet<ServerHolder> holders = druidCluster.getHistoricalsByTier(tier);
-
+      final int targetReplicant = targetReplicants.getOrDefault(tier, 0);
       final int numDropped;
       if (holders == null) {
         log.makeAlert("No holders found for tier[%s]", tier).emit();
+        numDropped = 0;
+      } else if (targetReplicant > 0 && params.getSegmentReplicantLookup().isUnloadingInProcess(tier, segment.getId())) {
+        log.debug(
+            "segment[%s] is unloading in tier[%s], target replicant[%d], skip drop rule",
+            segment.getId(),
+            tier,
+            targetReplicant
+        );
         numDropped = 0;
       } else {
         final int currentReplicantsInTier = entry.getIntValue();
