@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -494,9 +495,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                       ? null
                                       : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions(), null, null);
       // We only need to store filter since that is the only field auto compaction support
-      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null
+      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null
-                                          : new TransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter(), null).asMap(toolbox.getJsonMapper());
+                                          : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
       final CompactionState compactionState = new CompactionState(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,

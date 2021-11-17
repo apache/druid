@@ -29,20 +29,15 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Map;
 
 public class TransformSpecTest extends InitializedNullHandlingTest
@@ -210,24 +205,6 @@ public class TransformSpecTest extends InitializedNullHandlingTest
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z"), row.getTimestamp());
     Assert.assertEquals(DateTimes.of("2000-01-01T01:00:00Z").getMillis(), row.getTimestampFromEpoch());
   }
-
-  @Test
-  public void testAsMap()
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    String dimension = "dim1";
-    String value = "foo";
-    final TransformSpec spec = new TransformSpec(new SelectorDimFilter(dimension, value, null), null);
-    final Map<String, Object> map = spec.asMap(objectMapper);
-    Assert.assertNotNull(map);
-    Assert.assertEquals(0, ((List) map.get("transforms")).size());
-    Assert.assertEquals(4, ((Map) map.get("filter")).size());
-    Assert.assertEquals(dimension, ((Map) map.get("filter")).get("dimension"));
-    Assert.assertEquals(value, ((Map) map.get("filter")).get("value"));
-    TransformSpec actual = objectMapper.convertValue(map, TransformSpec.class);
-    Assert.assertEquals(spec, actual);
-  }
-
 
   @Test
   public void testSerde() throws Exception

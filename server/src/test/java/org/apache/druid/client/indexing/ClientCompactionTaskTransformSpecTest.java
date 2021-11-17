@@ -24,10 +24,12 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class ClientCompactionTaskTransformSpecTest
 {
@@ -54,5 +56,22 @@ public class ClientCompactionTaskTransformSpecTest
         ClientCompactionTaskTransformSpec.class
     );
     Assert.assertEquals(expected, fromJson);
+  }
+
+  @Test
+  public void testAsMap()
+  {
+    NullHandling.initializeForTests();
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    String dimension = "dim1";
+    String value = "foo";
+    final ClientCompactionTaskTransformSpec spec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter(dimension, value, null));
+    final Map<String, Object> map = spec.asMap(objectMapper);
+    Assert.assertNotNull(map);
+    Assert.assertEquals(4, ((Map) map.get("filter")).size());
+    Assert.assertEquals(dimension, ((Map) map.get("filter")).get("dimension"));
+    Assert.assertEquals(value, ((Map) map.get("filter")).get("value"));
+    ClientCompactionTaskTransformSpec actual = objectMapper.convertValue(map, ClientCompactionTaskTransformSpec.class);
+    Assert.assertEquals(spec, actual);
   }
 }

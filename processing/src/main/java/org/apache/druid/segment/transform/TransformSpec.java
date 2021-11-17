@@ -21,8 +21,6 @@ package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -33,7 +31,6 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -142,14 +139,6 @@ public class TransformSpec
     }
 
     return requiredColumns;
-  }
-
-  public Map<String, Object> asMap(ObjectMapper objectMapper)
-  {
-    return objectMapper.convertValue(
-        this,
-        new TypeReference<Map<String, Object>>() {}
-    );
   }
 
   @Override

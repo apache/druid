@@ -437,10 +437,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
 
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
+
+    Assert.assertEquals(3, compactedSegments.size());
 
     for (DataSegment segment : compactedSegments) {
       Assert.assertSame(
@@ -448,7 +450,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           segment.getShardSpec().getClass()
       );
       CompactionState expectedState = new CompactionState(
-          new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
+          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
           getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
