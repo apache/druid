@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -961,7 +960,7 @@ public class NewestSegmentFirstPolicyTest
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
             null,
-            new CompactionState(partitionsSpec,  null, null, indexSpec, ImmutableMap.of("rollup", "false"))
+            new CompactionState(partitionsSpec, null, null, indexSpec, ImmutableMap.of("rollup", "false"))
         ),
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),

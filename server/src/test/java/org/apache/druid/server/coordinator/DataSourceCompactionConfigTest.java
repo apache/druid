@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;

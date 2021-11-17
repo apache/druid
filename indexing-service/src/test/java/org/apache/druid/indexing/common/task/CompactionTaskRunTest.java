@@ -612,7 +612,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask compactionTask = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);

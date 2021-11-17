@@ -24,7 +24,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
