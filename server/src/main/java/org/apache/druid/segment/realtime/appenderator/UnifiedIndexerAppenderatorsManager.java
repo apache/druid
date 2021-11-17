@@ -47,6 +47,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
@@ -585,74 +586,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
-    )
-    {
-      return mergeQueryableIndex(
-          indexes,
-          rollup,
-          metricAggs,
-          null,
-          outDir,
-          indexSpec,
-          segmentWriteOutMediumFactory,
-          maxColumnsToMerge
-      );
-    }
-
-    @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        @Nullable DimensionsSpec dimensionsSpec,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
-    )
-    {
-      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.mergeQueryableIndex(
-                    indexes,
-                    rollup,
-                    metricAggs,
-                    dimensionsSpec,
-                    outDir,
-                    indexSpec,
-                    segmentWriteOutMediumFactory,
-                    maxColumnsToMerge
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
-      );
-
-      try {
-        return mergeFuture.get();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
     public File persist(
         IncrementalIndex index,
         Interval dataInterval,
@@ -758,12 +691,40 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
+        IndexSpec indexSpecForIntermediatePersists,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
+      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
+          () -> {
+            try {
+              return baseMerger.mergeQueryableIndex(
+                  indexes,
+                  rollup,
+                  metricAggs,
+                  dimensionsSpec,
+                  outDir,
+                  indexSpec,
+                  indexSpecForIntermediatePersists,
+                  new BaseProgressIndicator(),
+                  segmentWriteOutMediumFactory,
+                  maxColumnsToMerge
+              );
+            }
+            catch (IOException ioe) {
+              throw new RuntimeException(ioe);
+            }
+          }
+      );
+
+      try {
+        return mergeFuture.get();
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }

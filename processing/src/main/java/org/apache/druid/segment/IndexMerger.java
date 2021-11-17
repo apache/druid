@@ -188,12 +188,22 @@ public interface IndexMerger
     return Lists.newArrayList(retVal);
   }
 
-  File persist(
+  default File persist(
       IncrementalIndex index,
       File outDir,
       IndexSpec indexSpec,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException;
+  ) throws IOException
+  {
+    return persist(
+        index,
+        index.getInterval(),
+        outDir,
+        indexSpec,
+        new BaseProgressIndicator(),
+        segmentWriteOutMediumFactory
+    );
+  }
 
   /**
    * This is *not* thread-safe and havok will ensue if this is called and writes are still occurring
@@ -207,13 +217,16 @@ public interface IndexMerger
    *
    * @throws IOException if an IO error occurs persisting the index
    */
-  File persist(
+  default File persist(
       IncrementalIndex index,
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException;
+  ) throws IOException
+  {
+    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
+  }
 
   File persist(
       IncrementalIndex index,
@@ -224,7 +237,12 @@ public interface IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
-  File mergeQueryableIndex(
+  /**
+   * Only used as a convenience method in tests. In production code, use the full version
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   */
+  @VisibleForTesting
+  default File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
@@ -232,8 +250,25 @@ public interface IndexMerger
       IndexSpec indexSpec,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       int maxColumnsToMerge
-  ) throws IOException;
+  ) throws IOException
+  {
+    return mergeQueryableIndex(
+        indexes,
+        rollup,
+        metricAggs,
+        null,
+        outDir,
+        indexSpec,
+        indexSpec,
+        new BaseProgressIndicator(),
+        segmentWriteOutMediumFactory,
+        maxColumnsToMerge
+    );
+  }
 
+  /**
+   * Merge a collection of {@link QueryableIndex}.
+   */
   File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
@@ -241,22 +276,19 @@ public interface IndexMerger
       @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
-  ) throws IOException;
-
-  File mergeQueryableIndex(
-      List<QueryableIndex> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      @Nullable DimensionsSpec dimensionsSpec,
-      File outDir,
-      IndexSpec indexSpec,
+      IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       int maxColumnsToMerge
   ) throws IOException;
 
+  /**
+   * Only used as a convenience method in tests. In production code, to merge multiple {@link QueryableIndex}, use
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   *
+   * To merge multiple {@link IncrementalIndex}, call one of the {@link #persist} methods and then merge the resulting
+   * {@link QueryableIndex}.
+   */
   @VisibleForTesting
   File merge(
       List<IndexableAdapter> indexes,

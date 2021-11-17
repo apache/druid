@@ -814,29 +814,6 @@ public class IndexMergerV9 implements IndexMerger
   @Override
   public File persist(
       final IncrementalIndex index,
-      File outDir,
-      IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException
-  {
-    return persist(index, index.getInterval(), outDir, indexSpec, segmentWriteOutMediumFactory);
-  }
-
-  @Override
-  public File persist(
-      final IncrementalIndex index,
-      final Interval dataInterval,
-      File outDir,
-      IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-  ) throws IOException
-  {
-    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
-  }
-
-  @Override
-  public File persist(
-      final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
@@ -879,6 +856,7 @@ public class IndexMergerV9 implements IndexMerger
         null,
         outDir,
         indexSpec,
+        indexSpec,
         progress,
         segmentWriteOutMediumFactory,
         -1
@@ -890,57 +868,10 @@ public class IndexMergerV9 implements IndexMerger
       List<QueryableIndex> indexes,
       boolean rollup,
       final AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
-  ) throws IOException
-  {
-    return mergeQueryableIndex(
-        indexes,
-        rollup,
-        metricAggs,
-        null,
-        outDir,
-        indexSpec,
-        segmentWriteOutMediumFactory,
-        maxColumnsToMerge
-    );
-  }
-
-  @Override
-  public File mergeQueryableIndex(
-      List<QueryableIndex> indexes,
-      boolean rollup,
-      final AggregatorFactory[] metricAggs,
       @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
-  ) throws IOException
-  {
-    return mergeQueryableIndex(
-        indexes,
-        rollup,
-        metricAggs,
-        dimensionsSpec,
-        outDir,
-        indexSpec,
-        new BaseProgressIndicator(),
-        segmentWriteOutMediumFactory,
-        maxColumnsToMerge
-    );
-  }
-
-  @Override
-  public File mergeQueryableIndex(
-      List<QueryableIndex> indexes,
-      boolean rollup,
-      final AggregatorFactory[] metricAggs,
-      @Nullable DimensionsSpec dimensionsSpec,
-      File outDir,
-      IndexSpec indexSpec,
+      IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       int maxColumnsToMerge
@@ -953,6 +884,7 @@ public class IndexMergerV9 implements IndexMerger
         dimensionsSpec,
         outDir,
         indexSpec,
+        indexSpecForIntermediatePersists,
         progress,
         segmentWriteOutMediumFactory,
         maxColumnsToMerge
@@ -969,7 +901,18 @@ public class IndexMergerV9 implements IndexMerger
       int maxColumnsToMerge
   ) throws IOException
   {
-    return multiphaseMerge(indexes, rollup, metricAggs, null, outDir, indexSpec, new BaseProgressIndicator(), null, maxColumnsToMerge);
+    return multiphaseMerge(
+        indexes,
+        rollup,
+        metricAggs,
+        null,
+        outDir,
+        indexSpec,
+        indexSpec,
+        new BaseProgressIndicator(),
+        null,
+        maxColumnsToMerge
+    );
   }
 
   private File multiphaseMerge(
@@ -979,6 +922,7 @@ public class IndexMergerV9 implements IndexMerger
       @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
+      IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       int maxColumnsToMerge
@@ -1012,8 +956,9 @@ public class IndexMergerV9 implements IndexMerger
       while (true) {
         log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
         for (List<IndexableAdapter> phase : currentPhases) {
-          File phaseOutDir;
-          if (currentPhases.size() == 1) {
+          final File phaseOutDir;
+          final boolean isFinalPhase = currentPhases.size() == 1;
+          if (isFinalPhase) {
             // use the given outDir on the final merge phase
             phaseOutDir = outDir;
             log.info("Performing final merge phase.");
@@ -1030,7 +975,7 @@ public class IndexMergerV9 implements IndexMerger
               metricAggs,
               dimensionsSpec,
               phaseOutDir,
-              indexSpec,
+              isFinalPhase ? indexSpec : indexSpecForIntermediatePersists,
               progress,
               segmentWriteOutMediumFactory
           );
