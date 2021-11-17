@@ -97,7 +97,7 @@ public class RetryingInputStreamTest
 
 
   @Test(expected = IOException.class)
-  public void testDefaultsRead() throws IOException
+  public void testDefaultsReadThrows() throws IOException
   {
     throwIOException = true;
     final InputStream retryingInputStream = new RetryingInputStream<>(
@@ -139,7 +139,7 @@ public class RetryingInputStreamTest
   }
 
   @Test
-  public void testIOExceptionNotRetriableReadThrows() throws IOException
+  public void testIOExceptionNotRetriableRead() throws IOException
   {
     throwCustomException = true;
     throwIOException = true;
