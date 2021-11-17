@@ -89,6 +89,9 @@ public class S3Entity extends RetryingInputEntity
   @Override
   public Predicate<Throwable> getResetCondition()
   {
+    // SdkClientException can be thrown for many reasons and the only way to
+    // distinguish it is to look at the message, this is not ideal since the
+    // message may change so it may need to be adjusted in the future
     return t -> super.getResetCondition().apply(t) ||
                 (t instanceof SdkClientException &&
                  t.getMessage().contains("Data read has a different length than the expected"));
