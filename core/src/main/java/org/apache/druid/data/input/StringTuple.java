@@ -39,6 +39,15 @@ public class StringTuple implements Comparable<StringTuple>
     return new StringTuple(values);
   }
 
+  /**
+   * Gets the first String from the given StringTuple if the tuple is non-null
+   * and non-empty, null otherwise.
+   */
+  public static String firstOrNull(StringTuple tuple)
+  {
+    return tuple == null || tuple.size() < 1 ? null : tuple.get(0);
+  }
+
   @JsonCreator
   public StringTuple(String[] values)
   {

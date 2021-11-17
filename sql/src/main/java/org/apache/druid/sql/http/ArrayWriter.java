@@ -21,11 +21,13 @@ package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 public class ArrayWriter implements ResultFormat.Writer
 {
@@ -58,15 +60,13 @@ public class ArrayWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames) throws IOException
+  public void writeHeader(
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
   {
-    jsonGenerator.writeStartArray();
-
-    for (String columnName : columnNames) {
-      jsonGenerator.writeString(columnName);
-    }
-
-    jsonGenerator.writeEndArray();
+    writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
   }
 
   @Override
@@ -91,5 +91,37 @@ public class ArrayWriter implements ResultFormat.Writer
   public void close() throws IOException
   {
     jsonGenerator.close();
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
+  {
+    final RowSignature signature = RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType);
+
+    jsonGenerator.writeStartArray();
+    for (String columnName : signature.getColumnNames()) {
+      jsonGenerator.writeString(columnName);
+    }
+    jsonGenerator.writeEndArray();
+
+    if (includeTypes) {
+      jsonGenerator.writeStartArray();
+      for (int i = 0; i < signature.size(); i++) {
+        jsonGenerator.writeString(signature.getColumnType(i).get().asTypeString());
+      }
+      jsonGenerator.writeEndArray();
+    }
+
+    if (includeSqlTypes) {
+      jsonGenerator.writeStartArray();
+      for (int i = 0; i < signature.size(); i++) {
+        jsonGenerator.writeString(rowType.getFieldList().get(i).getType().getSqlTypeName().getName());
+      }
+      jsonGenerator.writeEndArray();
+    }
   }
 }

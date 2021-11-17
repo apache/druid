@@ -77,12 +77,12 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -756,8 +756,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
 
-    return new
-        DataSchema(
+    return new DataSchema(
         dataSource,
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
@@ -886,10 +885,9 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionSchemaMap.put(
               dimension,
               createDimensionSchema(
-                  columnHolder.getCapabilities(),
                   dimension,
-                  dimensionHandler.getMultivalueHandling(),
-                  columnHolder.getCapabilities().hasBitmapIndexes()
+                  columnHolder.getCapabilities(),
+                  dimensionHandler.getMultivalueHandling()
               )
           );
         }
@@ -933,14 +931,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     return segments;
   }
 
-  private static DimensionSchema createDimensionSchema(
-      TypeSignature<ValueType> type,
+  @VisibleForTesting
+  static DimensionSchema createDimensionSchema(
       String name,
-      MultiValueHandling multiValueHandling,
-      boolean hasBitmapIndexes
+      ColumnCapabilities capabilities,
+      MultiValueHandling multiValueHandling
   )
   {
-    switch (type.getType()) {
+    switch (capabilities.getType()) {
       case FLOAT:
         Preconditions.checkArgument(
             multiValueHandling == null,
@@ -963,9 +961,14 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
         return new DoubleDimensionSchema(name);
       case STRING:
-        return new StringDimensionSchema(name, multiValueHandling, hasBitmapIndexes);
+        return new StringDimensionSchema(name, multiValueHandling, capabilities.hasBitmapIndexes());
       default:
-        throw new ISE("Unsupported value type[%s] for dimension[%s]", type, name);
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+            name,
+            capabilities,
+            multiValueHandling
+        );
+        return handler.getDimensionSchema(capabilities);
     }
   }
 

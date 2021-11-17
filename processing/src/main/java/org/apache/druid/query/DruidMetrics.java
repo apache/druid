@@ -35,6 +35,8 @@ public class DruidMetrics
   public static final String TASK_ID = "taskId";
   public static final String STATUS = "status";
 
+  public static final String PARTITIONING_TYPE = "partitioningType";
+
   // task metrics
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";

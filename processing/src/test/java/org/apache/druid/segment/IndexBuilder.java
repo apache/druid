@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -209,7 +210,7 @@ public class IndexBuilder
   {
     return new RowBasedSegment<>(
         SegmentId.dummy("IndexBuilder"),
-        rows,
+        Sequences.simple(rows),
         RowAdapters.standardRow(),
         RowSignature.empty()
     );
@@ -227,7 +228,7 @@ public class IndexBuilder
 
       return new RowBasedSegment<>(
           SegmentId.dummy("IndexBuilder"),
-          rows,
+          Sequences.simple(rows),
           RowAdapters.standardRow(),
           rowSignatureBuilder.build()
       );

@@ -19,10 +19,13 @@
 
 package org.apache.druid.query.filter.sql;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,6 +79,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
     exprMacros.add(new BloomFilterExpressions.TestExprMacro());
     return new ExprMacroTable(exprMacros);
+  }
+
+  @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
   }
 
   @Test

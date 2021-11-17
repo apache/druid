@@ -222,7 +222,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     this.universalTimestamp = computeUniversalTimestamp();
-    this.resultRowSignature = computeResultRowSignature();
+    this.resultRowSignature = computeResultRowSignature(RowSignature.Finalization.UNKNOWN);
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
     this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, this.dimensions);
@@ -320,14 +320,32 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   /**
-   * Returns a list of field names, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
-   * order that they will appear in ResultRows for this query.
+   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
+  }
+
+  /**
+   * Returns a result row signature, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
+   * order that they will appear in ResultRows for this query.
+   *
+   * Aggregator types in the signature depend on the value of {@code finalization}.
+   *
+   * If finalization is {@link RowSignature.Finalization#UNKNOWN}, this method returns a cached object.
+   *
+   * @see ResultRow for documentation about the order that fields will be in
+   */
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
+  {
+    if (finalization == RowSignature.Finalization.UNKNOWN) {
+      return resultRowSignature;
+    } else {
+      return computeResultRowSignature(finalization);
+    }
   }
 
   /**
@@ -481,7 +499,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return forcePushDown;
   }
 
-  private RowSignature computeResultRowSignature()
+  private RowSignature computeResultRowSignature(final RowSignature.Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
@@ -490,7 +508,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
 
     return builder.addDimensions(dimensions)
-                  .addAggregators(aggregatorSpecs)
+                  .addAggregators(aggregatorSpecs, finalization)
                   .addPostAggregators(postAggregatorSpecs)
                   .build();
   }

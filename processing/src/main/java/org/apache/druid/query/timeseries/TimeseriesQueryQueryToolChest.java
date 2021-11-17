@@ -223,6 +223,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     String[] aggregatorNames = new String[aggregatorSpecs.size()];
+    RowSignature aggregatorsSignature =
+        RowSignature.builder().addAggregators(aggregatorSpecs, RowSignature.Finalization.UNKNOWN).build();
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
       aggregators[i] =
           aggregatorSpecs.get(i)
@@ -230,7 +232,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                              RowBasedColumnSelectorFactory.create(
                                  RowAdapters.standardRow(),
                                  () -> new MapBasedRow(null, null),
-                                 () -> RowSignature.builder().addAggregators(aggregatorSpecs).build(),
+                                 () -> aggregatorsSignature,
                                  false
                              )
                          );
@@ -417,7 +419,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
       rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
     }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
+    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
     rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
     return rowSignatureBuilder.build();
   }

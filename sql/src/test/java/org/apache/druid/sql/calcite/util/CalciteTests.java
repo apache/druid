@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -78,7 +79,9 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -242,10 +245,6 @@ public class CalciteTests
 
   public static final Injector INJECTOR = Guice.createInjector(
       binder -> {
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-
-        // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
-
         final LookupExtractorFactoryContainerProvider lookupProvider =
             LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
@@ -255,6 +254,21 @@ public class CalciteTests
                     "6", "x6"
                 )
             );
+
+        ObjectMapper mapper = TestHelper.makeJsonMapper().registerModules(
+            new LookupSerdeModule().getJacksonModules()
+        );
+        mapper.setInjectableValues(
+            new InjectableValues.Std().addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+                                      .addValue(ObjectMapper.class.getName(), mapper)
+                                      .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+                                      .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
+        );
+        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(
+            mapper
+        );
+
+        // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
         SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
       },
@@ -1021,6 +1035,7 @@ public class CalciteTests
       exprMacros.add(INJECTOR.getInstance(clazz));
     }
     exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
+
     return new ExprMacroTable(exprMacros);
   }
 
