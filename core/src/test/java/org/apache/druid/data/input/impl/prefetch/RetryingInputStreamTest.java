@@ -44,18 +44,15 @@ import java.util.zip.GZIPOutputStream;
 public class RetryingInputStreamTest
 {
   private static final int MAX_RETRY = 5;
-  private static final int MAX_ERROR = 6;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private File testFile;
 
-  private boolean throwError = false;
   private boolean throwSocketException = false;
   private boolean throwCustomException = false;
   private boolean throwIOException = false;
-  private int errorCount = 0;
 
 
   private final ObjectOpenFunction<File> objectOpenFunction = new ObjectOpenFunction<File>()
@@ -87,11 +84,9 @@ public class RetryingInputStreamTest
         dis.writeInt(i);
       }
     }
-    throwError = true;
     throwSocketException = false;
     throwCustomException = false;
     throwIOException = false;
-    errorCount = 0;
   }
 
   @After
@@ -101,15 +96,14 @@ public class RetryingInputStreamTest
   }
 
 
-  @Test
+  @Test(expected = IOException.class)
   public void testDefaultsRead() throws IOException
   {
-    throwSocketException = true;
     throwIOException = true;
     final InputStream retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
-        null, // will retry if exception thrown is IOException
+        null, // will not retry
         null, // will enable reset using default logic
         MAX_RETRY
     );
@@ -120,12 +114,11 @@ public class RetryingInputStreamTest
   public void testCustomResetRead() throws IOException
   {
     throwCustomException = true;
-    throwIOException = true;
     final InputStream retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
-        null, // will retry if exception thrown is IOException
-        t -> t instanceof CustomException,
+        null, // retry will fail
+        t -> t instanceof CustomException, // but reset won't
         MAX_RETRY
     );
     retryHelper(retryingInputStream);
@@ -135,18 +128,17 @@ public class RetryingInputStreamTest
   public void testCustomResetReadThrows() throws IOException
   {
     throwCustomException = true;
-    throwIOException = true;
     final InputStream retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
-        null, // will retry if exception thrown is IOException
+        null, // will not retry
         null, // since there is no custom reset lambda it will fail when the custom exception is thrown
         MAX_RETRY
     );
     retryHelper(retryingInputStream);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testIOExceptionNotRetriableReadThrows() throws IOException
   {
     throwCustomException = true;
@@ -154,8 +146,8 @@ public class RetryingInputStreamTest
     final InputStream retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
-        t -> t instanceof CustomException, // this is a weird predicate for retry but just using it to make a point
-        t -> t instanceof CustomException,
+        t -> t instanceof IOException, // retry will succeed
+        t -> t instanceof CustomException, // reset will also succeed
         MAX_RETRY
     );
     retryHelper(retryingInputStream);
@@ -163,14 +155,10 @@ public class RetryingInputStreamTest
 
   private void retryHelper(InputStream retryingInputStream) throws IOException
   {
-    DataInputStream inputStream = new DataInputStream(new GZIPInputStream(retryingInputStream));
-    try {
+    try (DataInputStream inputStream = new DataInputStream(new GZIPInputStream(retryingInputStream))) {
       for (int i = 0; i < 10000; i++) {
         Assert.assertEquals(i, inputStream.readInt());
       }
-    }
-    finally {
-      inputStream.close();
     }
   }
 
@@ -192,7 +180,6 @@ public class RetryingInputStreamTest
     @Override
     public int read(@Nonnull byte[] b, int off, int len) throws IOException
     {
-      errorCount++;
       if (throwIOException) {
         throwIOException = false;
         throw new IOException("test retry");
@@ -205,9 +192,6 @@ public class RetryingInputStreamTest
         delegate.close();
         throw new SocketException("Test Connection reset");
       } else {
-        if (errorCount >= MAX_ERROR) {
-          throwError = false;
-        }
         return delegate.read(b, off, len);
       }
     }

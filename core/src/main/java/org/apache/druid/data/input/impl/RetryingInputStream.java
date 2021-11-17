@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
 import org.apache.druid.data.input.impl.prefetch.Fetcher;
@@ -40,6 +41,9 @@ import java.net.SocketException;
  */
 public class RetryingInputStream<T> extends InputStream
 {
+
+  public static final Predicate<Throwable> DEFAULT_RETRY_CONDITION = Predicates.alwaysFalse();
+  public static final Predicate<Throwable> DEFAULT_RESET_CONDITION = RetryingInputStream::isConnectionReset;
 
   private static final Logger log = new Logger(RetryingInputStream.class);
 
@@ -73,13 +77,13 @@ public class RetryingInputStream<T> extends InputStream
   {
     this.object = object;
     this.objectOpenFunction = objectOpenFunction;
-    this.retryCondition = retryCondition == null ? t -> t instanceof IOException : retryCondition;
-    this.resetCondition = resetCondition == null ? this::isConnectionReset : resetCondition;
+    this.retryCondition = retryCondition == null ? DEFAULT_RETRY_CONDITION : retryCondition;
+    this.resetCondition = resetCondition == null ? DEFAULT_RESET_CONDITION : resetCondition;
     this.maxRetry = maxRetry == null ? RetryUtils.DEFAULT_MAX_TRIES : maxRetry;
     this.delegate = new CountingInputStream(objectOpenFunction.open(object));
   }
 
-  private boolean isConnectionReset(Throwable t)
+  private static boolean isConnectionReset(Throwable t)
   {
     return (t instanceof SocketException && (t.getMessage() != null && t.getMessage().contains("Connection reset"))) ||
            (t.getCause() != null && isConnectionReset(t.getCause()));
