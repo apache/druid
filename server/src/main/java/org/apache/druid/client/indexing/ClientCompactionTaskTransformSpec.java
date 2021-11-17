@@ -45,6 +45,7 @@ public class ClientCompactionTaskTransformSpec
     this.filter = filter;
   }
 
+  @JsonProperty
   @Nullable
   public DimFilter getFilter()
   {

@@ -45,6 +45,7 @@ public class UserCompactionTaskTransformConfig
     this.filter = filter;
   }
 
+  @JsonProperty
   @Nullable
   public DimFilter getFilter()
   {
