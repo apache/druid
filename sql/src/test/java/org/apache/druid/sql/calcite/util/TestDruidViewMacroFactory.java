@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -29,7 +28,6 @@ public class TestDruidViewMacroFactory implements DruidViewMacroFactory
   @Override
   public DruidViewMacro create(
       PlannerFactory plannerFactory,
-      Escalator escalator,
       String viewSql
   )
   {
