@@ -71,12 +71,10 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 /**
  * Manages {@link Appenderator} instances for the CliIndexer task execution service, which runs all tasks in
@@ -437,9 +435,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       taskAppenderatorMap.computeIfAbsent(
           taskId,
-          (myTaskId) -> {
-            return new ArrayList<>();
-          }
+          myTaskId -> new ArrayList<>()
       ).add(appenderator);
     }
   }
@@ -598,26 +594,15 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.persist(
-                    index,
-                    dataInterval,
-                    outDir,
-                    indexSpec,
-                    progress,
-                    segmentWriteOutMediumFactory
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
+          () ->
+              baseMerger.persist(
+                  index,
+                  dataInterval,
+                  outDir,
+                  indexSpec,
+                  progress,
+                  segmentWriteOutMediumFactory
+              )
       );
 
       try {
@@ -657,9 +642,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          () -> {
-            try {
-              return baseMerger.mergeQueryableIndex(
+          () ->
+              baseMerger.mergeQueryableIndex(
                   indexes,
                   rollup,
                   metricAggs,
@@ -670,12 +654,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                   new BaseProgressIndicator(),
                   segmentWriteOutMediumFactory,
                   maxColumnsToMerge
-              );
-            }
-            catch (IOException ioe) {
-              throw new RuntimeException(ioe);
-            }
-          }
+              )
       );
 
       try {

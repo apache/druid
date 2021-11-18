@@ -158,6 +158,10 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   {
     // Not all tasks use Appenderators. "remove" may be called without "create", and nothing bad should happen.
     manager.removeAppenderatorsForTask("someOtherTaskId", "someOtherDataSource");
+    manager.removeAppenderatorsForTask("someOtherTaskId", "myDataSource");
+
+    // Should be no change.
+    Assert.assertEquals(ImmutableSet.of("myDataSource"), manager.getDatasourceBundles().keySet());
   }
 
   @Test
@@ -177,6 +181,53 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, null, file, null, null, null));
     Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, file, null, null));
     Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, null, file, null, null));
+  }
+
+  @Test
+  public void test_limitedPool_persistFail() throws IOException
+  {
+    final UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger limitedPoolIndexMerger =
+        new UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger(
+            new NoopIndexMerger(true),
+            DirectQueryProcessingPool.INSTANCE
+        );
+
+    final File file = new File("xyz");
+
+    Assert.assertThrows(
+        "failed",
+        RuntimeException.class, // Wrapped IOException
+        () -> limitedPoolIndexMerger.persist(null, null, file, null, null, null)
+    );
+  }
+
+  @Test
+  public void test_limitedPool_mergeQueryableIndexFail() throws IOException
+  {
+    final UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger limitedPoolIndexMerger =
+        new UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger(
+            new NoopIndexMerger(true),
+            DirectQueryProcessingPool.INSTANCE
+        );
+
+    final File file = new File("xyz");
+
+    Assert.assertThrows(
+        "failed",
+        RuntimeException.class, // Wrapped IOException
+        () -> limitedPoolIndexMerger.mergeQueryableIndex(
+            null,
+            false,
+            null,
+            null,
+            file,
+            null,
+            null,
+            null,
+            null,
+            -1
+        )
+    );
   }
 
   @Test
@@ -230,6 +281,18 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
    */
   private static class NoopIndexMerger implements IndexMerger
   {
+    private final boolean failCalls;
+
+    public NoopIndexMerger(boolean failCalls)
+    {
+      this.failCalls = failCalls;
+    }
+
+    public NoopIndexMerger()
+    {
+      this(false);
+    }
+
     @Override
     public File persist(
         IncrementalIndex index,
@@ -238,8 +301,12 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         IndexSpec indexSpec,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
+    ) throws IOException
     {
+      if (failCalls) {
+        throw new IOException("failed");
+      }
+
       return outDir;
     }
 
@@ -255,8 +322,12 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
-    )
+    ) throws IOException
     {
+      if (failCalls) {
+        throw new IOException("failed");
+      }
+
       return outDir;
     }
 
@@ -268,8 +339,12 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         File outDir,
         IndexSpec indexSpec,
         int maxColumnsToMerge
-    )
+    ) throws IOException
     {
+      if (failCalls) {
+        throw new IOException("failed");
+      }
+
       return outDir;
     }
   }
