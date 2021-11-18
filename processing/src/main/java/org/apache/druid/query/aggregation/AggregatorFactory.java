@@ -222,10 +222,11 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public ColumnType getIntermediateType()
   {
-    if (getType() == ValueType.COMPLEX) {
+    final ValueType intermediateType = getType();
+    if (intermediateType == ValueType.COMPLEX) {
       return ColumnType.ofComplex(getComplexTypeName());
     }
-    return ColumnTypeFactory.ofValueType(getType());
+    return ColumnTypeFactory.ofValueType(intermediateType);
   }
 
   /**
@@ -238,15 +239,17 @@ public abstract class AggregatorFactory implements Cacheable
   public ColumnType getResultType()
   {
     // this default 'fill' method is incomplete and can at best return 'unknown' complex
-    if (getFinalizedType() == ValueType.COMPLEX) {
+    final ValueType finalized = getFinalizedType();
+    if (finalized == ValueType.COMPLEX) {
       return ColumnType.UNKNOWN_COMPLEX;
     }
-    return ColumnTypeFactory.ofValueType(getFinalizedType());
+    return ColumnTypeFactory.ofValueType(finalized);
   }
 
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
    */
   @Deprecated
   public ValueType getType()
@@ -257,7 +260,8 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getResultType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getResultType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
    */
   @Deprecated
   public ValueType getFinalizedType()
@@ -268,8 +272,10 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
    */
+  @Nullable
   @Deprecated
   public String getComplexTypeName()
   {
