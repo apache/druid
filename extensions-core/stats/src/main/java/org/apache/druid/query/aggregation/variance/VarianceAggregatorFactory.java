@@ -100,13 +100,13 @@ public class VarianceAggregatorFactory extends AggregatorFactory
    * actual type is {@link VarianceAggregatorCollector}
    */
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return ColumnType.DOUBLE;
   }

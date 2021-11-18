@@ -267,13 +267,13 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
    * actual type is {@link HyperLogLogCollector}
    */
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return isInputHyperUnique ? PRECOMPUTED_TYPE : TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }

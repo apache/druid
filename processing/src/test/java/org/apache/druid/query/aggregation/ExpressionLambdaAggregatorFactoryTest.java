@@ -113,7 +113,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getColumnType();
+    agg.getIntermediateType();
   }
 
   @Test
@@ -137,7 +137,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getFinalizedColumnType();
+    agg.getResultType();
   }
 
   @Test
@@ -222,9 +222,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getColumnType());
-    Assert.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -245,9 +245,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getColumnType());
-    Assert.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.LONG, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG, agg.getResultType());
   }
 
   @Test
@@ -268,9 +268,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test
@@ -291,9 +291,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getColumnType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -314,9 +314,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getColumnType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -337,9 +337,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getColumnType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -360,9 +360,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getColumnType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -383,9 +383,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -406,9 +406,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.STRING, agg.getFinalizedColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -429,9 +429,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getColumnType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getFinalizedColumnType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getResultType());
   }
 
   @Test
@@ -452,9 +452,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getColumnType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getFinalizedColumnType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test

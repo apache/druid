@@ -148,8 +148,8 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
-    return getColumnType();
+    return getIntermediateType();
   }
 }

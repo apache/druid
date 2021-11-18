@@ -297,13 +297,13 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
    * actual type is {@link ArrayOfDoublesSketch}
    */
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return metricColumns == null ? ArrayOfDoublesSketchModule.MERGE_TYPE : ArrayOfDoublesSketchModule.BUILD_TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return ColumnType.DOUBLE;
   }

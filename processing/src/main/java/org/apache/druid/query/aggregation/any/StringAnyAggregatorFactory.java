@@ -178,13 +178,13 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.STRING;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return ColumnType.STRING;
   }

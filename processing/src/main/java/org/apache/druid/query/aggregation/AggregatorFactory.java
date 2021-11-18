@@ -214,13 +214,13 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract List<String> requiredFields();
 
   /**
-   * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
+   * Get the "intermediate" {@link ColumnType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     if (getType() == ValueType.COMPLEX) {
       return ColumnType.ofComplex(getComplexTypeName());
@@ -229,14 +229,15 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
+   * Get the {@link ColumnType} for the final form of this aggregator, i.e. the type of the value returned by
    * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
    * and {@link #combine}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
+    // this default 'fill' method is incomplete and can at best return 'unknown' complex
     if (getFinalizedType() == ValueType.COMPLEX) {
       return ColumnType.UNKNOWN_COMPLEX;
     }
@@ -245,36 +246,34 @@ public abstract class AggregatorFactory implements Cacheable
 
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getColumnType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead.
    */
   @Deprecated
   public ValueType getType()
   {
     throw new UnsupportedOperationException(
-        "Do not call or implement this method, it is deprecated, use 'getColumnType'"
+        "Do not call or implement this method, it is deprecated, use 'getIntermediateType'"
     );
   }
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getFinalizedColumnType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getResultType()} instead.
    */
   @Deprecated
   public ValueType getFinalizedType()
   {
     throw new UnsupportedOperationException(
-        "Do not call or implement this method, it is deprecated, use 'getFinalizedColumnType'"
+        "Do not call or implement this method, it is deprecated, use 'getResultType'"
     );
   }
 
   /**
-   * This method is deprecated and will be removed soon. Use {@link #getColumnType()} instead.
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead.
    */
   @Deprecated
   public String getComplexTypeName()
   {
-    throw new UnsupportedOperationException(
-        "Do not call or implement this method, it is deprecated, use 'getColumnType'"
-    );
+    return null;
   }
 
   /**

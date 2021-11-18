@@ -162,15 +162,15 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.UNKNOWN_COMPLEX;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
-    return getColumnType();
+    return getIntermediateType();
   }
 
   /**

@@ -267,18 +267,18 @@ public class RowSignature implements ColumnInspector
 
         switch (finalization) {
           case YES:
-            type = aggregator.getFinalizedColumnType();
+            type = aggregator.getResultType();
             break;
 
           case NO:
-            type = aggregator.getColumnType();
+            type = aggregator.getIntermediateType();
             break;
 
           default:
             assert finalization == Finalization.UNKNOWN;
 
-            if (aggregator.getColumnType().equals(aggregator.getFinalizedColumnType())) {
-              type = aggregator.getColumnType();
+            if (aggregator.getIntermediateType().equals(aggregator.getResultType())) {
+              type = aggregator.getIntermediateType();
             } else {
               // Use null if the type depends on whether the aggregator is finalized, since we don't know if
               // it will be finalized or not.

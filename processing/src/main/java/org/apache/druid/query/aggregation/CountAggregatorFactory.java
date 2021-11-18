@@ -136,13 +136,13 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.LONG;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return ColumnType.LONG;
   }

@@ -144,7 +144,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    * actual type is {@link SketchHolder}
    */
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return isInputThetaSketch ? SketchModule.MERGE_TYPE : SketchModule.BUILD_TYPE;
   }
@@ -156,12 +156,12 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    * if {@link #shouldFinalize} is NOT set, type is {@link SketchHolder}
    */
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     if (shouldFinalize && errorBoundsStdDev == null) {
       return ColumnType.DOUBLE;
     }
-    return getColumnType();
+    return getIntermediateType();
   }
 
   @Override

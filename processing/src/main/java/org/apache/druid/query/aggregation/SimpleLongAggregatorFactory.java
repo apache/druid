@@ -134,7 +134,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
 
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return ColumnType.LONG;
   }

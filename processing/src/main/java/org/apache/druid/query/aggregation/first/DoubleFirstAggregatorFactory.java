@@ -274,14 +274,14 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
     return storeDoubleAsFloat ? ColumnType.FLOAT : ColumnType.DOUBLE;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     // this is a copy of getComplexTypeName in the hopes that someday groupby v1 is no more and it will report it's actual
     // type of COMPLEX

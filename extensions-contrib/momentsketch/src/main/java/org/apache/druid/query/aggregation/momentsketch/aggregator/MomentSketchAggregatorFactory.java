@@ -244,13 +244,13 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
    * actual type is {@link MomentSketchWrapper}
    */
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
     return TYPE;
   }

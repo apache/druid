@@ -139,15 +139,15 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getColumnType()
+  public ColumnType getIntermediateType()
   {
-    return delegate.getColumnType();
+    return delegate.getIntermediateType();
   }
 
   @Override
-  public ColumnType getFinalizedColumnType()
+  public ColumnType getResultType()
   {
-    return delegate.getFinalizedColumnType();
+    return delegate.getResultType();
   }
 
   @Override

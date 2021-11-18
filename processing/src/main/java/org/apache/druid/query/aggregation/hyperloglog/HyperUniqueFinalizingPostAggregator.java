@@ -108,7 +108,7 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   public ColumnType getType(ColumnInspector signature)
   {
     return aggregatorFactory != null
-           ? aggregatorFactory.getFinalizedColumnType()
+           ? aggregatorFactory.getResultType()
            : null;
   }
 
