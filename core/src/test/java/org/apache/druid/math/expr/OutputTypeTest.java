@@ -33,18 +33,18 @@ public class OutputTypeTest extends InitializedNullHandlingTest
 {
   private final Expr.InputBindingInspector inspector = inspectorFromMap(
       ImmutableMap.<String, ExpressionType>builder().put("x", ExpressionType.STRING)
-                                              .put("x_", ExpressionType.STRING)
-                                              .put("y", ExpressionType.LONG)
-                                              .put("y_", ExpressionType.LONG)
-                                              .put("z", ExpressionType.DOUBLE)
-                                              .put("z_", ExpressionType.DOUBLE)
-                                              .put("a", ExpressionType.STRING_ARRAY)
-                                              .put("a_", ExpressionType.STRING_ARRAY)
-                                              .put("b", ExpressionType.LONG_ARRAY)
-                                              .put("b_", ExpressionType.LONG_ARRAY)
-                                              .put("c", ExpressionType.DOUBLE_ARRAY)
-                                              .put("c_", ExpressionType.DOUBLE_ARRAY)
-                                              .build()
+                  .put("x_", ExpressionType.STRING)
+                  .put("y", ExpressionType.LONG)
+                  .put("y_", ExpressionType.LONG)
+                  .put("z", ExpressionType.DOUBLE)
+                  .put("z_", ExpressionType.DOUBLE)
+                  .put("a", ExpressionType.STRING_ARRAY)
+                  .put("a_", ExpressionType.STRING_ARRAY)
+                  .put("b", ExpressionType.LONG_ARRAY)
+                  .put("b_", ExpressionType.LONG_ARRAY)
+                  .put("c", ExpressionType.DOUBLE_ARRAY)
+                  .put("c_", ExpressionType.DOUBLE_ARRAY)
+                  .build()
   );
 
   @Rule
@@ -169,6 +169,11 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     assertOutputType("hypot(y,y_)", inspector, ExpressionType.DOUBLE);
     assertOutputType("hypot(y,z_)", inspector, ExpressionType.DOUBLE);
     assertOutputType("hypot(z,z_)", inspector, ExpressionType.DOUBLE);
+
+    assertOutputType("safe_divide(y,y_)", inspector, ExpressionType.LONG);
+    assertOutputType("safe_divide(y,z_)", inspector, ExpressionType.DOUBLE);
+    assertOutputType("safe_divide(z,z_)", inspector, ExpressionType.DOUBLE);
+
   }
 
   @Test
@@ -436,19 +441,49 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.operator(ExpressionType.STRING, null));
     Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.operator(null, ExpressionType.STRING));
     // only long stays long
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.LONG));
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.LONG)
+    );
     // only string stays string
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.STRING));
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.STRING)
+    );
     // for operators, doubles is the catch all
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.STRING));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.STRING));
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.DOUBLE, ExpressionType.STRING)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.STRING)
+    );
     // unless it is an array, and those have to be the same
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY));
+    Assert.assertEquals(
+        ExpressionType.LONG_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY)
+    );
     Assert.assertEquals(
         ExpressionType.DOUBLE_ARRAY,
         ExpressionTypeConversion.operator(ExpressionType.DOUBLE_ARRAY, ExpressionType.DOUBLE_ARRAY)
@@ -470,19 +505,49 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.STRING, null));
     Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(null, ExpressionType.STRING));
     // only long stays long
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.LONG));
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.LONG)
+    );
     // any double makes all doubles
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.DOUBLE));
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE,
+        ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.DOUBLE)
+    );
     // any string makes become string
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.STRING));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.STRING));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.STRING));
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.STRING)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.STRING)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.STRING)
+    );
     // unless it is an array, and those have to be the same
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, ExpressionTypeConversion.function(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY));
+    Assert.assertEquals(
+        ExpressionType.LONG_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY)
+    );
     Assert.assertEquals(
         ExpressionType.DOUBLE_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.DOUBLE_ARRAY, ExpressionType.DOUBLE_ARRAY)
@@ -501,21 +566,60 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(null, ExpressionType.LONG));
     Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, null));
     Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(null, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, null));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(null, ExpressionType.STRING));
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, null)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(null, ExpressionType.STRING)
+    );
     // all numbers are longs
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.DOUBLE));
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.LONG,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.DOUBLE)
+    );
     // any string makes become string
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.STRING));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.LONG));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.STRING));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.DOUBLE));
-    Assert.assertEquals(ExpressionType.STRING, ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.STRING));
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG, ExpressionType.STRING)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE, ExpressionType.STRING)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.DOUBLE)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING,
+        ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING, ExpressionType.STRING)
+    );
     // unless it is an array
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, ExpressionTypeConversion.integerMathFunction(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY));
+    Assert.assertEquals(
+        ExpressionType.LONG_ARRAY,
+        ExpressionTypeConversion.integerMathFunction(
+            ExpressionType.LONG_ARRAY,
+            ExpressionType.LONG_ARRAY
+        )
+    );
     Assert.assertEquals(
         ExpressionType.DOUBLE_ARRAY,
         ExpressionTypeConversion.integerMathFunction(ExpressionType.DOUBLE_ARRAY, ExpressionType.DOUBLE_ARRAY)
