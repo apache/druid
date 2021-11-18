@@ -41,7 +41,6 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -176,15 +175,20 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     final File file = new File("xyz");
 
     // Three forms of persist.
-    // Need a real index for this test, since getInterval is called on it.
-    final IncrementalIndex index = TestIndex.getIncrementalTestIndex();
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, null, file, null, null, null));
+
+    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, null));
+    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null));
+
+    // Need a mocked index for this test, since getInterval is called on it.
+    final IncrementalIndex index = EasyMock.createMock(IncrementalIndex.class);
+    EasyMock.expect(index.getInterval()).andReturn(null);
+    EasyMock.replay(index);
     Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, file, null, null));
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(index, null, file, null, null));
+    EasyMock.verify(index);
   }
 
   @Test
-  public void test_limitedPool_persistFail() throws IOException
+  public void test_limitedPool_persistFail()
   {
     final UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger limitedPoolIndexMerger =
         new UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger(
@@ -202,7 +206,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   }
 
   @Test
-  public void test_limitedPool_mergeQueryableIndexFail() throws IOException
+  public void test_limitedPool_mergeQueryableIndexFail()
   {
     final UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger limitedPoolIndexMerger =
         new UnifiedIndexerAppenderatorsManager.LimitedPoolIndexMerger(
