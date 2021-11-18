@@ -1090,7 +1090,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_LEGACY_DRUID_EXPLAIN, true);
-        testQuery(
+    testQuery(
         "EXPLAIN PLAN FOR SELECT 1 + 1",
         context,
         ImmutableList.of(),
