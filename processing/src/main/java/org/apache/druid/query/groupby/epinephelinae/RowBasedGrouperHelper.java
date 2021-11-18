@@ -60,6 +60,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -67,6 +68,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -381,10 +383,27 @@ public class RowBasedGrouperHelper
           }
         };
 
+    // Decorate "signature" so that it returns hasMultipleValues = false. (groupBy does not return multiple values.)
+    final ColumnInspector decoratedSignature = new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        final ColumnCapabilities baseCapabilities = signature.getColumnCapabilities(column);
+
+        if (baseCapabilities == null || baseCapabilities.hasMultipleValues().isFalse()) {
+          return baseCapabilities;
+        } else {
+          return ColumnCapabilitiesImpl.copyOf(baseCapabilities).setHasMultipleValues(false);
+        }
+      }
+    };
+
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        () -> signature,
+        () -> decoratedSignature,
         false
     );
   }
