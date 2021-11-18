@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.Util;
 import org.apache.datasketches.theta.SetOperation;
@@ -168,6 +169,25 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public int getSize()
   {
     return size;
+  }
+
+  @Override
+  public int guessAggregatorHeapFootprint(long rows)
+  {
+    final int maxEntries = size * 2;
+    final int expectedEntries;
+
+    if (rows > maxEntries) {
+      expectedEntries = maxEntries;
+    } else {
+      final int minEntries = 1 << Util.MIN_LG_ARR_LONGS;
+
+      // rows is within int range since it's <= maxEntries, so casting is OK.
+      expectedEntries = Math.max(minEntries, Util.ceilingPowerOf2(Ints.checkedCast(rows)));
+    }
+
+    // 8 bytes per entry + largest possible preamble.
+    return Long.BYTES * expectedEntries + (Family.UNION.getMaxPreLongs() << 3);
   }
 
   @Override
