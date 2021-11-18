@@ -38,6 +38,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -64,15 +65,31 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DruidMeta extends MetaImpl
 {
+  /**
+   * Logs any throwable and string format message with args at the error level.
+   *
+   * @param error   the Throwable to be logged
+   * @param message the message to be logged. Can be in string format structure
+   * @param format  the format arguments for the format message string
+   * @param <T>     any type that extends throwable
+   * @return the original Throwable
+   */
   public static <T extends Throwable> T logFailure(T error, String message, Object... format)
   {
-    LOG.error(message, format);
+    LOG.error(error, message, format);
     return error;
   }
 
+  /**
+   * Logs any throwable at the error level with the throwables message.
+   *
+   * @param error the throwable to be logged
+   * @param <T>   any type that extends throwable
+   * @return the original Throwable
+   */
   public static <T extends Throwable> T logFailure(T error)
   {
-    LOG.error(error, error.getMessage());
+    logFailure(error, error.getMessage());
     return error;
   }
 
@@ -82,8 +99,11 @@ public class DruidMeta extends MetaImpl
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
+  private final ErrorHandler errorHandler;
 
-  /** Used to track logical connections. */
+  /**
+   * Used to track logical connections.
+   */
   private final ConcurrentMap<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
   /**
@@ -96,12 +116,14 @@ public class DruidMeta extends MetaImpl
   public DruidMeta(
       final SqlLifecycleFactory sqlLifecycleFactory,
       final AvaticaServerConfig config,
+      final ErrorHandler errorHandler,
       final Injector injector
   )
   {
     super(null);
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.config = config;
+    this.errorHandler = errorHandler;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
@@ -116,41 +138,75 @@ public class DruidMeta extends MetaImpl
   @Override
   public void openConnection(final ConnectionHandle ch, final Map<String, String> info)
   {
-    // Build connection context.
-    final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    if (info != null) {
-      for (Map.Entry<String, String> entry : info.entrySet()) {
-        context.put(entry);
+    try {
+      // Build connection context.
+      final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
+      if (info != null) {
+        for (Map.Entry<String, String> entry : info.entrySet()) {
+          context.put(entry);
+        }
       }
+      // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
+      context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
+      openDruidConnection(ch.id, context.build());
     }
-    // we don't want to stringify arrays for JDBC ever because avatica needs to handle this
-    context.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false);
-    openDruidConnection(ch.id, context.build());
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      // we want to avoid sanitizing avatica specific exceptions as the avatica code can rely on them to handle issues
+      // differently
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
   public void closeConnection(final ConnectionHandle ch)
   {
-    final DruidConnection druidConnection = connections.remove(ch.id);
-    if (druidConnection != null) {
-      connectionCount.decrementAndGet();
-      druidConnection.close();
+    try {
+      final DruidConnection druidConnection = connections.remove(ch.id);
+      if (druidConnection != null) {
+        connectionCount.decrementAndGet();
+        druidConnection.close();
+      }
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
     }
   }
 
   @Override
   public ConnectionProperties connectionSync(final ConnectionHandle ch, final ConnectionProperties connProps)
   {
-    // getDruidConnection re-syncs it.
-    getDruidConnection(ch.id);
-    return connProps;
+    try {
+      // getDruidConnection re-syncs it.
+      getDruidConnection(ch.id);
+      return connProps;
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
-    final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
-    return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
+    try {
+      final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
+      return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -160,26 +216,34 @@ public class DruidMeta extends MetaImpl
       final long maxRowCount
   )
   {
-    final StatementHandle statement = createStatement(ch);
-    final DruidStatement druidStatement;
     try {
-      druidStatement = getDruidStatement(statement);
+      final StatementHandle statement = createStatement(ch);
+      final DruidStatement druidStatement;
+      try {
+        druidStatement = getDruidStatement(statement);
+      }
+      catch (NoSuchStatementException e) {
+        throw logFailure(new ISE(e, e.getMessage()));
+      }
+      final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+      AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+      if (authenticationResult == null) {
+        throw logFailure(
+            new ForbiddenException("Authentication failed."),
+            "Authentication failed for statement[%s]",
+            druidStatement.getStatementId()
+        );
+      }
+      statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
+      LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
+      return statement;
     }
-    catch (NoSuchStatementException e) {
-      throw logFailure(new IllegalStateException(e));
+    catch (NoSuchConnectionException e) {
+      throw e;
     }
-    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
-    if (authenticationResult == null) {
-      throw logFailure(
-          new ForbiddenException("Authentication failed."),
-          "Authentication failed for statement[%s]",
-          druidStatement.getStatementId()
-      );
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
     }
-    statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
-    LOG.debug("Successfully prepared statement[%s] for execution", druidStatement.getStatementId());
-    return statement;
   }
 
   @Deprecated
@@ -192,7 +256,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Avatica doesn't call this.
-    throw new UnsupportedOperationException("Deprecated");
+    throw errorHandler.sanitize(new UOE("Deprecated"));
   }
 
   @Override
@@ -204,36 +268,45 @@ public class DruidMeta extends MetaImpl
       final PrepareCallback callback
   ) throws NoSuchStatementException
   {
-    // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
-    final DruidStatement druidStatement = getDruidStatement(statement);
-    final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
-    AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
-    if (authenticationResult == null) {
-      throw logFailure(
-          new ForbiddenException("Authentication failed."),
-          "Authentication failed for statement[%s]",
-          druidStatement.getStatementId()
+    try {
+      // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
+      final DruidStatement druidStatement = getDruidStatement(statement);
+      final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+      AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
+      if (authenticationResult == null) {
+        throw logFailure(
+            new ForbiddenException("Authentication failed."),
+            "Authentication failed for statement[%s]",
+            druidStatement.getStatementId()
+        );
+      }
+      druidStatement.prepare(sql, maxRowCount, authenticationResult);
+      final Frame firstFrame = druidStatement.execute(Collections.emptyList())
+                                             .nextFrame(
+                                                 DruidStatement.START_OFFSET,
+                                                 getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                             );
+      final Signature signature = druidStatement.getSignature();
+      LOG.debug("Successfully prepared statement[%s] and started execution", druidStatement.getStatementId());
+      return new ExecuteResult(
+          ImmutableList.of(
+              MetaResultSet.create(
+                  statement.connectionId,
+                  statement.id,
+                  false,
+                  signature,
+                  firstFrame
+              )
+          )
       );
     }
-    druidStatement.prepare(sql, maxRowCount, authenticationResult);
-    final Frame firstFrame = druidStatement.execute(Collections.emptyList())
-                                           .nextFrame(
-                                               DruidStatement.START_OFFSET,
-                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
-                                           );
-    final Signature signature = druidStatement.getSignature();
-    LOG.debug("Successfully prepared statement[%s] and started execution", druidStatement.getStatementId());
-    return new ExecuteResult(
-        ImmutableList.of(
-            MetaResultSet.create(
-                statement.connectionId,
-                statement.id,
-                false,
-                signature,
-                firstFrame
-            )
-        )
-    );
+    // cannot affect these exceptions as avatica handles them
+    catch (NoSuchConnectionException | NoSuchStatementException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -243,7 +316,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
-    throw new UnsupportedOperationException("Batch statements not supported");
+    throw errorHandler.sanitize(new UOE("Batch statements not supported"));
   }
 
   @Override
@@ -253,7 +326,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
-    throw new UnsupportedOperationException("Batch statements not supported");
+    throw errorHandler.sanitize(new UOE("Batch statements not supported"));
   }
 
   @Override
@@ -263,9 +336,17 @@ public class DruidMeta extends MetaImpl
       final int fetchMaxRowCount
   ) throws NoSuchStatementException, MissingResultsException
   {
-    final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
-    LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
-    return getDruidStatement(statement).nextFrame(offset, maxRows);
+    try {
+      final int maxRows = getEffectiveMaxRowsPerFrame(fetchMaxRowCount);
+      LOG.debug("Fetching next frame from offset[%s] with [%s] rows for statement[%s]", offset, maxRows, statement.id);
+      return getDruidStatement(statement).nextFrame(offset, maxRows);
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Deprecated
@@ -277,7 +358,7 @@ public class DruidMeta extends MetaImpl
   )
   {
     // Avatica doesn't call this.
-    throw new UnsupportedOperationException("Deprecated");
+    throw errorHandler.sanitize(new UOE("Deprecated"));
   }
 
   @Override
@@ -287,26 +368,34 @@ public class DruidMeta extends MetaImpl
       final int maxRowsInFirstFrame
   ) throws NoSuchStatementException
   {
-    final DruidStatement druidStatement = getDruidStatement(statement);
-    final Frame firstFrame = druidStatement.execute(parameterValues)
-                                           .nextFrame(
-                                               DruidStatement.START_OFFSET,
-                                               getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
-                                           );
+    try {
+      final DruidStatement druidStatement = getDruidStatement(statement);
+      final Frame firstFrame = druidStatement.execute(parameterValues)
+                                             .nextFrame(
+                                                 DruidStatement.START_OFFSET,
+                                                 getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
+                                             );
 
-    final Signature signature = druidStatement.getSignature();
-    LOG.debug("Successfully started execution of statement[%s]", druidStatement.getStatementId());
-    return new ExecuteResult(
-        ImmutableList.of(
-            MetaResultSet.create(
-                statement.connectionId,
-                statement.id,
-                false,
-                signature,
-                firstFrame
-            )
-        )
-    );
+      final Signature signature = druidStatement.getSignature();
+      LOG.debug("Successfully started execution of statement[%s]", druidStatement.getStatementId());
+      return new ExecuteResult(
+          ImmutableList.of(
+              MetaResultSet.create(
+                  statement.connectionId,
+                  statement.id,
+                  false,
+                  signature,
+                  firstFrame
+              )
+          )
+      );
+    }
+    catch (NoSuchStatementException | NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -325,13 +414,21 @@ public class DruidMeta extends MetaImpl
   @Override
   public void closeStatement(final StatementHandle h)
   {
-    // connections.get, not getDruidConnection, since we want to silently ignore nonexistent statements
-    final DruidConnection druidConnection = connections.get(h.connectionId);
-    if (druidConnection != null) {
-      final DruidStatement druidStatement = druidConnection.getStatement(h.id);
-      if (druidStatement != null) {
-        druidStatement.close();
+    try {
+      // connections.get, not getDruidConnection, since we want to silently ignore nonexistent statements
+      final DruidConnection druidConnection = connections.get(h.connectionId);
+      if (druidConnection != null) {
+        final DruidStatement druidStatement = druidConnection.getStatement(h.id);
+        if (druidStatement != null) {
+          druidStatement.close();
+        }
       }
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
     }
   }
 
@@ -342,13 +439,25 @@ public class DruidMeta extends MetaImpl
       final long offset
   ) throws NoSuchStatementException
   {
-    final DruidStatement druidStatement = getDruidStatement(sh);
-    final boolean isDone = druidStatement.isDone();
-    final long currentOffset = druidStatement.getCurrentOffset();
-    if (currentOffset != offset) {
-      throw logFailure(new ISE("Requested offset[%,d] does not match currentOffset[%,d]", offset, currentOffset));
+    try {
+      final DruidStatement druidStatement = getDruidStatement(sh);
+      final boolean isDone = druidStatement.isDone();
+      final long currentOffset = druidStatement.getCurrentOffset();
+      if (currentOffset != offset) {
+        throw logFailure(new ISE(
+            "Requested offset[%,d] does not match currentOffset[%,d]",
+            offset,
+            currentOffset
+        ));
+      }
+      return !isDone;
     }
-    return !isDone;
+    catch (NoSuchStatementException | NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -372,14 +481,22 @@ public class DruidMeta extends MetaImpl
   @Override
   public MetaResultSet getCatalogs(final ConnectionHandle ch)
   {
-    final String sql = "SELECT\n"
-                       + "  DISTINCT CATALOG_NAME AS TABLE_CAT\n"
-                       + "FROM\n"
-                       + "  INFORMATION_SCHEMA.SCHEMATA\n"
-                       + "ORDER BY\n"
-                       + "  TABLE_CAT\n";
+    try {
+      final String sql = "SELECT\n"
+                         + "  DISTINCT CATALOG_NAME AS TABLE_CAT\n"
+                         + "FROM\n"
+                         + "  INFORMATION_SCHEMA.SCHEMATA\n"
+                         + "ORDER BY\n"
+                         + "  TABLE_CAT\n";
 
-    return sqlResultSet(ch, sql);
+      return sqlResultSet(ch, sql);
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -389,26 +506,34 @@ public class DruidMeta extends MetaImpl
       final Pat schemaPattern
   )
   {
-    final List<String> whereBuilder = new ArrayList<>();
-    if (catalog != null) {
-      whereBuilder.add("SCHEMATA.CATALOG_NAME = " + Calcites.escapeStringLiteral(catalog));
+    try {
+      final List<String> whereBuilder = new ArrayList<>();
+      if (catalog != null) {
+        whereBuilder.add("SCHEMATA.CATALOG_NAME = " + Calcites.escapeStringLiteral(catalog));
+      }
+
+      if (schemaPattern.s != null) {
+        whereBuilder.add("SCHEMATA.SCHEMA_NAME LIKE " + withEscapeClause(schemaPattern.s));
+      }
+
+      final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
+      final String sql = "SELECT\n"
+                         + "  SCHEMA_NAME AS TABLE_SCHEM,\n"
+                         + "  CATALOG_NAME AS TABLE_CATALOG\n"
+                         + "FROM\n"
+                         + "  INFORMATION_SCHEMA.SCHEMATA\n"
+                         + where + "\n"
+                         + "ORDER BY\n"
+                         + "  TABLE_CATALOG, TABLE_SCHEM\n";
+
+      return sqlResultSet(ch, sql);
     }
-
-    if (schemaPattern.s != null) {
-      whereBuilder.add("SCHEMATA.SCHEMA_NAME LIKE " + withEscapeClause(schemaPattern.s));
+    catch (NoSuchConnectionException e) {
+      throw e;
     }
-
-    final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
-    final String sql = "SELECT\n"
-                       + "  SCHEMA_NAME AS TABLE_SCHEM,\n"
-                       + "  CATALOG_NAME AS TABLE_CATALOG\n"
-                       + "FROM\n"
-                       + "  INFORMATION_SCHEMA.SCHEMATA\n"
-                       + where + "\n"
-                       + "ORDER BY\n"
-                       + "  TABLE_CATALOG, TABLE_SCHEM\n";
-
-    return sqlResultSet(ch, sql);
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -420,46 +545,54 @@ public class DruidMeta extends MetaImpl
       final List<String> typeList
   )
   {
-    final List<String> whereBuilder = new ArrayList<>();
-    if (catalog != null) {
-      whereBuilder.add("TABLES.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog));
-    }
-
-    if (schemaPattern.s != null) {
-      whereBuilder.add("TABLES.TABLE_SCHEMA LIKE " + withEscapeClause(schemaPattern.s));
-    }
-
-    if (tableNamePattern.s != null) {
-      whereBuilder.add("TABLES.TABLE_NAME LIKE " + withEscapeClause(tableNamePattern.s));
-    }
-
-    if (typeList != null) {
-      final List<String> escapedTypes = new ArrayList<>();
-      for (String type : typeList) {
-        escapedTypes.add(Calcites.escapeStringLiteral(type));
+    try {
+      final List<String> whereBuilder = new ArrayList<>();
+      if (catalog != null) {
+        whereBuilder.add("TABLES.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog));
       }
-      whereBuilder.add("TABLES.TABLE_TYPE IN (" + Joiner.on(", ").join(escapedTypes) + ")");
+
+      if (schemaPattern.s != null) {
+        whereBuilder.add("TABLES.TABLE_SCHEMA LIKE " + withEscapeClause(schemaPattern.s));
+      }
+
+      if (tableNamePattern.s != null) {
+        whereBuilder.add("TABLES.TABLE_NAME LIKE " + withEscapeClause(tableNamePattern.s));
+      }
+
+      if (typeList != null) {
+        final List<String> escapedTypes = new ArrayList<>();
+        for (String type : typeList) {
+          escapedTypes.add(Calcites.escapeStringLiteral(type));
+        }
+        whereBuilder.add("TABLES.TABLE_TYPE IN (" + Joiner.on(", ").join(escapedTypes) + ")");
+      }
+
+      final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
+      final String sql = "SELECT\n"
+                         + "  TABLE_CATALOG AS TABLE_CAT,\n"
+                         + "  TABLE_SCHEMA AS TABLE_SCHEM,\n"
+                         + "  TABLE_NAME AS TABLE_NAME,\n"
+                         + "  TABLE_TYPE AS TABLE_TYPE,\n"
+                         + "  CAST(NULL AS VARCHAR) AS REMARKS,\n"
+                         + "  CAST(NULL AS VARCHAR) AS TYPE_CAT,\n"
+                         + "  CAST(NULL AS VARCHAR) AS TYPE_SCHEM,\n"
+                         + "  CAST(NULL AS VARCHAR) AS TYPE_NAME,\n"
+                         + "  CAST(NULL AS VARCHAR) AS SELF_REFERENCING_COL_NAME,\n"
+                         + "  CAST(NULL AS VARCHAR) AS REF_GENERATION\n"
+                         + "FROM\n"
+                         + "  INFORMATION_SCHEMA.TABLES\n"
+                         + where + "\n"
+                         + "ORDER BY\n"
+                         + "  TABLE_TYPE, TABLE_CAT, TABLE_SCHEM, TABLE_NAME\n";
+
+      return sqlResultSet(ch, sql);
     }
-
-    final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
-    final String sql = "SELECT\n"
-                       + "  TABLE_CATALOG AS TABLE_CAT,\n"
-                       + "  TABLE_SCHEMA AS TABLE_SCHEM,\n"
-                       + "  TABLE_NAME AS TABLE_NAME,\n"
-                       + "  TABLE_TYPE AS TABLE_TYPE,\n"
-                       + "  CAST(NULL AS VARCHAR) AS REMARKS,\n"
-                       + "  CAST(NULL AS VARCHAR) AS TYPE_CAT,\n"
-                       + "  CAST(NULL AS VARCHAR) AS TYPE_SCHEM,\n"
-                       + "  CAST(NULL AS VARCHAR) AS TYPE_NAME,\n"
-                       + "  CAST(NULL AS VARCHAR) AS SELF_REFERENCING_COL_NAME,\n"
-                       + "  CAST(NULL AS VARCHAR) AS REF_GENERATION\n"
-                       + "FROM\n"
-                       + "  INFORMATION_SCHEMA.TABLES\n"
-                       + where + "\n"
-                       + "ORDER BY\n"
-                       + "  TABLE_TYPE, TABLE_CAT, TABLE_SCHEM, TABLE_NAME\n";
-
-    return sqlResultSet(ch, sql);
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @Override
@@ -471,70 +604,86 @@ public class DruidMeta extends MetaImpl
       final Pat columnNamePattern
   )
   {
-    final List<String> whereBuilder = new ArrayList<>();
-    if (catalog != null) {
-      whereBuilder.add("COLUMNS.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog));
+    try {
+      final List<String> whereBuilder = new ArrayList<>();
+      if (catalog != null) {
+        whereBuilder.add("COLUMNS.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog));
+      }
+
+      if (schemaPattern.s != null) {
+        whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + withEscapeClause(schemaPattern.s));
+      }
+
+      if (tableNamePattern.s != null) {
+        whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + withEscapeClause(tableNamePattern.s));
+      }
+
+      if (columnNamePattern.s != null) {
+        whereBuilder.add("COLUMNS.COLUMN_NAME LIKE "
+                         + withEscapeClause(columnNamePattern.s));
+      }
+
+      final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
+      final String sql = "SELECT\n"
+                         + "  TABLE_CATALOG AS TABLE_CAT,\n"
+                         + "  TABLE_SCHEMA AS TABLE_SCHEM,\n"
+                         + "  TABLE_NAME AS TABLE_NAME,\n"
+                         + "  COLUMN_NAME AS COLUMN_NAME,\n"
+                         + "  CAST(JDBC_TYPE AS INTEGER) AS DATA_TYPE,\n"
+                         + "  DATA_TYPE AS TYPE_NAME,\n"
+                         + "  -1 AS COLUMN_SIZE,\n"
+                         + "  -1 AS BUFFER_LENGTH,\n"
+                         + "  -1 AS DECIMAL_DIGITS,\n"
+                         + "  -1 AS NUM_PREC_RADIX,\n"
+                         + "  CASE IS_NULLABLE WHEN 'YES' THEN 1 ELSE 0 END AS NULLABLE,\n"
+                         + "  CAST(NULL AS VARCHAR) AS REMARKS,\n"
+                         + "  COLUMN_DEFAULT AS COLUMN_DEF,\n"
+                         + "  -1 AS SQL_DATA_TYPE,\n"
+                         + "  -1 AS SQL_DATETIME_SUB,\n"
+                         + "  -1 AS CHAR_OCTET_LENGTH,\n"
+                         + "  CAST(ORDINAL_POSITION AS INTEGER) AS ORDINAL_POSITION,\n"
+                         + "  IS_NULLABLE AS IS_NULLABLE,\n"
+                         + "  CAST(NULL AS VARCHAR) AS SCOPE_CATALOG,\n"
+                         + "  CAST(NULL AS VARCHAR) AS SCOPE_SCHEMA,\n"
+                         + "  CAST(NULL AS VARCHAR) AS SCOPE_TABLE,\n"
+                         + "  -1 AS SOURCE_DATA_TYPE,\n"
+                         + "  'NO' AS IS_AUTOINCREMENT,\n"
+                         + "  'NO' AS IS_GENERATEDCOLUMN\n"
+                         + "FROM\n"
+                         + "  INFORMATION_SCHEMA.COLUMNS\n"
+                         + where + "\n"
+                         + "ORDER BY\n"
+                         + "  TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION\n";
+
+      return sqlResultSet(ch, sql);
     }
-
-    if (schemaPattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + withEscapeClause(schemaPattern.s));
+    catch (NoSuchConnectionException e) {
+      throw e;
     }
-
-    if (tableNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + withEscapeClause(tableNamePattern.s));
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
     }
-
-    if (columnNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.COLUMN_NAME LIKE "
-                       + withEscapeClause(columnNamePattern.s));
-    }
-
-    final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
-    final String sql = "SELECT\n"
-                       + "  TABLE_CATALOG AS TABLE_CAT,\n"
-                       + "  TABLE_SCHEMA AS TABLE_SCHEM,\n"
-                       + "  TABLE_NAME AS TABLE_NAME,\n"
-                       + "  COLUMN_NAME AS COLUMN_NAME,\n"
-                       + "  CAST(JDBC_TYPE AS INTEGER) AS DATA_TYPE,\n"
-                       + "  DATA_TYPE AS TYPE_NAME,\n"
-                       + "  -1 AS COLUMN_SIZE,\n"
-                       + "  -1 AS BUFFER_LENGTH,\n"
-                       + "  -1 AS DECIMAL_DIGITS,\n"
-                       + "  -1 AS NUM_PREC_RADIX,\n"
-                       + "  CASE IS_NULLABLE WHEN 'YES' THEN 1 ELSE 0 END AS NULLABLE,\n"
-                       + "  CAST(NULL AS VARCHAR) AS REMARKS,\n"
-                       + "  COLUMN_DEFAULT AS COLUMN_DEF,\n"
-                       + "  -1 AS SQL_DATA_TYPE,\n"
-                       + "  -1 AS SQL_DATETIME_SUB,\n"
-                       + "  -1 AS CHAR_OCTET_LENGTH,\n"
-                       + "  CAST(ORDINAL_POSITION AS INTEGER) AS ORDINAL_POSITION,\n"
-                       + "  IS_NULLABLE AS IS_NULLABLE,\n"
-                       + "  CAST(NULL AS VARCHAR) AS SCOPE_CATALOG,\n"
-                       + "  CAST(NULL AS VARCHAR) AS SCOPE_SCHEMA,\n"
-                       + "  CAST(NULL AS VARCHAR) AS SCOPE_TABLE,\n"
-                       + "  -1 AS SOURCE_DATA_TYPE,\n"
-                       + "  'NO' AS IS_AUTOINCREMENT,\n"
-                       + "  'NO' AS IS_GENERATEDCOLUMN\n"
-                       + "FROM\n"
-                       + "  INFORMATION_SCHEMA.COLUMNS\n"
-                       + where + "\n"
-                       + "ORDER BY\n"
-                       + "  TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION\n";
-
-    return sqlResultSet(ch, sql);
   }
 
   @Override
   public MetaResultSet getTableTypes(final ConnectionHandle ch)
   {
-    final String sql = "SELECT\n"
-                       + "  DISTINCT TABLE_TYPE AS TABLE_TYPE\n"
-                       + "FROM\n"
-                       + "  INFORMATION_SCHEMA.TABLES\n"
-                       + "ORDER BY\n"
-                       + "  TABLE_TYPE\n";
+    try {
+      final String sql = "SELECT\n"
+                         + "  DISTINCT TABLE_TYPE AS TABLE_TYPE\n"
+                         + "FROM\n"
+                         + "  INFORMATION_SCHEMA.TABLES\n"
+                         + "ORDER BY\n"
+                         + "  TABLE_TYPE\n";
 
-    return sqlResultSet(ch, sql);
+      return sqlResultSet(ch, sql);
+    }
+    catch (NoSuchConnectionException e) {
+      throw e;
+    }
+    catch (Throwable t) {
+      throw errorHandler.sanitize(t);
+    }
   }
 
   @VisibleForTesting
@@ -585,7 +734,11 @@ public class DruidMeta extends MetaImpl
       if (connectionCount.get() > config.getMaxConnections()) {
         // We aren't going to make a connection after all.
         connectionCount.decrementAndGet();
-        throw logFailure(new ISE("Too many connections, limit is[%,d]", config.getMaxConnections()));
+        throw logFailure(
+            new ISE("Too many connections"),
+            "Too many connections, limit is[%,d] per broker",
+            config.getMaxConnections()
+        );
       }
     }
 
@@ -610,9 +763,7 @@ public class DruidMeta extends MetaImpl
    * Get a connection, or throw an exception if it doesn't exist. Also refreshes the timeout timer.
    *
    * @param connectionId connection id
-   *
    * @return the connection
-   *
    * @throws NoSuchConnectionException if the connection id doesn't exist
    */
   @Nonnull
@@ -654,7 +805,7 @@ public class DruidMeta extends MetaImpl
       final ExecuteResult result = prepareAndExecute(statement, sql, -1, -1, null);
       final MetaResultSet metaResultSet = Iterables.getOnlyElement(result.resultSets);
       if (!metaResultSet.firstFrame.done) {
-        throw logFailure(new ISE("Expected all results to be in a single frame!"));
+        throw new ISE("Expected all results to be in a single frame!");
       }
       return metaResultSet;
     }
@@ -671,11 +822,11 @@ public class DruidMeta extends MetaImpl
    * {@link java.sql.ResultSet}. This value corresponds to {@link java.sql.Statement#setFetchSize(int)} (which is a user
    * hint, we don't have to honor it), and this method modifies it, ensuring the actual chosen value falls within
    * {@link AvaticaServerConfig#minRowsPerFrame} and {@link AvaticaServerConfig#maxRowsPerFrame}.
-   *
+   * <p>
    * A value of -1 supplied as input indicates that the client has no preference for fetch size, and can handle
    * unlimited results (at our discretion). Similarly, a value of -1 for {@link AvaticaServerConfig#maxRowsPerFrame}
    * also indicates that there is no upper limit on fetch size on the server side.
-   *
+   * <p>
    * {@link AvaticaServerConfig#minRowsPerFrame} must be configured to a value greater than 0, because it will be
    * checked against if any additional frames are required (which means one of the input or maximum was set to a value
    * other than -1).
