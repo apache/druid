@@ -63,6 +63,7 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -394,6 +395,10 @@ public class DruidPlanner implements Closeable
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
       resources = null;
     }
+    catch (ISE ise) {
+      log.error("Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
+      resources = null;
+    }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
         Sequences.simple(ImmutableList.of(new Object[]{explanation, resources})));
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
@@ -418,7 +423,7 @@ public class DruidPlanner implements Closeable
       druidQueryList = rel.getInputs().stream().map(childRel -> (DruidRel<?>) childRel).map(childRel -> {
         if (childRel instanceof DruidUnionRel) {
           log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
-          // TODO: Throw an error here
+          throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
         }
         return childRel.toDruidQuery(false);
       }).collect(Collectors.toList());
