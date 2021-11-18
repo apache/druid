@@ -188,6 +188,10 @@ public interface IndexMerger
     return Lists.newArrayList(retVal);
   }
 
+  /**
+   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory)}
+   * without a progress indicator and with interval set to {@link IncrementalIndex#getInterval()}.
+   */
   default File persist(
       IncrementalIndex index,
       File outDir,
@@ -206,16 +210,8 @@ public interface IndexMerger
   }
 
   /**
-   * This is *not* thread-safe and havok will ensue if this is called and writes are still occurring
-   * on the IncrementalIndex object.
-   *
-   * @param index        the IncrementalIndex to persist
-   * @param dataInterval the Interval that the data represents
-   * @param outDir       the directory to persist the data to
-   *
-   * @return the index output directory
-   *
-   * @throws IOException if an IO error occurs persisting the index
+   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory)}
+   * without a progress indicator.
    */
   default File persist(
       IncrementalIndex index,
@@ -228,6 +224,24 @@ public interface IndexMerger
     return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
   }
 
+  /**
+   * Persist an IncrementalIndex to disk in such a way that it can be loaded back up as a {@link QueryableIndex}.
+   *
+   * This is *not* thread-safe and havoc will ensue if this is called and writes are still occurring on the
+   * IncrementalIndex object.
+   *
+   * @param index                        the IncrementalIndex to persist
+   * @param dataInterval                 the Interval that the data represents. Typically, this is the same as the
+   *                                     interval from the corresponding {@link org.apache.druid.timeline.SegmentId}.
+   * @param outDir                       the directory to persist the data to
+   * @param indexSpec                    storage and compression options
+   * @param progress                     an object that will receive progress updates
+   * @param segmentWriteOutMediumFactory controls allocation of temporary data structures
+   *
+   * @return the index output directory
+   *
+   * @throws IOException if an IO error occurs persisting the index
+   */
   File persist(
       IncrementalIndex index,
       Interval dataInterval,
@@ -238,6 +252,8 @@ public interface IndexMerger
   ) throws IOException;
 
   /**
+   * Merge a collection of {@link QueryableIndex}.
+   *
    * Only used as a convenience method in tests. In production code, use the full version
    * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
    */
@@ -283,9 +299,10 @@ public interface IndexMerger
   ) throws IOException;
 
   /**
-   * Only used as a convenience method in tests. In production code, to merge multiple {@link QueryableIndex}, use
-   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   * Only used as a convenience method in tests.
    *
+   * In production code, to merge multiple {@link QueryableIndex}, use
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
    * To merge multiple {@link IncrementalIndex}, call one of the {@link #persist} methods and then merge the resulting
    * {@link QueryableIndex}.
    */
@@ -297,17 +314,6 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       int maxColumnsToMerge
-  ) throws IOException;
-
-  // Faster than IndexMaker
-  File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
-
-  File append(
-      List<IndexableAdapter> indexes,
-      AggregatorFactory[] aggregators,
-      File outDir,
-      IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   /**

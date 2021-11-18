@@ -591,6 +591,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         Interval dataInterval,
         File outDir,
         IndexSpec indexSpec,
+        ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
@@ -606,6 +607,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     dataInterval,
                     outDir,
                     indexSpec,
+                    progress,
                     segmentWriteOutMediumFactory
                 );
               }
@@ -634,52 +636,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File convert(
-        File inDir,
-        File outDir,
-        IndexSpec indexSpec
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File append(
-        List<IndexableAdapter> indexes,
-        AggregatorFactory[] aggregators,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        Interval dataInterval,
-        File outDir,
-        IndexSpec indexSpec,
-        ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
+      // Only used in certain tests. No need to implement.
       throw new UOE(ERROR_MSG);
     }
 
