@@ -178,7 +178,7 @@ public class PlannerConfig
     newConfig.useLegacyDruidExplain = getContextBoolean(
         context,
         CTX_KEY_USE_LEGACY_DRUID_EXPLAIN,
-        useLegacyDruidExplain
+        isUseLegacyDruidExplain()
     );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
