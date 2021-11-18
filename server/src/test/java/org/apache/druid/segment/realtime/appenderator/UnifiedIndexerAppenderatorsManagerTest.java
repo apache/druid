@@ -238,7 +238,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         IndexSpec indexSpec,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    ) throws IOException
+    )
     {
       return outDir;
     }
@@ -255,7 +255,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
-    ) throws IOException
+    )
     {
       return outDir;
     }
@@ -268,7 +268,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         File outDir,
         IndexSpec indexSpec,
         int maxColumnsToMerge
-    ) throws IOException
+    )
     {
       return outDir;
     }
