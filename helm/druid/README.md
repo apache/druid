@@ -22,6 +22,7 @@
 [Apache Druid](https://druid.apache.org/) is a high performance real-time analytics database.
 
 ## Dependency Update
+
 Before you install the Druid Chart, update the dependencies :
 ```bash
 helm dependency update helm/druid
