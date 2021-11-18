@@ -103,7 +103,7 @@ ReactDOM.render(
 let mode: 'mouse' | 'tab' = 'mouse';
 
 function handleTab(e: KeyboardEvent) {
-  if (e.keyCode !== 9) return;
+  if (e.code !== 9) return;
   if (mode === 'tab') return;
   mode = 'tab';
   document.body.classList.remove('mouse-mode');
