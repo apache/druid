@@ -381,11 +381,10 @@ public class DruidPlanner implements Closeable
     String resources;
     try {
       if (isDruidConventionExplanation && rel instanceof DruidRel) {
-        DruidRel<?> druidRel = (DruidRel<?>) rel;
-        if (true) {
+        // Show the native queries instead of Calcite's explain if the legacy flag is turned off
+        if (!plannerContext.getPlannerConfig().isUseLegacyDruidExplain()) {
+          DruidRel<?> druidRel = (DruidRel<?>) rel;
           explanation = explainSqlPlanAsNativeQueries(druidRel);
-        } else {
-          explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
         }
       }
       resources = jsonMapper.writeValueAsString(plannerContext.getResources());
