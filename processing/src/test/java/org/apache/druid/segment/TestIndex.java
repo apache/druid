@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -191,11 +192,11 @@ public class TestIndex
       File bottomFile = new File(tmpFile, "bottom");
       File mergedFile = new File(tmpFile, "merged");
 
-      topFile.mkdirs();
+      FileUtils.mkdirp(topFile);
+      FileUtils.mkdirp(bottomFile);
+      FileUtils.mkdirp(mergedFile);
       topFile.deleteOnExit();
-      bottomFile.mkdirs();
       bottomFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
@@ -377,7 +378,7 @@ public class TestIndex
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
       someTmpFile.delete();
-      someTmpFile.mkdirs();
+      FileUtils.mkdirp(someTmpFile);
       someTmpFile.deleteOnExit();
 
       INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);

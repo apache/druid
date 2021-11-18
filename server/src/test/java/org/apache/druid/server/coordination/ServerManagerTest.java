@@ -103,7 +103,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -908,13 +907,6 @@ public class ServerManagerTest
         @Nullable
         @Override
         public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public String getColumnTypeName(String column)
         {
           return null;
         }

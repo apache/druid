@@ -53,6 +53,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -839,7 +840,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     clientNoTrailingSlash.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections, limit is[4]");
+    expectedException.expectMessage("Too many connections");
 
     final Connection connection5 = DriverManager.getConnection(url);
   }
@@ -904,6 +905,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
           )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -993,6 +995,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {

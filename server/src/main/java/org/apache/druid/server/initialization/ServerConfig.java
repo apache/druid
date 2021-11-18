@@ -65,7 +65,7 @@ public class ServerConfig
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
-      ErrorResponseTransformStrategy errorResponseTransformStrategy
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
     this.numThreads = numThreads;

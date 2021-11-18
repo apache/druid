@@ -107,6 +107,12 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.NUMBERED;
+  }
+
+  @Override
   public String toString()
   {
     return "NumberedShardSpec{" +

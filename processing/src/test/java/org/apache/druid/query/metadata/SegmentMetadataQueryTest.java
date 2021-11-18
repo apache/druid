@@ -52,6 +52,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.LogicalSegment;
@@ -207,6 +208,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
                 false,
                 false,
@@ -218,6 +220,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
                 false,
                 false,
@@ -229,6 +232,7 @@ public class SegmentMetadataQueryTest
             ),
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -251,6 +255,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
                 false,
                 false,
@@ -262,6 +267,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
                 false,
                 false,
@@ -273,6 +279,7 @@ public class SegmentMetadataQueryTest
             ),
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -310,6 +317,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -321,6 +329,7 @@ public class SegmentMetadataQueryTest
             ),
             "placementish",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 true,
                 false,
@@ -380,6 +389,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -391,6 +401,7 @@ public class SegmentMetadataQueryTest
             ),
             "placementish",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 true,
                 false,
@@ -450,6 +461,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -461,7 +473,8 @@ public class SegmentMetadataQueryTest
             ),
             "quality_uniques",
             new ColumnAnalysis(
-                "COMPLEX<hyperUnique>",
+                ColumnType.ofComplex("hyperUnique"),
+                "hyperUnique",
                 false,
                 true,
                 0,
@@ -521,6 +534,7 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 10881 : 10764;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
@@ -543,6 +557,7 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 6882 : 6808;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
@@ -565,6 +580,7 @@ public class SegmentMetadataQueryTest
       size2 = mmap2 ? 9765 : 9660;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
@@ -588,6 +604,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
+                ColumnType.LONG,
                 ValueType.LONG.toString(),
                 false,
                 false,
@@ -599,6 +616,7 @@ public class SegmentMetadataQueryTest
             ),
             "index",
             new ColumnAnalysis(
+                ColumnType.DOUBLE,
                 ValueType.DOUBLE.toString(),
                 false,
                 false,
@@ -654,6 +672,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -717,6 +736,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -776,6 +796,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -835,6 +856,7 @@ public class SegmentMetadataQueryTest
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
+                ColumnType.STRING,
                 ValueType.STRING.toString(),
                 false,
                 false,
@@ -1299,6 +1321,7 @@ public class SegmentMetadataQueryTest
   public void testLongNullableColumn()
   {
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.LONG,
         ValueType.LONG.toString(),
         false,
         NullHandling.replaceWithDefault() ? false : true,
@@ -1315,6 +1338,7 @@ public class SegmentMetadataQueryTest
   public void testDoubleNullableColumn()
   {
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.DOUBLE,
         ValueType.DOUBLE.toString(),
         false,
         NullHandling.replaceWithDefault() ? false : true,
@@ -1332,6 +1356,7 @@ public class SegmentMetadataQueryTest
   public void testFloatNullableColumn()
   {
     ColumnAnalysis analysis = new ColumnAnalysis(
+        ColumnType.FLOAT,
         ValueType.FLOAT.toString(),
         false,
         NullHandling.replaceWithDefault() ? false : true,

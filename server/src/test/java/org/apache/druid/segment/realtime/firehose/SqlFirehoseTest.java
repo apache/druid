@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -34,6 +33,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -70,8 +70,8 @@ public class SqlFirehoseTest
   public void setup() throws IOException
   {
     TEST_DIR = File.createTempFile(SqlFirehose.class.getSimpleName(), "testDir");
-    FileUtils.forceDelete(TEST_DIR);
-    FileUtils.forceMkdir(TEST_DIR);
+    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
+    FileUtils.mkdirp(TEST_DIR);
 
     final List<Map<String, Object>> inputTexts = ImmutableList.of(
         ImmutableMap.of("x", "foostring1", "timestamp", 2000),
@@ -249,7 +249,7 @@ public class SqlFirehoseTest
   @After
   public void teardown() throws IOException
   {
-    FileUtils.forceDelete(TEST_DIR);
+    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
   }
 
   private static final class TestCloseable implements Closeable

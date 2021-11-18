@@ -48,6 +48,7 @@ public class NoneShardSpecTest
     // Serde should return same object instead of creating new one every time.
     Assert.assertTrue(serde1 == serde2);
     Assert.assertTrue(one == serde1);
+    Assert.assertEquals(ShardSpec.Type.NONE, serde1.getType());
   }
 
   @Test

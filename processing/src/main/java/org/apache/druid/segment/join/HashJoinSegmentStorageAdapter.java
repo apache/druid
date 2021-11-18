@@ -188,21 +188,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Nullable
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final Optional<JoinableClause> maybeClause = getClauseForColumn(column);
-
-    if (maybeClause.isPresent()) {
-      final JoinableClause clause = maybeClause.get();
-      final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.asTypeString() : null;
-    } else {
-      return baseAdapter.getColumnTypeName(column);
-    }
-  }
-
   @Override
   public int getNumRows()
   {

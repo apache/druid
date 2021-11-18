@@ -38,7 +38,7 @@ public class NumberedOverwriteShardSpecTest
   public void testSerde() throws JsonProcessingException
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
-    mapper.registerSubtypes(new NamedType(NumberedOverwriteShardSpec.class, NumberedOverwriteShardSpec.TYPE));
+    mapper.registerSubtypes(new NamedType(NumberedOverwriteShardSpec.class, ShardSpec.Type.NUMBERED_OVERWRITE));
     final NumberedOverwriteShardSpec original = new NumberedOverwriteShardSpec(
         PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 2,
         0,
@@ -47,7 +47,9 @@ public class NumberedOverwriteShardSpecTest
         (short) 3
     );
     final String json = mapper.writeValueAsString(original);
-    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.NUMBERED_OVERWRITE, shardSpec.getType());
+    final NumberedOverwriteShardSpec fromJson = (NumberedOverwriteShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

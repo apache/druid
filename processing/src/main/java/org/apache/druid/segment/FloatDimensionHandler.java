@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -59,6 +61,12 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   public DimensionSpec getDimensionSpec()
   {
     return new DefaultDimensionSpec(dimensionName, dimensionName, ColumnType.FLOAT);
+  }
+
+  @Override
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new FloatDimensionSchema(dimensionName);
   }
 
   @Override
