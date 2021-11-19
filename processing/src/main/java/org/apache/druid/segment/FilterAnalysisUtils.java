@@ -34,8 +34,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Used by both QueryableIndexStorageAdapter and IncrementalIndexStorageAdapter to analyze filters
- *
+ * Extracted from QueryableIndexStorageAdapter to an util file to make it usable by both QueryableIndexStorageAdapter
+ * and IncrementalIndexStorageAdapter to analyze filters when bitmap index is present
  */
 public class FilterAnalysisUtils
 {

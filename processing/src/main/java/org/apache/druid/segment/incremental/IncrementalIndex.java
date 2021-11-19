@@ -244,7 +244,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private volatile DateTime maxIngestedEventTime;
 
   private final boolean enableInMemoryBitmap;
+  @Nullable
   private final Map<String, ColumnHolder> columns;
+  @Nullable
   protected final BitmapFactory inMemoryBitmapFactory;
 
   /**
@@ -327,7 +329,16 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       );
       DimensionDesc desc = addNewDimension(dimName, handler);
 
-      if (enableInMemoryBitmap && type.equals(ColumnType.STRING)) {
+      // Bitmap index can be enabled in immutable segments by the flag {@link DimensionSchema#createBitmapIndex} which
+      // defaults to true for string type dimension {@link StringDimensionSchema#DEFAULT_CREATE_BITMAP_INDEX}
+      // Bitmap index can be enabled in incremental index by the flag {@link TaskConfig#enableInMemoryBitmap}
+      // Currently, bitmap index in batch immutable segments only support string type columns, the in-memory bitmap
+      // index is following the same design by still only supporting string typed dimensions but extending the bitmap
+      // index support from batch immutable segments to real-time incremental index. Theofore, in-memory bitmaps will be
+      // enabled if all 3 conditions met: 1) column is of type string 2) {@link DimensionSchema#createBitmapIndex} is
+      // true, and 3) {@link TaskConfig#enableInMemoryBitmap} is true.
+      // If any of the three conditions is false, in-memory bitmap in incremental index is disabled.
+      if (dimSchema.hasBitmapIndex() && enableInMemoryBitmap && type.equals(ColumnType.STRING)) {
         columns.put(
             dimName,
             new SimpleColumnHolder(
@@ -352,6 +363,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         timeCapabilities
     );
     if (enableInMemoryBitmap) {
+      // Add an empty wrapper for time column to not break the query engine when in-memory bitmap is enabled
       columns.put(
           ColumnHolder.TIME_COLUMN_NAME,
           new SimpleColumnHolder(
@@ -359,6 +371,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
               new IncrementalIndexLongNumericColumnSupplier(
                   () -> getFacts()
               ),
+              // bitmap index supplier is put as null here for time column
               null,
               null
           )
@@ -594,6 +607,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
               )
           );
 
+          // As documented in {@link IncrementalIndex}, in-memory bitmap index is enabled if all 3 conditions met: 1)
+          // column is of type string 2) {@link DimensionSchema#createBitmapIndex} is true, and 3)
+          // {@link TaskConfig#enableInMemoryBitmap} is true.
+          // For schemaless type discovery, condition 1 and 2 are automatically met. Only need to check condition 3
           if (enableInMemoryBitmap) {
             columns.put(
                 dimension,
