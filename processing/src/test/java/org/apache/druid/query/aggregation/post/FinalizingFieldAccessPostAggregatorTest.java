@@ -85,7 +85,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
     EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
+    EasyMock.expect(aggFactory.getResultType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
@@ -109,7 +109,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.getComparator()).andReturn(Comparators.naturalNullsFirst()).once();
     EasyMock.expect(aggFactory.finalizeComputation("test")).andReturn(3L).once();
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
+    EasyMock.expect(aggFactory.getResultType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
@@ -149,7 +149,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
             .andReturn(Ordering.natural().<Long>nullsLast())
             .times(1);
 
-    EasyMock.expect(aggFactory.getFinalizedType()).andReturn(ColumnType.LONG).once();
+    EasyMock.expect(aggFactory.getResultType()).andReturn(ColumnType.LONG).once();
     EasyMock.replay(aggFactory);
 
     FinalizingFieldAccessPostAggregator postAgg = buildDecorated(
