@@ -48,6 +48,7 @@ import java.util.function.Function;
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_TASK_NULL_INTERVALS = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
@@ -198,7 +199,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
     doIndexTest(
         INDEX_DATASOURCE,
-        INDEX_TASK,
+        INDEX_TASK_NULL_INTERVALS,
         transform,
         INDEX_QUERIES_RESOURCE,
         false,
@@ -250,7 +251,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
     doIndexTest(
         INDEX_DATASOURCE,
-        INDEX_TASK,
+        INDEX_TASK_NULL_INTERVALS,
         transform,
         INDEX_QUERIES_RESOURCE,
         false,
@@ -302,7 +303,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
     doIndexTest(
         INDEX_DATASOURCE,
-        INDEX_TASK,
+        INDEX_TASK_NULL_INTERVALS,
         transform,
         INDEX_QUERIES_RESOURCE,
         false,
