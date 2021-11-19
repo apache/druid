@@ -78,7 +78,9 @@ Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
+Float.NEGATIVE_INFINITY.
 Float.POSITIVE_INFINITY
+Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
@@ -137,7 +139,9 @@ LZ4
 LZO
 LimitSpec
 Long.MAX_VALUE
+Long.MAX_VALUE.
 Long.MIN_VALUE
+Long.MIN_VALUE.
 Lucene
 MapBD
 MapDB
@@ -1199,6 +1203,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
@@ -1939,4 +1944,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
-
+_n_

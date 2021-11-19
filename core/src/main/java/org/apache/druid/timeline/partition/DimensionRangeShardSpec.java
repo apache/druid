@@ -213,6 +213,12 @@ public class DimensionRangeShardSpec implements ShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.RANGE;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

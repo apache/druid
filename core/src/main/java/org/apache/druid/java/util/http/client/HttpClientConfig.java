@@ -82,6 +82,7 @@ public class HttpClientConfig
 
   private final int numConnections;
   private final SSLContext sslContext;
+  private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
   private final Duration sslHandshakeTimeout;
   private final int bossPoolSize;
@@ -92,6 +93,7 @@ public class HttpClientConfig
   private HttpClientConfig(
       int numConnections,
       SSLContext sslContext,
+      HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
       Duration sslHandshakeTimeout,
       int bossPoolSize,
@@ -102,6 +104,7 @@ public class HttpClientConfig
   {
     this.numConnections = numConnections;
     this.sslContext = sslContext;
+    this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
     this.sslHandshakeTimeout = sslHandshakeTimeout;
     this.bossPoolSize = bossPoolSize;
@@ -118,6 +121,11 @@ public class HttpClientConfig
   public SSLContext getSslContext()
   {
     return sslContext;
+  }
+
+  public HttpClientProxyConfig getProxyConfig()
+  {
+    return proxyConfig;
   }
 
   public Duration getReadTimeout()
@@ -154,6 +162,7 @@ public class HttpClientConfig
   {
     private int numConnections = 1;
     private SSLContext sslContext = null;
+    private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
     private Duration sslHandshakeTimeout = null;
     private int bossCount = DEFAULT_BOSS_COUNT;
@@ -174,6 +183,12 @@ public class HttpClientConfig
     public Builder withSslContext(SSLContext sslContext)
     {
       this.sslContext = sslContext;
+      return this;
+    }
+
+    public Builder withHttpProxyConfig(HttpClientProxyConfig config)
+    {
+      this.proxyConfig = config;
       return this;
     }
 
@@ -212,6 +227,7 @@ public class HttpClientConfig
       return new HttpClientConfig(
           numConnections,
           sslContext,
+          proxyConfig,
           readTimeout,
           sslHandshakeTimeout,
           bossCount,

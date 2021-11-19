@@ -96,6 +96,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -260,6 +261,11 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(HumanReadableFormatOperatorConversion.DECIMAL_FORMAT)
                    .build();
 
+  private static final List<SqlOperatorConversion> CUSTOM_MATH_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new SafeDivideOperatorConversion())
+                   .build();
+
   private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd"))
@@ -354,6 +360,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
                    .addAll(FORMAT_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
+                   .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

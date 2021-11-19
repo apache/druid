@@ -35,7 +35,6 @@ import java.util.Objects;
  */
 public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShardSpec>
 {
-  public static final String TYPE = "building_numbered";
 
   private final int partitionId;
 
@@ -72,6 +71,12 @@ public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShar
   public int getPartitionNum()
   {
     return partitionId;
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUILDING_NUMBERED;
   }
 
   @Override
