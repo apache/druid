@@ -126,7 +126,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     for (final AggregatorFactory aggregator : incrementalIndexSchema.getMetrics()) {
       final long rows =
           incrementalIndexSchema.isRollup() ? ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION : 1;
-      maxAggregatorIntermediateSize += aggregator.guessAggregatorHeapFootprint(rows) + 2 * Long.BYTES;
+      maxAggregatorIntermediateSize += (long) aggregator.guessAggregatorHeapFootprint(rows) + 2 * Long.BYTES;
     }
 
     return maxAggregatorIntermediateSize;
