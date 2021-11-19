@@ -3422,6 +3422,56 @@ public interface Function
     }
   }
 
+  class ArrayContainsContiguousSubarrayFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_contains_contiguous_subarray";
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+      int length1 = array1.length;
+      int length2 = array2.length;
+      if (length2 == 0) {
+        return ExprEval.ofLongBoolean(true);
+      }
+      if (length2 > length1) {
+        return ExprEval.ofLongBoolean(false);
+      }
+      for (int i = 0; i <= length1 - length2; i++) {
+        boolean found = true;
+        for (int j = 0, n = i; j < length2; j++, n++) {
+          if (!Objects.equals(array1[n], array2[j])) {
+            found = false;
+            break;
+          }
+        }
+        if (found) {
+          return ExprEval.ofLongBoolean(true);
+        }
+      }
+      return ExprEval.ofLongBoolean(false);
+    }
+  }
+
   class ArrayOverlapFunction extends ArraysFunction
   {
     @Override

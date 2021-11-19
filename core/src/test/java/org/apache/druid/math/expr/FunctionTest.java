@@ -288,6 +288,22 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArrayContainsContiguousSubarray()
+  {
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], 2)", 1L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], [1, 2])", 1L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], 4)", 0L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], [1, 3])", 0L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], [2, 3])", 1L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3], [3, 4])", 0L);
+    assertExpr("array_contains_contiguous_subarray(b, [3, 4])", 1L);
+    assertExpr("array_contains_contiguous_subarray(b, [])", 1L);
+    assertExpr("array_contains_contiguous_subarray([1, 2], [1, 2, 3])", 0L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3, 4, 1, 3, 5], [1, 5])", 0L);
+    assertExpr("array_contains_contiguous_subarray([1, 2, 3, 4, 1, 3, 5], [1, 3])", 1L);
+  }
+
+  @Test
   public void testArrayOverlap()
   {
     assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);

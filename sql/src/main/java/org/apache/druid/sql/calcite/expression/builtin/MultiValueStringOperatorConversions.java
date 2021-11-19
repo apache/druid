@@ -157,6 +157,34 @@ public class MultiValueStringOperatorConversions
     }
   }
 
+  public static class ContainsContiguousSubarray extends ArrayContainsContiguousSubarrayOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_CONTAINS_CONTIGUOUS_SUBARRAY")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(array,array)",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING),
+                    OperandTypes.family(SqlTypeFamily.NUMERIC)
+                )
+            )
+        )
+        .returnTypeInference(ReturnTypes.BOOLEAN)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+  }
+
   public static class Offset extends ArrayOffsetOperatorConversion
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions

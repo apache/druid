@@ -622,6 +622,8 @@ All 'array' references in the multi-value string function documentation can refe
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
 | `MV_CONTAINS(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
+| `MV_CONTAINS_CONTIGUOUS_SUBARRAY(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains contiguous subarray(see [substring](https://en.wikipedia.org/wiki/Substring)) specified by expr if expr is an array, else 0 |
+| `MV_CONTAINS_SUBSEQUENCE(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains [subsequence](https://en.wikipedia.org/wiki/Subsequence) specified by expr if expr is an array, else 0 |
 | `MV_OVERLAP(arr1,arr2)` | returns 1 if arr1 and arr2 have any elements in common, else 0 |
 | `MV_OFFSET_OF(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
 | `MV_ORDINAL_OF(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
