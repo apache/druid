@@ -1203,6 +1203,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
