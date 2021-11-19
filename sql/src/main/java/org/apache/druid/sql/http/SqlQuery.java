@@ -20,11 +20,13 @@
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,8 @@ public class SqlQuery
   private final String query;
   private final ResultFormat resultFormat;
   private final boolean header;
+  private final boolean typesHeader;
+  private final boolean sqlTypesHeader;
   private final Map<String, Object> context;
   private final List<SqlParameter> parameters;
 
@@ -54,6 +58,8 @@ public class SqlQuery
       @JsonProperty("query") final String query,
       @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
+      @JsonProperty("typesHeader") final boolean typesHeader,
+      @JsonProperty("sqlTypesHeader") final boolean sqlTypesHeader,
       @JsonProperty("context") final Map<String, Object> context,
       @JsonProperty("parameters") final List<SqlParameter> parameters
   )
@@ -61,8 +67,18 @@ public class SqlQuery
     this.query = Preconditions.checkNotNull(query, "query");
     this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
     this.header = header;
+    this.typesHeader = typesHeader;
+    this.sqlTypesHeader = sqlTypesHeader;
     this.context = context == null ? ImmutableMap.of() : context;
     this.parameters = parameters == null ? ImmutableList.of() : parameters;
+
+    if (typesHeader && !header) {
+      throw new ISE("Cannot include 'typesHeader' without 'header'");
+    }
+
+    if (sqlTypesHeader && !header) {
+      throw new ISE("Cannot include 'sqlTypesHeader' without 'header'");
+    }
   }
 
   @JsonProperty
@@ -78,9 +94,24 @@ public class SqlQuery
   }
 
   @JsonProperty("header")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean includeHeader()
   {
     return header;
+  }
+
+  @JsonProperty("typesHeader")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean includeTypesHeader()
+  {
+    return typesHeader;
+  }
+
+  @JsonProperty("sqlTypesHeader")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean includeSqlTypesHeader()
+  {
+    return sqlTypesHeader;
   }
 
   @JsonProperty
@@ -111,6 +142,8 @@ public class SqlQuery
     }
     final SqlQuery sqlQuery = (SqlQuery) o;
     return header == sqlQuery.header &&
+           typesHeader == sqlQuery.typesHeader &&
+           sqlTypesHeader == sqlQuery.sqlTypesHeader &&
            Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
            Objects.equals(context, sqlQuery.context) &&
@@ -120,7 +153,7 @@ public class SqlQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, header, context, parameters);
+    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, context, parameters);
   }
 
   @Override
@@ -130,6 +163,8 @@ public class SqlQuery
            "query='" + query + '\'' +
            ", resultFormat=" + resultFormat +
            ", header=" + header +
+           ", typesHeader=" + typesHeader +
+           ", sqlTypesHeader=" + sqlTypesHeader +
            ", context=" + context +
            ", parameters=" + parameters +
            '}';
