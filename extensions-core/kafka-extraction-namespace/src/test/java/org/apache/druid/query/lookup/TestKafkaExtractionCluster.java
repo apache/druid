@@ -91,6 +91,9 @@ public class TestKafkaExtractionCluster
   {
     zkServer = new TestingCluster(1);
     zkServer.start();
+    closer.register(() -> {
+      zkServer.stop();
+    });
 
     kafkaServer = new KafkaServer(
           getBrokerProperties(),
@@ -99,6 +102,10 @@ public class TestKafkaExtractionCluster
           false);
 
     kafkaServer.startup();
+    closer.register(() -> {
+      kafkaServer.shutdown();
+      kafkaServer.awaitShutdown();
+    });
     log.info("---------------------------Started Kafka Broker ---------------------------");
 
     log.info("---------------------------Publish Messages to topic-----------------------");
