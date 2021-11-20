@@ -893,10 +893,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               rootSchema,
-              new NativeQueryMakerFactory(
-                  CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-                  CalciteTests.getJsonMapper()
-              ),
+              CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
               operatorTable,
               macroTable,
               plannerConfig,
@@ -986,10 +983,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
                 rootSchema,
-                new NativeQueryMakerFactory(
-                    CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-                    CalciteTests.getJsonMapper()
-                ),
+                CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,
                 plannerConfig,

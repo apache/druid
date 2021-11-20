@@ -35,7 +35,6 @@ import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -92,10 +91,7 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        new NativeQueryMakerFactory(
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            CalciteTests.getJsonMapper()
-        ),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,

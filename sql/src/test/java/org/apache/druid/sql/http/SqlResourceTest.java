@@ -231,10 +231,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        new NativeQueryMakerFactory(
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            CalciteTests.getJsonMapper()
-        ),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,

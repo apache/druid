@@ -44,7 +44,6 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -133,10 +132,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
-        new NativeQueryMakerFactory(
-            CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
-            CalciteTests.getJsonMapper()
-        ),
+        CalciteTests.createMockQueryMakerFactory(WALKER, CONGLOMERATE),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
