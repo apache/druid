@@ -38,6 +38,7 @@ public interface QueryMakerFactory
    *
    * @throws ValidationException if this factory cannot build an executor for the provided query
    */
+  @SuppressWarnings("RedundantThrows")
   QueryMaker buildForSelect(RelRoot relRoot, PlannerContext plannerContext) throws ValidationException;
 
   /**

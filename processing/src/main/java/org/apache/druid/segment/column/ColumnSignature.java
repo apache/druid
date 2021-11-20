@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * Class used by {@link RowSignature} for serialization.
@@ -67,25 +66,6 @@ class ColumnSignature
   ColumnType type()
   {
     return type;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ColumnSignature that = (ColumnSignature) o;
-    return name.equals(that.name) && Objects.equals(type, that.type);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, type);
   }
 
   @Override
