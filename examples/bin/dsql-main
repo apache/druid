@@ -388,6 +388,63 @@ def make_readline_completer(url, context, args):
 
   return readline_completer
 
+def do_single_query(url, context, args, readline_history_file):
+  sql = ''
+  while not sql.endswith(';'):
+    prompt = "dsql> " if sql == '' else 'more> '
+    try:
+      more_sql = raw_input(prompt)
+    except EOFError:
+      sys.stdout.write('\n')
+      sys.exit(1)
+    if sql == '' and more_sql.startswith('\\'):
+      # backslash command
+      dmatch = re.match(r'^\\d(S?)(\+?)(\s+.*?|)\s*$', more_sql)
+      if dmatch:
+        include_system = dmatch.group(1)
+        extra_info = dmatch.group(2)
+        arg = dmatch.group(3).strip()
+        if arg:
+          sql = "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = " + sql_literal_escape(arg)
+          if not include_system:
+            sql = sql + " AND TABLE_SCHEMA = 'druid'"
+          # break to execute sql
+          break
+        else:
+          sql = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
+          if not include_system:
+            sql = sql + " WHERE TABLE_SCHEMA = 'druid'"
+          # break to execute sql
+          break
+
+      hmatch = re.match(r'^\\h\s*$', more_sql)
+      if hmatch:
+        print("Commands:")
+        print("  \\d             show tables")
+        print("  \\dS            show tables, including system tables")
+        print("  \\d table_name  describe table")
+        print("  \\h             show this help")
+        print("  \\q             exit this program")
+        print("Or enter a SQL query ending with a semicolon (;).")
+        continue
+
+      qmatch = re.match(r'^\\q\s*$', more_sql)
+      if qmatch:
+        sys.exit(0)
+
+      print("No such command: " + more_sql)
+    else:
+      sql = (sql + ' ' + more_sql).strip()
+
+  try:
+    readline.write_history_file(readline_history_file)
+    display_query(url, sql.rstrip(';'), context, args)
+  except DruidSqlException as e:
+    e.write_to(sys.stdout)
+  except KeyboardInterrupt:
+    sys.stdout.write("Query interrupted\n")
+    sys.stdout.flush()
+
 def main():
   parser = argparse.ArgumentParser(description='Druid SQL command-line client.')
   parser_cnn = parser.add_argument_group('Connection options')
@@ -446,61 +503,10 @@ def main():
     print("Type \"\\h\" for help.")
 
     while True:
-      sql = ''
-      while not sql.endswith(';'):
-        prompt = "dsql> " if sql == '' else 'more> '
-        try:
-          more_sql = raw_input(prompt)
-        except EOFError:
-          sys.stdout.write('\n')
-          sys.exit(1)
-        if sql == '' and more_sql.startswith('\\'):
-          # backslash command
-          dmatch = re.match(r'^\\d(S?)(\+?)(\s+.*?|)\s*$', more_sql)
-          if dmatch:
-            include_system = dmatch.group(1)
-            extra_info = dmatch.group(2)
-            arg = dmatch.group(3).strip()
-            if arg:
-              sql = "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = " + sql_literal_escape(arg)
-              if not include_system:
-                sql = sql + " AND TABLE_SCHEMA = 'druid'"
-              # break to execute sql
-              break
-            else:
-              sql = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
-              if not include_system:
-                sql = sql + " WHERE TABLE_SCHEMA = 'druid'"
-              # break to execute sql
-              break
-
-          hmatch = re.match(r'^\\h\s*$', more_sql)
-          if hmatch:
-            print("Commands:")
-            print("  \\d             show tables")
-            print("  \\dS            show tables, including system tables")
-            print("  \\d table_name  describe table")
-            print("  \\h             show this help")
-            print("  \\q             exit this program")
-            print("Or enter a SQL query ending with a semicolon (;).")
-            continue
-
-          qmatch = re.match(r'^\\q\s*$', more_sql)
-          if qmatch:
-            sys.exit(0)
-
-          print("No such command: " + more_sql)
-        else:
-          sql = (sql + ' ' + more_sql).strip()
-
       try:
-        readline.write_history_file(readline_history_file)
-        display_query(url, sql.rstrip(';'), context, args)
-      except DruidSqlException as e:
-        e.write_to(sys.stdout)
+        do_single_query(url, context, args, readline_history_file)
       except KeyboardInterrupt:
-        sys.stdout.write("Query interrupted\n")
-        sys.stdout.flush()
+        print("\n^C")
 
 try:
   main()
