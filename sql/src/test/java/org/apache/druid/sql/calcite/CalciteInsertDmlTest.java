@@ -277,6 +277,23 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
+    final ScanQuery expectedQuery = newScanQueryBuilder()
+        .dataSource(externalDataSource)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("x", "y", "z")
+        .context(
+            queryJsonMapper.readValue(
+                "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
+                JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+            )
+        )
+        .build();
+
+    final String expectedExplanation =
+        "DruidQueryRel(query=["
+        + queryJsonMapper.writeValueAsString(expectedQuery)
+        + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
+
     // Use testQuery for EXPLAIN (not testInsertQuery).
     testQuery(
         new PlannerConfig(),
@@ -285,21 +302,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=["
-                + queryJsonMapper.writeValueAsString(
-                    newScanQueryBuilder()
-                        .dataSource(externalDataSource)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
-                        .columns("x", "y", "z")
-                        .context(
-                            queryJsonMapper.readValue(
-                                "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
-                                JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-                            )
-                        )
-                        .build()
-                )
-                + "], signature=[{x:STRING, y:STRING, z:LONG}])\n",
+                expectedExplanation,
                 "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
             }
         )
