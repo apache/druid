@@ -90,9 +90,9 @@ Druid routers for security group integration test (permissive tls, no client aut
    mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
    ```             
    
-   > NOTE: -Ddocker.build.hadoop=true is optional if you don't run tests againt Hadoop.
+   > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
 
-3. Choose a docker-compose file to start containers.
+2. Choose a docker-compose file to start containers.
 
    There are a few different Docker compose yamls located in "docker" folder that could be used to start containers for different tests. 
 
@@ -116,7 +116,7 @@ Druid routers for security group integration test (permissive tls, no client aut
      docker-compose -f docker-compose.yml -f docker-compose.security.yml up
      ```
 
-4. Run tests.
+3. Run tests.
   
    Execute the following command from root module, where `<test_name>` is the class name of a test, such as ITIndexerTest.
    ```bash
@@ -179,7 +179,7 @@ This is meant to be use together with docker-compose.yml or docker-compose.overr
 
 ### Debugging Druid while running tests
 
-For your convenience, Druid processes running inside Docker have debugging enabled at following debugging ports.
+For your convenience, Druid processes running inside Docker have been debugging enabled at following debugging ports:
 
 | Process | Remote Debugging Port |
 | --- | :---: |
@@ -193,10 +193,7 @@ For your convenience, Druid processes running inside Docker have debugging enabl
 | Middlemanager | 5008 |
 | Overlord | 5009 |
 
-You can use remote debugger(such as via IntelliJ IDEA's Remote Configuration) by adding following command line parameter to debug the corresponding Druid processes.
-```bash
--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<debugging port>
-```
+You can use remote debugger(such as via IntelliJ IDEA's Remote Configuration) to debug the corresponding Druid process at above port.
 
 Running Tests Using A Quickstart Cluster
 -------------------
@@ -207,9 +204,9 @@ environment. This section walks you through setting up the integration tests
 so that it can run against a [quickstart cluster](../docs/tutorials/index.md) running on your development
 machine.
 
-> NOTE: Not all features run by default on a quickstart cluster, so it may not make sense to run the entire test suite against this configuration.
-
-> NOTE: Quickstart does not run with ssl, so to trick the integration tests we specify the `*_tls_url` in the config to be the same as the http url.
+> **NOTE**: Not all features run by default on a quickstart cluster, so it may not make sense to run the entire test suite against this configuration.
+>
+> Quickstart does not run with ssl, so to trick the integration tests we specify the `*_tls_url` in the config to be the same as the http url.
 
 Make sure you have at least 6GiB of memory available before you run the tests.
 
