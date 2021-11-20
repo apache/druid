@@ -204,6 +204,7 @@ jobs:
         - >
           MAVEN_OPTS='-Xmx1100m' ${MVN} test -pl ${MAVEN_PROJECTS}
           ${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
+        - sh -c "cat extensions-core/kafka-extraction-namespace/target/surefire-reports/* || exit 0"
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
         - ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
