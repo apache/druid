@@ -281,6 +281,33 @@ public class SupervisorResource
     );
   }
 
+  @GET
+  @Path("/{id}/parseErrors")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getAllTaskParseErrors(
+      @PathParam("id") final String id
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<List<String>> parseErrors = manager.getSupervisorParseErrors(id);
+          if (!parseErrors.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("[%s] does not exist", id)
+                               )
+                           )
+                           .build();
+          }
+
+          return Response.ok(parseErrors.get()).build();
+        }
+    );
+  }
+
   @POST
   @Path("/{id}/resume")
   @Produces(MediaType.APPLICATION_JSON)

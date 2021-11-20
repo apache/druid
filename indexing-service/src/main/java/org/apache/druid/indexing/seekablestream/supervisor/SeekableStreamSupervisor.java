@@ -107,6 +107,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -314,6 +315,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public Map<String, Object> getStats()
     {
       return stats;
+    }
+  }
+
+  private static class ErrorsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final List<String> errors;
+
+    public ErrorsFromTaskResult(
+        int groupId,
+        String taskId,
+        List<String> errors
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.errors = errors;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public List<String> getErrors()
+    {
+      return errors;
     }
   }
 
@@ -657,6 +691,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final ReentrantLock recordSupplierLock = new ReentrantLock();
+  private List<String> lastKnownParseErrors = new ArrayList<>();
 
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
@@ -1132,6 +1167,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  @Override
+  public List<String> getParseErrors()
+  {
+    try {
+      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() <= 0) {
+        return ImmutableList.of();
+      }
+      lastKnownParseErrors = getCurrentParseErrors();
+      return lastKnownParseErrors;
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.error(ie, "getErrors() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
+    }
+  }
+
   /**
    * Collect row ingestion stats from all tasks managed by this supervisor.
    *
@@ -1200,6 +1255,85 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return allStats;
   }
 
+  /**
+   * Collect parse errors from all tasks managed by this supervisor.
+   *
+   * @return A list of parse error strings
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private List<String> getCurrentParseErrors()
+      throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final List<ListenableFuture<ErrorsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
+
+    for (int groupId : activelyReadingTaskGroups.keySet()) {
+      TaskGroup group = activelyReadingTaskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getParseErrorsAsync(taskId),
+                (Function<List<String>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                    groupId,
+                    taskId,
+                    taskErrors
+                )
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getParseErrorsAsync(taskId),
+                  (Function<List<String>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                      groupId,
+                      taskId,
+                      taskErrors
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
+      }
+    }
+
+    // We use a tree set to sort the parse errors by time, and eliminate duplicates across calls to this method
+    TreeSet<String> parseErrorsTreeSet = new TreeSet<>(lastKnownParseErrors);
+
+    List<ErrorsFromTaskResult> results = Futures.successfulAsList(futures)
+                                               .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      ErrorsFromTaskResult result = results.get(i);
+      if (result != null) {
+        parseErrorsTreeSet.addAll(result.getErrors());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get errors for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+      }
+    }
+
+    // store a limited number of parse exceptions, keeping the most recent ones
+    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() *
+                          spec.getSpec().getIOConfig().getTaskCount();
+    parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
+
+    final List<String> limitedParseErrors = new ArrayList<>();
+    Iterator<String> descendingIterator = parseErrorsTreeSet.descendingIterator();
+    for (int i = 0; i < parseErrorLimit; i++) {
+      limitedParseErrors.add(descendingIterator.next());
+    }
+
+    return limitedParseErrors;
+  }
 
   @VisibleForTesting
   public void addTaskGroupToActivelyReadingTaskGroup(

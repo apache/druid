@@ -317,7 +317,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+              determinePartitionsParseExceptionHandler.getSavedParseExceptions(),
+              false
           )
       );
     }
@@ -326,7 +327,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+              buildSegmentsParseExceptionHandler.getSavedParseExceptions(),
+              false
           )
       );
     }
@@ -545,10 +547,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+        determinePartitionsParseExceptionHandler.getSavedParseExceptions(),
+        false
     );
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+        buildSegmentsParseExceptionHandler.getSavedParseExceptions(),
+        false
     );
 
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {

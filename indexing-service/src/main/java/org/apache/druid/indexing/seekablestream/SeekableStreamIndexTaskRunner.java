@@ -1100,7 +1100,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+        parseExceptionHandler.getSavedParseExceptions(),
+        true
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
@@ -1585,7 +1586,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.READ);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+        parseExceptionHandler.getSavedParseExceptions(),
+        true
     );
     return Response.ok(events).build();
   }

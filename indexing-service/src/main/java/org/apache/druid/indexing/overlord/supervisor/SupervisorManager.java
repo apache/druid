@@ -188,6 +188,12 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
   }
 
+  public Optional<List<String>> getSupervisorParseErrors(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getParseErrors());
+  }
+
   public Optional<Boolean> isSupervisorHealthy(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);

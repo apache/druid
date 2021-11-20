@@ -38,17 +38,20 @@ import org.apache.druid.java.util.common.StringUtils;
 public class ParseException extends RuntimeException
 {
   private final boolean fromPartiallyValidRow;
+  private final long timeOfExceptionMillis;
 
   public ParseException(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
     this.fromPartiallyValidRow = false;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
   public ParseException(boolean fromPartiallyValidRow, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
     this.fromPartiallyValidRow = fromPartiallyValidRow;
+    this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
   public ParseException(Throwable cause, String formatText, Object... arguments)
@@ -59,5 +62,10 @@ public class ParseException extends RuntimeException
   public boolean isFromPartiallyValidRow()
   {
     return fromPartiallyValidRow;
+  }
+
+  public long getTimeOfExceptionMillis()
+  {
+    return timeOfExceptionMillis;
   }
 }

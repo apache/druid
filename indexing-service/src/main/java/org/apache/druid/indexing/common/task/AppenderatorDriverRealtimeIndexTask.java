@@ -566,7 +566,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+        parseExceptionHandler.getSavedParseExceptions(),
+        false
     );
     return Response.ok(events).build();
   }
@@ -617,7 +618,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+        parseExceptionHandler.getSavedParseExceptions(),
+        false
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);

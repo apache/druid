@@ -19,11 +19,13 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public interface Supervisor
@@ -45,6 +47,11 @@ public interface Supervisor
   default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();
+  }
+
+  default List<String> getParseErrors()
+  {
+    return ImmutableList.of();
   }
 
   @Nullable

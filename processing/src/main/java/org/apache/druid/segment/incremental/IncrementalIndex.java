@@ -33,6 +33,7 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -73,6 +74,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.transform.Transformer;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -634,9 +636,25 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return new ParseException(
         true,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
-        row,
+        getSimplifiedEventStringFromRow(row),
         stringBuilder.toString()
     );
+  }
+
+  private static String getSimplifiedEventStringFromRow(InputRow inputRow)
+  {
+    if (inputRow instanceof MapBasedInputRow) {
+      return ((MapBasedInputRow) inputRow).getEvent().toString();
+    }
+
+    if (inputRow instanceof Transformer.TransformedInputRow) {
+      InputRow innerRow = ((Transformer.TransformedInputRow) inputRow).getRow();
+      if (innerRow instanceof MapBasedInputRow) {
+        return ((MapBasedInputRow) innerRow).getEvent().toString();
+      }
+    }
+
+    return inputRow.toString();
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)

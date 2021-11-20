@@ -39,6 +39,7 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -180,7 +181,6 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     }
   }
 
-
   @Nullable
   public DateTime getStartTime(final String id)
   {
@@ -223,6 +223,31 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       throw new RuntimeException(e);
     }
   }
+
+  public List<String> getParseErrors(final String id)
+  {
+    log.debug("getParseErrors task[%s]", id);
+
+    try {
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.GET,
+          "unparseableEvents",
+          null,
+          true
+      );
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? Collections.emptyList()
+             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_LIST_STRING);
+    }
+    catch (NoTaskLocationException e) {
+      return Collections.emptyList();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 
   public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(final String id, final boolean retry)
   {
@@ -367,6 +392,10 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     return doAsync(() -> getMovingAverages(id));
   }
 
+  public ListenableFuture<List<String>> getParseErrorsAsync(final String id)
+  {
+    return doAsync(() -> getParseErrors(id));
+  }
 
   public ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(final String id)
   {

@@ -510,7 +510,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              parseExceptionHandler.getSavedParseExceptions()
+              parseExceptionHandler.getSavedParseExceptions(),
+              false
           )
       );
     }
@@ -635,7 +636,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> parseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+        parseExceptionHandler.getSavedParseExceptions(),
+        false
     );
 
     if (parseExceptionMessages != null) {
