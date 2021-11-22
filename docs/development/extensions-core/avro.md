@@ -61,4 +61,4 @@ The extension returns `enum` types as `string` of the enum symbol.
 You can ingest `record` and `map` types representing nested data with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the parser.
 
 ### Logical types
-Druid doesn't currently support Avro logical types. It ignores them and handles fields according to the underlying primitive type.
+Druid does not currently support Avro logical types. It ignores them and handles fields according to the underlying primitive type.
