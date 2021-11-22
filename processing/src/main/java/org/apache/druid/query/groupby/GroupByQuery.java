@@ -592,7 +592,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         needsReverseList.add(false);
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        comparators.add(StringComparators.LEXICOGRAPHIC);
+        if (type.isNumeric()) {
+          comparators.add(StringComparators.NUMERIC);
+        } else {
+          comparators.add(StringComparators.LEXICOGRAPHIC);
+        }
       }
     }
 
