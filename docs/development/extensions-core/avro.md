@@ -43,7 +43,7 @@ Druid has two modes for supporting `union` types.
 The default mode treats unions as a single value regardless of the type of data populating the union.
 
 If you want to operate on individual members of a union, set `extractUnionsByType` on the Avro parser. This configuration expands union values into nested objects according to the following rules:
-- Primitive types and unnamed complex types are keyed their type name. For example: `int`, `string`
+- Primitive types and unnamed complex types are keyed by their type name, such as `int` and `string`.
 - Complex named types are keyed by their names, this includes `record`, `fixed` and `enum`.
 - The Avro null type is elided as its value can only ever be null
 
