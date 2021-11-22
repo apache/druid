@@ -203,6 +203,7 @@ public class BalanceSegments implements CoordinatorDuty
     int moved = 0, unmoved = 0;
 
     Iterator<BalancerSegmentHolder> segmentsToMove;
+    // The pick method depends on if the operator has enabled batched segment sampling in the Coorinator dynamic config.
     if (params.getCoordinatorDynamicConfig().useBatchedSegmentSampler()) {
       segmentsToMove = strategy.pickSegmentsToMove(
           toMoveFrom,

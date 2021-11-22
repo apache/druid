@@ -105,7 +105,9 @@ public interface BalancerStrategy
   }
 
   /**
-   * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy.
+   * Pick the best segments to move from one of the supplied set of servers according to the balancing strategy. This
+   * is the deprecated way of picking a segment to move. pickSegmentsToMove(List<ServerHoler>, Set<String>, int) uses
+   * a more performant bathced sampling method that will become the default picking mode in the future.
    *
    * @param serverHolders set of historicals to consider for moving segments
    * @param broadcastDatasources Datasources that contain segments which were loaded via broadcast rules.
