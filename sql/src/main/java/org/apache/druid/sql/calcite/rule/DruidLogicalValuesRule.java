@@ -28,8 +28,8 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -120,7 +120,7 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new DruidCannotPlanSQLException("%s type is not supported", literal.getType().getSqlTypeName());
+        throw new UnsupportedQueryFeatureException("%s type is not supported", literal.getType().getSqlTypeName());
     }
   }
 }

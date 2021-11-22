@@ -30,7 +30,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
+import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
 
 public class MinSqlAggregator extends SimpleSqlAggregator
 {
@@ -69,7 +69,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable);
       default:
-        throw new DruidCannotPlanSQLException("MIN aggregator is not supported for '%s' type", aggregationType);
+        throw new UnsupportedQueryFeatureException("MIN aggregator is not supported for '%s' type", aggregationType);
     }
   }
 }

@@ -29,9 +29,9 @@ import org.apache.druid.java.util.common.StringUtils;
  * to be halted during planning. Similarly, Druid planner can catch these exception and know that the error
  * can be directly exposed to end-user.
  */
-public class DruidCannotPlanSQLException extends RelOptPlanner.CannotPlanException
+public class UnsupportedQueryFeatureException extends RelOptPlanner.CannotPlanException
 {
-  public DruidCannotPlanSQLException(String formatText, Object... arguments)
+  public UnsupportedQueryFeatureException(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
   }

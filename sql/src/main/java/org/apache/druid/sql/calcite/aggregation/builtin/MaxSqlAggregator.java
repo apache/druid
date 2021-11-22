@@ -31,7 +31,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
+import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
 
 public class MaxSqlAggregator extends SimpleSqlAggregator
 {
@@ -73,7 +73,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable);
       default:
-        throw new DruidCannotPlanSQLException("Max aggregation is not supported for '%s' type", aggregationType);
+        throw new UnsupportedQueryFeatureException("Max aggregation is not supported for '%s' type", aggregationType);
     }
   }
 }

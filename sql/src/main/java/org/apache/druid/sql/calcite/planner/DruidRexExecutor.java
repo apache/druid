@@ -91,7 +91,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw new DruidCannotPlanSQLException("Illegal DATE constant: %s", constExp);
+            throw new UnsupportedQueryFeatureException("Illegal DATE constant: %s", constExp);
           }
 
           literal = rexBuilder.makeDateLiteral(
@@ -105,7 +105,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw new DruidCannotPlanSQLException("Illegal TIMESTAMP constant: %s", constExp);
+            throw new UnsupportedQueryFeatureException("Illegal TIMESTAMP constant: %s", constExp);
           }
 
           literal = rexBuilder.makeTimestampLiteral(
@@ -131,7 +131,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw new DruidCannotPlanSQLException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                throw new UnsupportedQueryFeatureException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
                     expression,
                     Double.toString(exprResultDouble),
                     expression,

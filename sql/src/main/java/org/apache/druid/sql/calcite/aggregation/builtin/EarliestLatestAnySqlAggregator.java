@@ -58,11 +58,12 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -90,7 +91,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw new DruidCannotPlanSQLException("EARLIEST aggregator is not supported for '%s' type", type);
+            throw new UnsupportedQueryFeatureException("EARLIEST aggregator is not supported for '%s' type", type);
         }
       }
     },
@@ -110,7 +111,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw new DruidCannotPlanSQLException("LATEST aggregator is not supported for '%s' type", type);
+            throw new UnsupportedQueryFeatureException("LATEST aggregator is not supported for '%s' type", type);
         }
       }
     },
@@ -129,7 +130,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw new DruidCannotPlanSQLException("ANY aggregation is not supported for '%s' type", type);
+            throw new UnsupportedQueryFeatureException("ANY aggregation is not supported for '%s' type", type);
         }
       }
     };
