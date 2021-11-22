@@ -47,11 +47,9 @@ import org.apache.druid.utils.Streams;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,18 +61,18 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   private final File baseDir;
   @Nullable
   private final String filter;
-  private final Set<File> files;
+  private final List<File> files;
 
   @JsonCreator
   public LocalInputSource(
       @JsonProperty("baseDir") @Nullable File baseDir,
       @JsonProperty("filter") @Nullable String filter,
-      @JsonProperty("files") @Nullable Set<File> files
+      @JsonProperty("files") @Nullable List<File> files
   )
   {
     this.baseDir = baseDir;
     this.filter = baseDir != null ? Preconditions.checkNotNull(filter, "filter") : filter;
-    this.files = files == null ? Collections.emptySet() : files;
+    this.files = files == null ? Collections.emptyList() : files;
 
     if (baseDir == null && CollectionUtils.isNullOrEmpty(files)) {
       throw new IAE("At least one of baseDir or files should be specified");
@@ -101,7 +99,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   @JsonProperty
-  public Set<File> getFiles()
+  public List<File> getFiles()
   {
     return files;
   }
@@ -180,7 +178,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public SplittableInputSource<List<File>> withSplit(InputSplit<List<File>> split)
   {
-    return new LocalInputSource(null, null, new HashSet<>(split.get()));
+    return new LocalInputSource(null, null, split.get());
   }
 
   @Override
