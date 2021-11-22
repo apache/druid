@@ -47,7 +47,7 @@ If you want to operate on individual members of a union, set `extractUnionsByTyp
 - Complex named types are keyed by their names, this includes `record`, `fixed`, and `enum`.
 - The Avro null type is elided as its value can only ever be null.
 
-This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed. For example: only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
+This is safe because an Avro union can only contain a single member of each unnamed type and duplicates of the same named type are not allowed. For example, only a single array is allowed, multiple records (or other named types) are allowed as long as each has a unique name.
 
 You can then access the members of the union with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) like you would for other nested types.
 
