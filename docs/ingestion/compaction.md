@@ -161,26 +161,25 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |Field|Description|Default|Required?|
 |-----|-----------|-------|--------|
 |`type`|Task type: `compact`|none|Yes|
-|`inputSpec`|Input specification|none|Yes|
+|`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
 |`dropExisting`|If `true`, when the task publishes newly compacted segments the compaction, it marks all existing segments fully contained by either of the following as unused (drops the segments):<br>- the `interval` in the `interval` type `inputSpec`.<br>- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br>If compaction fails, Druid does not drop or mark unused any segments.<br>**WARNING**: `dropExisting` in `ioConfig` is a beta feature. It may cause data within the compaction task interval to become  temporarily unavailable.|false|no|
 
 
 Druid supports two supported `inputSpec` formats:
 
-#### Interval `inputSpec`:
+#### Interval `inputSpec`
 
-     |Field|Description|Required|
-     |-----|-----------|--------|
-     |`type`|Task type. Should be `interval`|Yes|
-     |`interval`|Interval to compact|Yes|
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `interval`|Yes|
+|`interval`|Interval to compact|Yes|
 
-#### Segments `inputSpec`:
+#### Segments `inputSpec`
 
-     |Field|Description|Required|
-     |-----|-----------|--------|
-     |`type`|Task type. Should be `segments`|Yes|
-     |`segments`|A list of segment IDs|Yes|
-
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `segments`|Yes|
+|`segments`|A list of segment IDs|Yes|
 
 ### Compaction dimensions spec
 You can optionally use the `dimensionsSpec` object to configure the dimensions of the compacted segments.
