@@ -263,13 +263,13 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
    * actual type is {@link SerializablePairLongString}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return ColumnType.STRING;
   }
