@@ -188,7 +188,8 @@ public class DruidPlanner implements Closeable
       return planWithDruidConvention(explain, root);
     }
     catch (Exception e) {
-      if (!Throwables.isThrowable(e, RelOptPlanner.CannotPlanException.class)) {
+      Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
+      if (null == cannotPlanException) {
         // Not a CannotPlanningException, rethrow without trying with bindable
         throw e;
       }
@@ -200,10 +201,15 @@ public class DruidPlanner implements Closeable
         e.addSuppressed(e2);
         log.noStackTrace().warn(e, "Failed to plan the query '%s'", sql);
         String errorMessage = plannerContext.getPlanningError();
+        if (null == errorMessage && cannotPlanException instanceof DruidCannotPlanSQLException) {
+          errorMessage = cannotPlanException.getMessage();
+        }
         if (null == errorMessage) {
           errorMessage = "Please check broker logs for more details";
+        } else {
+          errorMessage = "Possible error: " + errorMessage;
         }
-        throw new RelOptPlanner.CannotPlanException("Unsupported query: " + errorMessage);
+        throw new DruidCannotPlanSQLException(errorMessage);
       }
     }
   }

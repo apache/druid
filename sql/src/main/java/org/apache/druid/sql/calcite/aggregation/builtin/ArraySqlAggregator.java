@@ -37,7 +37,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
@@ -49,6 +48,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -184,7 +184,7 @@ public class ArraySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (SqlTypeUtil.isArray(type)) {
-        throw new ISE("Cannot use ARRAY_AGG on array inputs %s", type);
+        throw new DruidCannotPlanSQLException("Cannot use ARRAY_AGG on array inputs %s", type);
       }
       return Calcites.createSqlArrayTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

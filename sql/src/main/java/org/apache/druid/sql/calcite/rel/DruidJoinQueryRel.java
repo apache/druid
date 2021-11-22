@@ -38,7 +38,6 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,6 +52,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -347,7 +347,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw new IAE("Cannot handle joinType[%s]", calciteJoinType);
+        throw new DruidCannotPlanSQLException("Cannot handle joinType '%s'", calciteJoinType);
     }
   }
 

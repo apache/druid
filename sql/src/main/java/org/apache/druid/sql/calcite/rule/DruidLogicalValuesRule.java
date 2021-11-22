@@ -21,15 +21,14 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidCannotPlanSQLException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
@@ -121,9 +120,7 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        String error = StringUtils.nonStrictFormat("Unsupported type[%s]", literal.getTypeName());
-        plannerContext.setPlanningError(error);
-        throw new RelOptPlanner.CannotPlanException(error);
+        throw new DruidCannotPlanSQLException("%s type is not supported", literal.getType().getSqlTypeName());
     }
   }
 }
