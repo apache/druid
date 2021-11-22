@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
@@ -1100,9 +1101,24 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  public void testSysTableParameterBinding() throws Exception
+  public void testSysTableParameterBindingRegularUser() throws Exception
   {
-    PreparedStatement statement = client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    PreparedStatement statement =
+        client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    statement.setString(1, "dummy");
+
+    Assert.assertThrows(
+        "Insufficient permission to view servers",
+        AvaticaSqlException.class,
+        statement::executeQuery
+    );
+  }
+
+  @Test
+  public void testSysTableParameterBindingSuperUser() throws Exception
+  {
+    PreparedStatement statement =
+        superuserClient.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
     statement.setString(1, "dummy");
     final ResultSet resultSet = statement.executeQuery();
     final List<Map<String, Object>> rows = getRows(resultSet);
