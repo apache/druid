@@ -52,7 +52,7 @@ This is safe because an Avro union can only contain a single member of each unna
 You can then access the members of the union with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) like you would for other nested types.
 
 ### Binary types
-The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. If you enable the `binaryAsString` option on the Avro parser, the extension decodes these types as UTF-8 strings.
+The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. To decode these types as UTF-8 strings, enable the `binaryAsString` option on the Avro parser.
 
 ### Enums
 The extension returns `enum` types  as `string` of the enum symbol.
