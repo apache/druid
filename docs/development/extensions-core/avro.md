@@ -55,7 +55,7 @@ You can then access the members of the union with a [flattenSpec](../../ingestio
 The extension returns `bytes` and `fixed` Avro types as base64 encoded strings by default. To decode these types as UTF-8 strings, enable the `binaryAsString` option on the Avro parser.
 
 ### Enums
-The extension returns `enum` types  as `string` of the enum symbol.
+The extension returns `enum` types as `string` of the enum symbol.
 
 ### Complex types
 You can ingest `record` and `map` types representing nested data with a [flattenSpec](../../ingestion/data-formats.md#flattenspec) on the parser.
