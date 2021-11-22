@@ -279,7 +279,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       for (int i = 0; i < partitionDimensions.size(); ++i) {
         List<String> dimensionValues = inputRow.getDimension(partitionDimensions.get(i));
         if (dimensionValues != null && !dimensionValues.isEmpty()) {
-          values[i] = Iterables.getOnlyElement(dimensionValues));
+          values[i] = Iterables.getOnlyElement(dimensionValues);
         }
       }
       final StringTuple partitionDimensionValues = StringTuple.create(values);
