@@ -652,7 +652,7 @@ For details on available input sources see:
 - [Google Cloud Storage input source](./native-batch-input-source.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
 - [Azure input source](./native-batch-input-source.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
 - [HDFS input source](./native-batch-input-source.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
-- [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) eads data from HTTP servers.
+- [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) reads data from HTTP servers.
 - [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the Druid console.
 - [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
