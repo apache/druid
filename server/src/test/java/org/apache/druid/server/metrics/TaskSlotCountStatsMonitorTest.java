@@ -19,10 +19,13 @@
 
 package org.apache.druid.server.metrics;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Map;
 
 public class TaskSlotCountStatsMonitorTest
 {
@@ -34,33 +37,33 @@ public class TaskSlotCountStatsMonitorTest
     statsProvider = new TaskSlotCountStatsProvider()
     {
       @Override
-      public Long getTotalTaskSlotCount()
+      public Map<String, Long> getTotalTaskSlotCount()
       {
-        return 1L;
+        return ImmutableMap.of("c1", 1L);
       }
 
       @Override
-      public Long getIdleTaskSlotCount()
+      public Map<String, Long> getIdleTaskSlotCount()
       {
-        return 1L;
+        return ImmutableMap.of("c1", 1L);
       }
 
       @Override
-      public Long getUsedTaskSlotCount()
+      public Map<String, Long> getUsedTaskSlotCount()
       {
-        return 1L;
+        return ImmutableMap.of("c1", 1L);
       }
 
       @Override
-      public Long getLazyTaskSlotCount()
+      public Map<String, Long> getLazyTaskSlotCount()
       {
-        return 1L;
+        return ImmutableMap.of("c1", 1L);
       }
 
       @Override
-      public Long getBlacklistedTaskSlotCount()
+      public Map<String, Long> getBlacklistedTaskSlotCount()
       {
-        return 1L;
+        return ImmutableMap.of("c1", 1L);
       }
     };
   }
