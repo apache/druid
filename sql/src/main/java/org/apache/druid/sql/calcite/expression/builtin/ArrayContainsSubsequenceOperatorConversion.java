@@ -43,12 +43,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ArrayContainsContiguousSubarrayOperatorConversion extends BaseExpressionDimFilterOperatorConversion
+public class ArrayContainsSubsequenceOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
-  private static final String EXPR_FUNCTION = "array_contains_contiguous_subarray";
+  private static final String EXPR_FUNCTION = "array_contains_subsequence";
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("ARRAY_CONTAINS_CONTIGUOUS_SUBARRAY")
+      .operatorBuilder("ARRAY_CONTAINS_SUBSEQUENCE")
       .operandTypeChecker(
           OperandTypes.sequence(
               "(array,array)",
@@ -65,7 +65,7 @@ public class ArrayContainsContiguousSubarrayOperatorConversion extends BaseExpre
       .returnTypeInference(ReturnTypes.BOOLEAN)
       .build();
 
-  public ArrayContainsContiguousSubarrayOperatorConversion()
+  public ArrayContainsSubsequenceOperatorConversion()
   {
     super(SQL_FUNCTION, EXPR_FUNCTION);
   }
@@ -89,7 +89,7 @@ public class ArrayContainsContiguousSubarrayOperatorConversion extends BaseExpre
       return null;
     }
 
-    // Converts array_contains() function into an AND of Selector filters if possible.
+    // Converts array_contains_subsequence() function into an AND of Selector filters if possible.
     final DruidExpression leftExpr = druidExpressions.get(0);
     final DruidExpression rightExpr = druidExpressions.get(1);
 
@@ -117,7 +117,7 @@ public class ArrayContainsContiguousSubarrayOperatorConversion extends BaseExpre
               .stream(arrayElements)
               .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), val))
               .collect(Collectors.toList());
-          // expression filter array_contains_contiguous_subarray will ensure the expected order of elements
+          // expression filter array_contains_subsequence will ensure the expected order of elements
           selectFilters.add(toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions));
           return new AndDimFilter(selectFilters);
         }

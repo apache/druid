@@ -304,6 +304,22 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArrayContainsSubsequence()
+  {
+    assertExpr("array_contains_subsequence([1, 2, 3], 2)", 1L);
+    assertExpr("array_contains_subsequence([1, 2, 3], [1, 2])", 1L);
+    assertExpr("array_contains_subsequence([1, 2, 3], 4)", 0L);
+    assertExpr("array_contains_subsequence([1, 2, 3], [1, 3])", 1L);
+    assertExpr("array_contains_subsequence([1, 2, 3], [2, 3])", 1L);
+    assertExpr("array_contains_subsequence([1, 2, 3], [3, 4])", 0L);
+    assertExpr("array_contains_subsequence(b, [3, 5])", 1L);
+    assertExpr("array_contains_subsequence(b, [])", 1L);
+    assertExpr("array_contains_subsequence([1, 2], [1, 2, 3])", 0L);
+    assertExpr("array_contains_subsequence([1, 2, 3, 4, 1, 3, 5], [1, 5])", 1L);
+    assertExpr("array_contains_subsequence([1, 2, 3, 4, 1, 3, 5], [6, 3])", 0L);
+  }
+
+  @Test
   public void testArrayOverlap()
   {
     assertExpr("array_overlap([1, 2, 3], [2, 4, 6])", 1L);

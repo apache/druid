@@ -57,6 +57,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayConcatOperatorConver
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsContiguousSubarrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayContainsSubsequenceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayLengthOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOfOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOffsetOperatorConversion;
@@ -210,6 +211,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArrayConstructorOperatorConversion())
                    .add(new ArrayContainsOperatorConversion())
                    .add(new ArrayContainsContiguousSubarrayOperatorConversion())
+                   .add(new ArrayContainsSubsequenceOperatorConversion())
                    .add(new ArrayConcatOperatorConversion())
                    .add(new ArrayOverlapOperatorConversion())
                    .add(new ArrayAppendOperatorConversion())
@@ -231,6 +233,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.Concat())
                    .add(new MultiValueStringOperatorConversions.Contains())
                    .add(new MultiValueStringOperatorConversions.ContainsContiguousSubarray())
+                   .add(new MultiValueStringOperatorConversions.ContainsSubsequence())
                    .add(new MultiValueStringOperatorConversions.Overlap())
                    .add(new MultiValueStringOperatorConversions.Length())
                    .add(new MultiValueStringOperatorConversions.Offset())

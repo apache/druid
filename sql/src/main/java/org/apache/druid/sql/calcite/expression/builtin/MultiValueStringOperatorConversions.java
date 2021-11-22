@@ -185,6 +185,34 @@ public class MultiValueStringOperatorConversions
     }
   }
 
+  public static class ContainsSubsequence extends ArrayContainsSubsequenceOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_CONTAINS_SUBSEQUENCE")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "(array,array)",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING),
+                    OperandTypes.family(SqlTypeFamily.NUMERIC)
+                )
+            )
+        )
+        .returnTypeInference(ReturnTypes.BOOLEAN)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+  }
+
   public static class Offset extends ArrayOffsetOperatorConversion
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions

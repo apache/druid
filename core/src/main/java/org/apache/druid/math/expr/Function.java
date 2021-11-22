@@ -3472,6 +3472,50 @@ public interface Function
     }
   }
 
+  class ArrayContainsSubsequenceFunction extends ArraysFunction
+  {
+    @Override
+    public String name()
+    {
+      return "array_contains_subsequence";
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inputTypes, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+
+    @Override
+    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    {
+      final Object[] array1 = lhsExpr.asArray();
+      final Object[] array2 = rhsExpr.asArray();
+      int length1 = array1.length;
+      int length2 = array2.length;
+      if (length2 == 0) {
+        return ExprEval.ofLongBoolean(true);
+      }
+      if (length2 > length1) {
+        return ExprEval.ofLongBoolean(false);
+      }
+      int count = 0;
+      for (int i = 0; i < length1 && count < length2; i++) {
+        if (Objects.equals(array2[count], array1[i])) {
+          count++;
+        }
+      }
+      return count == length2 ? ExprEval.ofLongBoolean(true) : ExprEval.ofLongBoolean(false);
+    }
+  }
+
   class ArrayOverlapFunction extends ArraysFunction
   {
     @Override
