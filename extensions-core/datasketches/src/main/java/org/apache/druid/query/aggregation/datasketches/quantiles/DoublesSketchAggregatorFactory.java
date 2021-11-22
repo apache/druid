@@ -360,13 +360,13 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
    * actual type is {@link DoublesSketch}
    */
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     return DoublesSketchModule.TYPE;
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     return ColumnType.LONG;
   }
