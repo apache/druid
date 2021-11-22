@@ -33,7 +33,7 @@ The [Avro Stream Parser](../../ingestion/data-formats.md#avro-stream-parser) is 
 
 To use the Avro extension, add the `druid-avro-extensions` to the list of loaded extensions. See [Loading extensions](../../development/extensions.md#loading-extensions) for more information.
 
-## Avro Types
+## Avro types
 
 Druid supports most Avro types natively. This section describes some  exceptions.
 
