@@ -158,7 +158,7 @@ public class DruidRexExecutor implements RexExecutor
                     if (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal)) {
                       String expression = druidExpression.getExpression();
                       throw new IAE(
-                          "'%s' contains to '%s' that is not supported in SQL. You can either cast the value in the array to bigint or char or change the expression itself",
+                          "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the array to bigint or char or change the expression itself",
                           expression,
                           Double.toString(doubleVal)
                       );
