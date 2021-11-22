@@ -68,6 +68,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 
@@ -186,7 +187,11 @@ public class DruidPlanner implements Closeable
     try {
       return planWithDruidConvention(explain, root);
     }
-    catch (RelOptPlanner.CannotPlanException e) {
+    catch (Exception e) {
+      if (!Throwables.isThrowable(e, RelOptPlanner.CannotPlanException.class)) {
+        // Not a CannotPlanningException, rethrow without trying with bindable
+        throw e;
+      }
       // Try again with BINDABLE convention. Used for querying Values and metadata tables.
       try {
         return planWithBindableConvention(explain, root);
