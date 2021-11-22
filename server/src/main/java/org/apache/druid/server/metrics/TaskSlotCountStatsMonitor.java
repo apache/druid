@@ -24,6 +24,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
+import java.util.Map;
+
 public class TaskSlotCountStatsMonitor extends AbstractMonitor
 {
   private final TaskSlotCountStatsProvider statsProvider;
@@ -47,11 +49,14 @@ public class TaskSlotCountStatsMonitor extends AbstractMonitor
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, String key, Long count)
+  private void emit(ServiceEmitter emitter, String key, Map<String, Long> counts)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    if (count != null) {
-      emitter.emit(builder.build(key, count.longValue()));
+    if (counts != null) {
+      counts.forEach((k, v) -> {
+        builder.setDimension("category", k);
+        emitter.emit(builder.build(key, v));
+      });
     }
   }
 }

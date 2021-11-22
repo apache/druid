@@ -445,7 +445,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getType()
+    public ColumnType getIntermediateType()
     {
       return new ColumnType(ValueType.COMPLEX, TYPE, null);
     }
@@ -463,9 +463,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getFinalizedType()
+    public ColumnType getResultType()
     {
-      return getType();
+      return getIntermediateType();
     }
   }
 

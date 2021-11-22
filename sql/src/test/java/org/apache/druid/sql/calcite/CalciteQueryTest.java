@@ -1077,7 +1077,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"virtualColumns\":[],"
                          + "\"resultFormat\":\"compactedList\","
                          + "\"batchSize\":20480,"
-                         + "\"order\":\"none\","
                          + "\"filter\":null,"
                          + "\"columns\":[\"EXPR$0\"],"
                          + "\"legacy\":false,"
@@ -1506,7 +1505,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"virtualColumns\":[],"
                          + "\"resultFormat\":\"compactedList\","
                          + "\"batchSize\":20480,"
-                         + "\"order\":\"none\","
                          + "\"filter\":null,"
                          + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
                          + "\"legacy\":false,"
@@ -1875,23 +1873,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
                     ImmutableList.<String>builder()
-                                 .add("__time")
-                                 .add("count")
-                                 .add("dimHyperUnique")
-                                 .add("dimMultivalEnumerated")
-                                 .add("dimMultivalEnumerated2")
-                                 .add("dimMultivalSequentialWithNulls")
-                                 .add("dimSequential")
-                                 .add("dimSequentialHalfNull")
-                                 .add("dimUniform")
-                                 .add("dimZipf")
-                                 .add("metFloatNormal")
-                                 .add("metFloatZipf")
-                                 .add("metLongSequential")
-                                 .build()
+                        .add("__time")
+                        .add("count")
+                        .add("dimHyperUnique")
+                        .add("dimMultivalEnumerated")
+                        .add("dimMultivalEnumerated2")
+                        .add("dimMultivalSequentialWithNulls")
+                        .add("dimSequential")
+                        .add("dimSequentialHalfNull")
+                        .add("dimUniform")
+                        .add("dimZipf")
+                        .add("metFloatNormal")
+                        .add("metFloatZipf")
+                        .add("metLongSequential")
+                        .build()
                 )
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -1943,24 +1940,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
                     ImmutableList.<String>builder()
-                                 .add("__time")
-                                 .add("count")
-                                 .add("dimHyperUnique")
-                                 .add("dimMultivalEnumerated")
-                                 .add("dimMultivalEnumerated2")
-                                 .add("dimMultivalSequentialWithNulls")
-                                 .add("dimSequential")
-                                 .add("dimSequentialHalfNull")
-                                 .add("dimUniform")
-                                 .add("dimZipf")
-                                 .add("metFloatNormal")
-                                 .add("metFloatZipf")
-                                 .add("metLongSequential")
-                                 .add("metLongUniform")
-                                 .build()
+                        .add("__time")
+                        .add("count")
+                        .add("dimHyperUnique")
+                        .add("dimMultivalEnumerated")
+                        .add("dimMultivalEnumerated2")
+                        .add("dimMultivalSequentialWithNulls")
+                        .add("dimSequential")
+                        .add("dimSequentialHalfNull")
+                        .add("dimUniform")
+                        .add("dimZipf")
+                        .add("metFloatNormal")
+                        .add("metFloatZipf")
+                        .add("metLongSequential")
+                        .add("metLongUniform")
+                        .build()
                 )
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -9101,7 +9097,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"virtualColumns\":[],"
                          + "\"resultFormat\":\"compactedList\","
                          + "\"batchSize\":20480,"
-                         + "\"order\":\"none\","
                          + "\"filter\":null,"
                          + "\"columns\":[\"dim1\"],"
                          + "\"legacy\":false,"
@@ -9115,7 +9110,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"virtualColumns\":[],"
                          + "\"resultFormat\":\"compactedList\","
                          + "\"batchSize\":20480,"
-                         + "\"order\":\"none\","
                          + "\"filter\":null,"
                          + "\"columns\":[\"dim1\"],"
                          + "\"legacy\":false,"
@@ -9185,8 +9179,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
-    String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
-    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"order\":\"none\",\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useLegacyDruidExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useLegacyDruidExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
     String explanation = "[{"
                          + "\"query\":{\"queryType\":\"scan\","
                          + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
@@ -9194,7 +9188,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"virtualColumns\":[],"
                          + "\"resultFormat\":\"compactedList\","
                          + "\"batchSize\":20480,"
-                         + "\"order\":\"none\","
                          + "\"filter\":null,"
                          + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
                          + "\"legacy\":false,"
@@ -9210,7 +9203,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     + "\"virtualColumns\":[],"
                                     + "\"resultFormat\":\"compactedList\","
                                     + "\"batchSize\":20480,"
-                                    + "\"order\":\"none\","
                                     + "\"filter\":null,"
                                     + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
                                     + "\"legacy\":false,"

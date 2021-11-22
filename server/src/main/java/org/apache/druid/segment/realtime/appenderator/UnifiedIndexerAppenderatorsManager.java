@@ -316,11 +316,13 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     synchronized (this) {
       DatasourceBundle datasourceBundle = datasourceBundles.get(dataSource);
       if (datasourceBundle == null) {
-        LOG.error("Could not find datasource bundle for [%s], task [%s]", dataSource, taskId);
+        // Not a warning, because not all tasks use Appenderators.
+        LOG.debug("Could not find datasource bundle for [%s], task [%s]", dataSource, taskId);
       } else {
         List<Appenderator> existingAppenderators = datasourceBundle.taskAppenderatorMap.remove(taskId);
         if (existingAppenderators == null) {
-          LOG.error("Tried to remove appenderators for task [%s] but none were found.", taskId);
+          // Not a warning, because not all tasks use Appenderators.
+          LOG.debug("Tried to remove appenderators for task [%s] but none were found.", taskId);
         }
         if (datasourceBundle.taskAppenderatorMap.isEmpty()) {
           datasourceBundles.remove(dataSource);
