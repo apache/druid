@@ -56,8 +56,6 @@ public class BalanceSegments implements CoordinatorDuty
   protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
 
-  private static final int DEFAULT_RESERVOIR_SIZE = 1;
-
   public BalanceSegments(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
