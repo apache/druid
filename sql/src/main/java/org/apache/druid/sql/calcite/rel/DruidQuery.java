@@ -1154,6 +1154,7 @@ public class DruidQuery
         scanOffset,
         scanLimit,
         order,
+        null,
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(columns),
         false,

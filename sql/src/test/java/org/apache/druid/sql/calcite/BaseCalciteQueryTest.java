@@ -972,8 +972,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ObjectMapper objectMapper
   )
   {
-    final InProcessViewManager viewManager =
-        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
+    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.DRUID_VIEW_MACRO_FACTORY);
     DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,

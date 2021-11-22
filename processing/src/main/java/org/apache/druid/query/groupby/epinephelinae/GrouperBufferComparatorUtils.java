@@ -148,7 +148,7 @@ public class GrouperBufferComparatorUtils
         int aggIndex = OrderByColumnSpec.getAggIndexForOrderBy(orderSpec, Arrays.asList(aggregatorFactories));
         if (aggIndex >= 0) {
           final StringComparator stringComparator = orderSpec.getDimensionComparator();
-          final ColumnType valueType = aggregatorFactories[aggIndex].getType();
+          final ColumnType valueType = aggregatorFactories[aggIndex].getIntermediateType();
           // Aggregators start after dimensions
           final int aggOffset = keySize + aggregatorOffsets[aggIndex];
 
