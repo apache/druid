@@ -35,6 +35,7 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
     InputStreamReader isr;
-    try {
+    try (final Closeable ignored = eventReceiverSelector::stop) {
       isr = new InputStreamReader(
           ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE),
           StandardCharsets.UTF_8
@@ -127,9 +128,6 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-    finally {
-      eventReceiverSelector.stop();
     }
   }
 

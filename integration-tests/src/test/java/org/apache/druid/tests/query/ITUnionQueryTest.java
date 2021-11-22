@@ -88,14 +88,13 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testUnionQuery() throws IOException
+  public void testUnionQuery() throws Exception
   {
     final int numTasks = 3;
-    final Closer closer = Closer.create();
-    for (int i = 0; i < numTasks; i++) {
-      closer.register(unloader(fullDatasourceName + i));
-    }
-    try {
+    try (final Closer closer = Closer.create()) {
+      for (int i = 0; i < numTasks; i++) {
+        closer.register(unloader(fullDatasourceName + i));
+      }
       // Load 3 datasources with same dimensions
       String task = setShutOffTime(
           getResourceAsString(UNION_TASK_RESOURCE),
@@ -178,12 +177,6 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       // run queries on historical nodes
       this.queryHelper.testQueriesFromString(queryResponseTemplate);
 
-    }
-    catch (Throwable e) {
-      throw closer.rethrow(e);
-    }
-    finally {
-      closer.close();
     }
   }
 

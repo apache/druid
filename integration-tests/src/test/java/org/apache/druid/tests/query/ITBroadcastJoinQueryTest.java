@@ -69,8 +69,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   @Test
   public void testBroadcastJoin() throws Exception
   {
-    final Closer closer = Closer.create();
-    try {
+    try (final Closer closer = Closer.create()) {
       closer.register(unloader(BROADCAST_JOIN_DATASOURCE));
       closer.register(() -> {
         // remove broadcast rule
@@ -125,30 +124,27 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
           replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
-    finally {
-      closer.close();
 
-      // query metadata until druid schema is refreshed and datasource is no longer available
-      ITRetryUtil.retryUntilTrue(
-          () -> {
-            try {
-              queryHelper.testQueriesFromString(
-                  queryHelper.getQueryURL(config.getRouterUrl()),
-                  replaceJoinTemplate(
-                      getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE),
-                      BROADCAST_JOIN_DATASOURCE
-                  )
-              );
-              return true;
-            }
-            catch (Exception ex) {
-              LOG.error(ex, "SQL metadata not yet in expected state");
-              return false;
-            }
-          },
-          "waiting for SQL metadata refresh"
-      );
-    }
+    // query metadata until druid schema is refreshed and datasource is no longer available
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          try {
+            queryHelper.testQueriesFromString(
+                queryHelper.getQueryURL(config.getRouterUrl()),
+                replaceJoinTemplate(
+                    getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE),
+                    BROADCAST_JOIN_DATASOURCE
+                )
+            );
+            return true;
+          }
+          catch (Exception ex) {
+            LOG.error(ex, "SQL metadata not yet in expected state");
+            return false;
+          }
+        },
+        "waiting for SQL metadata refresh"
+    );
   }
 
   private static String replaceJoinTemplate(String template, String joinDataSource)

@@ -25,6 +25,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.CloseableUtils;
 import org.testng.Assert;
 import org.testng.SkipException;
 
@@ -190,7 +191,10 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
     }
     finally {
       // If the test pass, then there is no datasource to unload
-      closeQuietly(unloader(indexDatasource + config.getExtraDatasourceNameSuffix()));
+      CloseableUtils.closeAndSuppressExceptions(
+          unloader(indexDatasource + config.getExtraDatasourceNameSuffix()),
+          e -> {}
+      );
     }
   }
 
@@ -258,17 +262,6 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
           true,
           new Pair<>(false, false)
       );
-    }
-  }
-
-  private void closeQuietly(Closeable closeable)
-  {
-    try {
-      if (closeable != null) {
-        closeable.close();
-      }
-    }
-    catch (Exception var2) {
     }
   }
 }

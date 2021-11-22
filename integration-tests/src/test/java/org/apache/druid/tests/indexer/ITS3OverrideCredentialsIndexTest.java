@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.utils.CloseableUtils;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -191,7 +192,10 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
     }
     finally {
       // If the test pass, then there is no datasource to unload
-      closeQuietly(unloader(indexDatasource + config.getExtraDatasourceNameSuffix()));
+      CloseableUtils.closeAndSuppressExceptions(
+          unloader(indexDatasource + config.getExtraDatasourceNameSuffix()),
+          e -> {}
+      );
     }
   }
 
@@ -264,18 +268,10 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
     }
     finally {
       // If the test pass, then there is no datasource to unload
-      closeQuietly(unloader(indexDatasource + config.getExtraDatasourceNameSuffix()));
-    }
-  }
-
-  private void closeQuietly(Closeable closeable)
-  {
-    try {
-      if (closeable != null) {
-        closeable.close();
-      }
-    }
-    catch (Exception var2) {
+      CloseableUtils.closeAndSuppressExceptions(
+          unloader(indexDatasource + config.getExtraDatasourceNameSuffix()),
+          e -> {}
+      );
     }
   }
 }
