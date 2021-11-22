@@ -901,7 +901,7 @@ public class RowBasedGrouperHelper
             fieldIndices.add(aggIndex);
             needsReverses.add(needsReverse);
             aggFlags.add(true);
-            fieldValueTypes.add(aggregatorFactories[aggIndex].getType());
+            fieldValueTypes.add(aggregatorFactories[aggIndex].getIntermediateType());
             comparators.add(orderSpec.getDimensionComparator());
           }
         }

@@ -114,6 +114,43 @@ public class ScanQueryTest
           .build();
   }
 
+  @Test
+  public void testConflictingOrderByAndTimeOrder()
+  {
+    Assert.assertThrows(
+        "Cannot provide 'order' incompatible with 'orderBy'",
+        IllegalArgumentException.class,
+        () ->
+            Druids.newScanQueryBuilder()
+                  .order(ScanQuery.Order.ASCENDING)
+                  .orderBy(
+                      // Not ok, even though it starts with __time ASC, because it also has non-time component.
+                      ImmutableList.of(
+                          new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING),
+                          new ScanQuery.OrderBy("quality", ScanQuery.Order.DESCENDING)
+                      )
+                  )
+                  .columns(ImmutableList.of("__time", "quality"))
+                  .dataSource("source")
+                  .intervals(intervalSpec)
+                  .build()
+    );
+  }
+
+  @Test
+  public void testCompatibleOrderByAndTimeOrder()
+  {
+    Assert.assertNotNull(
+        Druids.newScanQueryBuilder()
+              .order(ScanQuery.Order.ASCENDING)
+              .orderBy(ImmutableList.of(new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING)))
+              .columns(ImmutableList.of("__time", "quality"))
+              .dataSource("source")
+              .intervals(intervalSpec)
+              .build()
+    );
+  }
+
   // No assertions because we're checking that no IllegalArgumentExceptions are thrown
   @Test
   public void testValidScanQueryInitialization()
@@ -268,6 +305,37 @@ public class ScanQueryTest
 
     // This should throw an ISE
     List<ScanResultValue> res = borkedSequence.toList();
+  }
+
+  @Test
+  public void testGetResultOrderingWithTimeBasedOrderBy()
+  {
+    final ScanQuery scanQuery =
+        Druids.newScanQueryBuilder()
+              .columns("__time")
+              .orderBy(Collections.singletonList(new ScanQuery.OrderBy("__time", ScanQuery.Order.DESCENDING)))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .build();
+
+    Assert.assertNotNull(scanQuery.getResultOrdering());
+  }
+
+  @Test
+  public void testGetResultOrderingWithNonTimeOrderBy()
+  {
+    // Queries with non-time order cannot currently be executed
+    final ScanQuery scanQuery =
+        Druids.newScanQueryBuilder()
+              .columns("quality")
+              .orderBy(Collections.singletonList(new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)))
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .build();
+
+    Assert.assertThrows("Cannot execute query with orderBy [quality ASC]", ISE.class, scanQuery::getResultOrdering);
   }
 
   @Test

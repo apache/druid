@@ -123,7 +123,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       //noinspection unchecked
       theComparator = aggregators.get(fieldName).getComparator();
       theFinalizer = aggregators.get(fieldName)::finalizeComputation;
-      finalizedType = aggregators.get(fieldName).getFinalizedType();
+      finalizedType = aggregators.get(fieldName).getResultType();
     } else {
       //noinspection unchecked
       theComparator = (Comparator) Comparators.naturalNullsFirst();
