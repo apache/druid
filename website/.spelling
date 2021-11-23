@@ -473,7 +473,6 @@ druid-s3-extensions
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
 LeaderLatch
 3.5.x
 3.4.x
