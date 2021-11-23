@@ -16417,6 +16417,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testRequireTimeConditionLogicalValuePositive() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT 2 + 2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{3L}),
+                    RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                ))
+                .columns("EXPR$0")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3}
+        )
+    );
+  }
+
+  @Test
   public void testFilterFloatDimension() throws Exception
   {
     testQuery(
