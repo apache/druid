@@ -43,6 +43,7 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -139,7 +140,11 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
       return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
+      ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
       try {
+        // Set the context classloader same as the loader of this class so that BasicSecuritySSLSocketFactory
+        // class can be found
+        Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
         InitialDirContext dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
         try {
           userResult = getLdapUserObject(this.ldapConfig, dirContext, username);
@@ -161,6 +166,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       catch (NamingException e) {
         LOG.error(e, "Exception during user lookup");
         return null;
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(currentClassLoader);
       }
 
       if (!validatePassword(this.ldapConfig, userDn, password)) {
@@ -213,8 +221,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   boolean validatePassword(BasicAuthLDAPConfig ldapConfig, LdapName userDn, char[] password)
   {
     InitialDirContext context = null;
+    ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
 
     try {
+      Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
       context = new InitialDirContext(userProperties(ldapConfig, userDn, password));
       return true;
     }
@@ -235,6 +245,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         LOG.warn("Exception closing LDAP context");
         // ignored
       }
+      Thread.currentThread().setContextClassLoader(currentClassLoader);
     }
   }
 
