@@ -396,7 +396,7 @@ public class DruidPlanner implements Closeable
       resources = null;
     }
     catch (ISE ise) {
-      log.error("Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
+      log.error(ise, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
       resources = null;
     }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
