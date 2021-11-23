@@ -177,7 +177,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
       return Optional.of(((DruidUnionDataSourceRel) druidRel).getUnionColumnNames());
     } else if (druidTable.isPresent()) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("Union operation is supported between simple table scans without any filter or aliasing");
+        plannerContext.setPlanningError("Union operation is only supported between simple table scans without any filter or aliasing");
       }
       return Optional.empty();
     } else {

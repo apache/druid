@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class PrioritizedExecutorServiceTest
@@ -180,6 +181,41 @@ public class PrioritizedExecutorServiceTest
 
     List<Integer> expected = ImmutableList.of(2, 0, -1);
     Assert.assertEquals(expected, ImmutableList.copyOf(order));
+  }
+
+  @Test
+  public void testExecuteRegularRunnable()
+  {
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    Assert.assertThrows(
+        "Class does not implemented PrioritizedRunnable",
+        IllegalArgumentException.class,
+        () -> exec.execute(latch::countDown)
+    );
+  }
+
+  @Test
+  public void testExecutePrioritizedRunnable() throws InterruptedException
+  {
+    final CountDownLatch latch = new CountDownLatch(1);
+    exec.execute(
+        new PrioritizedRunnable()
+        {
+          @Override
+          public int getPriority()
+          {
+            return 1;
+          }
+
+          @Override
+          public void run()
+          {
+            latch.countDown();
+          }
+        }
+    );
+    latch.await();
   }
 
   // Make sure entries are processed FIFO

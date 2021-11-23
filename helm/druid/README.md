@@ -16,29 +16,36 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-  
+
 # Apache Druid
 
 [Apache Druid](https://druid.apache.org/) is a high performance real-time analytics database.
+
+## Dependency Update
+
+Before you install the Druid Chart, update the dependencies :
+```bash
+helm dependency update helm/druid
+```
 
 ## Install Chart
 
 To install the Druid Chart into your Kubernetes cluster :
 
 ```bash
-helm install "druid" --namespace "druid" incubator/druid
+helm install druid helm/druid --namespace dev --create-namespace
 ```
 
 After installation succeeds, you can get a status of Chart
 
 ```bash
-helm status "druid"
+helm status druid -n dev 
 ```
 
 If you want to delete your Chart, use this command:
 
 ```bash
-helm delete --purge "druid"
+helm uninstall druid -n dev
 ```
 
 ### Helm ingresses

@@ -577,7 +577,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       log.error(e, "Expected CannotPlanException for query: %s", sql);
       Assert.fail(sql);
     }
-    Assert.assertEquals(sql, "Unsupported query: " + expectedError, e.getMessage());
+    Assert.assertEquals(sql, expectedError, e.getMessage());
   }
 
   /**
@@ -973,8 +973,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ObjectMapper objectMapper
   )
   {
-    final InProcessViewManager viewManager =
-        new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR, CalciteTests.DRUID_VIEW_MACRO_FACTORY);
+    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.DRUID_VIEW_MACRO_FACTORY);
     DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,

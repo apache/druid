@@ -74,6 +74,8 @@ import java.util.stream.Collectors;
 public class SqlResource
 {
   public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
+  public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
+  public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
 
   private final ObjectMapper jsonMapper;
@@ -126,7 +128,7 @@ public class SqlResource
       final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
       try {
-        return Response
+        final Response.ResponseBuilder responseBuilder = Response
             .ok(
                 (StreamingOutput) outputStream -> {
                   Exception e = null;
@@ -138,7 +140,11 @@ public class SqlResource
                     writer.writeResponseStart();
 
                     if (sqlQuery.includeHeader()) {
-                      writer.writeHeader(rowTransformer.getFieldList());
+                      writer.writeHeader(
+                          rowTransformer.getRowType(),
+                          sqlQuery.includeTypesHeader(),
+                          sqlQuery.includeSqlTypesHeader()
+                      );
                     }
 
                     while (!yielder.isDone()) {
@@ -165,8 +171,13 @@ public class SqlResource
                   }
                 }
             )
-            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
-            .build();
+            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+
+        if (sqlQuery.includeHeader()) {
+          responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
+        }
+
+        return responseBuilder.build();
       }
       catch (Throwable e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
@@ -192,7 +203,8 @@ public class SqlResource
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
+                                             .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
     // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
     catch (Throwable e) {
@@ -238,7 +250,8 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
-  private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId) throws JsonProcessingException
+  private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId)
+      throws JsonProcessingException
   {
     return Response.status(status)
                    .type(MediaType.APPLICATION_JSON_TYPE)
