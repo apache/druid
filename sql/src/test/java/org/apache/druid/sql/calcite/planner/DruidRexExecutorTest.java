@@ -32,6 +32,8 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.ArraySqlType;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -132,6 +134,48 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.builder().build(),
+            reduced.get(0)
+        )
+    );
+  }
+
+  @Test
+  public void testArrayOfDoublesReduction()
+  {
+    DruidRexExecutor rexy = new DruidRexExecutor(PLANNER_CONTEXT);
+    List<RexNode> reduced = new ArrayList<>();
+    BasicSqlType basicSqlType = new BasicSqlType(DruidTypeSystem.INSTANCE, SqlTypeName.DECIMAL);
+    ArraySqlType arraySqlType = new ArraySqlType(basicSqlType, false);
+    List<BigDecimal> elements = ImmutableList.of(BigDecimal.valueOf(50.12), BigDecimal.valueOf(12.1));
+    RexNode literal = rexBuilder.makeLiteral(elements, arraySqlType, true);
+    rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
+    Assert.assertEquals(1, reduced.size());
+    Assert.assertEquals(
+        DruidExpression.fromExpression("array(50.12,12.1)"),
+        Expressions.toDruidExpression(
+            PLANNER_CONTEXT,
+            RowSignature.empty(),
+            reduced.get(0)
+        )
+    );
+  }
+
+  @Test
+  public void testArrayOfLongsReduction()
+  {
+    DruidRexExecutor rexy = new DruidRexExecutor(PLANNER_CONTEXT);
+    List<RexNode> reduced = new ArrayList<>();
+    BasicSqlType basicSqlType = new BasicSqlType(DruidTypeSystem.INSTANCE, SqlTypeName.INTEGER);
+    ArraySqlType arraySqlType = new ArraySqlType(basicSqlType, false);
+    List<BigDecimal> elements = ImmutableList.of(BigDecimal.valueOf(50), BigDecimal.valueOf(12));
+    RexNode literal = rexBuilder.makeLiteral(elements, arraySqlType, true);
+    rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
+    Assert.assertEquals(1, reduced.size());
+    Assert.assertEquals(
+        DruidExpression.fromExpression("array(50,12)"),
+        Expressions.toDruidExpression(
+            PLANNER_CONTEXT,
+            RowSignature.empty(),
             reduced.get(0)
         )
     );
