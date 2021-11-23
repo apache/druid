@@ -62,8 +62,8 @@ When you define the consumer properties in the supervisor spec, use the dynamic 
 ...
    "consumerProperties": {
         "bootstrap.servers": "localhost:9092",
-        "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks"
-        "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks"
+        "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks",
+        "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks",
         "druid.dynamic.config.provider": {
           "type": "environment",
           "variables": {

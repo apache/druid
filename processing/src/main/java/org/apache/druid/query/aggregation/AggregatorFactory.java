@@ -27,6 +27,7 @@ import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -213,22 +214,73 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract List<String> requiredFields();
 
   /**
-   * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
+   * Get the "intermediate" {@link ColumnType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getType();
+  public ColumnType getIntermediateType()
+  {
+    final ValueType intermediateType = getType();
+    if (intermediateType == ValueType.COMPLEX) {
+      return ColumnType.ofComplex(getComplexTypeName());
+    }
+    return ColumnTypeFactory.ofValueType(intermediateType);
+  }
 
   /**
-   * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
+   * Get the {@link ColumnType} for the final form of this aggregator, i.e. the type of the value returned by
    * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
    * and {@link #combine}.
    *
    * Refer to the {@link ColumnType} javadocs for details on the implications of choosing a type.
    */
-  public abstract ColumnType getFinalizedType();
+  public ColumnType getResultType()
+  {
+    // this default 'fill' method is incomplete and can at best return 'unknown' complex
+    final ValueType finalized = getFinalizedType();
+    if (finalized == ValueType.COMPLEX) {
+      return ColumnType.UNKNOWN_COMPLEX;
+    }
+    return ColumnTypeFactory.ofValueType(finalized);
+  }
+
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Deprecated
+  public ValueType getType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getIntermediateType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getResultType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Deprecated
+  public ValueType getFinalizedType()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated, use 'getResultType'"
+    );
+  }
+
+  /**
+   * This method is deprecated and will be removed soon. Use {@link #getIntermediateType()} instead. Do not call this
+   * method, it will likely produce incorrect results, it exists for backwards compatibility.
+   */
+  @Nullable
+  @Deprecated
+  public String getComplexTypeName()
+  {
+    return null;
+  }
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.

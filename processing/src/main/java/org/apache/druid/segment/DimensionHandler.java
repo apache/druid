@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -77,6 +78,8 @@ public interface DimensionHandler
   {
     return DefaultDimensionSpec.of(getDimensionName());
   }
+
+  DimensionSchema getDimensionSchema(ColumnCapabilities capabilities);
 
   /**
    * Get {@link MultiValueHandling} for the column associated with this handler.

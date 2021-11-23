@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -53,6 +54,7 @@ import java.util.Set;
 
 public class HttpIndexingServiceClient implements IndexingServiceClient
 {
+  private static final Logger log = new Logger(HttpIndexingServiceClient.class);
   private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper jsonMapper;
 
@@ -350,7 +352,13 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           )
       );
 
-      if (responseHolder.getContent().length() == 0) {
+      if (responseHolder.getContent().length() == 0 || responseHolder.getStatus() != HttpResponseStatus.OK) {
+        if (responseHolder.getStatus() == HttpResponseStatus.NOT_FOUND) {
+          log.info("Report not found for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+        } else {
+          // also log other non-ok statuses:
+          log.info("Non OK response for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+        }
         return null;
       }
 

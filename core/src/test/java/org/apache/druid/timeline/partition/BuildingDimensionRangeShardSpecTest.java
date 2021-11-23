@@ -89,7 +89,7 @@ public class BuildingDimensionRangeShardSpecTest
   {
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
-        new NamedType(BuildingDimensionRangeShardSpec.class, BuildingDimensionRangeShardSpec.TYPE)
+        new NamedType(BuildingDimensionRangeShardSpec.class, ShardSpec.Type.BUILDING_RANGE)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final BuildingDimensionRangeShardSpec original = new BuildingDimensionRangeShardSpec(
@@ -100,10 +100,10 @@ public class BuildingDimensionRangeShardSpecTest
         5
     );
     final String json = mapper.writeValueAsString(original);
-    final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) mapper.readValue(
-        json,
-        ShardSpec.class
-    );
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUILDING_RANGE, shardSpec.getType());
+
+    final BuildingDimensionRangeShardSpec fromJson = (BuildingDimensionRangeShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

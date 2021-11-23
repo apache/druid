@@ -42,8 +42,6 @@ import java.util.Objects;
  */
 public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<BuildingDimensionRangeShardSpec>
 {
-  public static final String TYPE = "bucket_range";
-
   private final int bucketId;
   private final List<String> dimensions;
   @Nullable
@@ -137,6 +135,12 @@ public class DimensionRangeBucketShardSpec implements BucketNumberedShardSpec<Bu
   private boolean isInChunk(InputRow inputRow)
   {
     return DimensionRangeShardSpec.isInChunk(dimensions, start, end, inputRow);
+  }
+
+  @Override
+  public String getType()
+  {
+    return Type.BUCKET_RANGE;
   }
 
   @Override
