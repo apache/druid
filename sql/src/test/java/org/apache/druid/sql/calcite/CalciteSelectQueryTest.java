@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -48,12 +47,10 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.List;
 
-@RunWith(JUnitParamsRunner.class)
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
   @Test

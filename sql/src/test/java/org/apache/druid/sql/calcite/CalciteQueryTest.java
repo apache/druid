@@ -23,8 +23,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,17 +33,13 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -94,7 +88,6 @@ import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
@@ -112,9 +105,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.server.QueryLifecycle;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -131,7 +121,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,7 +130,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RunWith(JUnitParamsRunner.class)
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
 
@@ -1207,23 +1195,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             // first row of dim1 is empty string, which is null in default mode, last non-null numeric rows are zeros
             new Object[]{useDefault ? "10.1" : "", 0L, 0.0, 0.0f}
         )
-    );
-  }
-
-  // This query is expected to fail as we do not support join on multi valued column
-  // (see issue https://github.com/apache/druid/issues/9924 for more information)
-  // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9924 is fixed
-  @Test(expected = QueryException.class)
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testJoinOnMultiValuedColumnShouldThrowException(Map<String, Object> queryContext) throws Exception
-  {
-    final String query = "SELECT dim3, l.v from druid.foo f inner join lookup.lookyloo l on f.dim3 = l.k\n";
-
-    testQuery(
-        query,
-        queryContext,
-        ImmutableList.of(),
-        ImmutableList.of()
     );
   }
 
@@ -2904,133 +2875,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext) throws Exception
-  {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
-
-    testQuery(
-        "(SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k)  UNION ALL SELECT SUM(cnt) FROM foo",
-        queryContext,
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(
-                      join(
-                          new TableDataSource(CalciteTests.DATASOURCE1),
-                          new LookupDataSource("lookyloo"),
-                          "j0.",
-                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
-                          JoinType.INNER
-                      ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-                  .withOverriddenContext(queryContext),
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-                  .withOverriddenContext(queryContext)
-        ),
-        ImmutableList.of(new Object[]{1L}, new Object[]{6L})
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext) throws Exception
-  {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
-
-    testQuery(
-        "(SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k) ",
-        queryContext,
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-                  .withOverriddenContext(queryContext),
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(
-                      join(
-                          new TableDataSource(CalciteTests.DATASOURCE1),
-                          new LookupDataSource("lookyloo"),
-                          "j0.",
-                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
-                          JoinType.INNER
-                      ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-                  .withOverriddenContext(queryContext)
-        ),
-        ImmutableList.of(new Object[]{6L}, new Object[]{1L})
-    );
-  }
-
-  @Test
-  public void testUnionAllTwoQueriesBothQueriesAreJoin() throws Exception
-  {
-    cannotVectorize();
-
-    testQuery(
-        "("
-        + "SELECT COUNT(*) FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k "
-        + "                               UNION ALL                                       "
-        + "SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k"
-        + ") ",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(
-                      join(
-                          new TableDataSource(CalciteTests.DATASOURCE1),
-                          new LookupDataSource("lookyloo"),
-                          "j0.",
-                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
-                          JoinType.LEFT
-                      )
-                  )
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build(),
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(
-                      join(
-                          new TableDataSource(CalciteTests.DATASOURCE1),
-                          new LookupDataSource("lookyloo"),
-                          "j0.",
-                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
-                          JoinType.INNER
-                      ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(new Object[]{6L}, new Object[]{1L})
-    );
-  }
 
   @Test
   public void testPruneDeadAggregators() throws Exception
@@ -6783,208 +6627,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testTopNFilterJoin(Map<String, Object> queryContext) throws Exception
-  {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
-
-    // Filters on top N values of some dimension by using an inner join.
-    testQuery(
-        "SELECT t1.dim1, SUM(t1.cnt)\n"
-        + "FROM druid.foo t1\n"
-        + "  INNER JOIN (\n"
-        + "  SELECT\n"
-        + "    SUM(cnt) AS sum_cnt,\n"
-        + "    dim2\n"
-        + "  FROM druid.foo\n"
-        + "  GROUP BY dim2\n"
-        + "  ORDER BY 1 DESC\n"
-        + "  LIMIT 2\n"
-        + ") t2 ON (t1.dim2 = t2.dim2)\n"
-        + "GROUP BY t1.dim1\n"
-        + "ORDER BY 1\n",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(
-                            join(
-                                new TableDataSource(CalciteTests.DATASOURCE1),
-                                new QueryDataSource(
-                                    new TopNQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                        .granularity(Granularities.ALL)
-                                        .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                                        .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
-                                        .metric("a0")
-                                        .threshold(2)
-                                        .context(QUERY_CONTEXT_DEFAULT)
-                                        .build()
-                                ),
-                                "j0.",
-                                equalsCondition(
-                                    DruidExpression.fromColumn("dim2"),
-                                    DruidExpression.fromColumn("j0.d0")
-                                ),
-                                JoinType.INNER
-                            )
-                        )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec(
-                                        "d0",
-                                        OrderByColumnSpec.Direction.ASCENDING,
-                                        StringComparators.LEXICOGRAPHIC
-                                    )
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
-                        .setContext(queryContext)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"", 1L},
-            new Object[]{"1", 1L}
-        )
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testTopNFilterJoinWithProjection(Map<String, Object> queryContext) throws Exception
-  {
-    // Cannot vectorize JOIN operator.
-    cannotVectorize();
-
-    // Filters on top N values of some dimension by using an inner join. Also projects the outer dimension.
-
-    testQuery(
-        "SELECT SUBSTRING(t1.dim1, 1, 10), SUM(t1.cnt)\n"
-        + "FROM druid.foo t1\n"
-        + "  INNER JOIN (\n"
-        + "  SELECT\n"
-        + "    SUM(cnt) AS sum_cnt,\n"
-        + "    dim2\n"
-        + "  FROM druid.foo\n"
-        + "  GROUP BY dim2\n"
-        + "  ORDER BY 1 DESC\n"
-        + "  LIMIT 2\n"
-        + ") t2 ON (t1.dim2 = t2.dim2)\n"
-        + "GROUP BY SUBSTRING(t1.dim1, 1, 10)",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(
-                            join(
-                                new TableDataSource(CalciteTests.DATASOURCE1),
-                                new QueryDataSource(
-                                    new TopNQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Filtration.eternity()))
-                                        .granularity(Granularities.ALL)
-                                        .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                                        .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
-                                        .metric("a0")
-                                        .threshold(2)
-                                        .context(QUERY_CONTEXT_DEFAULT)
-                                        .build()
-                                ),
-                                "j0.",
-                                equalsCondition(
-                                    DruidExpression.fromColumn("dim2"),
-                                    DruidExpression.fromColumn("j0.d0")
-                                ),
-                                JoinType.INNER
-                            )
-                        )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            dimensions(
-                                new ExtractionDimensionSpec(
-                                    "dim1",
-                                    "d0",
-                                    ColumnType.STRING,
-                                    new SubstringDimExtractionFn(0, 10)
-                                )
-                            )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setContext(queryContext)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NULL_STRING, 1L},
-            new Object[]{"1", 1L}
-        )
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  @Ignore("Stopped working after the ability to join on subqueries was added to DruidJoinRule")
-  public void testRemovableLeftJoin(Map<String, Object> queryContext) throws Exception
-  {
-    // LEFT JOIN where the right-hand side can be ignored.
-
-    testQuery(
-        "SELECT t1.dim1, SUM(t1.cnt)\n"
-        + "FROM druid.foo t1\n"
-        + "  LEFT JOIN (\n"
-        + "  SELECT\n"
-        + "    SUM(cnt) AS sum_cnt,\n"
-        + "    dim2\n"
-        + "  FROM druid.foo\n"
-        + "  GROUP BY dim2\n"
-        + "  ORDER BY 1 DESC\n"
-        + "  LIMIT 2\n"
-        + ") t2 ON (t1.dim2 = t2.dim2)\n"
-        + "GROUP BY t1.dim1\n"
-        + "ORDER BY 1\n",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec(
-                                        "d0",
-                                        OrderByColumnSpec.Direction.ASCENDING,
-                                        StringComparators.LEXICOGRAPHIC
-                                    )
-                                ),
-                                Integer.MAX_VALUE
-                            )
-                        )
-                        .setContext(queryContext)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"", 1L},
-            new Object[]{"1", 1L},
-            new Object[]{"10.1", 1L},
-            new Object[]{"2", 1L},
-            new Object[]{"abc", 1L},
-            new Object[]{"def", 1L}
-        )
-    );
-  }
-
-  @Test
   public void testExactCountDistinctOfSemiJoinResult() throws Exception
   {
     // Cannot vectorize due to extraction dimension spec.
@@ -8428,48 +8070,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           "a0",
                           null,
                           ImmutableList.of(new ExtractionDimensionSpec("dim1", null, extractionFn)),
-                          false,
-                          true
-                      )
-                  ))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
-        )
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCountDistinctOfLookupUsingJoinOperator(Map<String, Object> queryContext) throws Exception
-  {
-    // Cannot yet vectorize the JOIN operator.
-    cannotVectorize();
-
-    testQuery(
-        "SELECT COUNT(DISTINCT lookyloo.v)\n"
-        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k",
-        queryContext,
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(
-                      join(
-                          new TableDataSource(CalciteTests.DATASOURCE1),
-                          new LookupDataSource("lookyloo"),
-                          "j0.",
-                          equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.k")),
-                          JoinType.LEFT
-                      )
-                  )
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(
-                      new CardinalityAggregatorFactory(
-                          "a0",
-                          null,
-                          ImmutableList.of(DefaultDimensionSpec.of("j0.v")),
                           false,
                           true
                       )
@@ -10741,158 +10341,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testUsingSubqueryAsPartOfAndFilter(Map<String, Object> queryContext) throws Exception
-  {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
-
-    testQuery(
-        "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
-        + "WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')\n"
-        + "AND dim1 <> 'xxx'\n"
-        + "group by dim1, dim2 ORDER BY dim2",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(
-                            join(
-                                new TableDataSource(CalciteTests.DATASOURCE1),
-                                new QueryDataSource(
-                                    GroupByQuery.builder()
-                                                .setDataSource(CalciteTests.DATASOURCE1)
-                                                .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                .setGranularity(Granularities.ALL)
-                                                .setDimFilter(not(selector("dim1", "", null)))
-                                                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                                                .setContext(QUERY_CONTEXT_DEFAULT)
-                                                .build()
-                                ),
-                                "j0.",
-                                equalsCondition(
-                                    DruidExpression.fromColumn("dim2"),
-                                    DruidExpression.fromColumn("j0.d0")
-                                ),
-                                JoinType.INNER
-                            )
-                        )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimFilter(not(selector("dim1", "xxx", null)))
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("dim1", "d0"),
-                                new DefaultDimensionSpec("dim2", "d1")
-                            )
-                        )
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.ASCENDING)),
-                                Integer.MAX_VALUE
-                            )
-                        )
-                        .setContext(queryContext)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"def", "abc", 1L}
-        )
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testUsingSubqueryAsPartOfOrFilter(Map<String, Object> queryContext) throws Exception
-  {
-    // Cannot vectorize JOIN operator.
-    cannotVectorize();
-
-    testQuery(
-        "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
-        + "WHERE dim1 = 'xxx' OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')\n"
-        + "group by dim1, dim2 ORDER BY dim2",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(
-                            join(
-                                join(
-                                    new TableDataSource(CalciteTests.DATASOURCE1),
-                                    new QueryDataSource(
-                                        Druids.newTimeseriesQueryBuilder()
-                                              .dataSource(CalciteTests.DATASOURCE1)
-                                              .intervals(querySegmentSpec(Filtration.eternity()))
-                                              .filters(new LikeDimFilter("dim1", "%bc", null, null))
-                                              .granularity(Granularities.ALL)
-                                              .aggregators(new CountAggregatorFactory("a0"))
-                                              .context(QUERY_CONTEXT_DEFAULT)
-                                              .build()
-                                    ),
-                                    "j0.",
-                                    "1",
-                                    JoinType.INNER
-                                ),
-                                new QueryDataSource(
-                                    GroupByQuery.builder()
-                                                .setDataSource(CalciteTests.DATASOURCE1)
-                                                .setInterval(querySegmentSpec(Filtration.eternity()))
-                                                .setGranularity(Granularities.ALL)
-                                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
-                                                .setDimFilter(new LikeDimFilter("dim1", "%bc", null, null))
-                                                .setDimensions(
-                                                    dimensions(
-                                                        new DefaultDimensionSpec("dim1", "d0"),
-                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
-                                                    )
-                                                )
-                                                .setContext(queryContext)
-                                                .build()
-                                ),
-                                "_j0.",
-                                equalsCondition(
-                                    DruidExpression.fromColumn("dim2"),
-                                    DruidExpression.fromColumn("_j0.d0")
-                                ),
-                                JoinType.LEFT
-                            )
-                        )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimFilter(
-                            or(
-                                selector("dim1", "xxx", null),
-                                and(
-                                    not(selector("j0.a0", "0", null)),
-                                    not(selector("_j0.d1", null, null)),
-                                    not(selector("dim2", null, null))
-                                )
-                            )
-                        )
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("dim1", "d0"),
-                                new DefaultDimensionSpec("dim2", "d1")
-                            )
-                        )
-                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(new OrderByColumnSpec("d1", OrderByColumnSpec.Direction.ASCENDING)),
-                                Integer.MAX_VALUE
-                            )
-                        )
-                        .setContext(queryContext)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"def", "abc", 1L}
-        )
-    );
-  }
 
   @Test
   public void testTimeExtractWithTooFewArguments() throws Exception
@@ -10911,157 +10359,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext) throws Exception
-  {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
-    testQuery(
-        "with abc as"
-        + "("
-        + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
-        + ")"
-        + ", def as"
-        + "("
-        + "  SELECT t1.dim1, SUM(t2.m2) as \"metricSum\" "
-        + "  from abc as t1 inner join abc as t2 on t1.dim1 = t2.dim1"
-        + "  where t1.dim1='def'"
-        + "  group by 1"
-        + ")"
-        + "SELECT count(*) from def",
-        queryContext,
-        ImmutableList.of(
-            GroupByQuery
-                .builder()
-                .setDataSource(
-                    GroupByQuery
-                        .builder()
-                        .setDataSource(
-                            join(
-                                new QueryDataSource(
-                                    newScanQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Intervals.of(
-                                            "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                        .columns("dim1")
-                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .context(queryContext)
-                                        .build()
-                                ),
-                                new QueryDataSource(
-                                    newScanQueryBuilder()
-                                        .dataSource(CalciteTests.DATASOURCE1)
-                                        .intervals(querySegmentSpec(Intervals.of(
-                                            "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                        .columns("dim1", "m2")
-                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .context(queryContext)
-                                        .build()
-                                ),
-                                "j0.",
-                                equalsCondition(
-                                    DruidExpression.fromColumn("dim1"),
-                                    DruidExpression.fromColumn("j0.dim1")
-                                ),
-                                JoinType.INNER
-                            )
-                        )
-                        .setGranularity(Granularities.ALL)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim1", "def", null))
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0")
-                            )
-                        )
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'def'", ColumnType.STRING))
-                        .build()
-                )
-                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                .setGranularity(Granularities.ALL)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .build()
-        ),
-        ImmutableList.of(new Object[]{1L})
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testGroupByJoinAsNativeQueryWithUnoptimizedFilter(Map<String, Object> queryContext)
-  {
-    // The query below is the same as the inner groupBy on a join datasource from the test
-    // testNestedGroupByOnInlineDataSourceWithFilter, except that the selector filter
-    // dim1=def has been rewritten into an unoptimized filter, dim1 IN (def).
-    //
-    // The unoptimized filter will be optimized into dim1=def by the query toolchests in their
-    // pre-merge decoration function, when it calls DimFilter.optimize().
-    //
-    // This test's goal is to ensure that the join filter rewrites function correctly when there are
-    // unoptimized filters in the join query. The rewrite logic must apply to the optimized form of the filters,
-    // as this is what will be passed to HashJoinSegmentAdapter.makeCursors(), where the result of the join
-    // filter pre-analysis is used.
-    //
-    // A native query is used because the filter types where we support optimization are the AND/OR/NOT and
-    // IN filters. However, when expressed in a SQL query, our SQL planning layer is smart enough to already apply
-    // these optimizations in the native query it generates, making it impossible to test the unoptimized filter forms
-    // using SQL queries.
-    //
-    // The test method is placed here for convenience as this class provides the necessary setup.
-    Query query = GroupByQuery
-        .builder()
-        .setDataSource(
-            join(
-                new QueryDataSource(
-                    newScanQueryBuilder()
-                        .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Intervals.of(
-                            "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                        .columns("dim1")
-                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                        .context(queryContext)
-                        .build()
-                ),
-                new QueryDataSource(
-                    newScanQueryBuilder()
-                        .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Intervals.of(
-                            "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                        .columns("dim1", "m2")
-                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                        .context(queryContext)
-                        .build()
-                ),
-                "j0.",
-                equalsCondition(
-                    DruidExpression.fromColumn("dim1"),
-                    DruidExpression.fromColumn("j0.dim1")
-                ),
-                JoinType.INNER
-            )
-        )
-        .setGranularity(Granularities.ALL)
-        .setInterval(querySegmentSpec(Filtration.eternity()))
-        .setDimFilter(in("dim1", Collections.singletonList("def"), null))  // provide an unoptimized IN filter
-        .setDimensions(
-            dimensions(
-                new DefaultDimensionSpec("v0", "d0")
-            )
-        )
-        .setVirtualColumns(expressionVirtualColumn("v0", "'def'", ColumnType.STRING))
-        .build();
-
-    QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
-    QueryLifecycle ql = qlf.factorize();
-    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK);
-    List<Object> results = seq.toList();
-    Assert.assertEquals(
-        ImmutableList.of(ResultRow.of("def")),
-        results
-    );
-  }
 
   @Test
   public void testUsingSubqueryAsFilterOnTwoColumns() throws Exception
@@ -12419,46 +11716,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCountOnSemiJoinSingleColumn(Map<String, Object> queryContext) throws Exception
-  {
-    testQuery(
-        "SELECT dim1 FROM foo WHERE dim1 IN (SELECT dim1 FROM foo WHERE dim1 = '10.1')\n",
-        queryContext,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(
-                    join(
-                        new TableDataSource(CalciteTests.DATASOURCE1),
-                        new QueryDataSource(
-                            GroupByQuery.builder()
-                                        .setDataSource(CalciteTests.DATASOURCE1)
-                                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                                        .setDimFilter(
-                                            selector("dim1", "10.1", null)
-                                        )
-                                        .setGranularity(Granularities.ALL)
-                                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                                        .setContext(queryContext)
-                                        .build()
-                        ),
-                        "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
-                        JoinType.INNER
-                    )
-                )
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
-                .columns("v0")
-                .context(queryContext)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"10.1"}
-        )
-    );
-  }
+
 
   @Test
   public void testRepeatedIdenticalVirtualExpressionGrouping() throws Exception
@@ -12525,86 +11783,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT REGEXP_LIKE('x', 1) FROM foo",
         ImmutableList.of(),
         ImmutableList.of()
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext) throws Exception
-  {
-    testQuery(
-        "SELECT druid.broadcast.dim4, COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
-        + "GROUP BY 1 ORDER BY 2 LIMIT 4",
-        queryContext,
-        ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(
-                    join(
-                        new TableDataSource(CalciteTests.DATASOURCE3),
-                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
-                        "j0.",
-                        equalsCondition(
-                            DruidExpression.fromColumn("dim4"),
-                            DruidExpression.fromColumn("j0.dim4")
-                        ),
-                        JoinType.INNER
-
-                    )
-                )
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .dimension(new DefaultDimensionSpec("j0.dim4", "_d0", ColumnType.STRING))
-                .threshold(4)
-                .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                .context(queryContext)
-                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"a", 9L},
-            new Object[]{"b", 9L}
-        )
-    );
-  }
-
-  @Test
-  @Parameters(source = QueryContextForJoinProvider.class)
-  public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext)
-      throws Exception
-  {
-    testQuery(
-        "SELECT druid.broadcast.dim4, COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
-        + "GROUP BY 1 ORDER BY 1 DESC LIMIT 4",
-        queryContext,
-        ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(
-                    join(
-                        new TableDataSource(CalciteTests.DATASOURCE3),
-                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
-                        "j0.",
-                        equalsCondition(
-                            DruidExpression.fromColumn("dim4"),
-                            DruidExpression.fromColumn("j0.dim4")
-                        ),
-                        JoinType.INNER
-                    )
-                )
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .dimension(new DefaultDimensionSpec("j0.dim4", "_d0", ColumnType.STRING))
-                .threshold(4)
-                .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                .context(queryContext)
-                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"b", 9L},
-            new Object[]{"a", 9L}
-        )
     );
   }
 
