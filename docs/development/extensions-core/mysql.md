@@ -127,7 +127,7 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
 
 ### MySQL InputSource and Firehose
 
-The MySQL extension provides a connector implementation of an [SqlInputSource](../../ingestion/native-batch.md#sql-input-source) and [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database. This works with either MySQL or MariaDB connector jars.
+The MySQL extension provides a connector implementation of an [SqlInputSource](../../ingestion/native-batch-input-source.md#sql-input-source) and [SqlFirehose](../../ingestion/native-batch-firehose.md) which can be used to ingest data into Druid from a MySQL database. This works with either MySQL or MariaDB connector jars.
 
 ```json
 {

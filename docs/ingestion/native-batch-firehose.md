@@ -33,7 +33,7 @@ There are several firehoses readily available in Druid, some are meant for examp
 > You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the StaticS3Firehose.
 
 This firehose ingests events from a predefined list of S3 objects.
-This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+This firehose is _splittable_ and can be used by the [Parallel task](./native-batch.md).
 Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
 
 Sample spec:
@@ -68,7 +68,7 @@ This firehose ingests events, similar to the StaticS3Firehose, but from an Googl
 
 As with the S3 blobstore, it is assumed to be gzipped if the extension ends in .gz
 
-This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+This firehose is _splittable_ and can be used by the [Parallel task](./native-batch.md).
 Since each split represents an object in this firehose, each worker task of `index_parallel` will read an object.
 
 Sample spec:
@@ -115,7 +115,7 @@ Google Blobs:
 > You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFSFirehose.
 
 This firehose ingests events from a predefined list of files from the HDFS storage.
-This firehose is _splittable_ and can be used by the [Parallel task](#parallel-task).
+This firehose is _splittable_ and can be used by the [Parallel task](./native-batch.md).
 Since each split represents an HDFS file, each worker task of `index_parallel` will read files.
 
 Sample spec:
@@ -150,7 +150,7 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configur
 ### LocalFirehose
 
 This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
 Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
 A sample local Firehose spec is shown below:
 
@@ -173,7 +173,7 @@ A sample local Firehose spec is shown below:
 ### HttpFirehose
 
 This Firehose can be used to read the data from remote sites via HTTP, and works with `string` typed parsers.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
 Since each split represents a file in this Firehose, each worker task of `index_parallel` will read a file.
 A sample HTTP Firehose spec is shown below:
 
@@ -236,7 +236,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 ### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification.
  A sample ingest Firehose spec is shown below:
 
@@ -256,7 +256,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.md)|no|
-|maxInputSegmentBytesPerTask|Deprecated. Use [Segments Split Hint Spec](#segments-split-hint-spec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
+|maxInputSegmentBytesPerTask|Deprecated. Use [Segments Split Hint Spec](./native-batch.md#segments-split-hint-spec) instead. When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 <a name="sql-firehose"></a>
 
@@ -265,7 +265,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
 If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
-This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:

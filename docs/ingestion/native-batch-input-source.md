@@ -37,7 +37,7 @@ The S3 input source is to support reading objects directly from S3.
 Objects can be specified either via a list of S3 URI strings or a list of
 S3 location prefixes, which will attempt to list the contents and ingest
 all objects contained in the locations. The S3 input source is splittable
-and can be used by the [Parallel task](#parallel-task),
+and can be used by the [Parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple objects.
 
 Sample specs:
@@ -170,7 +170,7 @@ Properties Object:
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
 Cloud Storage URI strings. The Google Cloud Storage input source is splittable
-and can be used by the [Parallel task](#parallel-task), where each worker task of `index_parallel` will read
+and can be used by the [Parallel task](./native-batch.md), where each worker task of `index_parallel` will read
 one or multiple objects.
 
 Sample specs:
@@ -248,7 +248,7 @@ Google Cloud Storage object:
 > You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
 
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
-specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](#parallel-task) indexing and each worker task reads one chunk of the split data.
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
 Sample specs:
 
@@ -326,7 +326,7 @@ The `objects` property is:
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
-of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](#parallel-task),
+of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample specs:
@@ -415,7 +415,7 @@ The HTTP input source is to support reading files directly from remote sites via
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
-The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+The HTTP input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
@@ -522,7 +522,7 @@ Sample spec:
 
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
-The Local input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+The Local input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample spec:
@@ -556,7 +556,7 @@ Sample spec:
 
 The Druid input source is to support reading data directly from existing Druid segments,
 potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-The Druid input source is _splittable_ and can be used by the [Parallel task](#parallel-task).
+The Druid input source is _splittable_ and can be used by the [Parallel task](./native-batch.md).
 This input source has a fixed input format for reading from Druid segments;
 no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 
@@ -645,7 +645,7 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 ### SQL Input Source
 
 The SQL input source is used to read data directly from RDBMS.
-The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+The SQL input source is _splittable_ and can be used by the [Parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
 This input source does not support Split Hint Spec.
 Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 Please refer to the Recommended practices section below before using this input source.
@@ -698,7 +698,7 @@ Compared to the other native batch InputSources, SQL InputSource behaves differe
 ### Combining input sources
 
 The Combining input source is used to read data from multiple InputSources. This input source should be only used if all the delegate input sources are
- _splittable_ and can be used by the [Parallel task](#parallel-task). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.
+ _splittable_ and can be used by the [Parallel task](./native-batch.md). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.
 
 |property|description|required?|
 |--------|-----------|---------|

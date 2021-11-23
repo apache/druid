@@ -156,7 +156,7 @@ For perfect rollup, you should use `hashed`.
 |maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |numShards|Directly specify the number of shards to create. If this is specified and `intervals` is specified in the `granularitySpec`, the index task can skip the determine intervals/partitions pass through the data. `numShards` cannot be specified if `maxRowsPerSegment` is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions.|null|no|
-|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](#hash-partition-function)|`murmur3_32_abs`|no|
+|partitionFunction|A function to compute hash of partition dimensions. See [Hash partition function](./native-batch.md#hash-partition-function)|`murmur3_32_abs`|no|
 
 For best-effort rollup, you should use `dynamic`.
 
@@ -174,19 +174,9 @@ For best-effort rollup, you should use `dynamic`.
 
 ### Segment pushing modes
 
-While ingesting data using the Index task, it creates segments from the input data and pushes them. For segment pushing,
-the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and _incremental pushing mode_ for
-[perfect rollup and best-effort rollup](rollup.md), respectively.
+While ingesting data using the simple task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
+the simple task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
-In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
-are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
-problem due to limited storage capacity, and is not recommended to use in production.
-
-On the contrary, in the incremental pushing mode, segments are incrementally pushed, that is they can be pushed
-in the middle of the index task. More precisely, the index task collects data and stores created segments in the memory
-and disks of the process running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
-the index task immediately pushes all segments created until that moment, cleans all pushed segments up, and
-continues to ingest remaining data.
-
-To enable bulk pushing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot
-be used with `appendToExisting` of IOConfig.
+- Bulk pushing mode: Used for perfect rollup. Druid pushes every segment at the very end of the index task. Until then, Druid stores created segments in memory and local storage of the service running the index task. This mode can cause problems if you have limited storage capacity, and is not recommended to use in production.
+To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You can not use bulk pushing with `appendToExisting` in your IOConfig.
+- Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
