@@ -16421,23 +16421,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-        "SELECT 2 + 2",
+        "SELECT 2 + 2 AS a",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(InlineDataSource.fromIterable(
-                    ImmutableList.of(new Object[]{3L}),
-                    RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                    ImmutableList.of(new Object[]{4L}),
+                    RowSignature.builder().add("a", ColumnType.LONG).build()
                 ))
-                .columns("EXPR$0")
+                .columns("a")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{3}
-        )
+        ImmutableList.of(new Object[]{4})
     );
   }
 
