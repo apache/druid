@@ -204,6 +204,12 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.SINGLE;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

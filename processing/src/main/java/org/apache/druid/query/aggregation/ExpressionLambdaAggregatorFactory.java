@@ -384,7 +384,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getType()
+  public ColumnType getIntermediateType()
   {
     if (fields == null) {
       return ExpressionType.toColumnType(initialCombineValue.get().type());
@@ -393,7 +393,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ColumnType getFinalizedType()
+  public ColumnType getResultType()
   {
     Expr finalizeExpr = finalizeExpression.get();
     ExprEval<?> initialVal = initialCombineValue.get();
@@ -412,7 +412,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
   {
     // numeric expressions are either longs or doubles, with strings or arrays max size is unknown
     // for numeric arguments, the first 2 bytes are used for expression type byte and is_null byte
-    return getType().isNumeric() ? 2 + Long.BYTES : maxSizeBytes.getBytesInInt();
+    return getIntermediateType().isNumeric() ? 2 + Long.BYTES : maxSizeBytes.getBytesInInt();
   }
 
   @Override

@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
@@ -207,17 +208,20 @@ public class RowBasedStorageAdapterTest
         }
       };
 
-  private static RowBasedStorageAdapter<Integer> createIntAdapter(final int... ints)
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  public final AtomicLong numCloses = new AtomicLong();
+
+  private RowBasedStorageAdapter<Integer> createIntAdapter(final int... ints)
   {
     return new RowBasedStorageAdapter<>(
-        Arrays.stream(ints).boxed().collect(Collectors.toList()),
+        Sequences.simple(Arrays.stream(ints).boxed().collect(Collectors.toList()))
+                 .withBaggage(numCloses::incrementAndGet),
         ROW_ADAPTER,
         ROW_SIGNATURE
     );
   }
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void test_getInterval()
@@ -462,6 +466,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -485,6 +491,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -516,6 +524,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -540,6 +550,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -560,6 +572,8 @@ public class RowBasedStorageAdapterTest
         ImmutableList.of(),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -582,6 +596,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -608,6 +624,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_TIME_AND_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -632,6 +650,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_TIME_AND_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -656,6 +676,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, READ_TIME_AND_STRING)
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -767,6 +789,8 @@ public class RowBasedStorageAdapterTest
         ),
         walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -787,6 +811,8 @@ public class RowBasedStorageAdapterTest
         ImmutableList.of(),
         walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))
     );
+
+    Assert.assertEquals(1, numCloses.get());
   }
 
   private static List<List<Object>> walkCursors(

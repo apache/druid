@@ -40,6 +40,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -107,9 +108,9 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
 
@@ -124,9 +125,9 @@ public class RemoteTaskRunnerTest
 
     cf.delete().guaranteed().forPath(JOINER.join(STATUS_PATH, task.getId()));
 
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
   }
 
   @Test
@@ -437,8 +438,8 @@ public class RemoteTaskRunnerTest
   public void testWorkerRemoved() throws Exception
   {
     doSetup();
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     Future<TaskStatus> future = remoteTaskRunner.run(task);
 
@@ -471,8 +472,8 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertNull(cf.checkExists().forPath(STATUS_PATH));
 
-    Assert.assertEquals(0, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getTotalTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
+    Assert.assertFalse(remoteTaskRunner.getIdleTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
   }
 
   @Test
@@ -677,9 +678,9 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertEquals(1, lazyworkers.size());
     Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
-    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount());
-    Assert.assertEquals(0, remoteTaskRunner.getIdleTaskSlotCount());
-    Assert.assertEquals(3, remoteTaskRunner.getLazyTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertFalse(remoteTaskRunner.getIdleTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
+    Assert.assertEquals(3, remoteTaskRunner.getLazyTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
   }
 
   @Test
@@ -990,12 +991,12 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task1);
     Assert.assertTrue(taskFuture1.get().isFailure());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
 
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
     Assert.assertTrue(taskAnnounced(task2.getId()));
     mockWorkerRunningTask(task2);
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
 
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
     Assert.assertTrue(taskAnnounced(task3.getId()));
@@ -1003,12 +1004,12 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task3);
     Assert.assertTrue(taskFuture3.get().isFailure());
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(3, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertEquals(3, remoteTaskRunner.getBlacklistedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
 
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(0, remoteTaskRunner.getBlacklistedTaskSlotCount());
+    Assert.assertFalse(remoteTaskRunner.getBlacklistedTaskSlotCount().containsKey(WorkerConfig.DEFAULT_CATEGORY));
   }
 
   @Test

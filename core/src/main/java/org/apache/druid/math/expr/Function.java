@@ -1164,6 +1164,51 @@ public interface Function
     }
   }
 
+  class SafeDivide extends BivariateMathFunction
+  {
+    public static final String NAME = "safe_divide";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.function(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    protected ExprEval eval(final long x, final long y)
+    {
+      if (y == 0) {
+        if (x != 0) {
+          return ExprEval.ofLong(NullHandling.defaultLongValue());
+        }
+        return ExprEval.ofLong(0);
+      }
+      return ExprEval.ofLong(x / y);
+    }
+
+    @Override
+    protected ExprEval eval(final double x, final double y)
+    {
+      if (y == 0 || Double.isNaN(y)) {
+        if (x != 0) {
+          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+        }
+        return ExprEval.ofDouble(0);
+      }
+      return ExprEval.ofDouble(x / y);
+    }
+  }
+
   class Div extends BivariateMathFunction
   {
     @Override
@@ -1931,7 +1976,9 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case ARRAY:
             return Collections.emptySet();
@@ -1947,7 +1994,9 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case LONG:
           case DOUBLE:
@@ -3236,7 +3285,9 @@ public interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
+          return index < 0
+                 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
+                 : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }

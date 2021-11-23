@@ -295,7 +295,8 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
       ColumnAnalysis columnAnalysis = analyses.get(invalid_aggregator);
       Assert.assertFalse(columnAnalysis.isError());
-      Assert.assertEquals("COMPLEX<invalid_complex_column_type>", columnAnalysis.getType());
+      Assert.assertEquals("invalid_complex_column_type", columnAnalysis.getType());
+      Assert.assertEquals(ColumnType.ofComplex("invalid_complex_column_type"), columnAnalysis.getTypeSignature());
     }
 
     // Persist the index.
@@ -444,7 +445,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getType()
+    public ColumnType getIntermediateType()
     {
       return new ColumnType(ValueType.COMPLEX, TYPE, null);
     }
@@ -462,9 +463,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ColumnType getFinalizedType()
+    public ColumnType getResultType()
     {
-      return getType();
+      return getIntermediateType();
     }
   }
 

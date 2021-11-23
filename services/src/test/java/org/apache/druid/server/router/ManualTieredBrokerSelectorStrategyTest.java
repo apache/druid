@@ -247,6 +247,8 @@ public class ManualTieredBrokerSelectorStrategyTest
         "SELECT * FROM test",
         null,
         false,
+        false,
+        false,
         queryContext,
         null
     );

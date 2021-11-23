@@ -175,6 +175,7 @@ public class SingleDimensionShardSpecTest
                         + "\"numCorePartitions\": 10}";
     ShardSpec shardSpec = OBJECT_MAPPER.readValue(json, ShardSpec.class);
     Assert.assertTrue(shardSpec instanceof SingleDimensionShardSpec);
+    Assert.assertEquals(ShardSpec.Type.SINGLE, shardSpec.getType());
 
     SingleDimensionShardSpec singleDimShardSpec = (SingleDimensionShardSpec) shardSpec;
     Assert.assertEquals(
