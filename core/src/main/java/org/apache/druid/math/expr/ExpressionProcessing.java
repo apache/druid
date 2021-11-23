@@ -77,7 +77,7 @@ public class ExpressionProcessing
   {
     // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
-      throw new IllegalStateException("NullHandling module not initialized, call NullHandling.initializeForTests()");
+      throw new IllegalStateException("ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()");
     }
     return INSTANCE.isUseLegacyLogicalOperators();
   }

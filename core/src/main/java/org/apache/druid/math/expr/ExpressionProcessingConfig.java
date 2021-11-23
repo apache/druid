@@ -46,7 +46,7 @@ public class ExpressionProcessingConfig
                              : allowNestedArrays;
     if (useLegacyLogicalOperators == null) {
       this.useLegacyLogicalOperators = Boolean.parseBoolean(
-          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false")
+          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "true")
       );
     } else {
       this.useLegacyLogicalOperators = useLegacyLogicalOperators;

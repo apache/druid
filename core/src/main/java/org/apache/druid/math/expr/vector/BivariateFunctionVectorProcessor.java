@@ -25,7 +25,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import javax.annotation.Nullable;
 
 /**
- * Basic vector processor that processes 2 inputs and works for both primtive value vectors and object vectors.
+ * Basic vector processor that processes 2 inputs and works for both primitive value vectors and object vectors.
  * Different from {@link BivariateFunctionVectorValueProcessor} and {@link BivariateFunctionVectorObjectProcessor} in
  * that subclasses of this class must check for and directly decide how to handle null values.
  */

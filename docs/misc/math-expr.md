@@ -266,7 +266,7 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* logical operators: `!`, `&&`, `||`, are supported for string and numeric types
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useLegacyLogicalOperators=false`)
 * comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
@@ -275,26 +275,10 @@ supported features:
 * string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
 
-## Legacy logical operator mode
-Prior to the 0.23 release of Apache Druid, the logical 'and' and 'or' operators behaved in a non-standard manner, but this behavior has been changed so that these operations output 'homogeneous' boolean values - `LONG` values of `0` for `true` and `1` for `false`. Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values: 
-* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
-* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
+## Logical operator modes
+Prior to the 0.23 release of Apache Druid, boolean function expressions have inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. 
 
-Old behavior:
-* `100 && 11` -> `11`
-* `0.7 || 0.3` -> `0.3`
-* `100 && 0` -> `0`
-* `'troo' && 'true'` -> `'troo'`
-* `'troo' || 'true'` -> `'true'`
-
-Current behavior:
-* `100 && 11` -> `1`
-* `0.7 || 0.3` -> `1`
-* `100 && 0` -> `0`
-* `'troo' && 'true'` -> `0`
-* `'troo' || 'true'` -> `1`
-
-Additionally, the logical operators in these older versions did not honor SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`). The current version treats `null` values as "unknown".
+After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useLegacyLogicalOperators=false`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
 
 For the "or" operator:
 * `true || null`, `null || true`, -> `1`
@@ -304,4 +288,22 @@ For the "and" operator:
 * `true && null`, `null && true`, `null && null` -> `null`
 * `false && null`, `null && false` -> `0`
 
-To revert to the behavior of previous Druid versions, `druid.expressions.useLegacyLogicalOperators` can be set to `true` in your Druid configuration.
+Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
+* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
+* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
+
+Legacy behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `'troo'`
+* `'troo' || 'true'` -> `'true'`
+
+SQL compatible behavior:
+* `100 && 11` -> `1`
+* `0.7 || 0.3` -> `1`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `0`
+* `'troo' || 'true'` -> `1`
+
+

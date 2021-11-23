@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
@@ -105,6 +106,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void setupClass()
   {
     Calcites.setSystemProperties();
+    ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -148,6 +150,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
+    ExpressionProcessing.initializeForTests(null);
   }
 
   @Parameterized.Parameters(name = "query = {0}")

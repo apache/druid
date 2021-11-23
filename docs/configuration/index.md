@@ -2100,6 +2100,12 @@ Supported query contexts:
 |`maxResults`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxResults` for a groupBy v1 query.|None|
 |`useOffheap`|Ignored by groupBy v2, and no longer supported for groupBy v1. Enabling this option with groupBy v1 will result in an error. For off-heap aggregation, switch to groupBy v2, which always operates off-heap.|false|
 
+#### Expression processing configurations
+
+|Key|Description|Default|
+|---|-----------|-------|
+|`druid.expressions.useLegacyLogicalOperators`|Controls the behavior of Druid logical `AND` and `OR` operators. See [expression documentation](../misc/math-expr.md#logical-operator-modes)|true|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This is experimental and should be used with caution.|false|
 ### Router
 
 #### Router Process Configs

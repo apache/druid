@@ -85,37 +85,43 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertFalse(evalDouble("!2.0", bindings) > 0.0);
     }
     finally {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForTests(null);
     }
-    Assert.assertEquals(0L, evalLong("1.0 && 0.0", bindings));
-    Assert.assertEquals(1L, evalLong("1.0 && 2.0", bindings));
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      Assert.assertEquals(0L, evalLong("1.0 && 0.0", bindings));
+      Assert.assertEquals(1L, evalLong("1.0 && 2.0", bindings));
 
-    Assert.assertEquals(1L, evalLong("1.0 || 0.0", bindings));
-    Assert.assertEquals(0L, evalLong("0.0 || 0.0", bindings));
+      Assert.assertEquals(1L, evalLong("1.0 || 0.0", bindings));
+      Assert.assertEquals(0L, evalLong("0.0 || 0.0", bindings));
 
-    Assert.assertEquals(1L, evalLong("2.0 > 1.0", bindings));
-    Assert.assertEquals(1L, evalLong("2.0 >= 2.0", bindings));
-    Assert.assertEquals(1L, evalLong("1.0 < 2.0", bindings));
-    Assert.assertEquals(1L, evalLong("2.0 <= 2.0", bindings));
-    Assert.assertEquals(1L, evalLong("2.0 == 2.0", bindings));
-    Assert.assertEquals(1L, evalLong("2.0 != 1.0", bindings));
+      Assert.assertEquals(1L, evalLong("2.0 > 1.0", bindings));
+      Assert.assertEquals(1L, evalLong("2.0 >= 2.0", bindings));
+      Assert.assertEquals(1L, evalLong("1.0 < 2.0", bindings));
+      Assert.assertEquals(1L, evalLong("2.0 <= 2.0", bindings));
+      Assert.assertEquals(1L, evalLong("2.0 == 2.0", bindings));
+      Assert.assertEquals(1L, evalLong("2.0 != 1.0", bindings));
 
-    Assert.assertEquals(1L, evalLong("!-1.0", bindings));
-    Assert.assertEquals(1L, evalLong("!0.0", bindings));
-    Assert.assertEquals(0L, evalLong("!2.0", bindings));
+      Assert.assertEquals(1L, evalLong("!-1.0", bindings));
+      Assert.assertEquals(1L, evalLong("!0.0", bindings));
+      Assert.assertEquals(0L, evalLong("!2.0", bindings));
 
-    assertEquals(3.5, evalDouble("2.0 + 1.5", bindings), 0.0001);
-    assertEquals(0.5, evalDouble("2.0 - 1.5", bindings), 0.0001);
-    assertEquals(3.0, evalDouble("2.0 * 1.5", bindings), 0.0001);
-    assertEquals(4.0, evalDouble("2.0 / 0.5", bindings), 0.0001);
-    assertEquals(0.2, evalDouble("2.0 % 0.3", bindings), 0.0001);
-    assertEquals(8.0, evalDouble("2.0 ^ 3.0", bindings), 0.0001);
-    assertEquals(-1.5, evalDouble("-1.5", bindings), 0.0001);
+      assertEquals(3.5, evalDouble("2.0 + 1.5", bindings), 0.0001);
+      assertEquals(0.5, evalDouble("2.0 - 1.5", bindings), 0.0001);
+      assertEquals(3.0, evalDouble("2.0 * 1.5", bindings), 0.0001);
+      assertEquals(4.0, evalDouble("2.0 / 0.5", bindings), 0.0001);
+      assertEquals(0.2, evalDouble("2.0 % 0.3", bindings), 0.0001);
+      assertEquals(8.0, evalDouble("2.0 ^ 3.0", bindings), 0.0001);
+      assertEquals(-1.5, evalDouble("-1.5", bindings), 0.0001);
 
 
-    assertEquals(2.0, evalDouble("sqrt(4.0)", bindings), 0.0001);
-    assertEquals(2.0, evalDouble("if(1.0, 2.0, 3.0)", bindings), 0.0001);
-    assertEquals(3.0, evalDouble("if(0.0, 2.0, 3.0)", bindings), 0.0001);
+      assertEquals(2.0, evalDouble("sqrt(4.0)", bindings), 0.0001);
+      assertEquals(2.0, evalDouble("if(1.0, 2.0, 3.0)", bindings), 0.0001);
+      assertEquals(3.0, evalDouble("if(0.0, 2.0, 3.0)", bindings), 0.0001);
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
@@ -374,17 +380,10 @@ public class EvalTest extends InitializedNullHandlingTest
     Expr.ObjectBinding bindings = InputBindings.withMap(
         ImmutableMap.of("x", 100L, "y", 100L, "z", 100D, "w", 100D)
     );
-    ExprEval eval = Parser.parse("x==y", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertTrue(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
-
-    eval = Parser.parse("x!=y", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertFalse(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
 
     try {
       ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
-      eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
+      ExprEval eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
       Assert.assertTrue(eval.asBoolean());
       assertEquals(ExpressionType.DOUBLE, eval.type());
 
@@ -401,23 +400,37 @@ public class EvalTest extends InitializedNullHandlingTest
       assertEquals(ExpressionType.DOUBLE, eval.type());
     }
     finally {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForTests(null);
     }
-    eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertTrue(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExprEval eval = Parser.parse("x==y", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertTrue(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
 
-    eval = Parser.parse("x!=z", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertFalse(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
+      eval = Parser.parse("x!=y", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertFalse(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
 
-    eval = Parser.parse("z==w", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertTrue(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
+      eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertTrue(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
 
-    eval = Parser.parse("z!=w", ExprMacroTable.nil()).eval(bindings);
-    Assert.assertFalse(eval.asBoolean());
-    assertEquals(ExpressionType.LONG, eval.type());
+      eval = Parser.parse("x!=z", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertFalse(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
+
+      eval = Parser.parse("z==w", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertTrue(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
+
+      eval = Parser.parse("z!=w", ExprMacroTable.nil()).eval(bindings);
+      Assert.assertFalse(eval.asBoolean());
+      assertEquals(ExpressionType.LONG, eval.type());
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
@@ -427,59 +440,66 @@ public class EvalTest extends InitializedNullHandlingTest
         ImmutableMap.of()
     );
 
-    assertEquals(1L, eval("'true' && 'true'", bindings).value());
-    assertEquals(0L, eval("'true' && 'false'", bindings).value());
-    assertEquals(0L, eval("'false' && 'true'", bindings).value());
-    assertEquals(0L, eval("'troo' && 'true'", bindings).value());
-    assertEquals(0L, eval("'false' && 'false'", bindings).value());
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      assertEquals(1L, eval("'true' && 'true'", bindings).value());
+      assertEquals(0L, eval("'true' && 'false'", bindings).value());
+      assertEquals(0L, eval("'false' && 'true'", bindings).value());
+      assertEquals(0L, eval("'troo' && 'true'", bindings).value());
+      assertEquals(0L, eval("'false' && 'false'", bindings).value());
 
-    assertEquals(1L, eval("'true' || 'true'", bindings).value());
-    assertEquals(1L, eval("'true' || 'false'", bindings).value());
-    assertEquals(1L, eval("'false' || 'true'", bindings).value());
-    assertEquals(1L, eval("'troo' || 'true'", bindings).value());
-    assertEquals(0L, eval("'false' || 'false'", bindings).value());
+      assertEquals(1L, eval("'true' || 'true'", bindings).value());
+      assertEquals(1L, eval("'true' || 'false'", bindings).value());
+      assertEquals(1L, eval("'false' || 'true'", bindings).value());
+      assertEquals(1L, eval("'troo' || 'true'", bindings).value());
+      assertEquals(0L, eval("'false' || 'false'", bindings).value());
 
-    assertEquals(1L, eval("1 && 1", bindings).value());
-    assertEquals(1L, eval("100 && 11", bindings).value());
-    assertEquals(0L, eval("1 && 0", bindings).value());
-    assertEquals(0L, eval("0 && 1", bindings).value());
-    assertEquals(0L, eval("0 && 0", bindings).value());
+      assertEquals(1L, eval("1 && 1", bindings).value());
+      assertEquals(1L, eval("100 && 11", bindings).value());
+      assertEquals(0L, eval("1 && 0", bindings).value());
+      assertEquals(0L, eval("0 && 1", bindings).value());
+      assertEquals(0L, eval("0 && 0", bindings).value());
 
-    assertEquals(1L, eval("1 || 1", bindings).value());
-    assertEquals(1L, eval("100 || 11", bindings).value());
-    assertEquals(1L, eval("1 || 0", bindings).value());
-    assertEquals(1L, eval("0 || 1", bindings).value());
-    assertEquals(1L, eval("111 || 0", bindings).value());
-    assertEquals(1L, eval("0 || 111", bindings).value());
-    assertEquals(0L, eval("0 || 0", bindings).value());
+      assertEquals(1L, eval("1 || 1", bindings).value());
+      assertEquals(1L, eval("100 || 11", bindings).value());
+      assertEquals(1L, eval("1 || 0", bindings).value());
+      assertEquals(1L, eval("0 || 1", bindings).value());
+      assertEquals(1L, eval("111 || 0", bindings).value());
+      assertEquals(1L, eval("0 || 111", bindings).value());
+      assertEquals(0L, eval("0 || 0", bindings).value());
 
-    assertEquals(1L, eval("1.0 && 1.0", bindings).value());
-    assertEquals(1L, eval("0.100 && 1.1", bindings).value());
-    assertEquals(0L, eval("1.0 && 0.0", bindings).value());
-    assertEquals(0L, eval("0.0 && 1.0", bindings).value());
-    assertEquals(0L, eval("0.0 && 0.0", bindings).value());
+      assertEquals(1L, eval("1.0 && 1.0", bindings).value());
+      assertEquals(1L, eval("0.100 && 1.1", bindings).value());
+      assertEquals(0L, eval("1.0 && 0.0", bindings).value());
+      assertEquals(0L, eval("0.0 && 1.0", bindings).value());
+      assertEquals(0L, eval("0.0 && 0.0", bindings).value());
 
-    assertEquals(1L, eval("1.0 || 1.0", bindings).value());
-    assertEquals(1L, eval("0.2 || 0.3", bindings).value());
-    assertEquals(1L, eval("1.0 || 0.0", bindings).value());
-    assertEquals(1L, eval("0.0 || 1.0", bindings).value());
-    assertEquals(1L, eval("1.11 || 0.0", bindings).value());
-    assertEquals(1L, eval("0.0 || 0.111", bindings).value());
-    assertEquals(0L, eval("0.0 || 0.0", bindings).value());
+      assertEquals(1L, eval("1.0 || 1.0", bindings).value());
+      assertEquals(1L, eval("0.2 || 0.3", bindings).value());
+      assertEquals(1L, eval("1.0 || 0.0", bindings).value());
+      assertEquals(1L, eval("0.0 || 1.0", bindings).value());
+      assertEquals(1L, eval("1.11 || 0.0", bindings).value());
+      assertEquals(1L, eval("0.0 || 0.111", bindings).value());
+      assertEquals(0L, eval("0.0 || 0.0", bindings).value());
 
-    assertEquals(1L, eval("null || 1", bindings).value());
-    assertEquals(1L, eval("1 || null", bindings).value());
-    assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).value());
-    assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).value());
-    // null/null is evaluated as string typed
-    assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).value());
+      assertEquals(1L, eval("null || 1", bindings).value());
+      assertEquals(1L, eval("1 || null", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).value());
+      // null/null is evaluated as string typed
+      assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).value());
 
-    assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).value());
-    assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).value());
-    assertEquals(0L, eval("null && 0", bindings).value());
-    assertEquals(0L, eval("0 && null", bindings).value());
-    // null/null is evaluated as string typed
-    assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).value());
+      assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).value());
+      assertEquals(0L, eval("null && 0", bindings).value());
+      assertEquals(0L, eval("0 && null", bindings).value());
+      // null/null is evaluated as string typed
+      assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).value());
+    }
+    finally {
+      // reset
+      ExpressionProcessing.initializeForTests(null);
+    }
 
     try {
       // turn on legacy insanity mode
