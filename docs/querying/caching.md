@@ -63,13 +63,9 @@ Use per-segment caching with real-time data. For example, your queries request d
 
 ### Whole-query caching
 
-With *whole-query caching*, Druid caches the entire results of individual queries. In this case the Broker no longer needs to merge the per-segment results.
+With *whole-query caching*, Druid caches the entire results of individual queries, meaning the Broker no longer needs to merge per-segment results from data processes.
 
-Whole-query result caching is controlled by the parameters `useResultLevelCache` and `populateResultLevelCache` and runtime properties `druid.broker.cache.*`.
-
-Use whole-query caching when segments are stable and you are not using real-time ingestion. If real-time ingestion invalidating the cache is not an issue for your queries, you can use *whole-query caching* on the Broker to increase query efficiency.
-
-For instance, whole-query caching is a good option when you have queries that include data from a batch ingestion task that runs every few hours or once a day. [Per-segment caching](#per-segment-caching) would be less efficient in this case because it requires Druid to merge the per-segment results for each query, even when the results are cached.
+Use *whole-query caching* on the Broker to increase query efficiency when there is little risk of ingestion invalidating the cache at a segment level.  This applies particularly, for example, when _not_ using real-time ingestion.  Perhaps your queries tend to use batch-ingested data, in which case per-segment caching would be less efficient since the underlying segments hardly ever change, yet Druid would continue to acquire per-segment results for each query.
 
 ## Where to enable caching
 
