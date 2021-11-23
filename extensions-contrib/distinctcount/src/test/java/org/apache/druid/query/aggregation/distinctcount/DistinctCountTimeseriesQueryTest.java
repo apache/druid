@@ -47,7 +47,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
 {
 
   @Test
-  public void testTopNWithDistinctCountAgg() throws Exception
+  public void testTimeseriesWithDistinctCountAgg() throws Exception
   {
     TimeseriesQueryEngine engine = new TimeseriesQueryEngine();
 
