@@ -474,6 +474,7 @@ druid-s3-extensions
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
 LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
