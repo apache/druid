@@ -23,10 +23,12 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -39,11 +41,29 @@ public class S3Entity extends RetryingInputEntity
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final CloudObjectLocation object;
+  private final int maxRetries;
 
   S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords)
   {
     this.s3Client = s3Client;
     this.object = coords;
+    this.maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
+  }
+
+  // this was added for testing but it might be useful in other cases (you can
+  // configure maxRetries...
+  S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords, int maxRetries)
+  {
+    Preconditions.checkArgument(maxRetries >= 0);
+    this.s3Client = s3Client;
+    this.object = coords;
+    this.maxRetries = maxRetries;
+  }
+
+  @Override
+  protected int getMaxRetries()
+  {
+    return maxRetries;
   }
 
   @Override

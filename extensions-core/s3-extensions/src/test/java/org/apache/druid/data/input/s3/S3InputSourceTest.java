@@ -554,7 +554,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         ImmutableList.of(PREFIXES.get(0)),
         null,
-        null
+        null,
+        3 // only have three retries since they are slow
     );
 
     InputRowSchema someSchema = new InputRowSchema(
