@@ -673,7 +673,7 @@ For details on available input sources see:
 - [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the Druid console.
 - [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
 - [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
-- [SQL input Source](./native-batch-input-source.md#sql-input-source)( ] (`sql`) reads data from a RDBMS source.
+- [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
 For information on how to combine input sources, see [Combining input sources](./native-batch-input-source.md#combining-input-sources).
 
