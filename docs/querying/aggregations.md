@@ -143,9 +143,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `doubleFirst` aggregator
 
-`doubleFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in 
-SQL-compatible 
-mode if no row exists.
+`doubleFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {

@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -269,14 +269,10 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    byte[] timeColumnBytes = StringUtils.toUtf8(timeColumn);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + timeColumnBytes.length)
-                     .put(AggregatorUtil.LONG_FIRST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put(timeColumnBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.LONG_FIRST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(timeColumn)
+        .build();
   }
 
   @Override

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -32,6 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -268,15 +268,11 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    byte[] timeColumnBytes = StringUtils.toUtf8(timeColumn);
-
-    return ByteBuffer.allocate(2 + fieldNameBytes.length + timeColumnBytes.length)
-                     .put(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put(timeColumnBytes)
-                     .put((byte) 0xff)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.FLOAT_LAST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(timeColumn)
+        .appendByte((byte) 0xff)
+        .build();
   }
 
   @Override
