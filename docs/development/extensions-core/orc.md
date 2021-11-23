@@ -30,7 +30,7 @@ The extension provides the [ORC input format](../../ingestion/data-formats.md#or
 for [native batch ingestion](../../ingestion/native-batch.md) and [Hadoop batch ingestion](../../ingestion/hadoop.md), respectively.
 Please see corresponding docs for details.
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-orc-extensions`.
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-orc-extensions` in the extensions load list.
 
 ### Migration from 'contrib' extension
 This extension, first available in version 0.15.0, replaces the previous 'contrib' extension which was available until

@@ -129,6 +129,7 @@ public class JdbcCacheGeneratorTest
         tsColumn,
         "filter",
         Period.ZERO,
+        null,
         new JdbcAccessSecurityConfig()
     );
   }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import ReactTable from 'react-table';
@@ -32,17 +32,20 @@ import {
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
 import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
-import { LookupSpec } from '../../druid-models';
+import { LookupSpec, lookupSpecSummary } from '../../druid-models';
 import { Api, AppToaster } from '../../singletons';
 import {
+  deepGet,
   getDruidErrorMessage,
   isLookupsUninitialized,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   QueryManager,
   QueryState,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './lookups-view.scss';
 
@@ -51,6 +54,8 @@ const tableColumns: string[] = [
   'Lookup tier',
   'Type',
   'Version',
+  'Poll period',
+  'Summary',
   ACTION_COLUMN_LABEL,
 ];
 
@@ -61,12 +66,19 @@ function tierNameCompare(a: string, b: string) {
 }
 
 export interface LookupEntriesAndTiers {
-  lookupEntries: any[];
+  lookupEntries: LookupEntry[];
   tiers: string[];
 }
 
+export interface LookupEntry {
+  id: string;
+  tier: string;
+  version: string;
+  spec: LookupSpec;
+}
+
 export interface LookupEditInfo {
-  name: string;
+  id: string;
   tier: string;
   version: string;
   spec: Partial<LookupSpec>;
@@ -83,7 +95,7 @@ export interface LookupsViewState {
   deleteLookupName?: string;
   deleteLookupTier?: string;
 
-  hiddenColumns: LocalStorageBackedArray<string>;
+  visibleColumns: LocalStorageBackedVisibility;
 
   lookupTableActionDialogId?: string;
   actions: BasicAction[];
@@ -99,7 +111,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       isEdit: false,
       actions: [],
 
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
       ),
     };
@@ -114,9 +126,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
-        const lookupEntries: Record<string, string>[] = [];
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
+
+        const lookupEntries: LookupEntry[] = [];
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
           Object.keys(lookupIds).map((id: string) => {
@@ -178,7 +191,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         return {
           isEdit: false,
           lookupEdit: {
-            name: '',
+            id: '',
             tier: loadingEntriesAndTiers ? loadingEntriesAndTiers.tiers[0] : '',
             spec: { type: 'map', map: {} },
             version: new Date().toISOString(),
@@ -189,8 +202,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       this.setState({
         isEdit: true,
         lookupEdit: {
-          name: id,
-          tier: tier,
+          id,
+          tier,
           spec: target.spec,
           version: target.version,
         },
@@ -216,7 +229,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     const specJson: any = lookupEdit.spec;
     let dataJson: any;
     if (isEdit) {
-      endpoint = `${endpoint}/${lookupEdit.tier}/${lookupEdit.name}`;
+      endpoint = `${endpoint}/${lookupEdit.tier}/${lookupEdit.id}`;
       dataJson = {
         version: version,
         lookupExtractorFactory: specJson,
@@ -224,7 +237,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     } else {
       dataJson = {
         [lookupEdit.tier]: {
-          [lookupEdit.name]: {
+          [lookupEdit.id]: {
             version: version,
             lookupExtractorFactory: specJson,
           },
@@ -292,9 +305,9 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   renderLookupsTable() {
-    const { lookupEntriesAndTiersState, hiddenColumns } = this.state;
+    const { lookupEntriesAndTiersState, visibleColumns } = this.state;
     const lookupEntriesAndTiers = lookupEntriesAndTiersState.data;
-    const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : undefined;
+    const lookups = lookupEntriesAndTiers ? lookupEntriesAndTiers.lookupEntries : [];
 
     if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
@@ -311,53 +324,87 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     return (
       <>
         <ReactTable
-          data={lookups || []}
+          data={lookups}
           loading={lookupEntriesAndTiersState.loading}
           noDataText={
-            !lookupEntriesAndTiersState.loading && lookups && !lookups.length
+            !lookupEntriesAndTiersState.loading && !lookups.length
               ? 'No lookups'
               : lookupEntriesAndTiersState.getErrorMessage() || ''
           }
           filterable
+          defaultSorted={[{ id: 'lookup_name', desc: false }]}
+          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={lookups.length > STANDARD_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: 'Lookup name',
-              show: hiddenColumns.exists('Lookup name'),
+              show: visibleColumns.shown('Lookup name'),
               id: 'lookup_name',
               accessor: 'id',
               filterable: true,
+              width: 200,
             },
             {
               Header: 'Lookup tier',
-              show: hiddenColumns.exists('Lookup tier'),
+              show: visibleColumns.shown('Lookup tier'),
               id: 'tier',
               accessor: 'tier',
               filterable: true,
+              width: 100,
             },
             {
               Header: 'Type',
-              show: hiddenColumns.exists('Type'),
+              show: visibleColumns.shown('Type'),
               id: 'type',
               accessor: 'spec.type',
               filterable: true,
+              width: 150,
             },
             {
               Header: 'Version',
-              show: hiddenColumns.exists('Version'),
+              show: visibleColumns.shown('Version'),
               id: 'version',
               accessor: 'version',
               filterable: true,
+              width: 190,
+            },
+            {
+              Header: 'Poll period',
+              show: visibleColumns.shown('Poll period'),
+              id: 'poolPeriod',
+              width: 150,
+              accessor: row => deepGet(row, 'spec.extractionNamespace.pollPeriod'),
+              Cell: ({ original }) => {
+                if (original.spec.type === 'map') return 'Static map';
+                const pollPeriod = deepGet(original, 'spec.extractionNamespace.pollPeriod');
+                if (!pollPeriod) {
+                  return (
+                    <>
+                      <Icon icon={IconNames.WARNING_SIGN} intent={Intent.WARNING} /> No poll period
+                      set
+                    </>
+                  );
+                }
+                return pollPeriod;
+              },
+            },
+            {
+              Header: 'Summary',
+              show: visibleColumns.shown('Summary'),
+              id: 'summary',
+              accessor: row => lookupSpecSummary(row.spec),
             },
             {
               Header: ACTION_COLUMN_LABEL,
-              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
+              show: visibleColumns.shown(ACTION_COLUMN_LABEL),
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
-              accessor: (row: any) => ({ id: row.id, tier: row.tier }),
               filterable: false,
-              Cell: (row: any) => {
-                const lookupId = row.value.id;
-                const lookupTier = row.value.tier;
+              accessor: 'id',
+              Cell: ({ original }) => {
+                const lookupId = original.id;
+                const lookupTier = original.tier;
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
                 return (
                   <ActionCell
@@ -373,7 +420,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
               },
             },
           ]}
-          defaultPageSize={50}
         />
       </>
     );
@@ -391,10 +437,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         onClose={() => this.setState({ lookupEdit: undefined })}
         onSubmit={updateLookupVersion => this.submitLookupEdit(updateLookupVersion)}
         onChange={this.handleChangeLookup}
-        lookupSpec={lookupEdit.spec}
-        lookupName={lookupEdit.name}
+        lookupId={lookupEdit.id}
         lookupTier={lookupEdit.tier}
         lookupVersion={lookupEdit.version}
+        lookupSpec={lookupEdit.spec}
         isEdit={isEdit}
         allLookupTiers={allLookupTiers}
       />
@@ -404,7 +450,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   render(): JSX.Element {
     const {
       lookupEntriesAndTiersState,
-      hiddenColumns,
+      visibleColumns,
       lookupTableActionDialogId,
       actions,
     } = this.state;
@@ -427,10 +473,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             columns={tableColumns}
             onChange={column =>
               this.setState(prevState => ({
-                hiddenColumns: prevState.hiddenColumns.toggle(column),
+                visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            tableColumnsHidden={hiddenColumns.storedArray}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
         {this.renderLookupsTable()}

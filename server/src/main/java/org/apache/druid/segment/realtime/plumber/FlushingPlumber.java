@@ -25,6 +25,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -43,6 +44,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -111,7 +113,13 @@ public class FlushingPlumber extends RealtimePlumber
   {
     log.info("Starting job for %s", getSchema().getDataSource());
 
-    computeBaseDir(getSchema()).mkdirs();
+    try {
+      FileUtils.mkdirp(computeBaseDir(getSchema()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     initializeExecutors();
 
     if (flushScheduledExec == null) {

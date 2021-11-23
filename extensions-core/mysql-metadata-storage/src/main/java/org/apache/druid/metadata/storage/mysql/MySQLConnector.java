@@ -58,6 +58,7 @@ public class MySQLConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     try {
+      log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
       Class.forName(driverConfig.getDriverClassName(), false, getClass().getClassLoader());
     }
     catch (ClassNotFoundException e) {

@@ -53,8 +53,8 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.junit.Assert;
@@ -90,26 +90,26 @@ public class JoinTestHelper
   );
   private static final RowSignature COUNTRIES_SIGNATURE =
       RowSignature.builder()
-                  .add("countryNumber", ValueType.LONG)
-                  .add("countryIsoCode", ValueType.STRING)
-                  .add("countryName", ValueType.STRING)
+                  .add("countryNumber", ColumnType.LONG)
+                  .add("countryIsoCode", ColumnType.STRING)
+                  .add("countryName", ColumnType.STRING)
                   .build();
 
   private static final RowSignature REGIONS_SIGNATURE =
       RowSignature.builder()
-                  .add("regionIsoCode", ValueType.STRING)
-                  .add("countryIsoCode", ValueType.STRING)
-                  .add("regionName", ValueType.STRING)
-                  .add("extraField", ValueType.STRING)
+                  .add("regionIsoCode", ColumnType.STRING)
+                  .add("countryIsoCode", ColumnType.STRING)
+                  .add("regionName", ColumnType.STRING)
+                  .add("extraField", ColumnType.STRING)
                   .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =
       new ColumnProcessorFactory<Supplier<Object>>()
       {
         @Override
-        public ValueType defaultType()
+        public ColumnType defaultType()
         {
-          return ValueType.STRING;
+          return ColumnType.STRING;
         }
 
         @Override
@@ -159,7 +159,7 @@ public class JoinTestHelper
       @Override
       public Function<Map<String, Object>, Object> columnFunction(String columnName)
       {
-        final ValueType columnType = signature.getColumnType(columnName).orElse(null);
+        final ColumnType columnType = signature.getColumnType(columnName).orElse(null);
 
         if (columnType == null) {
           return row -> row.get(columnName);

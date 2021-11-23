@@ -25,13 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -192,7 +192,7 @@ public class ExecutorLifecycle
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {
-                FileUtils.forceMkdir(statusFileParent);
+                FileUtils.mkdirp(statusFileParent);
               }
               jsonMapper.writeValue(statusFile, taskStatus);
 

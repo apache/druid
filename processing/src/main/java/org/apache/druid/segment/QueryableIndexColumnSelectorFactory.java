@@ -26,7 +26,6 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -117,9 +116,13 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
-    ValueType type = columnHolder.getCapabilities().getType();
-    if (type.isNumeric()) {
-      return ValueTypes.makeNumericWrappingDimensionSelector(type, makeColumnValueSelector(dimension), extractionFn);
+    ColumnCapabilities capabilities = columnHolder.getCapabilities();
+    if (columnHolder.getCapabilities().isNumeric()) {
+      return ValueTypes.makeNumericWrappingDimensionSelector(
+          capabilities.getType(),
+          makeColumnValueSelector(dimension),
+          extractionFn
+      );
     }
 
     final DictionaryEncodedColumn column = getCachedColumn(dimension, DictionaryEncodedColumn.class);
@@ -169,7 +172,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @SuppressWarnings("unchecked")
   private <T extends BaseColumn> T getCachedColumn(final String columnName, final Class<T> clazz)
   {
-    return (T) columnCache.computeIfAbsent(
+    final BaseColumn cachedColumn = columnCache.computeIfAbsent(
         columnName,
         name -> {
           ColumnHolder holder = index.getColumnHolder(name);
@@ -182,6 +185,12 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
           }
         }
     );
+
+    if (cachedColumn != null && clazz.isAssignableFrom(cachedColumn.getClass())) {
+      return (T) cachedColumn;
+    } else {
+      return null;
+    }
   }
 
   @Override

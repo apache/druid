@@ -32,6 +32,7 @@ export interface DimensionSpec {
   readonly type: string;
   readonly name: string;
   readonly createBitmapIndex?: boolean;
+  readonly multiValueHandling?: string;
 }
 
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
@@ -52,6 +53,13 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     type: 'boolean',
     defined: typeIs('string'),
     defaultValue: true,
+  },
+  {
+    name: 'multiValueHandling',
+    type: 'string',
+    defined: typeIs('string'),
+    defaultValue: 'SORTED_ARRAY',
+    suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
   },
 ];
 

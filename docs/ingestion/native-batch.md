@@ -198,7 +198,6 @@ A sample task is shown below:
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
 |context|Context containing various task configuration parameters. See below for more details.|no|
-|awaitSegmentAvailabilityTimeoutMillis|Long|Milliseconds to wait for the newly indexed segments to become available for query after ingestion completes. If `<= 0`, no wait will occur. If `> 0`, the task will wait for the Coordinator to indicate that the new segments are available for querying. If the timeout expires, the task will exit as successful, but the segments were not confirmed to have become available for query. Note for compaction tasks: you should not set this to a non-zero value because it is not supported by the compaction task type at this time.|no (default = 0)|
 
 ### `dataSchema`
 
@@ -370,11 +369,14 @@ Druid currently supports only one partition function.
 
 The Parallel task will use one subtask when you set `maxNumConcurrentSubTasks` to 1.
 
-> Be aware that, with this technique, segment sizes could be skewed if your chosen `partitionDimension` is also skewed in source data.
+When you use this technique to partition your data, segment sizes may be unequally distributed if the data
+in your `partitionDimension` is also unequally distributed.  Therefore, to avoid imbalance in data layout, 
+ review the distribution of values in your source data before deciding on a partitioning strategy.
 
-> While it is technically possible to concatenate multiple dimensions into a single new dimension
-> that you go on to specify in `partitionDimension`, remember that you _must_ then use this newly concatenated dimension at query time
-> in order for segment pruning to be effective.
+For segment pruning to be effective and translate into better query performance, you must use
+the `partitionDimension` at query time.  You can concatenate values from multiple
+dimensions into a new dimension to use as the `partitionDimension`. In this case, you
+must use that new dimension in your native filter `WHERE` clause.
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -1216,9 +1218,7 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where the they would be denied access otherwise.
-
-> **WARNING:** `HTTPInputSource` is not limited to the HTTP or HTTPS protocols. It uses the Java `URI` class that supports HTTP, HTTPS, FTP, file, and jar protocols by default. This means you should never run Druid under the `root` account, because a user can use the file protocol to access any files on the local disk.
+> **NOTE:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an `HTTPInputSource` at any location where the Druid process has permissions. For example, using `HTTPInputSource`, a console user has access to internal network locations where they would be denied access otherwise.
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 

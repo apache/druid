@@ -194,6 +194,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // Expected compaction state to exist after compaction as we store compaction state by default
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
       mapper.readValue(
           mapper.writeValueAsString(
@@ -338,6 +339,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         );
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
                 getObjectMapper().writeValueAsString(
@@ -605,7 +607,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -626,7 +628,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // hour segmentGranularity
     final CompactionTask compactionTask2 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null, null))
         .build();
 
     resultPair = runTask(compactionTask2);
@@ -660,7 +662,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -705,7 +707,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // day segmentGranularity and day queryGranularity
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -737,7 +739,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final CompactionTask compactionTask1 = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, null))
         .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
@@ -1297,7 +1299,20 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     return new TaskToolbox(
-        new TaskConfig(null, null, null, null, null, false, null, null, null, false, false),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        ),
         null,
         createActionClient(task),
         null,

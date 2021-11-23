@@ -23,22 +23,35 @@ title: "Design"
   -->
 
 
-Druid has a multi-process, distributed architecture that is designed to be cloud-friendly and easy to operate. Each
-Druid process type can be configured and scaled independently, giving you maximum flexibility over your cluster. This
-design also provides enhanced fault tolerance: an outage of one component will not immediately affect other components.
+Druid has a distributed architecture that is designed to be cloud-friendly and easy to operate. You can configure and scale services independently so you have maximum flexibility over cluster operations. This design includes enhanced fault tolerance: an outage of one component does not immediately affect other components.
 
-## Processes and Servers
+## Druid architecture
 
-Druid has several process types, briefly described below:
+The following diagram shows the services that make up the Druid architecture, how they are typically organized into servers, and how queries and data flow through this architecture.
 
-* [**Coordinator**](../design/coordinator.md) processes manage data availability on the cluster.
-* [**Overlord**](../design/overlord.md) processes control the assignment of data ingestion workloads.
-* [**Broker**](../design/broker.md) processes handle queries from external clients.
-* [**Router**](../design/router.md) processes are optional; they route requests to Brokers, Coordinators, and Overlords.
-* [**Historical**](../design/historical.md) processes store queryable data.
-* [**MiddleManager**](../design/middlemanager.md) processes ingest data.
+<img src="../assets/druid-architecture.png" width="800"/>
 
-Druid processes can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types: Master, Query, and Data.
+The following sections describe the components of this architecture. 
+
+## Druid services
+
+Druid has several types of services:
+
+* [**Coordinator**](../design/coordinator.md) service manages data availability on the cluster.
+* [**Overlord**](../design/overlord.md) service controls the assignment of data ingestion workloads.
+* [**Broker**](../design/broker.md) handles queries from external clients.
+* [**Router**](../design/router.md) services are optional; they route requests to Brokers, Coordinators, and Overlords.
+* [**Historical**](../design/historical.md) services store queryable data.
+* [**MiddleManager**](../design/middlemanager.md) services ingest data.
+
+You can view services in the **Services** tab in the Druid console: 
+
+![Druid services](../assets/services-overview.png "Services in the Druid console")
+
+
+## Druid servers
+
+Druid services can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types: Master, Query, and Data.
 
 * **Master**: Runs Coordinator and Overlord processes, manages data availability and ingestion.
 * **Query**: Runs Broker and optional Router processes, handles queries from external clients.
@@ -83,11 +96,6 @@ Used for internal service discovery, coordination, and leader election.
 
 For more details, please see the [ZooKeeper](../dependencies/zookeeper.md) page.
 
-## Architecture diagram
-
-The following diagram shows how queries and data flow through this architecture, using the suggested Master/Query/Data server organization:
-
-<img src="../assets/druid-architecture.png" width="800"/>
 
 ## Storage design
 

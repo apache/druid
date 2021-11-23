@@ -78,7 +78,9 @@ Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
+Float.NEGATIVE_INFINITY.
 Float.POSITIVE_INFINITY
+Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
@@ -125,6 +127,7 @@ JVM
 JVMs
 Joda
 JsonProperty
+Jupyter
 KMS
 Kerberized
 Kerberos
@@ -136,10 +139,13 @@ LZ4
 LZO
 LimitSpec
 Long.MAX_VALUE
+Long.MAX_VALUE.
 Long.MIN_VALUE
+Long.MIN_VALUE.
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
@@ -178,6 +184,7 @@ SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
+SYSTEM_TABLE
 TCP
 TGT
 TLS
@@ -466,7 +473,7 @@ druid-s3-extensions
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
@@ -507,6 +514,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -680,6 +693,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
@@ -777,6 +791,7 @@ PT30M
 PT30S
 PT5S
 PT80S
+SASL
 SegmentWriteOutMediumFactory
 UNABLE_TO_CONNECT_TO_STREAM
 UNHEALTHY_SUPERVISOR
@@ -838,8 +853,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
@@ -971,10 +984,21 @@ column_1
 column_n
 com.opencsv
 ctrl
+headerFormat
+headerLabelPrefix
 jsonLowercase
+kafka
+KafkaStringHeaderFormat
+kafka.header.
+kafka.key
+kafka.timestamp
+keyColumnName
+keyFormat
 listDelimiter
+timestampColumnName
 timestampSpec
 urls
+valueFormat
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1179,6 +1203,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
@@ -1273,6 +1298,8 @@ bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1298,6 +1325,9 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1679,6 +1709,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1700,6 +1731,7 @@ LoggingEmitter
 Los_Angeles
 MDC
 NoopServiceEmitter
+NUMA
 ONLY_EVENTS
 P1D
 P1W
@@ -1748,6 +1780,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1911,3 +1944,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+_n_

@@ -72,6 +72,7 @@ druid_coordinator_kill_supervisor_on=true
 druid_coordinator_kill_supervisor_period=PT10S
 druid_coordinator_kill_supervisor_durationToRetain=PT0M
 druid_coordinator_period_metadataStoreManagementPeriod=PT10S
+druid_sql_planner_authorizeSystemTablesDirectly=true
 
 # Testing the legacy config from https://github.com/apache/druid/pull/10267
 # Can remove this when the flag is no longer needed

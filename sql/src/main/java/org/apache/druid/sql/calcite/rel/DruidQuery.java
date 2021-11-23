@@ -69,7 +69,9 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
@@ -395,8 +397,8 @@ public class DruidQuery
       }
 
       final RelDataType dataType = rexNode.getType();
-      final ValueType outputType = Calcites.getValueTypeForRelDataType(dataType);
-      if (outputType == null || outputType == ValueType.COMPLEX) {
+      final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
@@ -733,15 +735,14 @@ public class DruidQuery
   private Query computeQuery()
   {
     if (dataSource instanceof QueryDataSource) {
-      // If there is a subquery then the outer query must be a groupBy.
+      // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
+      // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
+      // requiring the Broker to inline results.)
       final GroupByQuery outerQuery = toGroupByQuery();
 
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
+      if (outerQuery != null) {
+        return outerQuery;
       }
-
-      return outerQuery;
     }
 
     final TimeseriesQuery tsQuery = toTimeseriesQuery();
@@ -1153,6 +1154,7 @@ public class DruidQuery
         scanOffset,
         scanLimit,
         order,
+        null,
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(columns),
         false,

@@ -59,7 +59,7 @@ public class Transformer
                                       RowBasedColumnSelectorFactory.create(
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
-                                          RowSignature.empty(),
+                                          RowSignature::empty, // sad
                                           false
                                       )
                                   );

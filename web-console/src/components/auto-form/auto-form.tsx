@@ -20,7 +20,7 @@ import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprint
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { deepDelete, deepGet, deepSet } from '../../utils';
+import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
@@ -281,15 +281,16 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  private renderStringInput(field: Field<T>, sanitize?: (str: string) => string): JSX.Element {
+  private renderStringInput(field: Field<T>, sanitizer?: (str: string) => string): JSX.Element {
     const { model, large, onFinalize } = this.props;
     const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
 
     return (
       <SuggestibleInput
         value={modelValue != null ? modelValue : defaultValue || ''}
+        sanitizer={sanitizer}
+        issueWithValue={field.issueWithValue}
         onValueChange={v => {
-          if (sanitize && typeof v === 'string') v = sanitize(v);
           this.fieldChange(field, v);
         }}
         onBlur={() => {
@@ -397,9 +398,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       case 'string':
         return this.renderStringInput(field);
       case 'duration':
-        return this.renderStringInput(field, (str: string) =>
-          str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, ''),
-        );
+        return this.renderStringInput(field, durationSanitizer);
       case 'boolean':
         return this.renderBooleanInput(field);
       case 'string-array':

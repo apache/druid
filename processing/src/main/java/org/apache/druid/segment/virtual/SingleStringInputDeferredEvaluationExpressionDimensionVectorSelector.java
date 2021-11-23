@@ -21,7 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
@@ -122,9 +122,9 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
 
     @Nullable
     @Override
-    public ExprType getType(String name)
+    public ExpressionType getType(String name)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override

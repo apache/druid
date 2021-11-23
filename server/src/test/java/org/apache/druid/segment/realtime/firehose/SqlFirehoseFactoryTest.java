@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -29,6 +28,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.input.SqlTestUtils;
@@ -82,16 +82,16 @@ public class SqlFirehoseFactoryTest
   public static void setup() throws IOException
   {
     TEST_DIR = File.createTempFile(SqlFirehoseFactoryTest.class.getSimpleName(), "testDir");
-    FileUtils.forceDelete(TEST_DIR);
-    FileUtils.forceMkdir(TEST_DIR);
+    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
+    FileUtils.mkdirp(TEST_DIR);
   }
 
   @AfterClass
   public static void teardown() throws IOException
   {
-    FileUtils.forceDelete(TEST_DIR);
+    org.apache.commons.io.FileUtils.forceDelete(TEST_DIR);
     for (File dir : FIREHOSE_TMP_DIRS) {
-      FileUtils.forceDelete(dir);
+      org.apache.commons.io.FileUtils.forceDelete(dir);
     }
   }
 
@@ -127,8 +127,8 @@ public class SqlFirehoseFactoryTest
         SqlFirehoseFactoryTest.class.getSimpleName(),
         dirSuffix
     );
-    FileUtils.forceDelete(firehoseTempDir);
-    FileUtils.forceMkdir(firehoseTempDir);
+    org.apache.commons.io.FileUtils.forceDelete(firehoseTempDir);
+    FileUtils.mkdirp(firehoseTempDir);
     FIREHOSE_TMP_DIRS.add(firehoseTempDir);
     return firehoseTempDir;
   }
