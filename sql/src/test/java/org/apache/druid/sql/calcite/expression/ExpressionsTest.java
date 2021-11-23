@@ -32,6 +32,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -1155,41 +1156,89 @@ public class ExpressionsTest extends ExpressionTestBase
         1L
     );
 
-    testHelper.testExpression(
-        SqlStdOperatorTable.AND,
-        ImmutableList.of(
-            testHelper.makeCall(
-                ContainsOperatorConversion.caseSensitive().calciteOperator(),
-                testHelper.makeInputRef("spacey"),
-                testHelper.makeLiteral("there")
-            ),
-            testHelper.makeCall(
-                SqlStdOperatorTable.EQUALS,
-                testHelper.makeLiteral("yes"),
-                testHelper.makeLiteral("yes")
-            )
-        ),
-        DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
-        1L
-    );
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      testHelper.testExpression(
+          SqlStdOperatorTable.AND,
+          ImmutableList.of(
+              testHelper.makeCall(
+                  ContainsOperatorConversion.caseSensitive().calciteOperator(),
+                  testHelper.makeInputRef("spacey"),
+                  testHelper.makeLiteral("there")
+              ),
+              testHelper.makeCall(
+                  SqlStdOperatorTable.EQUALS,
+                  testHelper.makeLiteral("yes"),
+                  testHelper.makeLiteral("yes")
+              )
+          ),
+          DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+          1L
+      );
 
-    testHelper.testExpression(
-        SqlStdOperatorTable.AND,
-        ImmutableList.of(
-            testHelper.makeCall(
-                ContainsOperatorConversion.caseInsensitive().calciteOperator(),
-                testHelper.makeInputRef("spacey"),
-                testHelper.makeLiteral("There")
-            ),
-            testHelper.makeCall(
-                SqlStdOperatorTable.EQUALS,
-                testHelper.makeLiteral("yes"),
-                testHelper.makeLiteral("yes")
-            )
-        ),
-        DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
-        1L
-    );
+      testHelper.testExpression(
+          SqlStdOperatorTable.AND,
+          ImmutableList.of(
+              testHelper.makeCall(
+                  ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+                  testHelper.makeInputRef("spacey"),
+                  testHelper.makeLiteral("There")
+              ),
+              testHelper.makeCall(
+                  SqlStdOperatorTable.EQUALS,
+                  testHelper.makeLiteral("yes"),
+                  testHelper.makeLiteral("yes")
+              )
+          ),
+          DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+          1L
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
+
+    try {
+      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      testHelper.testExpression(
+          SqlStdOperatorTable.AND,
+          ImmutableList.of(
+              testHelper.makeCall(
+                  ContainsOperatorConversion.caseSensitive().calciteOperator(),
+                  testHelper.makeInputRef("spacey"),
+                  testHelper.makeLiteral("there")
+              ),
+              testHelper.makeCall(
+                  SqlStdOperatorTable.EQUALS,
+                  testHelper.makeLiteral("yes"),
+                  testHelper.makeLiteral("yes")
+              )
+          ),
+          DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+          "true"
+      );
+
+      testHelper.testExpression(
+          SqlStdOperatorTable.AND,
+          ImmutableList.of(
+              testHelper.makeCall(
+                  ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+                  testHelper.makeInputRef("spacey"),
+                  testHelper.makeLiteral("There")
+              ),
+              testHelper.makeCall(
+                  SqlStdOperatorTable.EQUALS,
+                  testHelper.makeLiteral("yes"),
+                  testHelper.makeLiteral("yes")
+              )
+          ),
+          DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+          "true"
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
