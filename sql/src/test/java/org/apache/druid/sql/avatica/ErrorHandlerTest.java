@@ -78,4 +78,20 @@ public class ErrorHandlerTest
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     Assert.assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
   }
+
+  @Test
+  public void testErrorHandlerHandlesNonSanitizableExceptionCorrectly()
+  {
+    ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
+    AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
+        ImmutableList.of());
+
+    Mockito.when(serverConfig.getErrorResponseTransformStrategy())
+           .thenReturn(emptyAllowedRegexErrorResponseTransformStrategy);
+    ErrorHandler errorHandler = new ErrorHandler(serverConfig);
+
+    Exception input = new Exception("message");
+    RuntimeException output = errorHandler.sanitize(input);
+    Assert.assertEquals(null, output.getMessage());
+  }
 }
