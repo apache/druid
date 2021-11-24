@@ -50,6 +50,7 @@ public class DruidUnionDataSourceRuleTest
                   .add("col1", ColumnType.STRING)
                   .add("col2", ColumnType.LONG)
                   .build(),
+      null,
       false,
       false
   );

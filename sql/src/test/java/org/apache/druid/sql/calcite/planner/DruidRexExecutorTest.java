@@ -77,11 +77,13 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .build();
 
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      "SELECT 1", // The actual query isn't important for this test
       new DruidOperatorTable(
           Collections.emptySet(),
           ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
       ),
       CalciteTests.createExprMacroTable(),
+      CalciteTests.getJsonMapper(),
       new PlannerConfig(),
       new DruidSchemaCatalog(
           EasyMock.createMock(SchemaPlus.class),

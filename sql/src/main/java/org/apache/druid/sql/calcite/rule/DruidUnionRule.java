@@ -72,7 +72,7 @@ public class DruidUnionRule extends RelOptRule
     if (unionRel.all) {
       call.transformTo(
           DruidUnionRel.create(
-              someDruidRel.getQueryMaker(),
+              someDruidRel.getPlannerContext(),
               unionRel.getRowType(),
               inputs,
               -1

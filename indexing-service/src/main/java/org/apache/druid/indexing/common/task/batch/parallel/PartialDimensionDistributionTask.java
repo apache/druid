@@ -68,8 +68,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_distribution";
 
-  // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
-  private static final boolean SKIP_NULL = true;
+  // Do not skip nulls as StringDistribution can handle null values.
+  // This behavior is different from hadoop indexing.
+  private static final boolean SKIP_NULL = false;
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
@@ -276,9 +277,10 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       }
       String[] values = new String[partitionDimensions.size()];
       for (int i = 0; i < partitionDimensions.size(); ++i) {
-        values[i] = Iterables.getOnlyElement(
-            inputRow.getDimension(partitionDimensions.get(i))
-        );
+        List<String> dimensionValues = inputRow.getDimension(partitionDimensions.get(i));
+        if (dimensionValues != null && !dimensionValues.isEmpty()) {
+          values[i] = Iterables.getOnlyElement(dimensionValues);
+        }
       }
       final StringTuple partitionDimensionValues = StringTuple.create(values);
 

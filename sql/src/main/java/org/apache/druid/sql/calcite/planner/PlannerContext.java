@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -28,11 +29,13 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -66,8 +69,10 @@ public class PlannerContext
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
+  private final String sql;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
+  private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
   private final DruidSchemaCatalog rootSchema;
@@ -79,14 +84,17 @@ public class PlannerContext
   private List<TypedValue> parameters = Collections.emptyList();
   // result of authentication, providing identity to authorize set of resources produced by validation
   private AuthenticationResult authenticationResult;
-  // set of datasources and views which must be authorized
-  private Set<Resource> resources = Collections.emptySet();
+  // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
+  private Set<ResourceAction> resourceActions = null;
   // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
+  private QueryMaker queryMaker;
 
   private PlannerContext(
+      final String sql,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
@@ -94,8 +102,10 @@ public class PlannerContext
       final Map<String, Object> queryContext
   )
   {
+    this.sql = sql;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
+    this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.rootSchema = rootSchema;
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
@@ -111,8 +121,10 @@ public class PlannerContext
   }
 
   public static PlannerContext create(
+      final String sql,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DruidSchemaCatalog rootSchema,
       final Map<String, Object> queryContext
@@ -151,8 +163,10 @@ public class PlannerContext
     }
 
     return new PlannerContext(
+        sql,
         operatorTable,
         macroTable,
+        jsonMapper,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
@@ -169,6 +183,11 @@ public class PlannerContext
   public ExprMacroTable getExprMacroTable()
   {
     return macroTable;
+  }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 
   public PlannerConfig getPlannerConfig()
@@ -209,7 +228,12 @@ public class PlannerContext
 
   public AuthenticationResult getAuthenticationResult()
   {
-    return authenticationResult;
+    return Preconditions.checkNotNull(authenticationResult, "Authentication result not available");
+  }
+
+  public String getSql()
+  {
+    return sql;
   }
 
   public String getSqlQueryId()
@@ -288,7 +312,7 @@ public class PlannerContext
 
   public Access getAuthorizationResult()
   {
-    return authorizationResult;
+    return Preconditions.checkNotNull(authorizationResult, "Authorization result not available");
   }
 
   public void setParameters(List<TypedValue> parameters)
@@ -298,21 +322,51 @@ public class PlannerContext
 
   public void setAuthenticationResult(AuthenticationResult authenticationResult)
   {
+    if (this.authenticationResult != null) {
+      // It's a bug if this happens, because setAuthenticationResult should be called exactly once.
+      throw new ISE("Authentication result has already been set");
+    }
+
     this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
   }
 
   public void setAuthorizationResult(Access access)
   {
+    if (this.authorizationResult != null) {
+      // It's a bug if this happens, because setAuthorizationResult should be called exactly once.
+      throw new ISE("Authorization result has already been set");
+    }
+
     this.authorizationResult = Preconditions.checkNotNull(access, "authorizationResult");
   }
 
-  public Set<Resource> getResources()
+  public Set<ResourceAction> getResourceActions()
   {
-    return resources;
+    return Preconditions.checkNotNull(resourceActions, "Resources not available");
   }
 
-  public void setResources(Set<Resource> resources)
+  public void setResourceActions(Set<ResourceAction> resourceActions)
   {
-    this.resources = Preconditions.checkNotNull(resources, "resources");
+    if (this.resourceActions != null) {
+      // It's a bug if this happens, because setResourceActions should be called exactly once.
+      throw new ISE("Resources have already been set");
+    }
+
+    this.resourceActions = Preconditions.checkNotNull(resourceActions, "resourceActions");
+  }
+
+  public void setQueryMaker(QueryMaker queryMaker)
+  {
+    if (this.queryMaker != null) {
+      // It's a bug if this happens, because setQueryMaker should be called exactly once.
+      throw new ISE("QueryMaker has already been set");
+    }
+
+    this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
+  }
+
+  public QueryMaker getQueryMaker()
+  {
+    return Preconditions.checkNotNull(queryMaker, "QueryMaker not available");
   }
 }

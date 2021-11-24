@@ -791,7 +791,7 @@ public class DruidSchema extends AbstractSchema
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DruidTable(tableDataSource, builder.build(), null, isJoinable, isBroadcast);
   }
 
   @VisibleForTesting

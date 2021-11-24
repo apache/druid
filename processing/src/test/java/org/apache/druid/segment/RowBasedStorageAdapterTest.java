@@ -254,6 +254,13 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
+  public void test_getRowSignature()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter();
+    Assert.assertEquals(ROW_SIGNATURE, adapter.getRowSignature());
+  }
+
+  @Test
   public void test_getDimensionCardinality_knownColumns()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
