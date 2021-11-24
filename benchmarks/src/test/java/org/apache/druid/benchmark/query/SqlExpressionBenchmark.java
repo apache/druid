@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -80,6 +81,7 @@ public class SqlExpressionBenchmark
   static {
     NullHandling.initializeForTests();
     Calcites.setSystemProperties();
+    ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()

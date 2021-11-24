@@ -63,17 +63,6 @@ class BinLtExpr extends BinaryBooleanOpExprBase
     return Double.compare(left, right) < 0;
   }
 
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
-  }
-
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
@@ -118,17 +107,6 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) <= 0;
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
   }
 
   @Override
@@ -177,16 +155,6 @@ class BinGtExpr extends BinaryBooleanOpExprBase
     return Double.compare(left, right) > 0;
   }
 
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
-  }
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
@@ -231,17 +199,6 @@ class BinGeqExpr extends BinaryBooleanOpExprBase
   {
     // Use Double.compare for more consistent NaN handling.
     return Double.compare(left, right) >= 0;
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
   }
 
   @Override
@@ -289,17 +246,6 @@ class BinEqExpr extends BinaryBooleanOpExprBase
     return left == right;
   }
 
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
-  }
-
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
@@ -343,17 +289,6 @@ class BinNeqExpr extends BinaryBooleanOpExprBase
   protected final boolean evalDouble(double left, double right)
   {
     return left != right;
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
   }
 
   @Override
