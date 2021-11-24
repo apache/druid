@@ -4181,7 +4181,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                + "\"postAggregations\":[],"
                                + "\"limit\":2147483647,"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}},"
-                               + "\"signature\":\"{a0:LONG}\"}]";
+                               + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
+                               + "}]";
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
 
     testQuery(
@@ -6757,7 +6758,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                + "\"limitSpec\":{\"type\":\"NoopLimitSpec\"},"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                                + "\"descending\":false},"
-                               + "\"signature\":\"{a0:LONG}\"}]";
+                               + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
+                               + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
@@ -6804,7 +6806,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                          + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                          + "\"descending\":false,"
                          + "\"granularity\":{\"type\":\"all\"}},"
-                         + "\"signature\":\"{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}\"}]";
+                         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]"
+                         + "}]";
 
     String explanationWithContext = "[{"
                                     + "\"query\":{\"queryType\":\"scan\","
@@ -6819,7 +6822,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useLegacyDruidExplain\":false,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                                     + "\"descending\":false,"
                                     + "\"granularity\":{\"type\":\"all\"}},"
-                                    + "\"signature\":\"{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}\"}]";
+                                    + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]"
+                                    + "}]";
     String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
     String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 

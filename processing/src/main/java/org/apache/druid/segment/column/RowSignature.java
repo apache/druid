@@ -197,7 +197,7 @@ public class RowSignature implements ColumnInspector
 
   // Temporary method for displaying the output in SQL EXPLAIN PLAN
   @JsonValue
-  public List<Map<String, String>> toJsonValue()
+  private List<Map<String, String>> toJsonValue()
   {
     List<Map<String, String>> jsonMap = new ArrayList<>();
     for (String columnName : columnNames) {

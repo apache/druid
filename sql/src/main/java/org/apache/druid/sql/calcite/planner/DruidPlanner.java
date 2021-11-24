@@ -437,7 +437,7 @@ public class DruidPlanner implements Closeable
       Query<?> nativeQuery = druidQuery.getQuery();
       ObjectNode objectNode = jsonMapper.createObjectNode();
       objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
-      objectNode.put("signature", druidQuery.getOutputRowSignature().toString());
+      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
       nativeQueriesArrayNode.add(objectNode);
     }
 
