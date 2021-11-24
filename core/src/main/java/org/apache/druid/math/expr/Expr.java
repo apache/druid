@@ -189,16 +189,22 @@ public interface Expr extends Cacheable
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but could be other
-     * things depending on the backing adapter)
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but
+     * could be other things depending on the backing adapter)
      */
     @Nullable
     ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(List<Expr> args)
     {
@@ -214,15 +220,29 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(Expr... args)
     {
       return areNumeric(Arrays.asList(args));
     }
 
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
     default boolean areSameTypes(List<Expr> args)
     {
       ExpressionType currentType = null;
@@ -240,16 +260,29 @@ public interface Expr extends Cacheable
       return allSame;
     }
 
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
     default boolean areSameTypes(Expr... args)
     {
       return areSameTypes(Arrays.asList(args));
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
-     * value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(List<Expr> args)
     {
@@ -265,10 +298,15 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()} (non-array) with a
-     * value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(Expr... args)
     {
