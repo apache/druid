@@ -121,12 +121,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    */
   private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
   {
+    final long rowsPerAggregator =
+        incrementalIndexSchema.isRollup() ? ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION : 1;
+
     long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
 
     for (final AggregatorFactory aggregator : incrementalIndexSchema.getMetrics()) {
-      final long rows =
-          incrementalIndexSchema.isRollup() ? ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION : 1;
-      maxAggregatorIntermediateSize += (long) aggregator.guessAggregatorHeapFootprint(rows) + 2 * Long.BYTES;
+      maxAggregatorIntermediateSize +=
+          (long) aggregator.guessAggregatorHeapFootprint(rowsPerAggregator) + 2L * Long.BYTES;
     }
 
     return maxAggregatorIntermediateSize;

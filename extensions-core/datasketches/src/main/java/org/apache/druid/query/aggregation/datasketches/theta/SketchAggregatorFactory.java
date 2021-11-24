@@ -49,6 +49,13 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
 
+  // Smallest number of entries in an Aggregator. Each entry is a long. Based on the constructor of
+  // HeapQuickSelectSketch and used by guessAggregatorHeapFootprint.
+  private static final int MIN_ENTRIES_PER_AGGREGATOR = 1 << Util.MIN_LG_ARR_LONGS;
+
+  // Largest preamble size for the sketch stored in an Aggregator, in bytes. Based on Util.getMaxUnionBytes.
+  private static final int LONGEST_POSSIBLE_PREAMBLE_BYTES = Family.UNION.getMaxPreLongs() << 3;
+
   protected final String name;
   protected final String fieldName;
   protected final int size;
@@ -180,14 +187,12 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     if (rows > maxEntries) {
       expectedEntries = maxEntries;
     } else {
-      final int minEntries = 1 << Util.MIN_LG_ARR_LONGS;
-
       // rows is within int range since it's <= maxEntries, so casting is OK.
-      expectedEntries = Math.max(minEntries, Util.ceilingPowerOf2(Ints.checkedCast(rows)));
+      expectedEntries = Math.max(MIN_ENTRIES_PER_AGGREGATOR, Util.ceilingPowerOf2(Ints.checkedCast(rows)));
     }
 
     // 8 bytes per entry + largest possible preamble.
-    return Long.BYTES * expectedEntries + (Family.UNION.getMaxPreLongs() << 3);
+    return Long.BYTES * expectedEntries + LONGEST_POSSIBLE_PREAMBLE_BYTES;
   }
 
   @Override
