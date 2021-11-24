@@ -6776,6 +6776,85 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This testcase has been added here and not in CalciteSelectQueryTests since this checks if the overrides are working
+  // properly when displaying the output of "EXPLAIN PLAN FOR ..." queries
+  @Test
+  public void testExplainSelectStarWithOverrides() throws Exception
+  {
+    Map<String, Object> useLegacyDruidExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    useLegacyDruidExplainContext.put(PlannerConfig.CTX_KEY_USE_LEGACY_DRUID_EXPLAIN, true);
+
+    Map<String, Object> useRegularDruidExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    useRegularDruidExplainContext.put(PlannerConfig.CTX_KEY_USE_LEGACY_DRUID_EXPLAIN, false);
+
+
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+    String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useLegacyDruidExplain\":true},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String explanation = "[{"
+                         + "\"query\":{\"queryType\":\"scan\","
+                         + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                         + "\"virtualColumns\":[],"
+                         + "\"resultFormat\":\"compactedList\","
+                         + "\"batchSize\":20480,"
+                         + "\"filter\":null,"
+                         + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
+                         + "\"legacy\":false,"
+                         + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                         + "\"descending\":false,"
+                         + "\"granularity\":{\"type\":\"all\"}},"
+                         + "\"signature\":\"{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}\"}]";
+
+    String explanationWithContext = "[{"
+                                    + "\"query\":{\"queryType\":\"scan\","
+                                    + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                                    + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                                    + "\"virtualColumns\":[],"
+                                    + "\"resultFormat\":\"compactedList\","
+                                    + "\"batchSize\":20480,"
+                                    + "\"filter\":null,"
+                                    + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
+                                    + "\"legacy\":false,"
+                                    + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useLegacyDruidExplain\":false,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                                    + "\"descending\":false,"
+                                    + "\"granularity\":{\"type\":\"all\"}},"
+                                    + "\"signature\":\"{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}\"}]";
+    String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
+    String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+
+    // Test when default config and no overrides
+    testQuery(sql, ImmutableList.of(), ImmutableList.of(new Object[]{legacyExplanation, resources}));
+
+    // Test when default config and useLegacyDruidExplain is overridden in the context
+    testQuery(
+        sql,
+        useRegularDruidExplainContext,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanationWithContext, resources})
+    );
+
+    // Test when useLegacyDruidExplain disabled by default and no overrides
+    testQuery(
+        PLANNER_CONFIG_LEGACY_DRUID_EXPLAIN_FALSE,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanation, resources})
+    );
+
+    // Test when useLegacyDruidExplain disabled by default but is overriden in the context
+    testQuery(
+        PLANNER_CONFIG_LEGACY_DRUID_EXPLAIN_FALSE,
+        useLegacyDruidExplainContext,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{legacyExplanationWithContext, resources})
+    );
+  }
+
   @Test
   public void testExactCountDistinctUsingSubqueryWithWherePushDown() throws Exception
   {
