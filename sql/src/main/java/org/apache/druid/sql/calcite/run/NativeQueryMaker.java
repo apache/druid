@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.rel;
+package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +25,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.Pair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -49,44 +51,64 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.sql.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class QueryMaker
+public class NativeQueryMaker implements QueryMaker
 {
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
+  private final List<Pair<Integer, String>> fieldMapping;
+  private final RelDataType resultType;
 
-  public QueryMaker(
+  public NativeQueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
       final PlannerContext plannerContext,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final List<Pair<Integer, String>> fieldMapping,
+      final RelDataType resultType
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
     this.jsonMapper = jsonMapper;
+    this.fieldMapping = fieldMapping;
+    this.resultType = resultType;
   }
 
-  public PlannerContext getPlannerContext()
+  @Override
+  public RelDataType getResultType()
   {
-    return plannerContext;
+    return resultType;
   }
 
-  public ObjectMapper getJsonMapper()
+  @Override
+  public boolean feature(QueryFeature feature)
   {
-    return jsonMapper;
+    switch (feature) {
+      case CAN_RUN_TIMESERIES:
+      case CAN_RUN_TOPN:
+        return true;
+      case CAN_READ_EXTERNAL_DATA:
+      case SCAN_CAN_ORDER_BY_NON_TIME:
+        return false;
+      default:
+        throw new IAE("Unrecognized feature: %s", feature);
+    }
   }
 
+  @Override
   public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
@@ -113,14 +135,17 @@ public class QueryMaker
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
     }
 
-    return execute(
-        query,
-        rowOrder,
+    final List<SqlTypeName> columnTypes =
         druidQuery.getOutputRowType()
                   .getFieldList()
                   .stream()
                   .map(f -> f.getType().getSqlTypeName())
-                  .collect(Collectors.toList())
+                  .collect(Collectors.toList());
+
+    return execute(
+        query,
+        mapColumnList(rowOrder, fieldMapping),
+        mapColumnList(columnTypes, fieldMapping)
     );
   }
 
@@ -159,10 +184,10 @@ public class QueryMaker
     final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
     final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
 
-    return remapFields(resultArrays, resultArrayFields, newFields, newTypes);
+    return mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes);
   }
 
-  private Sequence<Object[]> remapFields(
+  private Sequence<Object[]> mapResultSequence(
       final Sequence<Object[]> sequence,
       final List<String> originalFields,
       final List<String> newFields,
@@ -202,35 +227,6 @@ public class QueryMaker
           return newArray;
         }
     );
-  }
-
-  public static ColumnMetaData.Rep rep(final SqlTypeName sqlType)
-  {
-    if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
-      return ColumnMetaData.Rep.of(String.class);
-    } else if (sqlType == SqlTypeName.TIMESTAMP) {
-      return ColumnMetaData.Rep.of(Long.class);
-    } else if (sqlType == SqlTypeName.DATE) {
-      return ColumnMetaData.Rep.of(Integer.class);
-    } else if (sqlType == SqlTypeName.INTEGER) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
-    } else if (sqlType == SqlTypeName.BIGINT) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
-    } else if (sqlType == SqlTypeName.FLOAT) {
-      return ColumnMetaData.Rep.of(Float.class);
-    } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
-      return ColumnMetaData.Rep.of(Double.class);
-    } else if (sqlType == SqlTypeName.BOOLEAN) {
-      return ColumnMetaData.Rep.of(Boolean.class);
-    } else if (sqlType == SqlTypeName.OTHER) {
-      return ColumnMetaData.Rep.of(Object.class);
-    } else if (sqlType == SqlTypeName.ARRAY) {
-      return ColumnMetaData.Rep.of(Array.class);
-    } else {
-      throw new ISE("No rep for SQL type[%s]", sqlType);
-    }
   }
 
   private Object coerce(final Object value, final SqlTypeName sqlType)
@@ -367,5 +363,16 @@ public class QueryMaker
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
     }
     return dateTime;
+  }
+
+  private static <T> List<T> mapColumnList(final List<T> in, final List<Pair<Integer, String>> fieldMapping)
+  {
+    final List<T> out = new ArrayList<>(fieldMapping.size());
+
+    for (final Pair<Integer, String> entry : fieldMapping) {
+      out.add(in.get(entry.getKey()));
+    }
+
+    return out;
   }
 }

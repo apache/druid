@@ -17,32 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.run;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-
-import java.util.Set;
+import org.apache.druid.sql.calcite.external.ExternalDataSource;
 
 /**
- * If an SQL query can be validated by {@link DruidPlanner}, the resulting artifact is the set of {@link Resource}
- * corresponding to the datasources and views which an authenticated request must be authorized for to process the
- * query.
+ * Arguments to {@link QueryFeatureInspector#feature(QueryFeature)}.
  */
-public class ValidationResult
+public enum QueryFeature
 {
-  private final Set<ResourceAction> resourceActions;
+  /**
+   * Queries of type {@link org.apache.druid.query.timeseries.TimeseriesQuery} are usable.
+   */
+  CAN_RUN_TIMESERIES,
 
-  public ValidationResult(
-      final Set<ResourceAction> resourceActions
-  )
-  {
-    this.resourceActions = ImmutableSet.copyOf(resourceActions);
-  }
+  /**
+   * Queries of type {@link org.apache.druid.query.topn.TopNQuery} are usable.
+   */
+  CAN_RUN_TOPN,
 
-  public Set<ResourceAction> getResourceActions()
-  {
-    return resourceActions;
-  }
+  /**
+   * Queries can use {@link ExternalDataSource}.
+   */
+  CAN_READ_EXTERNAL_DATA,
+
+  /**
+   * Scan queries can use {@link org.apache.druid.query.scan.ScanQuery#getOrderBys()} that are based on something
+   * other than the "__time" column.
+   */
+  SCAN_CAN_ORDER_BY_NON_TIME,
 }
