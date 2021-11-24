@@ -50,4 +50,12 @@ public interface CachePopulator
       Cache cache,
       Cache.NamedKey cacheKey
   );
+
+  <T, CacheType> Sequence<T> wrap(
+      byte[] segmentInfo,
+      Sequence<T> sequence,
+      Function<T, CacheType> cacheFn,
+      Cache cache,
+      Cache.NamedKey cacheKey
+  );
 }

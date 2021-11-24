@@ -93,6 +93,56 @@ public class CacheUtil
     );
   }
 
+  public static Cache.NamedKey computeSegmentMergedResultCacheKey(
+      String dataSourceName,
+      byte[] queryCacheKey
+  )
+  {
+    byte[] nameBytes = StringUtils.toUtf8(dataSourceName);
+    byte[] bytes = ByteBuffer
+        .allocate(nameBytes.length + queryCacheKey.length)
+        .put(nameBytes)
+        .put(queryCacheKey)
+        .array();
+    return new Cache.NamedKey(StringUtils.fromUtf8(bytes), bytes);
+  }
+
+  /**
+   * Returns whether the segment-merged-result-level cache should be checked for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   */
+  public static <T> boolean isUseSegmentMergedResultCache(
+      Query<T> query,
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, true, true)
+           && QueryContexts.isUseSegmentMergedResultCache(query)
+           && cacheConfig.isUseSegmentMergedResultCache();
+  }
+
+  /**
+   * Returns whether the segment-merged-result-level cache should be populated for a particular query.
+   *
+   * @param query         the query to check
+   * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
+   * @param cacheConfig   current active cache config
+   */
+  public static <T> boolean isPopulateSegmentMergedResultCache(
+      Query<T> query,
+      @Nullable CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      CacheConfig cacheConfig
+  )
+  {
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, true, true)
+           && QueryContexts.isPopulateSegmentMergedResultCache(query)
+           && cacheConfig.isPopulateSegmentMergedResultCache();
+  }
+
   /**
    * Returns whether the segment-level cache should be checked for a particular query.
    *
@@ -189,9 +239,20 @@ public class CacheUtil
       final ServerType serverType
   )
   {
+    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType.willMergeRunners(), serverType == ServerType.BROKER);
+  }
+  
+  private static <T> boolean isQueryCacheable(
+      final Query<T> query,
+      @Nullable final CacheStrategy<T, Object, Query<T>> cacheStrategy,
+      final CacheConfig cacheConfig,
+      final boolean willMergeRunners,
+      final boolean isBroker
+  )
+  {
     return cacheStrategy != null
-           && cacheStrategy.isCacheable(query, serverType.willMergeRunners())
+           && cacheStrategy.isCacheable(query, willMergeRunners)
            && cacheConfig.isQueryCacheable(query)
-           && query.getDataSource().isCacheable(serverType == ServerType.BROKER);
+           && query.getDataSource().isCacheable(isBroker);
   }
 }

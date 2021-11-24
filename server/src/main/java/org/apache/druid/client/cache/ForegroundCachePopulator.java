@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.function.Function;
 
 /**
@@ -57,6 +59,7 @@ public class ForegroundCachePopulator implements CachePopulator
 
   @Override
   public <T, CacheType> Sequence<T> wrap(
+      byte[] segmentInfo,
       final Sequence<T> sequence,
       final Function<T, CacheType> cacheFn,
       final Cache cache,
@@ -68,6 +71,10 @@ public class ForegroundCachePopulator implements CachePopulator
     final JsonGenerator jsonGenerator;
 
     try {
+      if (segmentInfo.length > 0) {
+        bytes.write(ByteBuffer.allocate(Integer.BYTES).putInt(segmentInfo.length).array());
+        bytes.write(segmentInfo);
+      }
       jsonGenerator = objectMapper.getFactory().createGenerator(bytes);
     }
     catch (IOException e) {
@@ -122,5 +129,16 @@ public class ForegroundCachePopulator implements CachePopulator
           }
         }
     );
+  }
+
+  @Override
+  public <T, CacheType> Sequence<T> wrap(
+      Sequence<T> sequence,
+      Function<T, CacheType> cacheFn,
+      Cache cache,
+      Cache.NamedKey cacheKey
+  )
+  {
+    return wrap(StringUtils.EMPTY_BYTES, sequence, cacheFn, cache, cacheKey);
   }
 }

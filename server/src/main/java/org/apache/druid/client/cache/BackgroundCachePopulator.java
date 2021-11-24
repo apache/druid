@@ -28,12 +28,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -67,6 +69,7 @@ public class BackgroundCachePopulator implements CachePopulator
 
   @Override
   public <T, CacheType> Sequence<T> wrap(
+      byte[] segmentInfo,
       final Sequence<T> sequence,
       final Function<T, CacheType> cacheFn,
       final Cache cache,
@@ -93,7 +96,7 @@ public class BackgroundCachePopulator implements CachePopulator
                 @Override
                 public void onSuccess(List<CacheType> results)
                 {
-                  populateCache(cache, cacheKey, results);
+                  populateCache(segmentInfo, cache, cacheKey, results);
                   // Help out GC by making sure all references are gone
                   cacheFutures.clear();
                 }
@@ -113,6 +116,7 @@ public class BackgroundCachePopulator implements CachePopulator
   }
 
   private <CacheType> void populateCache(
+      byte[] segmentInfo,
       final Cache cache,
       final Cache.NamedKey cacheKey,
       final List<CacheType> results
@@ -120,6 +124,11 @@ public class BackgroundCachePopulator implements CachePopulator
   {
     try {
       final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
+      if (segmentInfo.length > 0) {
+        bytes.write(ByteBuffer.allocate(Integer.BYTES).putInt(segmentInfo.length).array());
+        bytes.write(segmentInfo);
+      }
 
       try (JsonGenerator gen = objectMapper.getFactory().createGenerator(bytes)) {
         for (CacheType result : results) {
@@ -144,5 +153,16 @@ public class BackgroundCachePopulator implements CachePopulator
       log.warn(e, "Could not populate cache");
       cachePopulatorStats.incrementError();
     }
+  }
+
+  @Override
+  public <T, CacheType> Sequence<T> wrap(
+      Sequence<T> sequence,
+      Function<T, CacheType> cacheFn,
+      Cache cache,
+      Cache.NamedKey cacheKey
+  )
+  {
+    return wrap(StringUtils.EMPTY_BYTES, sequence, cacheFn, cache, cacheKey);
   }
 }

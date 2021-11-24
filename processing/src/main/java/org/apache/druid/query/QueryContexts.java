@@ -74,6 +74,8 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
+  public static final boolean DEFAULT_POPULATE_SEGMENT_MERGED_RESULT_CACHE = true;
+  public static final boolean DEFAULT_USE_SEGMENT_MERGED_RESULT_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.FALSE;
   public static final int DEFAULT_PRIORITY = 0;
@@ -184,6 +186,16 @@ public class QueryContexts
   public static <T> boolean isUseResultLevelCache(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "useResultLevelCache", defaultValue);
+  }
+
+  public static <T> boolean isPopulateSegmentMergedResultCache(Query<T> query)
+  {
+    return parseBoolean(query, "populateSegmentMergedResultCache", DEFAULT_POPULATE_SEGMENT_MERGED_RESULT_CACHE);
+  }
+
+  public static <T> boolean isUseSegmentMergedResultCache(Query<T> query)
+  {
+    return parseBoolean(query, "useSegmentMergedResultCache", DEFAULT_USE_SEGMENT_MERGED_RESULT_CACHE);
   }
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)

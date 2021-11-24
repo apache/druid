@@ -44,6 +44,12 @@ public class CacheConfig
   private boolean populateResultLevelCache = false;
 
   @JsonProperty
+  private boolean useSegmentMergedResultCache = false;
+
+  @JsonProperty
+  private boolean populateSegmentMergedResultCache = false;
+
+  @JsonProperty
   @Min(0)
   private int numBackgroundThreads = 0;
 
@@ -78,6 +84,16 @@ public class CacheConfig
   public boolean isUseResultLevelCache()
   {
     return useResultLevelCache;
+  }
+
+  public boolean isUseSegmentMergedResultCache()
+  {
+    return useSegmentMergedResultCache;
+  }
+
+  public boolean isPopulateSegmentMergedResultCache()
+  {
+    return populateSegmentMergedResultCache;
   }
 
   public int getNumBackgroundThreads()

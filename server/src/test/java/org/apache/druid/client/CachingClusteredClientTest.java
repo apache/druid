@@ -472,6 +472,47 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
+  public void testUseSegmentMergedResultCacheCaching()
+  {
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 10, true);
+
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    testQueryCaching(
+        runner,
+        3,
+        false,
+        builder.randomQueryId().build(),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000),
+        Intervals.of("2011-01-02/2011-01-03"), makeTimeResults(DateTimes.of("2011-01-02"), 30, 6000),
+        Intervals.of("2011-01-04/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-04"), 23, 85312)
+    );
+
+    TimeseriesQuery query = builder.intervals("2011-01-01/2011-01-05")
+                                   .aggregators(RENAMED_AGGS)
+                                   .postAggregators(RENAMED_POST_AGGS)
+                                   .build();
+    TestHelper.assertExpectedResults(
+        makeRenamedTimeResults(
+            DateTimes.of("2011-01-01"), 50, 5000,
+            DateTimes.of("2011-01-02"), 30, 6000,
+            DateTimes.of("2011-01-04"), 23, 85312
+        ),
+        runner.run(QueryPlus.wrap(query))
+    );
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
   public void testTimeseriesCaching()
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
@@ -754,6 +795,76 @@ public class CachingClusteredClientTest
             ImmutableMap.of(
                 "useCache", "true",
                 "populateCache", "false"
+            )
+        ).randomQueryId().build(),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
+    );
+
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+  }
+
+  @Test
+  public void testDisableUseSegmentMergedResultCache() throws IOException
+  {
+    client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, 10, true);
+    
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    testQueryCaching(
+        runner,
+        1,
+        false,
+        builder.context(
+            ImmutableMap.of(
+                "useSegmentMergedResultCache", "false",
+                "populateSegmentMergedResultCache", "true"
+            )
+        ).randomQueryId().build(),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
+    );
+
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
+
+    cache.close();
+
+    testQueryCaching(
+        runner,
+        1,
+        false,
+        builder.context(
+            ImmutableMap.of(
+                "useSegmentMergedResultCache", "false",
+                "populateSegmentMergedResultCache", "false"
+            )
+        ).randomQueryId().build(),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
+    );
+
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
+
+    testQueryCaching(
+        getDefaultQueryRunner(),
+        1,
+        false,
+        builder.context(
+            ImmutableMap.of(
+                "useSegmentMergedResultCache", "true",
+                "populateSegmentMergedResultCache", "false"
             )
         ).randomQueryId().build(),
         Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
@@ -2746,11 +2857,21 @@ public class CachingClusteredClientTest
   {
     return makeClient(cachePopulator, cache, 10);
   }
+  
+  private CachingClusteredClient makeClient(
+      final CachePopulator cachePopulator,
+      final Cache cache,
+      final int mergeLimit
+  )
+  {
+    return makeClient(cachePopulator, cache, mergeLimit, false);
+  }
 
   protected CachingClusteredClient makeClient(
       final CachePopulator cachePopulator,
       final Cache cache,
-      final int mergeLimit
+      final int mergeLimit,
+      final boolean useSegmentMergedResultCache
   )
   {
     return new CachingClusteredClient(
@@ -2800,19 +2921,31 @@ public class CachingClusteredClientTest
           @Override
           public boolean isPopulateCache()
           {
-            return true;
+            return !useSegmentMergedResultCache;
           }
 
           @Override
           public boolean isUseCache()
           {
-            return true;
+            return !useSegmentMergedResultCache;
           }
 
           @Override
           public boolean isQueryCacheable(Query query)
           {
             return true;
+          }
+
+          @Override
+          public boolean isUseSegmentMergedResultCache()
+          {
+            return useSegmentMergedResultCache;
+          }
+
+          @Override
+          public boolean isPopulateSegmentMergedResultCache()
+          {
+            return useSegmentMergedResultCache;
           }
 
           @Override
