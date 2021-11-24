@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
@@ -99,11 +100,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
         recordSupplier = createRecordSupplier();
       }
       catch (Exception e) {
-        if (e.getCause() != null) {
-          throw new SamplerException(e, "Unable to create RecordSupplier: %s. Cause: %s", e.getMessage(), e.getCause().getMessage());
-        } else {
-          throw new SamplerException(e, "Unable to create RecordSupplier: %s", e.getMessage());
-        }
+        throw new SamplerException(e, "Unable to create RecordSupplier: %s", Throwables.getRootCause(e).getMessage());
       }
 
       inputSource = new RecordSupplierInputSource<>(
