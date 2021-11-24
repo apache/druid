@@ -29,6 +29,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -74,9 +75,7 @@ class LookupListeningResource extends ListenerResource
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ServletResourceUtils.sanitizeException(ex))
-                             .build();
+              return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, ex);
             }
 
             try {

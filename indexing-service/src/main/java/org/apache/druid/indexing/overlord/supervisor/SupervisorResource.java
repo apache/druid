@@ -33,6 +33,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -492,15 +493,16 @@ public class SupervisorResource
             Response.Status status;
             String errMsg;
             if (spec.isPresent()) {
-              status = Response.Status.BAD_REQUEST;
-              errMsg = StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running");
+              return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                              StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running"));
             } else {
               status = Response.Status.NOT_FOUND;
               errMsg = StringUtils.format("[%s] does not exist", id);
-            }
-            return Response.status(status)
+              return Response.status(status)
+                           .type(MediaType.APPLICATION_JSON_TYPE)
                            .entity(ImmutableMap.of("error", errMsg))
                            .build();
+            }
           }
         }
     );

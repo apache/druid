@@ -19,13 +19,13 @@
 
 package org.apache.druid.security.basic.authorization.endpoint;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -198,12 +198,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       log.error(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName);
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of(
-                         "error",
-                         StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName)
-                     ))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
     }
 
     cacheManager.handleAuthorizerUserUpdate(authorizerName, serializedUserAndRoleMap);
@@ -216,12 +211,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       log.error(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName);
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of(
-                         "error",
-                         StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName)
-                     ))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
     }
 
     cacheManager.handleAuthorizerGroupMappingUpdate(authorizerName, serializedGroupMappingAndRoleMap);

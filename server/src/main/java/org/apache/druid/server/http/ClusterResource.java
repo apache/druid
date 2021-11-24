@@ -32,6 +32,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -93,9 +94,7 @@ public class ClusterResource
   public Response getClusterServers(@PathParam("nodeRole") NodeRole nodeRole, @QueryParam("full") boolean full)
   {
     if (nodeRole == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid nodeRole of null. Valid node roles are " + Arrays.toString(NodeRole.values()))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Invalid nodeRole of null. Valid node roles are " + Arrays.toString(NodeRole.values()));
     } else {
       return Response.status(Response.Status.OK).entity(getNodes(nodeRole, full)).build();
     }

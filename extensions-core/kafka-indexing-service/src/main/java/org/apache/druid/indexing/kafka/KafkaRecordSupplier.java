@@ -142,9 +142,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
   {
     Long currPos = getPosition(partition);
     seekToLatest(Collections.singleton(partition));
-    Long nextPos = getPosition(partition);
+    Long latestPos = getPosition(partition);
     seek(partition, currPos);
-    return nextPos;
+    return latestPos;
   }
 
   @Override
@@ -152,9 +152,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
   {
     Long currPos = getPosition(partition);
     seekToEarliest(Collections.singleton(partition));
-    Long nextPos = getPosition(partition);
+    Long eariliestPos = getPosition(partition);
     seek(partition, currPos);
-    return nextPos;
+    return eariliestPos;
   }
 
   @Override

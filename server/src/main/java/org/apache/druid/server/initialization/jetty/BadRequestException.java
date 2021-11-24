@@ -19,16 +19,18 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import javax.ws.rs.core.Response;
+
 /**
  * This class is for any exceptions that should return a bad request status code (400).
  * See {@code BadQueryException} for query requests.
  *
- * @see BadRequestExceptionMapper
+ * @see ResponseStatusExceptionMapper
  */
-public class BadRequestException extends RuntimeException
+public class BadRequestException extends ResponseStatusException
 {
   public BadRequestException(String msg)
   {
-    super(msg);
+    super(Response.Status.BAD_REQUEST, msg);
   }
 }

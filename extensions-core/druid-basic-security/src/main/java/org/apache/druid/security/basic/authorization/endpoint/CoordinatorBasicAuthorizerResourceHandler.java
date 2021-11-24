@@ -20,7 +20,6 @@
 package org.apache.druid.security.basic.authorization.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,6 +38,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserF
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -436,21 +436,12 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
   {
-    return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.<String, Object>of(
-                       "error",
-                       StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName)
-                   ))
-                   .build();
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName));
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.<String, Object>of(
-                       "error", bsre.getMessage()
-                   ))
-                   .build();
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, bsre.getMessage());
   }
 
   private Response getUserSimple(String authorizerName, String userName)

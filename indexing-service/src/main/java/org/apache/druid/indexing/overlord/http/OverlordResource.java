@@ -66,6 +66,7 @@ import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -223,7 +224,7 @@ public class OverlordResource
   public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
   {
     if (minTaskPriority == null || minTaskPriority.isEmpty()) {
-      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "No Datasource provided");
     }
 
     // Build the response
@@ -384,7 +385,7 @@ public class OverlordResource
   public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "No TaskIds provided.");
     }
 
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());

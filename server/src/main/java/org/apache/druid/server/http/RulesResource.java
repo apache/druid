@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
@@ -30,6 +29,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -129,9 +129,7 @@ public class RulesResource
       return Response.ok(getRuleHistory(dataSourceName, interval, count)).build();
     }
     catch (IllegalArgumentException e) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e.getMessage());
     }
   }
 
@@ -148,9 +146,7 @@ public class RulesResource
       return Response.ok(getRuleHistory(null, interval, count)).build();
     }
     catch (IllegalArgumentException e) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e.getMessage());
     }
   }
 

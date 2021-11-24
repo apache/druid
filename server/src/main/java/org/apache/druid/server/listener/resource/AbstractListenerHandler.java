@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
@@ -68,7 +69,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (JsonParseException | JsonMappingException e) {
       LOG.debug(e, "Bad request");
-      return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(e)).build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e);
     }
     catch (Exception e) {
       LOG.error(e, "Error handling request");
@@ -99,7 +100,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
     }
     catch (final IOException ex) {
       LOG.debug(ex, "Bad request");
-      return Response.status(Response.Status.BAD_REQUEST).entity(ServletResourceUtils.sanitizeException(ex)).build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, ex);
     }
     final Object returnObj;
     try {

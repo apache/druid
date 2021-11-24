@@ -20,7 +20,6 @@
 package org.apache.druid.security.basic.authentication.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
@@ -30,6 +29,7 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
@@ -197,20 +197,11 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)
   {
-    return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.<String, Object>of(
-                       "error",
-                       StringUtils.format("Basic authenticator with name [%s] does not exist.", authenticatorName)
-                   ))
-                   .build();
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format("Basic authenticator with name [%s] does not exist.", authenticatorName));
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.<String, Object>of(
-                       "error", bsre.getMessage()
-                   ))
-                   .build();
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, bsre.getMessage());
   }
 }

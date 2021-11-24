@@ -19,23 +19,20 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import com.google.common.collect.ImmutableMap;
-
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
-@Provider
-public class BadRequestExceptionMapper implements ExceptionMapper<BadRequestException>
+public class ResponseStatusException extends RuntimeException
 {
-  @Override
-  public Response toResponse(BadRequestException exception)
+  private final Response.Status statusCode;
+
+  public ResponseStatusException(Response.Status statusCode, String message)
   {
-    return Response.status(Status.BAD_REQUEST)
-                   .type(MediaType.APPLICATION_JSON)
-                   .entity(ImmutableMap.of("error", exception.getMessage()))
-                   .build();
+    super(message);
+    this.statusCode = statusCode;
+  }
+
+  public Response.Status getStatusCode()
+  {
+    return statusCode;
   }
 }

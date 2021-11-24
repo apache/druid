@@ -82,6 +82,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1597,18 +1598,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   ) throws InterruptedException
   {
     if (sequenceNumbers == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Request body must contain a map of { partition:endOffset }")
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Request body must contain a map of { partition:endOffset }");
     } else if (!endOffsets.keySet().containsAll(sequenceNumbers.keySet())) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(
-                         StringUtils.format(
-                             "Request contains partitions not being handled by this task, my partitions: %s",
-                             endOffsets.keySet()
-                         )
-                     )
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                      StringUtils.format("Request contains partitions not being handled by this task, my partitions: %s",
+                                                                         endOffsets.keySet()));
     } else {
       try {
         pauseLock.lockInterruptibly();
@@ -1637,30 +1631,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
-          return Response.status(Response.Status.BAD_REQUEST)
-                         .entity(StringUtils.format(
+          return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                          StringUtils.format(
                              "Sequence [%s] has already endOffsets set, cannot set to [%s]",
                              latestSequence,
-                             sequenceNumbers
-                         )).build();
+                             sequenceNumbers));
         } else if (!isPaused()) {
-          return Response.status(Response.Status.BAD_REQUEST)
-                         .entity("Task must be paused before changing the end offsets")
-                         .build();
+          return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                          "Task must be paused before changing the end offsets");
         }
 
         for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceNumbers.entrySet()) {
           if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
               < 0) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(
-                               StringUtils.format(
-                                   "End sequence must be >= current sequence for partition [%s] (current: %s)",
-                                   entry.getKey(),
-                                   currOffsets.get(entry.getKey())
-                               )
-                           )
-                           .build();
+            return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                            StringUtils.format("End sequence must be >= current sequence for partition [%s] (current: %s)",
+                                                                               entry.getKey(),
+                                                                               currOffsets.get(entry.getKey())));
           }
         }
 
@@ -1769,9 +1756,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
-                     .build();
+      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                      StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status));
     }
 
     pauseLock.lockInterruptibly();

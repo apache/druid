@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
+import org.apache.druid.server.initialization.jetty.NotFoundException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -37,9 +38,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
-import javax.ws.rs.core.Response;
 
 public class SupervisorResourceFilter extends AbstractResourceFilter
 {
@@ -77,13 +76,8 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
 
     Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
     if (!supervisorSpecOptional.isPresent()) {
-      throw new WebApplicationException(
-          Response.status(Response.Status.NOT_FOUND)
-                  .entity(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId))
-                  .build()
-      );
+      throw new NotFoundException(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId));
     }
-
 
     final SupervisorSpec spec = supervisorSpecOptional.get();
     Preconditions.checkArgument(

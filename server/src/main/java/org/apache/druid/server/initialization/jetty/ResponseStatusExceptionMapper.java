@@ -19,19 +19,32 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import com.google.common.collect.ImmutableMap;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
-
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 @Provider
-public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
+public class ResponseStatusExceptionMapper implements ExceptionMapper<ResponseStatusException>
 {
-  @Override
-  public Response toResponse(JsonMappingException exception)
+  public static Response toResponse(Response.Status statusCode, Exception e)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
+    return toResponse(statusCode, e == null ? "null" : (e.getMessage() == null ? e.toString() : e.getMessage()));
+  }
+
+  public static Response toResponse(Response.Status status, String message)
+  {
+    return Response.status(status.getStatusCode())
+                   .type(MediaType.APPLICATION_JSON)
+                   .entity(ImmutableMap.of("error", message))
+                   .build();
+  }
+
+  @Override
+  public Response toResponse(ResponseStatusException exception)
+  {
+    return toResponse(exception.getStatusCode(), exception.getMessage());
   }
 }

@@ -19,19 +19,17 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-
-import com.fasterxml.jackson.databind.JsonMappingException;
-
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
-@Provider
-public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
+/**
+ * This class is for any exceptions that should return a not found status code (404).
+ *
+ * @see ResponseStatusExceptionMapper
+ */
+public class NotFoundException extends ResponseStatusException
 {
-  @Override
-  public Response toResponse(JsonMappingException exception)
+  public NotFoundException(String msg)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
+    super(Response.Status.NOT_FOUND, msg);
   }
 }

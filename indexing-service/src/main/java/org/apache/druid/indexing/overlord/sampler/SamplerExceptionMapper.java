@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord.sampler;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -31,11 +31,6 @@ public class SamplerExceptionMapper implements ExceptionMapper<SamplerException>
   @Override
   public Response toResponse(SamplerException exception)
   {
-    return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.of(
-                       "error",
-                       exception.getMessage() == null ? "The sampler encountered an issue" : exception.getMessage()
-                   ))
-                   .build();
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, exception.getMessage() == null ? "The sampler encountered an issue" : exception.getMessage());
   }
 }
