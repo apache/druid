@@ -72,7 +72,7 @@ public class PlannerConfig
   private boolean authorizeSystemTablesDirectly = false;
 
   @JsonProperty
-  private boolean useLegacyDruidExplain = false;
+  private boolean useLegacyDruidExplain = true;
 
   public long getMetadataSegmentPollPeriod()
   {
