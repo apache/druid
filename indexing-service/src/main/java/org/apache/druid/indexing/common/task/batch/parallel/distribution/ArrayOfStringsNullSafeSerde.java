@@ -25,6 +25,7 @@ import org.apache.datasketches.Util;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.java.util.common.IAE;
 
 import java.nio.charset.StandardCharsets;
 
@@ -37,16 +38,25 @@ import java.nio.charset.StandardCharsets;
 public class ArrayOfStringsNullSafeSerde extends ArrayOfItemsSerDe<String>
 {
 
+  private static final int NULL_STRING_LENGTH = -1;
+
   @Override
   public byte[] serializeToByteArray(final String[] items)
   {
+    // Determine the bytes for each String
     int length = 0;
     final byte[][] itemsBytes = new byte[items.length][];
     for (int i = 0; i < items.length; i++) {
-      // If the String is null, make the byte array also null
-      itemsBytes[i] = items[i] == null ? null : items[i].getBytes(StandardCharsets.UTF_8);
-      length += (itemsBytes[i] == null ? 0 : itemsBytes[i].length) + Integer.BYTES;
+      length += Integer.BYTES;
+
+      // Do not initialize the byte array for a null String
+      if (items[i] != null) {
+        itemsBytes[i] = items[i].getBytes(StandardCharsets.UTF_8);
+        length += itemsBytes[i].length;
+      }
     }
+
+    // Create a single byte array for all the Strings
     final byte[] bytes = new byte[length];
     final WritableMemory mem = WritableMemory.writableWrap(bytes);
     long offsetBytes = 0;
@@ -58,11 +68,11 @@ public class ArrayOfStringsNullSafeSerde extends ArrayOfItemsSerDe<String>
         mem.putByteArray(offsetBytes, itemsBytes[i], 0, itemsBytes[i].length);
         offsetBytes += itemsBytes[i].length;
       } else {
-        // If the byte array is null, write the length as -1
-        mem.putInt(offsetBytes, -1);
+        mem.putInt(offsetBytes, NULL_STRING_LENGTH);
         offsetBytes += Integer.BYTES;
       }
     }
+
     return bytes;
   }
 
@@ -72,18 +82,25 @@ public class ArrayOfStringsNullSafeSerde extends ArrayOfItemsSerDe<String>
     final String[] array = new String[numItems];
     long offsetBytes = 0;
     for (int i = 0; i < numItems; i++) {
-      // Read the length of the byte array
+      // Read the length of the ith String
       Util.checkBounds(offsetBytes, Integer.BYTES, mem.getCapacity());
-      final int arrayLength = mem.getInt(offsetBytes);
+      final int strLength = mem.getInt(offsetBytes);
       offsetBytes += Integer.BYTES;
 
-      // Negative strLength represents a null byte array and a null String
-      if (arrayLength >= 0) {
-        final byte[] bytes = new byte[arrayLength];
-        Util.checkBounds(offsetBytes, arrayLength, mem.getCapacity());
-        mem.getByteArray(offsetBytes, bytes, 0, arrayLength);
-        offsetBytes += arrayLength;
+      if (strLength >= 0) {
+        // Read the bytes for the String
+        final byte[] bytes = new byte[strLength];
+        Util.checkBounds(offsetBytes, strLength, mem.getCapacity());
+        mem.getByteArray(offsetBytes, bytes, 0, strLength);
+        offsetBytes += strLength;
         array[i] = new String(bytes, StandardCharsets.UTF_8);
+      } else if (strLength != NULL_STRING_LENGTH) {
+        throw new IAE(
+            "Illegal strLength [%s] at offset [%s]. Must be %s, 0 or a positive integer.",
+            strLength,
+            offsetBytes,
+            NULL_STRING_LENGTH
+        );
       }
     }
     return array;
