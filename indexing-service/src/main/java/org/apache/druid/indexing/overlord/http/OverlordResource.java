@@ -65,6 +65,7 @@ import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -177,25 +178,13 @@ public class OverlordResource
 
     return asLeaderWith(
         taskMaster.getTaskQueue(),
-        new Function<TaskQueue, Response>()
-        {
-          @Override
-          public Response apply(TaskQueue taskQueue)
-          {
-            try {
-              taskQueue.add(task);
-              return Response.ok(ImmutableMap.of("task", task.getId())).build();
-            }
-            catch (EntryExistsException e) {
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format("Task[%s] already exists!", task.getId())
-                                 )
-                             )
-                             .build();
-            }
+        taskQueue -> {
+          try {
+            taskQueue.add(task);
+            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+          }
+          catch (EntryExistsException e) {
+            throw new BadRequestException(StringUtils.format("Task[%s] already exists!", task.getId()));
           }
         }
     );
@@ -468,9 +457,7 @@ public class OverlordResource
         return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
-                       .build();
+        throw new BadRequestException(e.getMessage());
       }
     }
     List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
@@ -569,9 +556,7 @@ public class OverlordResource
     //check for valid state
     if (state != null) {
       if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
-        return Response.status(Status.BAD_REQUEST)
-                       .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
-                       .build();
+        throw new BadRequestException(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES));
       }
     }
     // early authorization check if datasource != null
@@ -587,11 +572,7 @@ public class OverlordResource
           authorizerMapper
       );
       if (!authResult.isAllowed()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.FORBIDDEN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                    .build()
-        );
+        throw new ForbiddenException(StringUtils.format(authResult.toString()));
       }
     }
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
