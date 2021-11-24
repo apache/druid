@@ -19,40 +19,115 @@
 
 package org.apache.druid.segment.column;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class RowSignatureTest
 {
+  @Test
+  public void test_add_withConflict()
+  {
+    final RowSignature.Builder builder =
+        RowSignature.builder()
+                    .add("s", ColumnType.STRING)
+                    .add("d", ColumnType.DOUBLE)
+                    .add("d", ColumnType.LONG);
+
+    Assert.assertThrows(
+        "Column [d] has conflicting types",
+        IllegalArgumentException.class,
+        builder::build
+    );
+  }
 
   @Test
-  public void testRowSignatureSerializationToJson() throws JsonProcessingException
+  public void test_addAll()
   {
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("foo1", ColumnType.DOUBLE)
-                                            .add("foo2", ColumnType.STRING)
-                                            .add("foo3", ColumnType.FLOAT)
-                                            .add("foo4", ColumnType.LONG)
-                                            .add("foo5", ColumnType.UNKNOWN_COMPLEX)
-                                            .add("foo6", ColumnType.ofComplex("bar"))
-                                            .add("foo7", ColumnType.STRING_ARRAY)
-                                            .add("foo8", ColumnType.LONG_ARRAY)
-                                            .add("foo9", ColumnType.DOUBLE_ARRAY)
-                                            .build();
-    String expectedSerialization = "["
-                                   + "{\"name\":\"foo1\",\"type\":\"DOUBLE\"},"
-                                   + "{\"name\":\"foo2\",\"type\":\"STRING\"},"
-                                   + "{\"name\":\"foo3\",\"type\":\"FLOAT\"},"
-                                   + "{\"name\":\"foo4\",\"type\":\"LONG\"},"
-                                   + "{\"name\":\"foo5\",\"type\":\"COMPLEX\"},"
-                                   + "{\"name\":\"foo6\",\"type\":\"COMPLEX<bar>\"},"
-                                   + "{\"name\":\"foo7\",\"type\":\"ARRAY<STRING>\"},"
-                                   + "{\"name\":\"foo8\",\"type\":\"ARRAY<LONG>\"},"
-                                   + "{\"name\":\"foo9\",\"type\":\"ARRAY<DOUBLE>\"}"
-                                   + "]";
-    String rowSignatureSerialized = new ObjectMapper().writeValueAsString(rowSignature);
-    Assert.assertEquals(expectedSerialization, rowSignatureSerialized);
+    final RowSignature expectedSignature =
+        RowSignature.builder()
+                    .add("s", ColumnType.STRING)
+                    .add("d", ColumnType.DOUBLE)
+                    .add("l", ColumnType.LONG)
+                    .build();
+
+    final RowSignature signature =
+        RowSignature.builder()
+                    .addAll(RowSignature.builder().add("s", ColumnType.STRING).add("d", ColumnType.DOUBLE).build())
+                    .addAll(RowSignature.builder().add("l", ColumnType.LONG).build())
+                    .build();
+
+    Assert.assertEquals(expectedSignature, signature);
+  }
+
+  @Test
+  public void test_addAll_withOverlap()
+  {
+    final RowSignature expectedSignature =
+        RowSignature.builder()
+                    .add("s", ColumnType.STRING)
+                    .add("d", ColumnType.DOUBLE)
+                    .add("d", ColumnType.DOUBLE)
+                    .build();
+
+    final RowSignature signature =
+        RowSignature.builder()
+                    .addAll(RowSignature.builder().add("s", ColumnType.STRING).add("d", ColumnType.DOUBLE).build())
+                    .addAll(RowSignature.builder().add("d", ColumnType.DOUBLE).build())
+                    .build();
+
+    Assert.assertEquals(ImmutableList.of("s", "d", "d"), expectedSignature.getColumnNames());
+    Assert.assertEquals(expectedSignature, signature);
+  }
+
+  @Test
+  public void test_json() throws IOException
+  {
+    final String signatureString =
+        "[{\"name\":\"s\",\"type\":\"STRING\"},"
+        + "{\"name\":\"d\",\"type\":\"DOUBLE\"},"
+        + "{\"name\":\"f\",\"type\":\"FLOAT\"},"
+        + "{\"name\":\"l\",\"type\":\"LONG\"},"
+        + "{\"name\":\"u\"},"
+        + "{\"name\":\"c\",\"type\":\"COMPLEX\"},"
+        + "{\"name\":\"cf\",\"type\":\"COMPLEX<foo>\"},"
+        + "{\"name\":\"as\",\"type\":\"ARRAY<STRING>\"}"
+        + "]";
+
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final RowSignature signature = mapper.readValue(signatureString, RowSignature.class);
+    Assert.assertEquals(signatureString, mapper.writeValueAsString(signature));
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("s", ColumnType.STRING)
+                    .add("d", ColumnType.DOUBLE)
+                    .add("f", ColumnType.FLOAT)
+                    .add("l", ColumnType.LONG)
+                    .add("u", null)
+                    .add("c", ColumnType.UNKNOWN_COMPLEX)
+                    .add("cf", ColumnType.ofComplex("foo"))
+                    .add("as", ColumnType.ofArray(ColumnType.STRING))
+                    .build(),
+        signature
+    );
+  }
+
+  @Test
+  public void test_json_missingName()
+  {
+    final String signatureString =
+        "[{\"name\":\"s\",\"type\":\"STRING\"},"
+        + "{\"type\":\"DOUBLE\"}]";
+
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    Assert.assertThrows(
+        "Column name must be non-empty",
+        IOException.class,
+        () -> mapper.readValue(signatureString, RowSignature.class)
+    );
   }
 }

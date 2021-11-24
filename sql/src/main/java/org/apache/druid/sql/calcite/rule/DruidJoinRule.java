@@ -186,7 +186,7 @@ public class DruidJoinRule extends RelOptRule
             join.isSemiJoinDone()
         ),
         leftFilter,
-        left.getQueryMaker()
+        left.getPlannerContext()
     );
 
     final RelBuilder relBuilder =

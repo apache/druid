@@ -91,7 +91,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
           DruidUnionDataSourceRel.create(
               (Union) newUnionRel,
               getColumnNamesIfTableOrUnion(firstDruidRel).get(),
-              firstDruidRel.getQueryMaker()
+              firstDruidRel.getPlannerContext()
           )
       );
     } else {
@@ -104,7 +104,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
           DruidUnionDataSourceRel.create(
               unionRel,
               getColumnNamesIfTableOrUnion(firstDruidRel).get(),
-              firstDruidRel.getQueryMaker()
+              firstDruidRel.getPlannerContext()
           )
       );
     }

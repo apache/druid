@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -462,6 +464,26 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         if (!config.getDimensionsSpec().getDimensions().equals(existingDimensions)) {
           log.info(
               "Configured dimensionsSpec is different from the dimensionsSpec of segments. Needs compaction"
+          );
+          return true;
+        }
+      }
+    }
+
+    if (config.getTransformSpec() != null) {
+      final ClientCompactionTaskTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec() != null ?
+                                                                      objectMapper.convertValue(lastCompactionState.getTransformSpec(), ClientCompactionTaskTransformSpec.class) :
+                                                                      null;
+      // Checks for filters
+      if (config.getTransformSpec().getFilter() != null) {
+        final DimFilter existingFilters = existingTransformSpec != null ?
+                                          existingTransformSpec.getFilter() :
+                                          null;
+        if (!config.getTransformSpec().getFilter().equals(existingFilters)) {
+          log.info(
+              "Configured filter[%s] is different from the filter[%s] of segments. Needs compaction",
+              config.getTransformSpec().getFilter(),
+              existingFilters
           );
           return true;
         }

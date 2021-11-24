@@ -109,12 +109,13 @@ To perform a manual compaction, you submit a compaction task. Compaction tasks m
 |`id`|Task id|No|
 |`dataSource`|Data source name to compact|Yes|
 |`ioConfig`|I/O configuration for compaction task. See [Compaction I/O configuration](#compaction-io-configuration) for details.|Yes|
-|`dimensionsSpec`|Custom dimensions spec. The compaction task uses the specified dimensions spec if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
-|`metricsSpec`|Custom metrics spec. The compaction task uses the specified metrics spec rather than generating one.|No|
+|`dimensionsSpec`|Custom `dimensionsSpec`. The compaction task uses the specified `dimensionsSpec` if it exists instead of generating one. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
+|`transformSpec`|Custom `transformSpec`. The compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
+|`metricsSpec`|Custom `metricsSpec`. The compaction task uses the specified `metricsSpec` rather than generating one.|No|
 |`segmentGranularity`|When set, the compaction task changes the segment granularity for the given interval.  Deprecated. Use `granularitySpec`. |No.|
 |`tuningConfig`|[Parallel indexing task tuningConfig](native-batch.md#tuningconfig). `awaitSegmentAvailabilityTimeoutMillis` in the tuning config is not currently supported for compaction tasks. Do not set it to a non-zero value.|No|
 |`context`|[Task context](./tasks.md#context)|No|
-|`granularitySpec`|Custom `granularitySpec` to describe the `segmentGranularity` and `queryGranularity` for the compacted segments. See [Compaction granularitySpec](#compaction-granularity-spec).|No|
+|`granularitySpec`|Custom `granularitySpec`. The compaction task uses the specified `granularitySpec` rather than generating one. See [Compaction granularitySpec](#compaction-granularity-spec) for details.|No|
 
 > Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
 
@@ -182,34 +183,17 @@ Druid supports two supported `inputSpec` formats:
 |`segments`|A list of segment IDs|Yes|
 
 ### Compaction dimensions spec
-You can optionally use the `dimensionsSpec` object to configure the dimensions of the compacted segments.
-
-`dimensionsSpec` takes the following keys:
-
 |Field|Description|Required|
 |-----|-----------|--------|
 |`dimensions`| A list of dimension names or objects. Cannot have the same column in both `dimensions` and `dimensionExclusions`. Defaults to `null`, which preserves the original dimensions.|No|
 |`dimensionExclusions`| The names of dimensions to exclude from compaction. Only names are supported here, not objects. This list is only used if the dimensions list is null or empty; otherwise it is ignored. Defaults to `[]`.|No|
 
+### Compaction transform spec
+|Field|Description|Required|
+|-----|-----------|--------|
+|`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
+
 ### Compaction granularity spec
-
-You can optionally use the `granularitySpec` object to configure the segment granularity and the query granularity of the compacted segments. Their syntax is as follows:
-```json
-    "type": "compact",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    ...
-    ,
-    "granularitySpec": {
-      "segmentGranularity": <time_period>,
-      "queryGranularity": <time_period>,
-      "rollup": true
-    }
-    ...
-```
-
-`granularitySpec` takes the following keys:
-
 |Field|Description|Required|
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|

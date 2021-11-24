@@ -268,7 +268,7 @@ public class SqlExpressionBenchmark
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -305,7 +305,7 @@ public class SqlExpressionBenchmark
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
