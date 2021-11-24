@@ -82,6 +82,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -405,31 +406,31 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
 
     @Override
-    public long getTotalTaskSlotCount()
+    public Map<String, Long> getTotalTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getIdleTaskSlotCount()
+    public Map<String, Long> getIdleTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getUsedTaskSlotCount()
+    public Map<String, Long> getUsedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getLazyTaskSlotCount()
+    public Map<String, Long> getLazyTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getBlacklistedTaskSlotCount()
+    public Map<String, Long> getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }

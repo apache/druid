@@ -128,7 +128,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final boolean isComplexMetric = agg.getType().is(ValueType.COMPLEX);
+        final boolean isComplexMetric = agg.getIntermediateType().is(ValueType.COMPLEX);
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -138,7 +138,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-          final String complexTypeName = agg.getType().getComplexTypeName();
+          final String complexTypeName = agg.getIntermediateType().getComplexTypeName();
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", complexTypeName);
@@ -939,7 +939,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       this.index = index;
       this.name = factory.getName();
 
-      ColumnType valueType = factory.getType();
+      ColumnType valueType = factory.getIntermediateType();
 
       if (valueType.isNumeric()) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);

@@ -1148,9 +1148,9 @@ public class BatchAppenderator implements Appenderator
       sm.setPersistedFileDir(persistDir);
 
       log.info(
-          "About to persist in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+          "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
           indexToPersist.getSegmentId(),
-          indexToPersist.getCount(),
+          sm.getNumHydrants(),
           (System.nanoTime() - startTime) / 1000000,
           numRows
       );

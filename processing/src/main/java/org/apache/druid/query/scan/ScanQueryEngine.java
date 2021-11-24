@@ -70,7 +70,7 @@ public class ScanQueryEngine
     final Object numScannedRows = responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
     if (numScannedRows != null) {
       long count = (long) numScannedRows;
-      if (count >= query.getScanRowsLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
+      if (count >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
@@ -131,8 +131,8 @@ public class ScanQueryEngine
                     intervals.get(0),
                     query.getVirtualColumns(),
                     Granularities.ALL,
-                    query.getOrder().equals(ScanQuery.Order.DESCENDING) ||
-                    (query.getOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
+                    query.getTimeOrder().equals(ScanQuery.Order.DESCENDING) ||
+                    (query.getTimeOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
                     null
                 )
                 .map(cursor -> new BaseSequence<>(
@@ -261,7 +261,7 @@ public class ScanQueryEngine
    */
   private long calculateRemainingScanRowsLimit(ScanQuery query, ResponseContext responseContext)
   {
-    if (query.getOrder().equals(ScanQuery.Order.NONE)) {
+    if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
       return query.getScanRowsLimit() - (long) responseContext.get(ResponseContext.Key.NUM_SCANNED_ROWS);
     }
     return query.getScanRowsLimit();
