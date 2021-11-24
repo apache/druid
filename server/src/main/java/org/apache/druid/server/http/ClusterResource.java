@@ -93,8 +93,7 @@ public class ClusterResource
   public Response getClusterServers(@PathParam("nodeRole") NodeRole nodeRole, @QueryParam("full") boolean full)
   {
     if (nodeRole == null) {
-      return Response.serverError()
-                     .status(Response.Status.BAD_REQUEST)
+      return Response.status(Response.Status.BAD_REQUEST)
                      .entity("Invalid nodeRole of null. Valid node roles are " + Arrays.toString(NodeRole.values()))
                      .build();
     } else {
