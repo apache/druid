@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
@@ -191,6 +193,22 @@ public class RowSignature implements ColumnInspector
 
     }
     return s.append("}").toString();
+  }
+
+  // Temporary method for displaying the output in SQL EXPLAIN PLAN
+  @JsonValue
+  public List<Map<String, String>> toJsonValue()
+  {
+    List<Map<String, String>> jsonMap = new ArrayList<>();
+    for (String columnName : columnNames) {
+      jsonMap.add(
+          ImmutableMap.<String, String>of(
+              "name", columnName,
+              "type", columnTypes.get(columnName).asTypeString()
+          )
+      );
+    }
+    return jsonMap;
   }
 
   @Nullable
