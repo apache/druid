@@ -222,8 +222,10 @@ public class FloatFirstAggregationTest extends InitializedNullHandlingTest
   public void testSerde() throws Exception
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    String doubleSpecJson = "{\"type\":\"floatFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(floatFirstAggregatorFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    String floatSpecJson = "{\"type\":\"floatFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
+    AggregatorFactory deserialized = mapper.readValue(floatSpecJson, AggregatorFactory.class);
+    Assert.assertEquals(floatFirstAggregatorFactory, deserialized);
+    Assert.assertArrayEquals(floatFirstAggregatorFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   private void aggregate(

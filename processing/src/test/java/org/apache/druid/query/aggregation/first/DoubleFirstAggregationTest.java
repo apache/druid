@@ -236,7 +236,9 @@ public class DoubleFirstAggregationTest extends InitializedNullHandlingTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String doubleSpecJson = "{\"type\":\"doubleFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(doubleFirstAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    AggregatorFactory deserialized = mapper.readValue(doubleSpecJson, AggregatorFactory.class);
+    Assert.assertEquals(doubleFirstAggFactory, deserialized);
+    Assert.assertArrayEquals(doubleFirstAggFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   private void aggregate(

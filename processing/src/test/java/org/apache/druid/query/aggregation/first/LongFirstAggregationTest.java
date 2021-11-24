@@ -222,7 +222,9 @@ public class LongFirstAggregationTest extends InitializedNullHandlingTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String longSpecJson = "{\"type\":\"longFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(longFirstAggFactory, mapper.readValue(longSpecJson, AggregatorFactory.class));
+    AggregatorFactory deserialized = mapper.readValue(longSpecJson, AggregatorFactory.class);
+    Assert.assertEquals(longFirstAggFactory, deserialized);
+    Assert.assertArrayEquals(longFirstAggFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   private void aggregate(
