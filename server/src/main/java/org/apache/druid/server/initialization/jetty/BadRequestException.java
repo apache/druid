@@ -20,7 +20,7 @@
 package org.apache.druid.server.initialization.jetty;
 
 /**
- * This class is for any exceptions that should return a bad request status code (404).
+ * This class is for any exceptions that should return a bad request status code (400).
  * See {@code BadQueryException} for query requests.
  *
  * @see BadRequestExceptionMapper
