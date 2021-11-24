@@ -478,13 +478,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
+    queryJsonMapper = createQueryJsonMapper();
     return queryLogHook = QueryLogHook.create(queryJsonMapper);
   }
 
   @Before
   public void setUp() throws Exception
   {
-    queryJsonMapper = createQueryJsonMapper();
     walker = createQuerySegmentWalker();
 
     // also register the static injected mapper, though across multiple test runs

@@ -127,8 +127,19 @@ public class DruidUnionDataSourceRule extends RelOptRule
 
   private static boolean isUnionCompatible(final DruidRel<?> first, final DruidRel<?> second, @Nullable PlannerContext plannerContext)
   {
-    final Optional<List<String>> columnNames = getColumnNamesIfTableOrUnion(first, plannerContext);
-    return columnNames.isPresent() && columnNames.equals(getColumnNamesIfTableOrUnion(second, plannerContext));
+    final Optional<List<String>> firstColumnNames = getColumnNamesIfTableOrUnion(first, plannerContext);
+    final Optional<List<String>> secondColumnNames = getColumnNamesIfTableOrUnion(second, plannerContext);
+    if (!firstColumnNames.isPresent() || !secondColumnNames.isPresent()) {
+      // No need to set the planning error here
+      return false;
+    }
+    if (!firstColumnNames.equals(secondColumnNames)) {
+      if (null != plannerContext) {
+        plannerContext.setPlanningError("When unioning two tables, column names queried for each table must be same");
+      }
+      return false;
+    }
+    return true;
   }
 
   static Optional<List<String>> getColumnNamesIfTableOrUnion(final DruidRel<?> druidRel, @Nullable PlannerContext plannerContext)
@@ -177,7 +188,8 @@ public class DruidUnionDataSourceRule extends RelOptRule
       return Optional.of(((DruidUnionDataSourceRel) druidRel).getUnionColumnNames());
     } else if (druidTable.isPresent()) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("Union operation is only supported between simple table scans without any filter or aliasing");
+        plannerContext.setPlanningError("Union operation is only supported between simple table scans without " +
+            "any filter or aliasing. Column types of tables being unioned should be of same type.");
       }
       return Optional.empty();
     } else {

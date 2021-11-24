@@ -2588,8 +2588,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
-        "Possible error: There is a mismatch between the column names and types of input tables and the expected query output"
-    );
+        "Possible error: Union operation is only supported between simple table scans without " +
+        "any filter or aliasing. Column types of tables being unioned should be of same type.");
   }
 
   @Test
@@ -2603,7 +2603,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Please check broker logs for more details"
+        "Possible error: When unioning two tables, column names queried for each table must be same"
+    );
+  }
+
+  @Test
+  public void testUnionIsUnplannable()
+  {
+    // Cannot plan this UNION operation
+
+    assertQueryIsUnplannable(
+        "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
+        "Possible error: 'UNION ALL' is supported but 'UNION' is not supported."
     );
   }
 
@@ -2618,7 +2629,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Possible error: Union operation is only supported between simple table scans without any filter or aliasing"
+        "Possible error: Union operation is only supported between simple table scans without any filter " +
+            "or aliasing. Column types of tables being unioned should be of same type."
     );
   }
 
@@ -2717,7 +2729,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
         + "GROUP BY 1, 2",
-        "Possible error: Union operation is only supported between simple table scans without any filter or aliasing"
+        "Possible error: When unioning two tables, column names queried for each table must be same"
     );
   }
 
