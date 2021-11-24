@@ -196,7 +196,7 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
         result = evalDouble(leftVal.asDouble(), rightVal.asDouble());
         break;
     }
-    if (ExpressionProcessing.useLegacyLogicalOperators() && !type.is(ExprType.STRING)) {
+    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING)) {
       return ExprEval.ofBoolean(result, type.getType());
     }
     return ExprEval.ofLongBoolean(result);
@@ -216,7 +216,7 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     ExpressionType implicitCast = super.getOutputType(inspector);
-    if (!ExpressionProcessing.useLegacyLogicalOperators() || Types.isNullOr(implicitCast, ExprType.STRING)) {
+    if (ExpressionProcessing.useStrictBooleans() || Types.isNullOr(implicitCast, ExprType.STRING)) {
       return ExpressionType.LONG;
     }
     return implicitCast;

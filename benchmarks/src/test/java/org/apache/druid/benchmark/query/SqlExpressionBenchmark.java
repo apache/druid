@@ -81,7 +81,7 @@ public class SqlExpressionBenchmark
   static {
     NullHandling.initializeForTests();
     Calcites.setSystemProperties();
-    ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()

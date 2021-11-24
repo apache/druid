@@ -267,7 +267,7 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useLegacyLogicalOperators=false`)
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useStrictBooleans=true`)
 * comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
@@ -279,7 +279,7 @@ supported features:
 ## Logical operator modes
 Prior to the 0.23 release of Apache Druid, boolean function expressions have inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. 
 
-After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useLegacyLogicalOperators=false`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
+After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useStrictBooleans=true`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
 
 For the "or" operator:
 * `true || null`, `null || true`, -> `1`

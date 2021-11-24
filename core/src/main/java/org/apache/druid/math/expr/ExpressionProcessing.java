@@ -52,9 +52,9 @@ public class ExpressionProcessing
   }
 
   @VisibleForTesting
-  public static void initializeForLegacyLogicalOperationsTests(boolean useLegacy)
+  public static void initializeForStrictBooleansTests(boolean useStrict)
   {
-    INSTANCE = new ExpressionProcessingConfig(null, useLegacy);
+    INSTANCE = new ExpressionProcessingConfig(null, useStrict);
   }
 
   /**
@@ -73,12 +73,12 @@ public class ExpressionProcessing
   }
 
 
-  public static boolean useLegacyLogicalOperators()
+  public static boolean useStrictBooleans()
   {
     // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
       throw new IllegalStateException("ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()");
     }
-    return INSTANCE.isUseLegacyLogicalOperators();
+    return INSTANCE.isUseStrictBooleans();
   }
 }

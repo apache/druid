@@ -106,7 +106,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void setupClass()
   {
     Calcites.setSystemProperties();
-    ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");

@@ -533,7 +533,7 @@ public class VectorProcessors
         }
       };
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
-      if (ExpressionProcessing.useLegacyLogicalOperators()) {
+      if (!ExpressionProcessing.useStrictBooleans()) {
         processor = new DoubleOutDoubleInFunctionVectorValueProcessor(expr.buildVectorized(inspector), maxVectorSize)
         {
           @Override

@@ -27,29 +27,29 @@ import javax.annotation.Nullable;
 public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
-  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useLegacyLogicalOperators";
+  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
 
-  @JsonProperty("useLegacyLogicalOperators")
-  private final boolean useLegacyLogicalOperators;
+  @JsonProperty("useStrictBooleans")
+  private final boolean useStrictBooleans;
 
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
-      @JsonProperty("useLegacyLogicalOperators") @Nullable Boolean useLegacyLogicalOperators
+      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans
   )
   {
     this.allowNestedArrays = allowNestedArrays == null
                              ? Boolean.valueOf(System.getProperty(NESTED_ARRAYS_CONFIG_STRING, "false"))
                              : allowNestedArrays;
-    if (useLegacyLogicalOperators == null) {
-      this.useLegacyLogicalOperators = Boolean.parseBoolean(
-          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "true")
+    if (useStrictBooleans == null) {
+      this.useStrictBooleans = Boolean.parseBoolean(
+          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false")
       );
     } else {
-      this.useLegacyLogicalOperators = useLegacyLogicalOperators;
+      this.useStrictBooleans = useStrictBooleans;
     }
   }
 
@@ -58,8 +58,8 @@ public class ExpressionProcessingConfig
     return allowNestedArrays;
   }
 
-  public boolean isUseLegacyLogicalOperators()
+  public boolean isUseStrictBooleans()
   {
-    return useLegacyLogicalOperators;
+    return useStrictBooleans;
   }
 }

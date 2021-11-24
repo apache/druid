@@ -169,7 +169,7 @@ class UnaryNotExpr extends UnaryExpr
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);
     }
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       // conforming to other boolean-returning binary operators
       ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
       return ExprEval.ofBoolean(!ret.asBoolean(), retType.getType());
@@ -181,7 +181,7 @@ class UnaryNotExpr extends UnaryExpr
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       ExpressionType implicitCast = super.getOutputType(inspector);
       if (Types.is(implicitCast, ExprType.STRING)) {
         return ExpressionType.LONG;

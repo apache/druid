@@ -67,7 +67,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setupTests()
   {
-    ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
   }
 
   @AfterClass

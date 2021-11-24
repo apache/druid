@@ -66,7 +66,7 @@ public class EvalTest extends InitializedNullHandlingTest
     assertEquals(304.0, evalDouble("300 + \"x\" * 2", bindings), 0.0001);
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
       Assert.assertFalse(evalDouble("1.0 && 0.0", bindings) > 0.0);
       Assert.assertTrue(evalDouble("1.0 && 2.0", bindings) > 0.0);
 
@@ -88,7 +88,7 @@ public class EvalTest extends InitializedNullHandlingTest
       ExpressionProcessing.initializeForTests(null);
     }
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
       Assert.assertEquals(0L, evalLong("1.0 && 0.0", bindings));
       Assert.assertEquals(1L, evalLong("1.0 && 2.0", bindings));
 
@@ -382,7 +382,7 @@ public class EvalTest extends InitializedNullHandlingTest
     );
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
       ExprEval eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
       Assert.assertTrue(eval.asBoolean());
       assertEquals(ExpressionType.DOUBLE, eval.type());
@@ -403,7 +403,7 @@ public class EvalTest extends InitializedNullHandlingTest
       ExpressionProcessing.initializeForTests(null);
     }
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
       ExprEval eval = Parser.parse("x==y", ExprMacroTable.nil()).eval(bindings);
       Assert.assertTrue(eval.asBoolean());
       assertEquals(ExpressionType.LONG, eval.type());
@@ -441,7 +441,7 @@ public class EvalTest extends InitializedNullHandlingTest
     );
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
       assertEquals(1L, eval("'true' && 'true'", bindings).value());
       assertEquals(0L, eval("'true' && 'false'", bindings).value());
       assertEquals(0L, eval("'false' && 'true'", bindings).value());
@@ -503,7 +503,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     try {
       // turn on legacy insanity mode
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
 
       assertEquals("true", eval("'true' && 'true'", bindings).value());
       assertEquals("false", eval("'true' && 'false'", bindings).value());

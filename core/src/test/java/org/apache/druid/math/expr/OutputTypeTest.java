@@ -76,7 +76,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     assertOutputType("-z", inspector, ExpressionType.DOUBLE);
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
       assertOutputType("!'true'", inspector, ExpressionType.LONG);
       assertOutputType("!1", inspector, ExpressionType.LONG);
       assertOutputType("!x", inspector, ExpressionType.LONG);
@@ -90,7 +90,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     }
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
       assertOutputType("!1.1", inspector, ExpressionType.DOUBLE);
       assertOutputType("!z", inspector, ExpressionType.DOUBLE);
     }
@@ -132,7 +132,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     assertOutputType("z%z_", inspector, ExpressionType.DOUBLE);
 
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(false);
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
       assertOutputType("y>y_", inspector, ExpressionType.LONG);
       assertOutputType("y_<y", inspector, ExpressionType.LONG);
       assertOutputType("y_<=y", inspector, ExpressionType.LONG);
@@ -164,7 +164,7 @@ public class OutputTypeTest extends InitializedNullHandlingTest
       ExpressionProcessing.initializeForTests(null);
     }
     try {
-      ExpressionProcessing.initializeForLegacyLogicalOperationsTests(true);
+      ExpressionProcessing.initializeForStrictBooleansTests(false);
       assertOutputType("z>y_", inspector, ExpressionType.DOUBLE);
       assertOutputType("z<y", inspector, ExpressionType.DOUBLE);
       assertOutputType("z<=y", inspector, ExpressionType.DOUBLE);

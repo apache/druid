@@ -45,7 +45,7 @@ public class VectorComparisonProcessors
       Supplier<DoubleOutDoublesInFunctionVectorValueProcessor> doubleOutDoublesInProcessor
   )
   {
-    assert ExpressionProcessing.useLegacyLogicalOperators();
+    assert !ExpressionProcessing.useStrictBooleans();
     final ExpressionType leftType = left.getOutputType(inspector);
     final ExpressionType rightType = right.getOutputType(inspector);
     ExprVectorProcessor<?> processor = null;
@@ -131,7 +131,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,
@@ -273,7 +273,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,
@@ -415,7 +415,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,
@@ -557,7 +557,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,
@@ -699,7 +699,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,
@@ -841,7 +841,7 @@ public class VectorComparisonProcessors
       Expr right
   )
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return makeComparisonProcessor(
           inspector,
           left,

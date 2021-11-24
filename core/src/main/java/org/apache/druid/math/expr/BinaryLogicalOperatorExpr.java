@@ -322,7 +322,7 @@ class BinAndExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
     }
 
@@ -357,7 +357,7 @@ class BinAndExpr extends BinaryOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return !ExpressionProcessing.useLegacyLogicalOperators() &&
+    return ExpressionProcessing.useStrictBooleans() &&
            inspector.areSameTypes(left, right) &&
            inspector.canVectorize(left, right);
   }
@@ -372,7 +372,7 @@ class BinAndExpr extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return super.getOutputType(inspector);
     }
     return ExpressionType.LONG;
@@ -396,7 +396,7 @@ class BinOrExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (ExpressionProcessing.useStrictBooleans()) {
       return leftVal.asBoolean() ? leftVal : right.eval(bindings);
     }
 
@@ -433,7 +433,7 @@ class BinOrExpr extends BinaryOpExprBase
   public boolean canVectorize(InputBindingInspector inspector)
   {
 
-    return !ExpressionProcessing.useLegacyLogicalOperators() &&
+    return !ExpressionProcessing.useStrictBooleans() &&
            inspector.areSameTypes(left, right) &&
            inspector.canVectorize(left, right);
   }
@@ -448,7 +448,7 @@ class BinOrExpr extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (ExpressionProcessing.useLegacyLogicalOperators()) {
+    if (ExpressionProcessing.useStrictBooleans()) {
       return super.getOutputType(inspector);
     }
     return ExpressionType.LONG;

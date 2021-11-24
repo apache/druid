@@ -332,14 +332,14 @@ public abstract class ExprEval<T>
   /**
    * Convert a boolean back into native expression type
    *
-   * Do not use this method unless {@link ExpressionProcessing#useLegacyLogicalOperators()} is set to true.
+   * Do not use this method unless {@link ExpressionProcessing#useStrictBooleans()} is set to false.
    * {@link ExpressionType#LONG} is the Druid boolean unless this mode is enabled, so use {@link #ofLongBoolean}
    * instead.
    */
   @Deprecated
   public static ExprEval ofBoolean(boolean value, ExprType type)
   {
-    assert ExpressionProcessing.useLegacyLogicalOperators();
+    assert !ExpressionProcessing.useStrictBooleans();
     switch (type) {
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
