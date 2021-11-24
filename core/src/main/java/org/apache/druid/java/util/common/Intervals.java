@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
@@ -46,6 +47,25 @@ public final class Intervals
   public static boolean isEmpty(Interval interval)
   {
     return interval.getStart().equals(interval.getEnd());
+  }
+
+  /**
+   * Returns true if the provided interval has endpoints that can be compared against other DateTimes using their
+   * string representations.
+   *
+   * See also {@link DateTimes#canCompareAsString(DateTime)}.
+   */
+  public static boolean canCompareEndpointsAsStrings(final Interval interval)
+  {
+    return DateTimes.canCompareAsString(interval.getStart()) && DateTimes.canCompareAsString(interval.getEnd());
+  }
+
+  /**
+   * Returns true if the provided interval contains all time.
+   */
+  public static boolean isEternity(final Interval interval)
+  {
+    return ETERNITY.equals(interval);
   }
 
   private Intervals()
