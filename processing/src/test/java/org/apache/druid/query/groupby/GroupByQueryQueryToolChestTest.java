@@ -837,13 +837,13 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   {
     switch (valueType) {
       case LONG:
-        return new LongLastAggregatorFactory("complexMetric", "test");
+        return new LongLastAggregatorFactory("complexMetric", "test", null);
       case DOUBLE:
-        return new DoubleLastAggregatorFactory("complexMetric", "test");
+        return new DoubleLastAggregatorFactory("complexMetric", "test", null);
       case FLOAT:
-        return new FloatLastAggregatorFactory("complexMetric", "test");
+        return new FloatLastAggregatorFactory("complexMetric", "test", null);
       case STRING:
-        return new StringLastAggregatorFactory("complexMetric", "test", null);
+        return new StringLastAggregatorFactory("complexMetric", "test", null, null);
       default:
         throw new IllegalArgumentException("bad valueType: " + valueType);
     }

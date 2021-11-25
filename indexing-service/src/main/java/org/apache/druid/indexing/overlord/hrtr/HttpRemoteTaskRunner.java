@@ -90,6 +90,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -1628,55 +1629,80 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
-    long totalPeons = 0;
+    Map<String, Long> totalPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerCapacity = worker.getWorker().getCapacity();
+      totalPeons.compute(
+          workerCategory,
+          (category, totalCapacity) -> totalCapacity == null ? workerCapacity : totalCapacity + workerCapacity
+      );
     }
 
     return totalPeons;
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    long totalIdlePeons = 0;
+    Map<String, Long> totalIdlePeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
-      totalIdlePeons += worker.getAvailableCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerAvailableCapacity = worker.getAvailableCapacity();
+      totalIdlePeons.compute(
+          workerCategory,
+          (category, availableCapacity) -> availableCapacity == null ? workerAvailableCapacity : availableCapacity + workerAvailableCapacity
+      );
     }
 
     return totalIdlePeons;
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
-    long totalUsedPeons = 0;
+    Map<String, Long> totalUsedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalUsedPeons += worker.getCurrCapacityUsed();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerUsedCapacity = worker.getCurrCapacityUsed();
+      totalUsedPeons.compute(
+          workerCategory,
+          (category, usedCapacity) -> usedCapacity == null ? workerUsedCapacity : usedCapacity + workerUsedCapacity
+      );
     }
 
     return totalUsedPeons;
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    long totalLazyPeons = 0;
+    Map<String, Long> totalLazyPeons = new HashMap<>();
     for (Worker worker : getLazyWorkers()) {
-      totalLazyPeons += worker.getCapacity();
+      String workerCategory = worker.getCategory();
+      int workerLazyPeons = worker.getCapacity();
+      totalLazyPeons.compute(
+          workerCategory,
+          (category, lazyPeons) -> lazyPeons == null ? workerLazyPeons : lazyPeons + workerLazyPeons
+      );
     }
 
     return totalLazyPeons;
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    long totalBlacklistedPeons = 0;
+    Map<String, Long> totalBlacklistedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
-      totalBlacklistedPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerBlacklistedPeons = worker.getWorker().getCapacity();
+      totalBlacklistedPeons.compute(
+          workerCategory,
+          (category, blacklistedPeons) -> blacklistedPeons == null ? workerBlacklistedPeons : blacklistedPeons + workerBlacklistedPeons
+      );
     }
 
     return totalBlacklistedPeons;

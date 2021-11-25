@@ -37,6 +37,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -89,6 +90,9 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
@@ -235,8 +239,8 @@ public class CompactionTaskTest
     AGGREGATORS.add(new CountAggregatorFactory("agg_0"));
     AGGREGATORS.add(new LongSumAggregatorFactory("agg_1", "long_dim_1"));
     AGGREGATORS.add(new LongMaxAggregatorFactory("agg_2", "long_dim_2"));
-    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3"));
-    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
+    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3", null));
+    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4", null));
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
       SEGMENT_MAP.put(
@@ -420,6 +424,25 @@ public class CompactionTaskTest
       throw iae;
     }
     Assert.fail("Should not have reached here!");
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithTransformSpec()
+  {
+    ClientCompactionTaskTransformSpec transformSpec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.transformSpec(transformSpec);
+    final CompactionTask taskCreatedWithTransformSpec = builder.build();
+    Assert.assertEquals(
+        transformSpec,
+        taskCreatedWithTransformSpec.getTransformSpec()
+    );
   }
 
   @Test(expected = IAE.class)
@@ -848,6 +871,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -918,6 +942,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
+        null,
         null,
         null,
         null,
@@ -995,6 +1020,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1069,6 +1095,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1133,6 +1160,7 @@ public class CompactionTaskTest
         customSpec,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1175,6 +1203,7 @@ public class CompactionTaskTest
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
+        null,
         customMetricsSpec,
         null,
         COORDINATOR_CLIENT,
@@ -1211,6 +1240,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         null,
@@ -1257,6 +1287,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1278,6 +1309,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         null,
@@ -1313,6 +1345,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
@@ -1353,6 +1386,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
+        null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
@@ -1387,6 +1421,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(
@@ -1432,6 +1467,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1466,6 +1502,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
@@ -1505,6 +1542,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
+        null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
@@ -1527,6 +1565,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
@@ -1584,6 +1623,107 @@ public class CompactionTaskTest
         null
     );
     Assert.assertNull(chooseFinestGranularityHelper(input));
+  }
+
+  @Test
+  public void testCreateDimensionSchema()
+  {
+    final String dimensionName = "dim";
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        ExtensionDimensionHandler.TYPE_NAME,
+        d -> new ExtensionDimensionHandler(d)
+    );
+    DimensionSchema stringSchema = CompactionTask.createDimensionSchema(
+        dimensionName,
+        ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+                              .setHasBitmapIndexes(true)
+                              .setDictionaryEncoded(true)
+                              .setDictionaryValuesUnique(true)
+                              .setDictionaryValuesUnique(true),
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+
+    Assert.assertTrue(stringSchema instanceof StringDimensionSchema);
+
+    DimensionSchema floatSchema = CompactionTask.createDimensionSchema(
+        dimensionName,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+        null
+    );
+    Assert.assertTrue(floatSchema instanceof FloatDimensionSchema);
+
+    DimensionSchema doubleSchema = CompactionTask.createDimensionSchema(
+        dimensionName,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
+        null
+    );
+    Assert.assertTrue(doubleSchema instanceof DoubleDimensionSchema);
+
+    DimensionSchema longSchema = CompactionTask.createDimensionSchema(
+        dimensionName,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
+        null
+    );
+    Assert.assertTrue(longSchema instanceof LongDimensionSchema);
+
+    DimensionSchema extensionSchema = CompactionTask.createDimensionSchema(
+        dimensionName,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
+            ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME)
+        ),
+        null
+    );
+    Assert.assertTrue(extensionSchema instanceof ExtensionDimensionSchema);
+  }
+
+  @Test
+  public void testCreateDimensionSchemaIllegalFloat()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("multi-value dimension [foo] is not supported for float type yet");
+    CompactionTask.createDimensionSchema(
+        "foo",
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+  }
+
+  @Test
+  public void testCreateDimensionSchemaIllegalDouble()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("multi-value dimension [foo] is not supported for double type yet");
+    CompactionTask.createDimensionSchema(
+        "foo",
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+  }
+
+  @Test
+  public void testCreateDimensionSchemaIllegalLong()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("multi-value dimension [foo] is not supported for long type yet");
+    CompactionTask.createDimensionSchema(
+        "foo",
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+  }
+
+  @Test
+  public void testCreateDimensionSchemaIllegalComplex()
+  {
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage("Can't find DimensionHandlerProvider for typeName [unknown]");
+    CompactionTask.createDimensionSchema(
+        "foo",
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(
+            ColumnType.ofComplex("unknown")
+        ),
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
   }
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
@@ -1984,7 +2124,7 @@ public class CompactionTaskTest
 
   private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
-    return new TestColumn(aggregatorFactory.getType());
+    return new TestColumn(aggregatorFactory.getIntermediateType());
   }
 
   private static class TestColumn implements ColumnHolder
@@ -2161,6 +2301,46 @@ public class CompactionTaskTest
     public TaskStatus run(TaskToolbox toolbox)
     {
       throw new UnsupportedOperationException();
+    }
+  }
+
+  private static class ExtensionDimensionHandler extends DoubleDimensionHandler
+  {
+    private static final String TYPE_NAME = "extension-double";
+
+    public ExtensionDimensionHandler(String dimensionName)
+    {
+      super(dimensionName);
+    }
+
+    @Override
+    public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+    {
+      return new ExtensionDimensionSchema(getDimensionName(), getMultivalueHandling(), capabilities.hasBitmapIndexes());
+    }
+  }
+
+  private static class ExtensionDimensionSchema extends DimensionSchema
+  {
+    protected ExtensionDimensionSchema(
+        String name,
+        MultiValueHandling multiValueHandling,
+        boolean createBitmapIndex
+    )
+    {
+      super(name, multiValueHandling, createBitmapIndex);
+    }
+
+    @Override
+    public String getTypeName()
+    {
+      return ExtensionDimensionHandler.TYPE_NAME;
+    }
+
+    @Override
+    public ColumnType getColumnType()
+    {
+      return ColumnType.ofComplex(ExtensionDimensionHandler.TYPE_NAME);
     }
   }
 }

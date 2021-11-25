@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -59,6 +61,12 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   public DimensionSpec getDimensionSpec()
   {
     return new DefaultDimensionSpec(dimensionName, dimensionName, ColumnType.DOUBLE);
+  }
+
+  @Override
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new DoubleDimensionSchema(dimensionName);
   }
 
   @Override

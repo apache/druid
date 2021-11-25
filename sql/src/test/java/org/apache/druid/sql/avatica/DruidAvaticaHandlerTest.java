@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
@@ -53,6 +54,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -64,6 +66,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -208,6 +212,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
                 binder.bind(QueryScheduler.class)
                       .toProvider(QuerySchedulerProvider.class)
                       .in(LazySingleton.class);
+                binder.bind(QueryMakerFactory.class).to(NativeQueryMakerFactory.class);
               }
             }
         )
@@ -834,7 +839,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     clientNoTrailingSlash.createStatement();
 
     expectedException.expect(AvaticaClientRuntimeException.class);
-    expectedException.expectMessage("Too many connections, limit is[4]");
+    expectedException.expectMessage("Too many connections");
 
     final Connection connection5 = DriverManager.getConnection(url);
   }
@@ -889,7 +894,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
           new PlannerFactory(
               rootSchema,
-              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+              CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
               operatorTable,
               macroTable,
               plannerConfig,
@@ -899,6 +904,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
           )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -978,7 +984,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
         CalciteTests.createSqlLifecycleFactory(
             new PlannerFactory(
                 rootSchema,
-                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
                 operatorTable,
                 macroTable,
                 plannerConfig,
@@ -988,6 +994,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
             )
         ),
         smallFrameConfig,
+        new ErrorHandler(new ServerConfig()),
         injector
     )
     {
@@ -1094,9 +1101,24 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
-  public void testSysTableParameterBinding() throws Exception
+  public void testSysTableParameterBindingRegularUser() throws Exception
   {
-    PreparedStatement statement = client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    PreparedStatement statement =
+        client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
+    statement.setString(1, "dummy");
+
+    Assert.assertThrows(
+        "Insufficient permission to view servers",
+        AvaticaSqlException.class,
+        statement::executeQuery
+    );
+  }
+
+  @Test
+  public void testSysTableParameterBindingSuperUser() throws Exception
+  {
+    PreparedStatement statement =
+        superuserClient.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?");
     statement.setString(1, "dummy");
     final ResultSet resultSet = statement.executeQuery();
     final List<Map<String, Object>> rows = getRows(resultSet);
