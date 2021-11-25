@@ -11336,6 +11336,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testRequireTimeConditionLogicalValuePositive() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT 2 + 2 AS a",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{4L}),
+                    RowSignature.builder().add("a", ColumnType.LONG).build()
+                ))
+                .columns("a")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{4})
+    );
+  }
+
+  @Test
   public void testRequireTimeConditionSimpleQueryNegative() throws Exception
   {
     expectedException.expect(CannotBuildQueryException.class);
