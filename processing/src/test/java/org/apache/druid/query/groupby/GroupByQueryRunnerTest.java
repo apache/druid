@@ -2598,8 +2598,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
@@ -2691,8 +2691,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ROWS_COUNT,
             QueryRunnerTestHelper.INDEX_LONG_SUM,
             QueryRunnerTestHelper.QUALITY_CARDINALITY,
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
@@ -6361,8 +6361,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
-            new LongFirstAggregatorFactory("innerfirst", "index"),
-            new LongLastAggregatorFactory("innerlast", "index")
+            new LongFirstAggregatorFactory("innerfirst", "index", null),
+            new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .overrideContext(ImmutableMap.of("finalize", true))
@@ -6373,8 +6373,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(Collections.emptyList())
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "innerfirst"),
-            new LongLastAggregatorFactory("last", "innerlast")
+            new LongFirstAggregatorFactory("first", "innerfirst", null),
+            new LongLastAggregatorFactory("last", "innerlast", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
