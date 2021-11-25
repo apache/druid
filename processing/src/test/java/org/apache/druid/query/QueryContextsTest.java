@@ -192,4 +192,29 @@ public class QueryContextsTest
     Assert.assertTrue(QueryContexts.isDebug(query));
     Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
   }
+
+  @Test
+  public void testDefaultSegmentMergedResultCache()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of()
+    );
+    Assert.assertTrue(QueryContexts.isPopulateSegmentMergedResultCache(query));
+    Assert.assertTrue(QueryContexts.isUseSegmentMergedResultCache(query));
+
+    query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(
+            "populateSegmentMergedResultCache", false,
+            "useSegmentMergedResultCache", false
+        )
+    );
+    Assert.assertFalse(QueryContexts.isPopulateSegmentMergedResultCache(query));
+    Assert.assertFalse(QueryContexts.isUseSegmentMergedResultCache(query));
+  }
 }

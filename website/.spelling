@@ -1478,6 +1478,8 @@ druid.broker.cache.populateCache
 druid.broker.cache.populateResultLevelCache
 druid.broker.cache.useCache
 druid.broker.cache.useResultLevelCache
+druid.broker.cache.useSegmentMergedResultCache
+druid.broker.cache.populateSegmentMergedResultCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
 enableParallelMerge
@@ -1490,6 +1492,7 @@ parallelMergeParallelism
 parallelMergeSmallBatchRows
 populateCache
 populateResultLevelCache
+populateSegmentMergedResultCache
 queryId
 row-matchers
 serializeDateTimeAsLong
@@ -1497,6 +1500,7 @@ serializeDateTimeAsLongInner
 skipEmptyBuckets
 useCache
 useResultLevelCache
+useSegmentMergedResultCache
 vectorSize
 enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
