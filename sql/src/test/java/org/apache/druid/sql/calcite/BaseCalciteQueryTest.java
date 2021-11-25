@@ -191,12 +191,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   };
 
-  public static final PlannerConfig PLANNER_CONFIG_LEGACY_DRUID_EXPLAIN_FALSE = new PlannerConfig()
+  public static final PlannerConfig PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN = new PlannerConfig()
   {
     @Override
-    public boolean isUseLegacyDruidExplain()
+    public boolean isUseNativeQueryExplain()
     {
-      return false;
+      return true;
     }
   };
 

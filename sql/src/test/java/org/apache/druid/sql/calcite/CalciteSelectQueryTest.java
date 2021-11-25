@@ -439,7 +439,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         )
     );
     testQuery(
-        PLANNER_CONFIG_LEGACY_DRUID_EXPLAIN_FALSE,
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
@@ -1138,7 +1138,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         )
     );
     testQuery(
-        PLANNER_CONFIG_LEGACY_DRUID_EXPLAIN_FALSE,
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         query,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),

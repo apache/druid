@@ -93,8 +93,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DruidPlanner implements Closeable
 {
@@ -397,7 +397,7 @@ public class DruidPlanner implements Closeable
     try {
       if (isDruidConventionExplanation && rel instanceof DruidRel) {
         // Show the native queries instead of Calcite's explain if the legacy flag is turned off
-        if (!plannerContext.getPlannerConfig().isUseLegacyDruidExplain()) {
+        if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
           DruidRel<?> druidRel = (DruidRel<?>) rel;
           explanation = explainSqlPlanAsNativeQueries(druidRel);
         }
@@ -448,6 +448,8 @@ public class DruidPlanner implements Closeable
       druidQueryList = ImmutableList.of(rel.toDruidQuery(false));
     }
 
+    // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
+    // serializing the "queryType"
     ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
 
     for (DruidQuery druidQuery : druidQueryList) {

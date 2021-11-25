@@ -33,7 +33,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
-  public static final String CTX_KEY_USE_LEGACY_DRUID_EXPLAIN = "useLegacyDruidExplain";
+  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -72,7 +72,7 @@ public class PlannerConfig
   private boolean authorizeSystemTablesDirectly = false;
 
   @JsonProperty
-  private boolean useLegacyDruidExplain = true;
+  private boolean useNativeQueryExplain = false;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -141,9 +141,9 @@ public class PlannerConfig
     return authorizeSystemTablesDirectly;
   }
 
-  public boolean isUseLegacyDruidExplain()
+  public boolean isUseNativeQueryExplain()
   {
-    return useLegacyDruidExplain;
+    return useNativeQueryExplain;
   }
 
   public PlannerConfig withOverrides(final Map<String, Object> context)
@@ -175,10 +175,10 @@ public class PlannerConfig
         CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
     );
-    newConfig.useLegacyDruidExplain = getContextBoolean(
+    newConfig.useNativeQueryExplain = getContextBoolean(
         context,
-        CTX_KEY_USE_LEGACY_DRUID_EXPLAIN,
-        isUseLegacyDruidExplain()
+        CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+        isUseNativeQueryExplain()
     );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
@@ -228,7 +228,7 @@ public class PlannerConfig
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useLegacyDruidExplain == that.useLegacyDruidExplain;
+           useNativeQueryExplain == that.useNativeQueryExplain;
   }
 
   @Override
@@ -246,7 +246,7 @@ public class PlannerConfig
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
         serializeComplexValues,
-        useLegacyDruidExplain
+        useNativeQueryExplain
     );
   }
 
@@ -264,7 +264,7 @@ public class PlannerConfig
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
-           ", useLegacyDruidExplain=" + useLegacyDruidExplain +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
            '}';
   }
 }
