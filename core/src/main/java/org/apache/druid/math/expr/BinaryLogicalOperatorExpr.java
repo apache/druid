@@ -326,7 +326,6 @@ class BinAndExpr extends BinaryOpExprBase
       return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
     }
 
-    boolean result;
     // if left is false, always false
     if (leftVal.value() != null && !leftVal.asBoolean()) {
       return ExprEval.ofLongBoolean(false);
@@ -396,7 +395,7 @@ class BinOrExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (ExpressionProcessing.useStrictBooleans()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return leftVal.asBoolean() ? leftVal : right.eval(bindings);
     }
 
@@ -433,7 +432,7 @@ class BinOrExpr extends BinaryOpExprBase
   public boolean canVectorize(InputBindingInspector inspector)
   {
 
-    return !ExpressionProcessing.useStrictBooleans() &&
+    return ExpressionProcessing.useStrictBooleans() &&
            inspector.areSameTypes(left, right) &&
            inspector.canVectorize(left, right);
   }
@@ -448,7 +447,7 @@ class BinOrExpr extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (ExpressionProcessing.useStrictBooleans()) {
+    if (!ExpressionProcessing.useStrictBooleans()) {
       return super.getOutputType(inspector);
     }
     return ExpressionType.LONG;
