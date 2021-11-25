@@ -20,6 +20,9 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -63,22 +66,27 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.Query;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -270,7 +278,7 @@ public class DruidPlanner implements Closeable
     );
 
     if (explain != null) {
-      return planExplanation(druidRel, explain);
+      return planExplanation(druidRel, explain, true);
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         // sanity check
@@ -331,7 +339,7 @@ public class DruidPlanner implements Closeable
     }
 
     if (explain != null) {
-      return planExplanation(bindableRel, explain);
+      return planExplanation(bindableRel, explain, false);
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext(
@@ -380,12 +388,20 @@ public class DruidPlanner implements Closeable
    */
   private PlannerResult planExplanation(
       final RelNode rel,
-      final SqlExplain explain
+      final SqlExplain explain,
+      final boolean isDruidConventionExplanation
   )
   {
-    final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+    String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
     String resourcesString;
     try {
+      if (isDruidConventionExplanation && rel instanceof DruidRel) {
+        // Show the native queries instead of Calcite's explain if the legacy flag is turned off
+        if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
+          DruidRel<?> druidRel = (DruidRel<?>) rel;
+          explanation = explainSqlPlanAsNativeQueries(druidRel);
+        }
+      }
       final Set<Resource> resources =
           plannerContext.getResourceActions().stream().map(ResourceAction::getResource).collect(Collectors.toSet());
       resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
@@ -395,9 +411,56 @@ public class DruidPlanner implements Closeable
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
       resourcesString = null;
     }
+    catch (ISE ise) {
+      log.error(ise, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
+      resourcesString = null;
+    }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
         Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})));
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
+  }
+
+  /**
+   * This method doesn't utilize the Calcite's internal {@link RelOptUtil#dumpPlan} since that tends to be verbose
+   * and not indicative of the native Druid Queries which will get executed
+   * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implictly cast it
+   *
+   * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
+   * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
+   * @throws JsonProcessingException
+   */
+  private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
+  {
+    // Only if rel is an instance of DruidUnionRel, do we run multiple native queries corresponding to single SQL query
+    // Also, DruidUnionRel can only be a top level node, so we don't need to check for this condition in the subsequent
+    // child nodes
+    ObjectMapper jsonMapper = plannerContext.getJsonMapper();
+    List<DruidQuery> druidQueryList;
+    if (rel instanceof DruidUnionRel) {
+      druidQueryList = rel.getInputs().stream().map(childRel -> (DruidRel<?>) childRel).map(childRel -> {
+        if (childRel instanceof DruidUnionRel) {
+          log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
+          throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
+        }
+        return childRel.toDruidQuery(false);
+      }).collect(Collectors.toList());
+    } else {
+      druidQueryList = ImmutableList.of(rel.toDruidQuery(false));
+    }
+
+    // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
+    // serializing the "queryType"
+    ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
+
+    for (DruidQuery druidQuery : druidQueryList) {
+      Query<?> nativeQuery = druidQuery.getQuery();
+      ObjectNode objectNode = jsonMapper.createObjectNode();
+      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      nativeQueriesArrayNode.add(objectNode);
+    }
+
+    return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
   }
 
   /**
@@ -409,7 +472,6 @@ public class DruidPlanner implements Closeable
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
-   *
    * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
    */
   @Nullable
