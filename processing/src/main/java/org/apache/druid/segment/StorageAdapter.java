@@ -19,13 +19,16 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
 /**
  */
@@ -35,6 +38,25 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();
+
+  /**
+   * Returns the row signature of the data available from this adapter. For mutable adapters, even though the signature
+   * may evolve over time, any particular object returned by this method is an immutable snapshot.
+   */
+  default RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    builder.addTimeColumn();
+
+    for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
+      builder.add(
+          column,
+          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
+      );
+    }
+
+    return builder.build();
+  }
 
   /**
    * Returns the number of distinct values for the given column if known, or {@link Integer#MAX_VALUE} if unknown,

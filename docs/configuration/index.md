@@ -948,6 +948,7 @@ A description of the compaction config is:
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|
 |`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec)|No|
 |`dimensionsSpec`|Custom `dimensionsSpec`. See [Automatic compaction dimensionsSpec](#automatic-compaction-dimensions-spec)|No|
+|`transformSpec`|Custom `transformSpec`. See [Automatic compaction transformSpec](#automatic-compaction-transform-spec)|No|
 |`ioConfig`|IO config for compaction tasks. See below [Compaction Task IOConfig](#automatic-compaction-ioconfig).|no|
 
 An example of compaction config is:
@@ -1002,6 +1003,12 @@ The below is a list of the supported configurations for auto compaction.
 |Field|Description|Required|
 |-----|-----------|--------|
 |`dimensions`| A list of dimension names or objects. Defaults to 'null', which preserves the original dimensions. Note that setting this will cause segments manually compacted with `dimensionExclusions` to be compacted again.|No|
+
+###### Automatic compaction transform spec
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
 
 ###### Automatic compaction IOConfig
 

@@ -608,7 +608,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
-        + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10), "
+        + "EARLIEST(cnt, m1), EARLIEST(m1, m1), EARLIEST(dim1, 10, m1), "
+        + "EARLIEST(cnt + 1, m1), EARLIEST(m1 + 1, m1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -622,19 +624,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       aggregators(
-                          new LongFirstAggregatorFactory("a0", "cnt"),
-                          new FloatFirstAggregatorFactory("a1", "m1"),
-                          new StringFirstAggregatorFactory("a2", "dim1", 10),
-                          new LongFirstAggregatorFactory("a3", "v0"),
-                          new FloatFirstAggregatorFactory("a4", "v1"),
-                          new StringFirstAggregatorFactory("a5", "v2", 10)
+                          new LongFirstAggregatorFactory("a0", "cnt", null),
+                          new FloatFirstAggregatorFactory("a1", "m1", null),
+                          new StringFirstAggregatorFactory("a2", "dim1", null, 10),
+                          new LongFirstAggregatorFactory("a3", "v0", null),
+                          new FloatFirstAggregatorFactory("a4", "v1", null),
+                          new StringFirstAggregatorFactory("a5", "v2", null, 10),
+                          new LongFirstAggregatorFactory("a6", "cnt", "m1"),
+                          new FloatFirstAggregatorFactory("a7", "m1", "m1"),
+                          new StringFirstAggregatorFactory("a8", "dim1", "m1", 10),
+                          new LongFirstAggregatorFactory("a9", "v0", "m1"),
+                          new FloatFirstAggregatorFactory("a10", "v1", "m1"),
+                          new StringFirstAggregatorFactory("a11", "v2", "m1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1"}
+            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 1.0f, "", 2L, 2.0f, "1"}
         )
     );
   }
@@ -648,7 +656,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
-        + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10), "
+        + "LATEST(cnt, m1), LATEST(m1, m1), LATEST(dim1, 10, m1), "
+        + "LATEST(cnt + 1, m1), LATEST(m1 + 1, m1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -662,19 +672,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       aggregators(
-                          new LongLastAggregatorFactory("a0", "cnt"),
-                          new FloatLastAggregatorFactory("a1", "m1"),
-                          new StringLastAggregatorFactory("a2", "dim1", 10),
-                          new LongLastAggregatorFactory("a3", "v0"),
-                          new FloatLastAggregatorFactory("a4", "v1"),
-                          new StringLastAggregatorFactory("a5", "v2", 10)
+                          new LongLastAggregatorFactory("a0", "cnt", null),
+                          new FloatLastAggregatorFactory("a1", "m1", null),
+                          new StringLastAggregatorFactory("a2", "dim1", null, 10),
+                          new LongLastAggregatorFactory("a3", "v0", null),
+                          new FloatLastAggregatorFactory("a4", "v1", null),
+                          new StringLastAggregatorFactory("a5", "v2", null, 10),
+                          new LongLastAggregatorFactory("a6", "cnt", "m1"),
+                          new FloatLastAggregatorFactory("a7", "m1", "m1"),
+                          new StringLastAggregatorFactory("a8", "dim1", "m1", 10),
+                          new LongLastAggregatorFactory("a9", "v0", "m1"),
+                          new FloatLastAggregatorFactory("a10", "v1", "m1"),
+                          new StringLastAggregatorFactory("a11", "v2", "m1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1", 1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
         )
     );
   }
@@ -806,9 +822,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(
-                                                                new FloatLastAggregatorFactory("a0:a", "m1"),
-                                                                new LongLastAggregatorFactory("a1:a", "cnt"),
-                                                                new DoubleLastAggregatorFactory("a2:a", "m2")
+                                                                new FloatLastAggregatorFactory("a0:a", "m1", null),
+                                                                new LongLastAggregatorFactory("a1:a", "cnt", null),
+                                                                new DoubleLastAggregatorFactory("a2:a", "m2", null)
                                                             )
                                         )
                                         .setPostAggregatorSpecs(
@@ -857,9 +873,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(
-                                                                new FloatFirstAggregatorFactory("a0:a", "m1"),
-                                                                new LongFirstAggregatorFactory("a1:a", "cnt"),
-                                                                new DoubleFirstAggregatorFactory("a2:a", "m2")
+                                                                new FloatFirstAggregatorFactory("a0:a", "m1", null),
+                                                                new LongFirstAggregatorFactory("a1:a", "cnt", null),
+                                                                new DoubleFirstAggregatorFactory("a2:a", "m2", null)
                                                             )
                                         )
                                         .setPostAggregatorSpecs(
@@ -910,6 +926,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setAggregatorSpecs(aggregators(new StringLastAggregatorFactory(
                                             "a0:a",
                                             "dim1",
+                                            null,
                                             10
                                         )))
                                         .setPostAggregatorSpecs(
@@ -957,6 +974,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory(
                                             "a0:a",
                                             "dim1",
+                                            null,
                                             10
                                         )))
                                         .setPostAggregatorSpecs(
@@ -1106,9 +1124,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new LongFirstAggregatorFactory("a0", "l1"),
-                          new DoubleFirstAggregatorFactory("a1", "d1"),
-                          new FloatFirstAggregatorFactory("a2", "f1")
+                          new LongFirstAggregatorFactory("a0", "l1", null),
+                          new DoubleFirstAggregatorFactory("a1", "d1", null),
+                          new FloatFirstAggregatorFactory("a2", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1135,9 +1153,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new LongLastAggregatorFactory("a0", "l1"),
-                          new DoubleLastAggregatorFactory("a1", "d1"),
-                          new FloatLastAggregatorFactory("a2", "f1")
+                          new LongLastAggregatorFactory("a0", "l1", null),
+                          new DoubleLastAggregatorFactory("a1", "d1", null),
+                          new FloatLastAggregatorFactory("a2", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1182,10 +1200,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(filter)
                   .aggregators(
                       aggregators(
-                          new StringFirstAggregatorFactory("a0", "dim1", 32),
-                          new LongLastAggregatorFactory("a1", "l1"),
-                          new DoubleLastAggregatorFactory("a2", "d1"),
-                          new FloatLastAggregatorFactory("a3", "f1")
+                          new StringFirstAggregatorFactory("a0", "dim1", null, 32),
+                          new LongLastAggregatorFactory("a1", "l1", null),
+                          new DoubleLastAggregatorFactory("a2", "d1", null),
+                          new FloatLastAggregatorFactory("a3", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1303,7 +1321,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new FloatFirstAggregatorFactory("a0", "f1")
+                        new FloatFirstAggregatorFactory("a0", "f1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1350,7 +1368,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new DoubleFirstAggregatorFactory("a0", "d1")
+                        new DoubleFirstAggregatorFactory("a0", "d1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1397,7 +1415,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new LongFirstAggregatorFactory("a0", "l1")
+                        new LongFirstAggregatorFactory("a0", "l1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1445,7 +1463,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new FloatLastAggregatorFactory("a0", "f1")
+                        new FloatLastAggregatorFactory("a0", "f1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1492,7 +1510,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new DoubleLastAggregatorFactory("a0", "d1")
+                        new DoubleLastAggregatorFactory("a0", "d1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1539,7 +1557,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new LongLastAggregatorFactory("a0", "l1")
+                        new LongLastAggregatorFactory("a0", "l1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -8765,10 +8783,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new StringAnyAggregatorFactory("a0", "dim1", 1024),
                           new LongAnyAggregatorFactory("a1", "l1"),
-                          new StringFirstAggregatorFactory("a2", "dim1", 1024),
-                          new LongFirstAggregatorFactory("a3", "l1"),
-                          new StringLastAggregatorFactory("a4", "dim1", 1024),
-                          new LongLastAggregatorFactory("a5", "l1"),
+                          new StringFirstAggregatorFactory("a2", "dim1", null, 1024),
+                          new LongFirstAggregatorFactory("a3", "l1", null),
+                          new StringLastAggregatorFactory("a4", "dim1", null, 1024),
+                          new LongLastAggregatorFactory("a5", "l1", null),
                           new ExpressionLambdaAggregatorFactory(
                               "a6",
                               ImmutableSet.of("dim3"),
@@ -9050,19 +9068,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                                    new StringFirstAggregatorFactory("a2", "dim1", null, 1024),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new LongFirstAggregatorFactory("a3", "l1"),
+                                    new LongFirstAggregatorFactory("a3", "l1", null),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new StringLastAggregatorFactory("a4", "dim1", 1024),
+                                    new StringLastAggregatorFactory("a4", "dim1", null, 1024),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new LongLastAggregatorFactory("a5", "l1"),
+                                    new LongLastAggregatorFactory("a5", "l1", null),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(

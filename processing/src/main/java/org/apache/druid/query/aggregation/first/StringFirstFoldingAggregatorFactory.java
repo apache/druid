@@ -29,6 +29,6 @@ public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFa
   @JsonCreator
   public StringFirstFoldingAggregatorFactory(String name, String fieldName, Integer maxStringBytes)
   {
-    super(name, fieldName, maxStringBytes);
+    super(name, fieldName, null, maxStringBytes);
   }
 }
