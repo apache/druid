@@ -1145,6 +1145,8 @@ array_concat
 array_set_add
 array_set_add_all
 array_contains
+array_contains_contiguous_subarray
+array_contains_subsequence
 array_length
 array_offset
 array_offset_of
