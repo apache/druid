@@ -519,17 +519,17 @@ public class OverlordResource
   @GET
   @Path("/waitingTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getWaitingTasks(@QueryParam("maxTasks") Integer maxTasks, @Context final HttpServletRequest req)
+  public Response getWaitingTasks(@QueryParam("n") Integer maxActiveTasks, @Context final HttpServletRequest req)
   {
-    return getTasks("waiting", null, null, maxTasks, null, req);
+    return getTasks("waiting", null, null, null, maxActiveTasks, null, req);
   }
 
   @GET
   @Path("/pendingTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getPendingTasks(@QueryParam("maxTasks") Integer maxTasks, @Context final HttpServletRequest req)
+  public Response getPendingTasks(@QueryParam("n") Integer maxActiveTasks, @Context final HttpServletRequest req)
   {
-    return getTasks("pending", null, null, maxTasks, null, req);
+    return getTasks("pending", null, null, null, maxActiveTasks, null, req);
   }
 
   @GET
@@ -537,22 +537,22 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks(
       @QueryParam("type") String taskType,
-      @QueryParam("maxTasks") Integer maxTasks,
+      @QueryParam("n") Integer maxActiveTasks,
       @Context final HttpServletRequest req
   )
   {
-    return getTasks("running", null, null, maxTasks, taskType, req);
+    return getTasks("running", null, null, null, maxActiveTasks, taskType, req);
   }
 
   @GET
   @Path("/completeTasks")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteTasks(
-      @QueryParam("maxTasks") final Integer maxTasks,
+      @QueryParam("n") final Integer maxTaskStatuses,
       @Context final HttpServletRequest req
   )
   {
-    return getTasks("complete", null, null, maxTasks, null, req);
+    return getTasks("complete", null, null, maxTaskStatuses, null, null, req);
   }
 
   @GET
@@ -562,7 +562,8 @@ public class OverlordResource
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
       @QueryParam("createdTimeInterval") final String createdTimeInterval,
-      @QueryParam("max") final Integer maxTasks,
+      @QueryParam("max") final Integer maxCompletedTasks,
+      @QueryParam("maxActiveTasks") final Integer maxActiveTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req
   )
@@ -626,10 +627,25 @@ public class OverlordResource
         taskInfo.getStatus().getErrorMsg()
     );
 
+    //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
+    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
+      }
+      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
+      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
+                                                              .map(completeTaskTransformFunc::apply)
+                                                              .collect(Collectors.toList());
+      finalTaskList.addAll(completedTasks);
+    }
+
     final List<TaskInfo<Task, TaskStatus>> allActiveTaskInfo;
     final List<AnyTask> allActiveTasks = new ArrayList<>();
-    if (maxTasks > 0 && (state == null || !"complete".equals(StringUtils.toLowerCase(state)))) {
-      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource, maxTasks);
+    if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo(dataSource, maxActiveTasks);
       for (final TaskInfo<Task, TaskStatus> task : allActiveTaskInfo) {
         allActiveTasks.add(
             new AnyTask(
@@ -646,22 +662,6 @@ public class OverlordResource
             ));
       }
     }
-
-    int maxOtherTasks = Math.max(0, maxTasks - allActiveTasks.size());
-    if (maxOtherTasks > 0 && (state == null || "complete".equals(StringUtils.toLowerCase(state)))) {
-      Duration createdTimeDuration = null;
-      if (createdTimeInterval != null) {
-        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
-        createdTimeDuration = theInterval.toDuration();
-      }
-      final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxOtherTasks, createdTimeDuration, dataSource);
-      final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
-                                                              .map(completeTaskTransformFunc::apply)
-                                                              .collect(Collectors.toList());
-      finalTaskList.addAll(completedTasks);
-    }
-
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
       List<TaskStatusPlus> transformedWaitingList = waitingWorkItems.stream()
