@@ -40,9 +40,16 @@ public abstract class RetryingInputEntity implements InputEntity
         this,
         new RetryingInputEntityOpenFunction(),
         getRetryCondition(),
-        RetryUtils.DEFAULT_MAX_TRIES
+        getResetCondition(),
+        getMaxRetries()
     );
     return CompressionUtils.decompress(retryingInputStream, getPath());
+  }
+
+  // override this in sub-classes to customize retries
+  protected int getMaxRetries()
+  {
+    return RetryUtils.DEFAULT_MAX_TRIES;
   }
 
   /**

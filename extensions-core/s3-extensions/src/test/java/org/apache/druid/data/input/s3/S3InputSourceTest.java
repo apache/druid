@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -28,6 +29,7 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -86,6 +88,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.easymock.EasyMock.expectLastCall;
 
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
@@ -535,6 +539,49 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.verify(S3_CLIENT);
   }
 
+  @Test(expected = SdkClientException.class)
+  public void testReaderRetriesOnSdkClientExceptionButNeverSucceedsThenThrows() throws Exception
+  {
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)), CONTENT);
+    expectSdkClientException(EXPECTED_URIS.get(0));
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0)),
+        null,
+        null,
+        3 // only have three retries since they are slow
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ColumnsFilter.all()
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        temporaryFolder.newFolder()
+    );
+
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+
+    EasyMock.verify(S3_CLIENT);
+  }
+
   @Test
   public void testCompressedReader() throws IOException
   {
@@ -619,6 +666,31 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     someObject.setObjectContent(new ByteArrayInputStream(CONTENT));
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
   }
+
+
+  // Setup mocks for invoquing the resettable condition for the S3Entity:
+  private static void expectSdkClientException(URI uri) throws IOException
+  {
+    final String s3Bucket = uri.getAuthority();
+    final String key = S3Utils.extractS3Key(uri);
+
+    S3ObjectInputStream someInputStream = EasyMock.createMock(S3ObjectInputStream.class);
+    EasyMock.expect(someInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(new SdkClientException("Data read has a different length than the expected")).anyTimes();
+    someInputStream.close();
+    expectLastCall().andVoid().anyTimes();
+
+    S3Object someObject = EasyMock.createMock(S3Object.class);
+    EasyMock.expect(someObject.getBucketName()).andReturn(s3Bucket).anyTimes();
+    EasyMock.expect(someObject.getKey()).andReturn(key).anyTimes();
+    EasyMock.expect(someObject.getObjectContent()).andReturn(someInputStream).anyTimes();
+
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).anyTimes();
+
+    EasyMock.replay(someObject);
+    EasyMock.replay(someInputStream);
+  }
+
 
   private static void expectGetObjectCompressed(URI uri) throws IOException
   {
