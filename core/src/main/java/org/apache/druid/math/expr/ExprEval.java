@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 
@@ -60,7 +61,7 @@ public abstract class ExprEval<T>
         }
         return of(TypeStrategies.readNullableDouble(buffer, offset));
       default:
-        return ofType(type, TypeStrategies.readNullableType(buffer, offset, type.getStrategy()));
+        return ofType(type, type.getNullableStrategy().read(buffer, offset));
     }
   }
 
@@ -90,13 +91,20 @@ public abstract class ExprEval<T>
         }
         break;
       default:
-        final TypeStrategy strategy = type.getStrategy();
+        final NullableTypeStrategy strategy = type.getNullableStrategy();
         // if the types don't match, cast it so things don't get weird
         if (type.equals(eval.type())) {
           eval = eval.castTo(type);
         }
-        TypeStrategies.checkMaxBytes(type, strategy.estimateSizeBytesNullable(eval.value()), maxSizeBytes);
-        TypeStrategies.writeNullableType(buffer, offset, strategy, eval.value());
+        int written = strategy.write(buffer, offset, eval.value(), maxSizeBytes);
+        if (written < 0) {
+          throw new ISE(
+              "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
+              type.asTypeString(),
+              maxSizeBytes,
+              maxSizeBytes - written
+          );
+        }
     }
   }
 

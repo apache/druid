@@ -348,12 +348,15 @@ public class ParserTest extends InitializedNullHandlingTest
     TypeStrategiesTest.NullableLongPair l1 = new TypeStrategiesTest.NullableLongPair(1L, 2L);
     TypeStrategiesTest.NullableLongPair l2 = new TypeStrategiesTest.NullableLongPair(2L, 3L);
     TypeStrategy byteStrategy = TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy();
-    final byte[] b1 = new byte[byteStrategy.estimateSizeBytesNullable(l1)];
-    final byte[] b2 = new byte[byteStrategy.estimateSizeBytesNullable(l2)];
+    final byte[] b1 = new byte[byteStrategy.estimateSizeBytes(l1)];
+    final byte[] b2 = new byte[byteStrategy.estimateSizeBytes(l2)];
     ByteBuffer bb1 = ByteBuffer.wrap(b1);
     ByteBuffer bb2 = ByteBuffer.wrap(b2);
-    byteStrategy.write(bb1, l1);
-    byteStrategy.write(bb2, l2);
+    int w1 = byteStrategy.write(bb1, l1, b1.length);
+    int w2 = byteStrategy.write(bb2, l2, b2.length);
+
+    Assert.assertTrue(w1 > 0);
+    Assert.assertTrue(w2 > 0);
     String l1String = StringUtils.format(
         "complex_decode_base64('%s', '%s')",
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),

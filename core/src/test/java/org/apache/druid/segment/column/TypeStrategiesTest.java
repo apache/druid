@@ -89,9 +89,9 @@ public class TypeStrategiesTest
       }
 
       @Override
-      public void write(ByteBuffer buffer, String value)
+      public int write(ByteBuffer buffer, String value, int maxSizeBytes)
       {
-
+        return 1;
       }
 
       @Override
@@ -264,43 +264,44 @@ public class TypeStrategiesTest
     // test buffer
     int offset = 10;
     buffer.position(offset);
-    strategy.write(buffer, value);
+    strategy.write(buffer, value, Integer.MAX_VALUE);
     Assert.assertEquals(expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertEquals(value, strategy.read(buffer));
     Assert.assertEquals(expectedLength, buffer.position() - offset);
 
     // test buffer nullable write read value
+    NullableTypeStrategy nullableTypeStrategy = new NullableTypeStrategy(strategy);
     buffer.position(offset);
-    TypeStrategies.writeNullableType(buffer, strategy, value);
+    nullableTypeStrategy.write(buffer, value, Integer.MAX_VALUE);
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
     buffer.position(offset);
-    Assert.assertEquals(value, TypeStrategies.readNullableType(buffer, strategy));
+    Assert.assertEquals(value, nullableTypeStrategy.read(buffer));
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
 
     // test buffer nullable write read null
     buffer.position(offset);
-    TypeStrategies.writeNullableType(buffer, strategy, null);
+    nullableTypeStrategy.write(buffer, null, Integer.MAX_VALUE);
     Assert.assertEquals(1, buffer.position() - offset);
     buffer.position(offset);
-    Assert.assertNull(TypeStrategies.readNullableType(buffer, strategy));
+    Assert.assertNull(nullableTypeStrategy.read(buffer));
     Assert.assertEquals(1, buffer.position() - offset);
 
     buffer.position(0);
 
     // test buffer offset
-    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, Integer.MAX_VALUE));
     Assert.assertEquals(value, strategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read value
-    Assert.assertEquals(1 + expectedLength, TypeStrategies.writeNullableType(buffer, 1024, strategy, value));
-    Assert.assertEquals(value, TypeStrategies.readNullableType(buffer, 1024, strategy));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, Integer.MAX_VALUE));
+    Assert.assertEquals(value, nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read null
-    Assert.assertEquals(1, TypeStrategies.writeNullableType(buffer, 1024, strategy, null));
-    Assert.assertNull(TypeStrategies.readNullableType(buffer, 1024, strategy));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, Integer.MAX_VALUE));
+    Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
   }
 
@@ -312,43 +313,44 @@ public class TypeStrategiesTest
     // test buffer
     int offset = 10;
     buffer.position(offset);
-    strategy.write(buffer, value);
+    strategy.write(buffer, value, Integer.MAX_VALUE);
     Assert.assertEquals(expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer));
     Assert.assertEquals(expectedLength, buffer.position() - offset);
 
     // test buffer nullable write read value
+    NullableTypeStrategy nullableTypeStrategy = new NullableTypeStrategy(strategy);
     buffer.position(offset);
-    TypeStrategies.writeNullableType(buffer, strategy, value);
+    nullableTypeStrategy.write(buffer, value, Integer.MAX_VALUE);
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
     buffer.position(offset);
-    Assert.assertArrayEquals(value, (Object[]) TypeStrategies.readNullableType(buffer, strategy));
+    Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer));
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
 
     // test buffer nullable write read null
     buffer.position(offset);
-    TypeStrategies.writeNullableType(buffer, strategy, null);
+    nullableTypeStrategy.write(buffer, null, Integer.MAX_VALUE);
     Assert.assertEquals(1, buffer.position() - offset);
     buffer.position(offset);
-    Assert.assertNull(TypeStrategies.readNullableType(buffer, strategy));
+    Assert.assertNull(nullableTypeStrategy.read(buffer));
     Assert.assertEquals(1, buffer.position() - offset);
 
     buffer.position(0);
 
     // test buffer offset
-    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, Integer.MAX_VALUE));
     Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read value
-    Assert.assertEquals(1 + expectedLength, TypeStrategies.writeNullableType(buffer, 1024, strategy, value));
-    Assert.assertArrayEquals(value, (Object[]) TypeStrategies.readNullableType(buffer, 1024, strategy));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, Integer.MAX_VALUE));
+    Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read null
-    Assert.assertEquals(1, TypeStrategies.writeNullableType(buffer, 1024, strategy, null));
-    Assert.assertNull(TypeStrategies.readNullableType(buffer, 1024, strategy));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, Integer.MAX_VALUE));
+    Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
   }
 
@@ -380,25 +382,29 @@ public class TypeStrategiesTest
       if (value == null) {
         return 0;
       }
-      TypeStrategy<Long> longStrategy = ExpressionType.LONG.getStrategy();
-      return longStrategy.estimateSizeBytesNullable(value.lhs) + longStrategy.estimateSizeBytesNullable(value.rhs);
+      NullableTypeStrategy<Long> longStrategy = ExpressionType.LONG.getNullableStrategy();
+      return longStrategy.estimateSizeBytes(value.lhs) + longStrategy.estimateSizeBytes(value.rhs);
     }
 
     @Override
     public NullableLongPair read(ByteBuffer buffer)
     {
-      TypeStrategy<Long> longTypeStrategy = ExpressionType.LONG.getStrategy();
-      Long lhs = TypeStrategies.readNullableType(buffer, longTypeStrategy);
-      Long rhs = TypeStrategies.readNullableType(buffer, longTypeStrategy);
+      NullableTypeStrategy<Long> longTypeStrategy = ExpressionType.LONG.getNullableStrategy();
+      Long lhs = longTypeStrategy.read(buffer);
+      Long rhs = longTypeStrategy.read(buffer);
       return new NullableLongPair(lhs, rhs);
     }
 
     @Override
-    public void write(ByteBuffer buffer, NullableLongPair value)
+    public int write(ByteBuffer buffer, NullableLongPair value, int maxSizeBytes)
     {
-      TypeStrategy<Long> longTypeStrategy = ExpressionType.LONG.getStrategy();
-      TypeStrategies.writeNullableType(buffer, longTypeStrategy, value.lhs);
-      TypeStrategies.writeNullableType(buffer, longTypeStrategy, value.rhs);
+      NullableTypeStrategy<Long> longTypeStrategy = ExpressionType.LONG.getNullableStrategy();
+      int written = longTypeStrategy.write(buffer, value.lhs, maxSizeBytes);
+      if (written > 0) {
+        int next = longTypeStrategy.write(buffer, value.rhs, maxSizeBytes - written);
+        written = next > 0 ? written + next : next;
+      }
+      return written;
     }
   }
 }

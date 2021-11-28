@@ -219,99 +219,13 @@ public class TypeStrategies
     return buffer.getFloat(offset + VALUE_OFFSET);
   }
 
-  /**
-   * Read a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
-   * move the underlying position by the size of the value read.
-   *
-   * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
-   */
-  @Nullable
-  public static <T> T readNullableType(ByteBuffer buffer, TypeStrategy<T> strategy)
-  {
-    if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
-      return null;
-    }
-    return strategy.read(buffer);
-  }
-
-
-  /**
-   * Write a potentially null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will
-   * move the underlying position by the size of the value written. If the value is null, only the null byte will be
-   * set - to {@link NullHandling#IS_NULL_BYTE}.
-   *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
-   * if the size is unknown.
-   */
-  public static <T> void writeNullableType(ByteBuffer buffer, TypeStrategy<T> strategy, @Nullable T value)
-  {
-    if (value == null) {
-      buffer.put(NullHandling.IS_NULL_BYTE);
-      return;
-    }
-    buffer.put(NullHandling.IS_NOT_NULL_BYTE);
-    strategy.write(buffer, value);
-  }
-
-  /**
-   * Read a potentially null value from the {@link ByteBuffer} at the requested position. This will not permanently
-   * move the underlying {@link ByteBuffer#position()}.
-   *
-   * This method uses masking to check the null bit, so flags may be used in the upper bits of the null byte.
-   */
-  @Nullable
-  public static <T> T readNullableType(ByteBuffer buffer, int offset, TypeStrategy<T> strategy)
-  {
-    if (isNullableNull(buffer, offset)) {
-      return null;
-    }
-    return strategy.read(buffer, offset + VALUE_OFFSET);
-  }
-
-  /**
-   * Write a potentially null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
-   * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
-   *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link TypeStrategy#estimateSizeBytesNullable(Object)} to determine the required size of a value before writing
-   * if the size is unknown.
-   */
-  public static <T> int writeNullableType(
-      ByteBuffer buffer,
-      int offset,
-      TypeStrategy<T> strategy,
-      @Nullable T value
-  )
-  {
-    if (value == null) {
-      return TypeStrategies.writeNull(buffer, offset);
-    }
-    buffer.put(offset, NullHandling.IS_NOT_NULL_BYTE);
-    return Byte.BYTES + strategy.write(buffer, offset + TypeStrategies.VALUE_OFFSET, value);
-  }
-
-  /**
-   * Throw an {@link ISE} for consistent error messaging if the size to be written is greater than the max size
-   */
-  public static void checkMaxBytes(TypeSignature<?> type, int sizeBytes, int maxSizeBytes)
-  {
-    if (sizeBytes > maxSizeBytes) {
-      throw new ISE(
-          "Unable to serialize [%s], size [%s] is larger than max [%s]",
-          type.asTypeString(),
-          sizeBytes,
-          maxSizeBytes
-      );
-    }
-  }
 
   public static final class LongTypeStrategy implements TypeStrategy<Long>
   {
     private static final Comparator<Long> COMPARATOR = Comparator.nullsFirst(Longs::compare);
 
     @Override
-    public int estimateSizeBytes(@Nullable Long value)
+    public int estimateSizeBytes(Long value)
     {
       return Long.BYTES;
     }
@@ -323,9 +237,16 @@ public class TypeStrategies
     }
 
     @Override
-    public void write(ByteBuffer buffer, Long value)
+    public int write(ByteBuffer buffer, Long value, int maxSizeBytes)
     {
-      buffer.putLong(value);
+      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      final int sizeBytes = Long.BYTES;
+      final int remaining = max - sizeBytes;
+      if (remaining >= 0) {
+        buffer.putLong(value);
+        return sizeBytes;
+      }
+      return remaining;
     }
 
     @Override
@@ -340,7 +261,7 @@ public class TypeStrategies
     private static final Comparator<Float> COMPARATOR = Comparator.nullsFirst(Floats::compare);
 
     @Override
-    public int estimateSizeBytes(@Nullable Float value)
+    public int estimateSizeBytes(Float value)
     {
       return Float.BYTES;
     }
@@ -352,9 +273,16 @@ public class TypeStrategies
     }
 
     @Override
-    public void write(ByteBuffer buffer, Float value)
+    public int write(ByteBuffer buffer, Float value, int maxSizeBytes)
     {
-      buffer.putFloat(value);
+      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      final int sizeBytes = Float.BYTES;
+      final int remaining = max - sizeBytes;
+      if (remaining >= 0) {
+        buffer.putFloat(value);
+        return sizeBytes;
+      }
+      return remaining;
     }
 
     @Override
@@ -369,7 +297,7 @@ public class TypeStrategies
     private static final Comparator<Double> COMPARATOR = Comparator.nullsFirst(Double::compare);
 
     @Override
-    public int estimateSizeBytes(@Nullable Double value)
+    public int estimateSizeBytes(Double value)
     {
       return Double.BYTES;
     }
@@ -381,9 +309,16 @@ public class TypeStrategies
     }
 
     @Override
-    public void write(ByteBuffer buffer, Double value)
+    public int write(ByteBuffer buffer, Double value, int maxSizeBytes)
     {
-      buffer.putDouble(value);
+      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      final int sizeBytes = Double.BYTES;
+      final int remaining = max - sizeBytes;
+      if (remaining >= 0) {
+        buffer.putDouble(value);
+        return sizeBytes;
+      }
+      return remaining;
     }
 
     @Override
@@ -399,7 +334,7 @@ public class TypeStrategies
     private static final Ordering<String> ORDERING = Ordering.from(String::compareTo).nullsFirst();
 
     @Override
-    public int estimateSizeBytes(@Nullable String value)
+    public int estimateSizeBytes(String value)
     {
       if (value == null) {
         return 0;
@@ -418,11 +353,18 @@ public class TypeStrategies
     }
 
     @Override
-    public void write(ByteBuffer buffer, String value)
+    public int write(ByteBuffer buffer, String value, int maxSizeBytes)
     {
       final byte[] bytes = StringUtils.toUtf8(value);
-      buffer.putInt(bytes.length);
-      buffer.put(bytes, 0, bytes.length);
+      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      final int sizeBytes = Integer.BYTES + bytes.length;
+      final int remaining = max - sizeBytes;
+      if (remaining >= 0) {
+        buffer.putInt(bytes.length);
+        buffer.put(bytes, 0, bytes.length);
+        return sizeBytes;
+      }
+      return remaining;
     }
 
     @Override
@@ -447,17 +389,17 @@ public class TypeStrategies
 
     public ArrayTypeStrategy(TypeSignature<?> type)
     {
-      this.elementStrategy = type.getElementType().getStrategy();
+      this.elementStrategy = type.getElementType().getNullableStrategy();
       this.elementComparator = Comparator.nullsFirst(elementStrategy);
     }
 
     @Override
-    public int estimateSizeBytes(@Nullable Object[] value)
+    public int estimateSizeBytes(Object[] value)
     {
       if (value == null) {
         return 0;
       }
-      return Integer.BYTES + Arrays.stream(value).mapToInt(elementStrategy::estimateSizeBytesNullable).sum();
+      return Integer.BYTES + Arrays.stream(value).mapToInt(elementStrategy::estimateSizeBytes).sum();
     }
 
     @Override
@@ -466,18 +408,34 @@ public class TypeStrategies
       final int arrayLength = buffer.getInt();
       final Object[] array = new Object[arrayLength];
       for (int i = 0; i < arrayLength; i++) {
-        array[i] = TypeStrategies.readNullableType(buffer, elementStrategy);
+        array[i] = elementStrategy.read(buffer);
       }
       return array;
     }
 
     @Override
-    public void write(ByteBuffer buffer, Object[] value)
+    public int write(ByteBuffer buffer, Object[] value, int maxSizeBytes)
     {
+      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      int sizeBytes = Integer.BYTES;
+      int remaining = max - sizeBytes;
+      if (remaining < 0) {
+        return remaining;
+      }
+      int extraNeeded = 0;
+
       buffer.putInt(value.length);
       for (Object o : value) {
-        TypeStrategies.writeNullableType(buffer, elementStrategy, o);
+        int written = elementStrategy.write(buffer, o, remaining);
+        if (written < 0) {
+          extraNeeded += written;
+          remaining = 0;
+        } else {
+          sizeBytes += written;
+          remaining -= sizeBytes;
+        }
       }
+      return extraNeeded < 0 ? extraNeeded : sizeBytes;
     }
 
     @Override

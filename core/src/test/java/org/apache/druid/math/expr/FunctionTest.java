@@ -871,9 +871,10 @@ public class FunctionTest extends InitializedNullHandlingTest
     TypeStrategiesTest.NullableLongPair expected = new TypeStrategiesTest.NullableLongPair(1L, 2L);
     TypeStrategy strategy = TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy();
 
-    final byte[] bytes = new byte[strategy.estimateSizeBytesNullable(expected)];
+    final byte[] bytes = new byte[strategy.estimateSizeBytes(expected)];
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    strategy.write(buffer, expected);
+    int written = strategy.write(buffer, expected, bytes.length);
+    Assert.assertEquals(bytes.length, written);
     assertExpr(
         StringUtils.format(
             "complex_decode_base64('%s', '%s')",

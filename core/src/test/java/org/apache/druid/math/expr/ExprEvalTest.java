@@ -67,10 +67,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.STRING,
-        16,
-        10
+        10,
+        16
     ));
     assertExpr(0, ExprEval.of("hello world"), 10);
   }
@@ -105,10 +105,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.STRING_ARRAY,
-        30,
-        10
+        10,
+        30
     ));
     assertExpr(0, ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
   }
@@ -119,10 +119,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     expectedException.expect(ISE.class);
     // this has a different failure size than string serde because it doesn't check incrementally
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.STRING_ARRAY,
-        30,
-        10
+        10,
+        30
     ));
     assertExpr(0, ExprEval.ofStringArray(new String[]{"hello", "hi", "hey"}), 10);
   }
@@ -140,10 +140,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.LONG_ARRAY,
-        32,
-        10
+        10,
+        32
     ));
     assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
   }
@@ -153,10 +153,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.LONG_ARRAY,
-        32,
-        10
+        10,
+        32
     ));
     assertExpr(0, ExprEval.ofLongArray(new Long[]{1L, 2L, 3L}), 10);
   }
@@ -174,10 +174,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.DOUBLE_ARRAY,
-        32,
-        10
+        10,
+        32
     ));
     assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
   }
@@ -187,10 +187,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         ExpressionType.DOUBLE_ARRAY,
-        32,
-        10
+        10,
+        32
     ));
     assertExpr(0, ExprEval.ofDoubleArray(new Double[]{1.1, 2.2, 3.3}), 10);
   }
@@ -209,10 +209,10 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     final ExpressionType complexType = ExpressionType.fromColumnType(TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE);
     expectedException.expect(ISE.class);
     expectedException.expectMessage(StringUtils.format(
-        "Unable to serialize [%s], size [%s] is larger than max [%s]",
+        "Unable to serialize [%s], max size bytes is [%s], but need at least [%s] bytes to write entire value",
         complexType.asTypeString(),
-        19,
-        10
+        10,
+        19
     ));
     assertExpr(0, ExprEval.ofComplex(complexType, new TypeStrategiesTest.NullableLongPair(1234L, 5678L)), 10);
   }

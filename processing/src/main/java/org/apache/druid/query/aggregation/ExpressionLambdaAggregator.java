@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 
@@ -49,11 +49,15 @@ public class ExpressionLambdaAggregator implements Aggregator
   public void aggregate()
   {
     final ExprEval<?> eval = lambda.eval(bindings);
-    TypeStrategies.checkMaxBytes(
-        eval.type(),
-        eval.type().getStrategy().estimateSizeBytesNullable(eval.value()),
-        maxSizeBytes
-    );
+    final int estimatedSize = eval.type().getNullableStrategy().estimateSizeBytes(eval.value());
+    if (estimatedSize > maxSizeBytes) {
+      throw new ISE(
+          "Exceeded memory usage when aggregating type [%s], size [%s] is larger than max [%s]",
+          eval.type().asTypeString(),
+          estimatedSize,
+          maxSizeBytes
+      );
+    }
     bindings.accumulate(eval);
     hasValue = true;
   }

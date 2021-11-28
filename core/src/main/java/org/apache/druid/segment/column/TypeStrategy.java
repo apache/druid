@@ -21,7 +21,6 @@ package org.apache.druid.segment.column;
 
 import org.apache.druid.common.config.NullHandling;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
@@ -32,43 +31,30 @@ import java.util.Comparator;
  * IMPORTANT!!! DO NOT USE THIS FOR WRITING COLUMNS, THERE ARE VERY LIKELY FAR BETTER WAYS TO DO THIS. However, if you
  * need to store a single value or small number of values, continue reading.
  *
- * Implementations of this mechanism support reading and writing ONLY non-null values. To read and write nullable
- * values and you have enough memory to burn a full byte for every value you want to store, consider using the
- * {@link TypeStrategies#readNullableType} and {@link TypeStrategies#writeNullableType} family of
- * methods, which will store values with a leading byte containing either {@link NullHandling#IS_NULL_BYTE} or
- * {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
- * consider alternative approaches to tracking your nulls.
+ * Most implementations of this mechanism, support reading and writing ONLY non-null values. The exception to this is
+ * {@link NullableTypeStrategy}, which might be acceptable to use if you need to read and write nullable values, AND,
+ * you have enough memory to burn a full byte for every value you want to store. It will store values with a leading
+ * byte containing either {@link NullHandling#IS_NULL_BYTE} or {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate.
+ * If you have a lot of values to write and a lot of nulls, consider alternative approaches to tracking your nulls.
  *
  * This mechanism allows using the natural {@link ByteBuffer#position()} and modify the underlying position as they
  * operate, and also random access reads are specific offets, which do not modify the underlying position. If a method
  * accepts an offset parameter, it does not modify the position, if not, it does.
  *
  * The only methods implementors are required to provide are {@link #read(ByteBuffer)},
- * {@link #write(ByteBuffer, Object)} and {@link #estimateSizeBytes(Object)}, default implementations are provided
+ * {@link #write(ByteBuffer, Object, int)} and {@link #estimateSizeBytes(Object)}, default implementations are provided
  * to set and reset buffer positions as appropriate for the offset based methods, but may be overridden if a more
  * optimized implementation is needed.
  */
 public interface TypeStrategy<T> extends Comparator<T>
 {
   /**
-   * The size in bytes that writing this value to memory would require, useful for constraining the values maximum size
-   *
-   * This does not include the null byte, use {@link #estimateSizeBytesNullable(Object)} instead.
+   * Estimate the size in bytes that writing this value to memory would require. This method is not required to be
+   * exactly correct, but many implementations might be. Implementations should err on the side of over-estimating if
+   * exact sizing is not efficient
    */
-  int estimateSizeBytes(@Nullable T value);
+  int estimateSizeBytes(T value);
 
-  /**
-   * The size in bytes that writing this value to memory would require, including the null byte, useful for constraining
-   * the values maximum size. If the value is null, the size will be {@link Byte#BYTES}, otherwise it will be
-   * {@link Byte#BYTES} + {@link #estimateSizeBytes(Object)}
-   */
-  default int estimateSizeBytesNullable(@Nullable T value)
-  {
-    if (value == null) {
-      return Byte.BYTES;
-    }
-    return Byte.BYTES + estimateSizeBytes(value);
-  }
 
   /**
    * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
@@ -83,13 +69,14 @@ public interface TypeStrategy<T> extends Comparator<T>
 
   /**
    * Write a non-null value to the {@link ByteBuffer} at position {@link ByteBuffer#position()}. This will move the
-   * underlying position by the size of the value written.
+   * underlying position by the size of the value written, and returns the number of bytes written.
    *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link #estimateSizeBytes(Object)} to determine the required size of a value before writing if the size
-   * is unknown.
+   * If writing the value would take more than 'maxSizeBytes' (or the buffer limit, whichever is smaller), this method
+   * will return a negative value indicating the number of additional bytes that would be required to fully write the
+   * value. Partial results may be written to the buffer when in this state, and the position may be left at whatever
+   * point the implementation ran out of space while writing the value.
    */
-  void write(ByteBuffer buffer, T value);
+  int write(ByteBuffer buffer, T value, int maxSizeBytes);
 
   /**
    * Read a non-null value from the {@link ByteBuffer} at the requested position. This will not permanently move the
@@ -113,16 +100,18 @@ public interface TypeStrategy<T> extends Comparator<T>
    * Write a non-null value to the {@link ByteBuffer} at the requested position. This will not permanently move the
    * underlying {@link ByteBuffer#position()}, and returns the number of bytes written.
    *
-   * Callers should ensure the {@link ByteBuffer} has adequate capacity before writing values, use
-   * {@link #estimateSizeBytes(Object)} to determine the required size of a value before writing if the size
-   * is unknown.
+   * If writing the value would take more than 'maxSizeBytes' (or the buffer limit, whichever is smaller), this method
+   * will return a negative value indicating the number of additional bytes that would be required to fully write the
+   * value. Partial results may be written to the buffer when in this state, and the position may be left at whatever
+   * point the implementation ran out of space while writing the value.
+   *
+   * @return number of bytes written
    */
-  default int write(ByteBuffer buffer, int offset, T value)
+  default int write(ByteBuffer buffer, int offset, T value, int maxSizeBytes)
   {
     final int oldPosition = buffer.position();
     buffer.position(offset);
-    write(buffer, value);
-    final int size = buffer.position() - offset;
+    final int size = write(buffer, value, maxSizeBytes);
     buffer.position(oldPosition);
     return size;
   }

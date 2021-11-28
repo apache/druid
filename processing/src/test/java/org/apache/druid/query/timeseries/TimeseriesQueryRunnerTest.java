@@ -3122,7 +3122,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     cannotVectorize();
     if (!vectorize) {
       // size bytes when it overshoots varies slightly between algorithms
-      expectedException.expectMessage("Unable to serialize [ARRAY<STRING>]");
+      expectedException.expectMessage("Exceeded memory usage when aggregating type [ARRAY<STRING>]");
     }
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3231,12 +3231,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, results);
   }
 
-  private Map<String, Object> makeContext()
+  protected Map<String, Object> makeContext()
   {
     return makeContext(ImmutableMap.of());
   }
 
-  private Map<String, Object> makeContext(final Map<String, Object> myContext)
+  protected Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
     context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
@@ -3246,7 +3246,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     return context;
   }
 
-  private void cannotVectorize()
+  protected void cannotVectorize()
   {
     if (vectorize) {
       expectedException.expect(RuntimeException.class);

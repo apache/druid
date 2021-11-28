@@ -435,9 +435,14 @@ class ComplexExpr extends ConstantExpr<Object>
       return StringUtils.format("complex_decode_base64('%s', %s)", outputType.getComplexTypeName(), NULL_LITERAL);
     }
     TypeStrategy strategy = outputType.getStrategy();
-    final byte[] bytes = new byte[strategy.estimateSizeBytes(value)];
+    byte[] bytes = new byte[strategy.estimateSizeBytes(value)];
     ByteBuffer wrappedBytes = ByteBuffer.wrap(bytes);
-    strategy.write(wrappedBytes, 0, value);
+    int remaining = strategy.write(wrappedBytes, 0, value, bytes.length);
+    if (remaining < 0) {
+      bytes = new byte[bytes.length - remaining];
+      wrappedBytes = ByteBuffer.wrap(bytes);
+      strategy.write(wrappedBytes, 0, value, bytes.length);
+    }
     return StringUtils.format(
         "complex_decode_base64('%s', '%s')",
         outputType.getComplexTypeName(),
