@@ -31,7 +31,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
@@ -73,7 +73,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, expression, macroTable);
       default:
-        throw new UnsupportedQueryFeatureException("Sum aggregation is not supported for '%s' type", aggregationType);
+        throw new UnsupportedSQLQueryException("Sum aggregation is not supported for '%s' type", aggregationType);
     }
   }
 }

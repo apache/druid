@@ -93,7 +93,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw new UnsupportedQueryFeatureException("Illegal DATE constant: %s", constExp);
+            throw new UnsupportedSQLQueryException("Illegal DATE constant: %s", constExp);
           }
 
           literal = rexBuilder.makeDateLiteral(
@@ -107,7 +107,7 @@ public class DruidRexExecutor implements RexExecutor
           // as a primitive long/float/double.
           // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
           if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
-            throw new UnsupportedQueryFeatureException("Illegal TIMESTAMP constant: %s", constExp);
+            throw new UnsupportedSQLQueryException("Illegal TIMESTAMP constant: %s", constExp);
           }
 
           literal = rexBuilder.makeTimestampLiteral(
@@ -133,7 +133,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw new UnsupportedQueryFeatureException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                throw new UnsupportedSQLQueryException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
                     expression,
                     Double.toString(exprResultDouble),
                     expression,
@@ -156,7 +156,7 @@ public class DruidRexExecutor implements RexExecutor
                   doubleVal -> {
                     if (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal)) {
                       String expression = druidExpression.getExpression();
-                      throw new UnsupportedQueryFeatureException(
+                      throw new UnsupportedSQLQueryException(
                           "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the array to bigint or char or change the expression itself",
                           expression,
                           Double.toString(doubleVal)

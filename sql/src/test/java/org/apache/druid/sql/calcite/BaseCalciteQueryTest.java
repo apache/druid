@@ -489,7 +489,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
-    return queryLogHook = QueryLogHook.create(createQueryJsonMapper());
+    queryJsonMapper = createQueryJsonMapper();
+    return queryLogHook = QueryLogHook.create(queryJsonMapper);
   }
 
   @Before

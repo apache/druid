@@ -29,7 +29,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -120,7 +120,7 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new UnsupportedQueryFeatureException("%s type is not supported", literal.getType().getSqlTypeName());
+        throw new UnsupportedSQLQueryException("%s type is not supported", literal.getType().getSqlTypeName());
     }
   }
 }

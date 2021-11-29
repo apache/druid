@@ -24,14 +24,14 @@ import org.apache.druid.java.util.common.StringUtils;
 
 /**
  * This class is different from {@link org.apache.calcite.plan.RelOptPlanner.CannotPlanException} in that the error
- * messages are user-friendly unlike it's parent class. This exception class be used instead of
+ * messages are user-friendly unlike its parent class. This exception class should be used instead of
  * {@link org.apache.druid.java.util.common.ISE} or {@link org.apache.druid.java.util.common.IAE} when processing is
- * to be halted during planning. Similarly, Druid planner can catch these exception and know that the error
- * can be directly exposed to end-user.
+ * to be halted during planning. Similarly, Druid planner can catch this exception and know that the error
+ * can be directly exposed to end-users.
  */
-public class UnsupportedQueryFeatureException extends RelOptPlanner.CannotPlanException
+public class UnsupportedSQLQueryException extends RelOptPlanner.CannotPlanException
 {
-  public UnsupportedQueryFeatureException(String formatText, Object... arguments)
+  public UnsupportedSQLQueryException(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
   }

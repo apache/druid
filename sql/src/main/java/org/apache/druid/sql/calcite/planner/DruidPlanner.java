@@ -224,7 +224,7 @@ public class DruidPlanner implements Closeable
         e.addSuppressed(e2);
         log.noStackTrace().warn(e, "Failed to plan the query '%s'", plannerContext.getSql());
         String errorMessage = plannerContext.getPlanningError();
-        if (null == errorMessage && cannotPlanException instanceof UnsupportedQueryFeatureException) {
+        if (null == errorMessage && cannotPlanException instanceof UnsupportedSQLQueryException) {
           errorMessage = cannotPlanException.getMessage();
         }
         if (null == errorMessage) {
@@ -232,7 +232,7 @@ public class DruidPlanner implements Closeable
         } else {
           errorMessage = "Possible error: " + errorMessage;
         }
-        throw new UnsupportedQueryFeatureException(errorMessage);
+        throw new UnsupportedSQLQueryException(errorMessage);
       }
     }
   }

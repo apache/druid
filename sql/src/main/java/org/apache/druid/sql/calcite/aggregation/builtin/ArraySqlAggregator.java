@@ -49,7 +49,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -185,7 +185,7 @@ public class ArraySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (SqlTypeUtil.isArray(type)) {
-        throw new UnsupportedQueryFeatureException("Cannot use ARRAY_AGG on array inputs %s", type);
+        throw new UnsupportedSQLQueryException("Cannot use ARRAY_AGG on array inputs %s", type);
       }
       return Calcites.createSqlArrayTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

@@ -111,7 +111,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -5411,7 +5411,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (Throwable t) {
       Throwable rootException = CalciteTests.getRootCauseFromInvocationTargetExceptionChain(t);
-      Assert.assertEquals(UnsupportedQueryFeatureException.class, rootException.getClass());
+      Assert.assertEquals(UnsupportedSQLQueryException.class, rootException.getClass());
       Assert.assertEquals(
           "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
           rootException.getMessage()

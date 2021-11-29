@@ -53,7 +53,7 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedQueryFeatureException;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -336,7 +336,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw new UnsupportedQueryFeatureException("Cannot handle joinType '%s'", calciteJoinType);
+        throw new UnsupportedSQLQueryException("Cannot handle joinType '%s'", calciteJoinType);
     }
   }
 
