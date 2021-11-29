@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -34,24 +33,18 @@ import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
-import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
-import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -79,7 +72,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -246,54 +238,6 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
 
     schema.start();
     schema.awaitInitialization();
-  }
-
-  @Test
-  public void testMemoryUsage() throws Exception
-  {
-//    QueryLifecycleFactory mockLifecyleFactory = EasyMock.createMock(QueryLifecycleFactory.class);
-//    QueryLifecycle mockLifecyle = EasyMock.createMock(QueryLifecycle.class);
-//    EasyMock.expect(mockLifecyleFactory.factorize()).andReturn(mockLifecyle);
-//    EasyMock.expect(mockLifecyle.runSimple(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
-//            .andAnswer(() -> {
-//              SegmentMetadataQuery segmentMetadataQuery = (SegmentMetadataQuery) EasyMock.getCurrentArgument(0);
-//              MultipleSpecificSegmentSpec multipleSpecificSegmentSpec = (MultipleSpecificSegmentSpec) segmentMetadataQuery.getQuerySegmentSpec();
-//              List<SegmentDescriptor> descriptors = multipleSpecificSegmentSpec.getDescriptors();
-//              return Sequences.simple(
-//                  descriptors.stream().map(descriptor -> new SegmentAnalysis(descriptor.ger))
-//              );
-//            });
-//    EasyMock.replay(mockLifecyle);
-//    EasyMock.replay(mockLifecyleFactory);
-    DruidSchema druidSchemaMemory = new DruidSchema(
-        null, null, null, null, null, null, null
-    )
-    {
-      @Override
-      Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
-      {
-        return Sequences.simple(
-            Lists.transform(
-                Lists.newArrayList(segments),
-                (segment) -> new SegmentAnalysis(segment.toString(),
-                                                 ImmutableList.of(segment.getInterval()),
-                                                 ImmutableMap.of("col1", new ColumnAnalysis(ColumnType.STRING, null, false, false, 40, null, null, null, null),
-                                                                 "col2", new ColumnAnalysis(ColumnType.LONG, null, false, false, 40, null, null, null, null),
-                                                                 "col2", new ColumnAnalysis(ColumnType.DOUBLE, null, false, false, 40, null, null, null, null),
-                                                                 "col2", new ColumnAnalysis(ColumnType.FLOAT, null, false, false, 40, null, null, null, null)
-                                                 ),
-                                                 40,
-                                                 40,
-                                                 null,
-                                                 null,
-                                                 null,
-                                                 false
-                )
-            )
-        );
-      }
-    };
-    druidSchemaMemory.addSegment();
   }
 
   @After
