@@ -27,18 +27,16 @@ The input source defines where your index task reads data for Apache Druid nativ
 
 For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
-> Firehose input has been deprecated. For information, see [Firehose](./native-batch-firehose.md). 
-
 ## S3 input source
 
 > You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source. 
 
-The S3 input source is to support reading objects directly from S3.
-Objects can be specified either via a list of S3 URI strings or a list of
-S3 location prefixes, which will attempt to list the contents and ingest
-all objects contained in the locations. The S3 input source is splittable
-and can be used by the [Parallel task](./native-batch.md),
-where each worker task of `index_parallel` will read one or multiple objects.
+The S3 input source reads objects directly from S3. You can specify either:
+- a list of S3 URI strings
+- a list of S3 location prefixes that attempts to list the contents and ingest
+all objects contained within the locations.
+
+The S3 input source is splittable. Therefore, you can use it with the [Parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
 
 Sample specs:
 
@@ -405,7 +403,7 @@ However, if you want to ingest from cloud storage, consider using the service-sp
 If you want to use a non-hdfs protocol with the HDFS input source, include the protocol
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
-### HTTP Input Source
+## HTTP Input Source
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
@@ -518,7 +516,7 @@ Sample spec:
 |type|This should be "inline".|yes|
 |data|Inlined data to ingest.|yes|
 
-### Local Input Source
+## Local Input Source
 
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
@@ -642,7 +640,7 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 > [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
 > to `true` to enable a compatibility mode where the timestampSpec is ignored.
 
-### SQL Input Source
+## SQL Input Source
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
@@ -695,7 +693,7 @@ Compared to the other native batch InputSources, SQL InputSource behaves differe
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
 
 
-### Combining input sources
+## Combining input sources
 
 The Combining input source is used to read data from multiple InputSources. This input source should be only used if all the delegate input sources are
  _splittable_ and can be used by the [Parallel task](./native-batch.md). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.

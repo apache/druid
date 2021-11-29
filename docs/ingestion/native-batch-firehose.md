@@ -60,7 +60,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 |fetchTimeout|Timeout for fetching an s3 object.|60000|no|
 |maxFetchRetry|Maximum retry for fetching an s3 object.|3|no|
 
-#### StaticGoogleBlobStoreFirehose
+## StaticGoogleBlobStoreFirehose
 
 > You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the StaticGoogleBlobStoreFirehose.
 
@@ -110,7 +110,7 @@ Google Blobs:
 |bucket|Name of the Google Cloud bucket|None|yes|
 |path|The path where data is located.|None|yes|
 
-### HDFSFirehose
+## HDFSFirehose
 
 > You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFSFirehose.
 
@@ -147,7 +147,7 @@ However, if you want to ingest from cloud storage, consider using the service-sp
 If you want to use a non-hdfs protocol with the HDFS firehose, you need to include the protocol you want
 in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configuration](../configuration/index.md#hdfs-input-source) for more details.
 
-### LocalFirehose
+## LocalFirehose
 
 This Firehose can be used to read the data from files on local disk, and is mainly intended for proof-of-concept testing, and works with `string` typed parsers.
 This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
@@ -170,7 +170,7 @@ A sample local Firehose spec is shown below:
 
 <a name="http-firehose"></a>
 
-### HttpFirehose
+## HttpFirehose
 
 This Firehose can be used to read the data from remote sites via HTTP, and works with `string` typed parsers.
 This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
@@ -233,7 +233,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 
 <a name="segment-firehose"></a>
 
-### IngestSegmentFirehose
+## IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments, potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
 This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md).
@@ -260,7 +260,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 
 <a name="sql-firehose"></a>
 
-### SqlFirehose
+## SqlFirehose
 
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
@@ -299,14 +299,14 @@ Requires one of the following extensions:
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.||Yes|
 
-#### Database
+### Database
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
 |connectorConfig|Specify the database connection properties via `connectURI`, `user` and `password`||Yes|
 
-### InlineFirehose
+## InlineFirehose
 
 This Firehose can be used to read the data inlined in its own spec.
 It can be used for demos or for quickly testing out parsing and schema, and works with `string` typed parsers.
@@ -324,7 +324,7 @@ A sample inline Firehose spec is shown below:
 |type|This should be "inline".|yes|
 |data|Inlined data to ingest.|yes|
 
-### CombiningFirehose
+## CombiningFirehose
 
 This Firehose can be used to combine and merge data from a list of different Firehoses.
 

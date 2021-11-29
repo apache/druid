@@ -391,7 +391,7 @@ them to create the final segments. Finally, they push the final segments to the 
 
 When you use multi-dimension partitioning for your data, Druid is able to distribute segment sizes more evenly than with single dimension partitioning.
 
-For segment pruning to be effective and translate into better query performance, you must the first of your `partitionDimensions` at query time. For example, given the following `partitionDimensions`:
+For segment pruning to be effective and translate into better query performance, you must include the first of your `partitionDimensions` in the `WHERE` clause at query time. For example, given the following `partitionDimensions`:
 ```
  "partitionsSpec": {
         "type": "range",
