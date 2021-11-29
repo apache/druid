@@ -40,7 +40,7 @@ A sample task is shown below:
         "format" : "auto"
       },
       "dimensionsSpec" : {
-        "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+        "dimensions": ["country", "page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent",,"region","city"],
         "dimensionExclusions" : []
       },
       "metricsSpec" : [
@@ -84,8 +84,11 @@ A sample task is shown below:
     },
     "tuningConfig" : {
       "type" : "index",
-      "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 1000000
+      "partitionsSpec": {
+        "type": "single_dim",
+        "partitionDimension": "country",
+        "targetRowsPerSegment": 5000000
+      }
     }
   }
 }

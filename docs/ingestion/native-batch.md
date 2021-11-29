@@ -119,6 +119,7 @@ The following example illustrates the configuration for a parallel indexing task
       },
       "dimensionsSpec": {
         "dimensions": [
+          "country",
           "page",
           "language",
           "user",
@@ -128,7 +129,6 @@ The following example illustrates the configuration for a parallel indexing task
           "anonymous",
           "namespace",
           "continent",
-          "country",
           "region",
           "city"
         ]
@@ -173,6 +173,11 @@ The following example illustrates the configuration for a parallel indexing task
     },
     "tuningConfig": {
         "type": "index_parallel",
+        "partitionsSpec": {
+             "type": "single_dim",
+             "partitionDimension": "country",
+             "targetRowsPerSegment": 5000000
+      },
         "maxNumConcurrentSubTasks": 2
     }
   }
