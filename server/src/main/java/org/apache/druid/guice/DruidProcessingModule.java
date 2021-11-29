@@ -94,6 +94,7 @@ public class DruidProcessingModule implements Module
 
   @Provides
   @ManageLifecycle
+  //per segment
   public QueryProcessingPool getProcessingExecutorPool(
       DruidProcessingConfig config,
       ExecutorServiceMonitor executorServiceMonitor,
@@ -115,10 +116,11 @@ public class DruidProcessingModule implements Module
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
+
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
-        config.getNumThreads(),
+        0,
         config.poolCacheMaxCount()
     );
   }
