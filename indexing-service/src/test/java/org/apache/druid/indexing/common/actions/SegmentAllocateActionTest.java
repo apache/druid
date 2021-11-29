@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -135,6 +136,39 @@ public class SegmentAllocateActionTest
             Granularities.SECOND
         ),
         Granularity.granularitiesFinerThan(Granularities.HOUR)
+    );
+  }
+
+  @Test
+  public void testGranularitiesFinerThanAll()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            Granularities.ALL,
+            Granularities.YEAR,
+            Granularities.QUARTER,
+            Granularities.MONTH,
+            Granularities.WEEK,
+            Granularities.DAY,
+            Granularities.SIX_HOUR,
+            Granularities.HOUR,
+            Granularities.THIRTY_MINUTE,
+            Granularities.FIFTEEN_MINUTE,
+            Granularities.TEN_MINUTE,
+            Granularities.FIVE_MINUTE,
+            Granularities.MINUTE,
+            Granularities.SECOND
+        ),
+        Granularity.granularitiesFinerThan(Granularities.ALL)
+    );
+  }
+
+  @Test
+  public void testGranularitiesFinerThanNone()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(),
+        Granularity.granularitiesFinerThan(Granularities.NONE)
     );
   }
 
@@ -927,26 +961,59 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
-    Granularity segmentGranularity = new PeriodGranularity(Period.hours(1), null, DateTimes.inferTzFromString("Asia/Shanghai"));
+    Granularity segmentGranularity = new PeriodGranularity(
+        Period.hours(1),
+        null,
+        DateTimes.inferTzFromString("Asia/Shanghai")
+    );
 
     final SegmentIdWithShardSpec id1 = allocate(
-            task,
-            PARTY_TIME,
-            Granularities.MINUTE,
-            segmentGranularity,
-            "s1",
-            null
+        task,
+        PARTY_TIME,
+        Granularities.MINUTE,
+        segmentGranularity,
+        "s1",
+        null
     );
     final SegmentIdWithShardSpec id2 = allocate(
-            task,
-            PARTY_TIME,
-            Granularities.MINUTE,
-            segmentGranularity,
-            "s2",
-            null
+        task,
+        PARTY_TIME,
+        Granularities.MINUTE,
+        segmentGranularity,
+        "s2",
+        null
     );
     Assert.assertNotNull(id1);
     Assert.assertNotNull(id2);
+  }
+
+  @Test
+  public void testAllocateAllGranularity()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final SegmentIdWithShardSpec id1 = allocate(
+        task,
+        PARTY_TIME,
+        Granularities.MINUTE,
+        Granularities.ALL,
+        "s1",
+        null
+    );
+    final SegmentIdWithShardSpec id2 = allocate(
+        task,
+        PARTY_TIME,
+        Granularities.MINUTE,
+        Granularities.ALL,
+        "s2",
+        null
+    );
+
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
+    Assert.assertEquals(Intervals.ETERNITY, id1.getInterval());
+    Assert.assertEquals(Intervals.ETERNITY, id2.getInterval());
   }
 
   private SegmentIdWithShardSpec allocate(
