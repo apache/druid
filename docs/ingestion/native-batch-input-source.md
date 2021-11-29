@@ -23,7 +23,7 @@ sidebar_label: "Input sources"
   ~ under the License.
   -->
 
-The input source is the place to define from where your index task reads data for Apache Druid native batch ingestion. Only the native parallel task and simple task support the input source.
+The input source defines where your index task reads data for Apache Druid native batch ingestion. Only the native parallel task and simple task support the input source.
 
 For information general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
