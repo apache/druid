@@ -33,10 +33,11 @@ public class TaskStorageConfigTest
   public void testDeserializationFromJson() throws Exception
   {
     TaskStorageConfig config = jsonMapper.readValue(
-        "{\"recentlyFinishedThreshold\": \"PT12H\" }",
+        "{\"recentlyFinishedThreshold\": \"PT12H\" , \"maxActiveTasks\": 1 }",
         TaskStorageConfig.class);
     
     Assert.assertEquals(Period.parse("PT12H").toStandardDuration(), config.getRecentlyFinishedThreshold());
+    Assert.assertEquals(1, config.getMaxActiveTasks());
   }
 
   @Test
@@ -47,5 +48,6 @@ public class TaskStorageConfigTest
         TaskStorageConfig.class);
     
     Assert.assertEquals(Period.parse("PT24H").toStandardDuration(), config.getRecentlyFinishedThreshold());
+    Assert.assertEquals(Integer.MAX_VALUE, config.getMaxActiveTasks());
   }
 }
