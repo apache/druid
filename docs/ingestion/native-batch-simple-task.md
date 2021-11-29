@@ -25,7 +25,7 @@ sidebar_label: "Simple task indexing"
 
 The simple task (type `index`) is designed to ingest small data sets into Apache Druid. The task executes within the indexing service. For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
-### Task syntax
+## Task syntax
 
 A sample task is shown below:
 
