@@ -1323,6 +1323,7 @@ numMetrics
 poolKind
 poolName
 remoteAddress
+segmentAvailabilityConfirmed
 serviceName
 taskStatus
 taskType
