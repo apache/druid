@@ -519,7 +519,7 @@ public class OverlordResource
   @GET
   @Path("/waitingTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getWaitingTasks(@QueryParam("n") Integer maxActiveTasks, @Context final HttpServletRequest req)
+  public Response getWaitingTasks(@QueryParam("maxActiveTasks") Integer maxActiveTasks, @Context final HttpServletRequest req)
   {
     return getTasks("waiting", null, null, null, maxActiveTasks, null, req);
   }
@@ -527,7 +527,7 @@ public class OverlordResource
   @GET
   @Path("/pendingTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getPendingTasks(@QueryParam("n") Integer maxActiveTasks, @Context final HttpServletRequest req)
+  public Response getPendingTasks(@QueryParam("maxActiveTasks") Integer maxActiveTasks, @Context final HttpServletRequest req)
   {
     return getTasks("pending", null, null, null, maxActiveTasks, null, req);
   }
@@ -537,7 +537,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks(
       @QueryParam("type") String taskType,
-      @QueryParam("n") Integer maxActiveTasks,
+      @QueryParam("maxActiveTasks") Integer maxActiveTasks,
       @Context final HttpServletRequest req
   )
   {
