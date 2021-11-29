@@ -28,7 +28,7 @@ Firehoses are deprecated in 0.17.0. It's highly recommended to use the [Native b
 
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 
-### StaticS3Firehose
+## StaticS3Firehose
 
 > You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the StaticS3Firehose.
 
