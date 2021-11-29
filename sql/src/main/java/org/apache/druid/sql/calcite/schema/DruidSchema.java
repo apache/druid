@@ -418,7 +418,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -848,7 +848,7 @@ public class DruidSchema extends AbstractSchema
    * @return {@link Sequence} of {@link SegmentAnalysis} objects
    */
   @VisibleForTesting
-  Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final Iterable<SegmentId> segments
   )
   {
