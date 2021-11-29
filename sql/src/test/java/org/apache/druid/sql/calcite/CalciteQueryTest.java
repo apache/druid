@@ -608,7 +608,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
-        + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10), "
+        + "EARLIEST(cnt, m1), EARLIEST(m1, m1), EARLIEST(dim1, 10, m1), "
+        + "EARLIEST(cnt + 1, m1), EARLIEST(m1 + 1, m1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -622,19 +624,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       aggregators(
-                          new LongFirstAggregatorFactory("a0", "cnt"),
-                          new FloatFirstAggregatorFactory("a1", "m1"),
-                          new StringFirstAggregatorFactory("a2", "dim1", 10),
-                          new LongFirstAggregatorFactory("a3", "v0"),
-                          new FloatFirstAggregatorFactory("a4", "v1"),
-                          new StringFirstAggregatorFactory("a5", "v2", 10)
+                          new LongFirstAggregatorFactory("a0", "cnt", null),
+                          new FloatFirstAggregatorFactory("a1", "m1", null),
+                          new StringFirstAggregatorFactory("a2", "dim1", null, 10),
+                          new LongFirstAggregatorFactory("a3", "v0", null),
+                          new FloatFirstAggregatorFactory("a4", "v1", null),
+                          new StringFirstAggregatorFactory("a5", "v2", null, 10),
+                          new LongFirstAggregatorFactory("a6", "cnt", "m1"),
+                          new FloatFirstAggregatorFactory("a7", "m1", "m1"),
+                          new StringFirstAggregatorFactory("a8", "dim1", "m1", 10),
+                          new LongFirstAggregatorFactory("a9", "v0", "m1"),
+                          new FloatFirstAggregatorFactory("a10", "v1", "m1"),
+                          new StringFirstAggregatorFactory("a11", "v2", "m1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1"}
+            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 1.0f, "", 2L, 2.0f, "1"}
         )
     );
   }
@@ -648,7 +656,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
-        + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10) "
+        + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10), "
+        + "LATEST(cnt, m1), LATEST(m1, m1), LATEST(dim1, 10, m1), "
+        + "LATEST(cnt + 1, m1), LATEST(m1 + 1, m1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -662,19 +672,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       aggregators(
-                          new LongLastAggregatorFactory("a0", "cnt"),
-                          new FloatLastAggregatorFactory("a1", "m1"),
-                          new StringLastAggregatorFactory("a2", "dim1", 10),
-                          new LongLastAggregatorFactory("a3", "v0"),
-                          new FloatLastAggregatorFactory("a4", "v1"),
-                          new StringLastAggregatorFactory("a5", "v2", 10)
+                          new LongLastAggregatorFactory("a0", "cnt", null),
+                          new FloatLastAggregatorFactory("a1", "m1", null),
+                          new StringLastAggregatorFactory("a2", "dim1", null, 10),
+                          new LongLastAggregatorFactory("a3", "v0", null),
+                          new FloatLastAggregatorFactory("a4", "v1", null),
+                          new StringLastAggregatorFactory("a5", "v2", null, 10),
+                          new LongLastAggregatorFactory("a6", "cnt", "m1"),
+                          new FloatLastAggregatorFactory("a7", "m1", "m1"),
+                          new StringLastAggregatorFactory("a8", "dim1", "m1", 10),
+                          new LongLastAggregatorFactory("a9", "v0", "m1"),
+                          new FloatLastAggregatorFactory("a10", "v1", "m1"),
+                          new StringLastAggregatorFactory("a11", "v2", "m1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1", 1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
         )
     );
   }
@@ -806,9 +822,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(
-                                                                new FloatLastAggregatorFactory("a0:a", "m1"),
-                                                                new LongLastAggregatorFactory("a1:a", "cnt"),
-                                                                new DoubleLastAggregatorFactory("a2:a", "m2")
+                                                                new FloatLastAggregatorFactory("a0:a", "m1", null),
+                                                                new LongLastAggregatorFactory("a1:a", "cnt", null),
+                                                                new DoubleLastAggregatorFactory("a2:a", "m2", null)
                                                             )
                                         )
                                         .setPostAggregatorSpecs(
@@ -857,9 +873,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                         .setAggregatorSpecs(aggregators(
-                                                                new FloatFirstAggregatorFactory("a0:a", "m1"),
-                                                                new LongFirstAggregatorFactory("a1:a", "cnt"),
-                                                                new DoubleFirstAggregatorFactory("a2:a", "m2")
+                                                                new FloatFirstAggregatorFactory("a0:a", "m1", null),
+                                                                new LongFirstAggregatorFactory("a1:a", "cnt", null),
+                                                                new DoubleFirstAggregatorFactory("a2:a", "m2", null)
                                                             )
                                         )
                                         .setPostAggregatorSpecs(
@@ -910,6 +926,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setAggregatorSpecs(aggregators(new StringLastAggregatorFactory(
                                             "a0:a",
                                             "dim1",
+                                            null,
                                             10
                                         )))
                                         .setPostAggregatorSpecs(
@@ -957,6 +974,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setAggregatorSpecs(aggregators(new StringFirstAggregatorFactory(
                                             "a0:a",
                                             "dim1",
+                                            null,
                                             10
                                         )))
                                         .setPostAggregatorSpecs(
@@ -1106,9 +1124,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new LongFirstAggregatorFactory("a0", "l1"),
-                          new DoubleFirstAggregatorFactory("a1", "d1"),
-                          new FloatFirstAggregatorFactory("a2", "f1")
+                          new LongFirstAggregatorFactory("a0", "l1", null),
+                          new DoubleFirstAggregatorFactory("a1", "d1", null),
+                          new FloatFirstAggregatorFactory("a2", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1135,9 +1153,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new LongLastAggregatorFactory("a0", "l1"),
-                          new DoubleLastAggregatorFactory("a1", "d1"),
-                          new FloatLastAggregatorFactory("a2", "f1")
+                          new LongLastAggregatorFactory("a0", "l1", null),
+                          new DoubleLastAggregatorFactory("a1", "d1", null),
+                          new FloatLastAggregatorFactory("a2", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1182,10 +1200,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(filter)
                   .aggregators(
                       aggregators(
-                          new StringFirstAggregatorFactory("a0", "dim1", 32),
-                          new LongLastAggregatorFactory("a1", "l1"),
-                          new DoubleLastAggregatorFactory("a2", "d1"),
-                          new FloatLastAggregatorFactory("a3", "f1")
+                          new StringFirstAggregatorFactory("a0", "dim1", null, 32),
+                          new LongLastAggregatorFactory("a1", "l1", null),
+                          new DoubleLastAggregatorFactory("a2", "d1", null),
+                          new FloatLastAggregatorFactory("a3", "f1", null)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1303,7 +1321,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new FloatFirstAggregatorFactory("a0", "f1")
+                        new FloatFirstAggregatorFactory("a0", "f1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1350,7 +1368,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new DoubleFirstAggregatorFactory("a0", "d1")
+                        new DoubleFirstAggregatorFactory("a0", "d1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1397,7 +1415,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new LongFirstAggregatorFactory("a0", "l1")
+                        new LongFirstAggregatorFactory("a0", "l1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1445,7 +1463,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new FloatLastAggregatorFactory("a0", "f1")
+                        new FloatLastAggregatorFactory("a0", "f1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1492,7 +1510,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new DoubleLastAggregatorFactory("a0", "d1")
+                        new DoubleLastAggregatorFactory("a0", "d1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -1539,7 +1557,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("dim1", "_d0"))
                 .aggregators(
                     aggregators(
-                        new LongLastAggregatorFactory("a0", "l1")
+                        new LongLastAggregatorFactory("a0", "l1", null)
                     )
                 )
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
@@ -4134,25 +4152,35 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
-    final String explanation =
-        "DruidQueryRel(query=[{"
-        + "\"queryType\":\"timeseries\","
-        + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
-        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
-        + "\"descending\":false,"
-        + "\"virtualColumns\":[],"
-        + "\"filter\":{\"type\":\"and\",\"fields\":[{\"type\":\"selector\",\"dimension\":\"dim2\",\"value\":\"a\",\"extractionFn\":null},{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"z\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}}]},"
-        + "\"granularity\":{\"type\":\"all\"},"
-        + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
-        + "\"postAggregations\":[],"
-        + "\"limit\":2147483647,"
-        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}]"
-        + ", signature=[{a0:LONG}])\n";
-
+    final String query = "EXPLAIN PLAN FOR SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'";
+    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":{\"type\":\"and\",\"fields\":[{\"type\":\"selector\",\"dimension\":\"dim2\",\"value\":\"a\",\"extractionFn\":null},{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"z\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}}]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}], signature=[{a0:LONG}])\n";
+    final String explanation = "[{"
+                               + "\"query\":{\"queryType\":\"timeseries\","
+                               + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                               + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                               + "\"descending\":false,"
+                               + "\"virtualColumns\":[],"
+                               + "\"filter\":{\"type\":\"and\",\"fields\":[{\"type\":\"selector\",\"dimension\":\"dim2\",\"value\":\"a\",\"extractionFn\":null},{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"z\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}}]},"
+                               + "\"granularity\":{\"type\":\"all\"},"
+                               + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
+                               + "\"postAggregations\":[],"
+                               + "\"limit\":2147483647,"
+                               + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}},"
+                               + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
+                               + "}]";
     final String resources = "[{\"name\":\"aview\",\"type\":\"VIEW\"}]";
 
     testQuery(
-        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM view.aview WHERE dim1_firstchar <> 'z'",
+        query,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{legacyExplanation, resources}
+        )
+    );
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{explanation, resources}
@@ -6741,25 +6769,130 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
-    final String explanation =
+    final String query = "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
+                         + "FROM (\n"
+                         + "  SELECT DISTINCT dim2\n"
+                         + "  FROM druid.foo\n"
+                         + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+                         + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
+                         + "  )\n"
+                         + ")";
+    final String legacyExplanation =
         "DruidOuterQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}}], signature=[{a0:LONG}])\n"
         + "  DruidJoinQueryRel(condition=[=(SUBSTRING($3, 1, 1), $8)], joinType=[inner], query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n"
         + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n"
         + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}], signature=[{d0:STRING}])\n";
-
+    final String explanation = "["
+                               + "{\"query\":{\"queryType\":\"groupBy\","
+                               + "\"dataSource\":{\"type\":\"query\",\"query\":{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"table\",\"name\":\"foo\"},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}},\"rightPrefix\":\"j0.\",\"condition\":\"(substring(\\\"dim2\\\", 0, 1) == \\\"j0.d0\\\")\",\"joinType\":\"INNER\",\"leftFilter\":null},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false}},"
+                               + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                               + "\"virtualColumns\":[],"
+                               + "\"filter\":null,"
+                               + "\"granularity\":{\"type\":\"all\"},"
+                               + "\"dimensions\":[],"
+                               + "\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],"
+                               + "\"postAggregations\":[],"
+                               + "\"having\":null,"
+                               + "\"limitSpec\":{\"type\":\"NoopLimitSpec\"},"
+                               + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                               + "\"descending\":false},"
+                               + "\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}]"
+                               + "}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
 
     testQuery(
-        "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
-        + "FROM (\n"
-        + "  SELECT DISTINCT dim2\n"
-        + "  FROM druid.foo\n"
-        + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
-        + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
-        + "  )\n"
-        + ")",
+        query,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{legacyExplanation, resources})
+    );
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{explanation, resources})
+    );
+  }
+
+  // This testcase has been added here and not in CalciteSelectQueryTests since this checks if the overrides are working
+  // properly when displaying the output of "EXPLAIN PLAN FOR ..." queries
+  @Test
+  public void testExplainSelectStarWithOverrides() throws Exception
+  {
+    Map<String, Object> useRegularExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    useRegularExplainContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, false);
+
+    Map<String, Object> useNativeQueryExplain = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    useNativeQueryExplain.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
+
+
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+    String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String legacyExplanationWithContext = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":false},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, cnt:LONG, dim1:STRING, dim2:STRING, dim3:STRING, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
+    String explanation = "[{"
+                         + "\"query\":{\"queryType\":\"scan\","
+                         + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                         + "\"virtualColumns\":[],"
+                         + "\"resultFormat\":\"compactedList\","
+                         + "\"batchSize\":20480,"
+                         + "\"filter\":null,"
+                         + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
+                         + "\"legacy\":false,"
+                         + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                         + "\"descending\":false,"
+                         + "\"granularity\":{\"type\":\"all\"}},"
+                         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]"
+                         + "}]";
+
+    String explanationWithContext = "[{"
+                                    + "\"query\":{\"queryType\":\"scan\","
+                                    + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+                                    + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                                    + "\"virtualColumns\":[],"
+                                    + "\"resultFormat\":\"compactedList\","
+                                    + "\"batchSize\":20480,"
+                                    + "\"filter\":null,"
+                                    + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
+                                    + "\"legacy\":false,"
+                                    + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+                                    + "\"descending\":false,"
+                                    + "\"granularity\":{\"type\":\"all\"}},"
+                                    + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]"
+                                    + "}]";
+    String sql = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
+    String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+
+    // Test when default config and no overrides
+    testQuery(sql, ImmutableList.of(), ImmutableList.of(new Object[]{legacyExplanation, resources}));
+
+    // Test when default config and useNativeQueryExplain is overridden in the context
+    testQuery(
+        sql,
+        useNativeQueryExplain,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanationWithContext, resources})
+    );
+
+    // Test when useNativeQueryExplain enabled by default and no overrides
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanation, resources})
+    );
+
+    // Test when useNativeQueryExplain enabled by default but is overriden in the context
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        useRegularExplainContext,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{legacyExplanationWithContext, resources})
     );
   }
 
@@ -8785,10 +8918,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new StringAnyAggregatorFactory("a0", "dim1", 1024),
                           new LongAnyAggregatorFactory("a1", "l1"),
-                          new StringFirstAggregatorFactory("a2", "dim1", 1024),
-                          new LongFirstAggregatorFactory("a3", "l1"),
-                          new StringLastAggregatorFactory("a4", "dim1", 1024),
-                          new LongLastAggregatorFactory("a5", "l1"),
+                          new StringFirstAggregatorFactory("a2", "dim1", null, 1024),
+                          new LongFirstAggregatorFactory("a3", "l1", null),
+                          new StringLastAggregatorFactory("a4", "dim1", null, 1024),
+                          new LongLastAggregatorFactory("a5", "l1", null),
                           new ExpressionLambdaAggregatorFactory(
                               "a6",
                               ImmutableSet.of("dim3"),
@@ -9070,19 +9203,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new StringFirstAggregatorFactory("a2", "dim1", 1024),
+                                    new StringFirstAggregatorFactory("a2", "dim1", null, 1024),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new LongFirstAggregatorFactory("a3", "l1"),
+                                    new LongFirstAggregatorFactory("a3", "l1", null),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new StringLastAggregatorFactory("a4", "dim1", 1024),
+                                    new StringLastAggregatorFactory("a4", "dim1", null, 1024),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new LongLastAggregatorFactory("a5", "l1"),
+                                    new LongLastAggregatorFactory("a5", "l1", null),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
@@ -11219,6 +11352,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{3L}
         )
+    );
+  }
+
+  @Test
+  public void testRequireTimeConditionLogicalValuePositive() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT 2 + 2 AS a",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{4L}),
+                    RowSignature.builder().add("a", ColumnType.LONG).build()
+                ))
+                .columns("a")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{4})
     );
   }
 

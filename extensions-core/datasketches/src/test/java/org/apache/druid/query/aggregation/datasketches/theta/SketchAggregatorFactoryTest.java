@@ -36,6 +36,31 @@ import org.junit.Test;
 
 public class SketchAggregatorFactoryTest
 {
+  private static final SketchMergeAggregatorFactory AGGREGATOR_16384 =
+      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null);
+
+  private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
+      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
+
+  @Test
+  public void testGuessAggregatorHeapFootprint()
+  {
+    Assert.assertEquals(288, AGGREGATOR_16384.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, AGGREGATOR_16384.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(262176, AGGREGATOR_16384.guessAggregatorHeapFootprint(1_000_000_000_000L));
+
+    Assert.assertEquals(288, AGGREGATOR_32768.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, AGGREGATOR_32768.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(524320, AGGREGATOR_32768.guessAggregatorHeapFootprint(1_000_000_000_000L));
+  }
+
+  @Test
+  public void testMaxIntermediateSize()
+  {
+    Assert.assertEquals(262176, AGGREGATOR_16384.getMaxIntermediateSize());
+    Assert.assertEquals(524320, AGGREGATOR_32768.getMaxIntermediateSize());
+  }
+
   @Test
   public void testResultArraySignature()
   {

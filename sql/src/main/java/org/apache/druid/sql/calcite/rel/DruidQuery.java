@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -82,12 +81,15 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
+import org.apache.druid.sql.calcite.run.QueryFeature;
+import org.apache.druid.sql.calcite.run.QueryFeatureInspector;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,6 +97,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -144,7 +148,7 @@ public class DruidQuery
     this.outputRowSignature = computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting);
     this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
     this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
-    this.query = computeQuery();
+    this.query = computeQuery(plannerContext.getQueryMaker());
   }
 
   public static DruidQuery fromPartialQuery(
@@ -735,35 +739,35 @@ public class DruidQuery
    *
    * @return Druid query
    */
-  private Query computeQuery()
+  private Query computeQuery(final QueryFeatureInspector queryFeatureInspector)
   {
     if (dataSource instanceof QueryDataSource) {
       // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
       // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
       // requiring the Broker to inline results.)
-      final GroupByQuery outerQuery = toGroupByQuery();
+      final GroupByQuery outerQuery = toGroupByQuery(queryFeatureInspector);
 
       if (outerQuery != null) {
         return outerQuery;
       }
     }
 
-    final TimeseriesQuery tsQuery = toTimeseriesQuery();
+    final TimeseriesQuery tsQuery = toTimeseriesQuery(queryFeatureInspector);
     if (tsQuery != null) {
       return tsQuery;
     }
 
-    final TopNQuery topNQuery = toTopNQuery();
+    final TopNQuery topNQuery = toTopNQuery(queryFeatureInspector);
     if (topNQuery != null) {
       return topNQuery;
     }
 
-    final GroupByQuery groupByQuery = toGroupByQuery();
+    final GroupByQuery groupByQuery = toGroupByQuery(queryFeatureInspector);
     if (groupByQuery != null) {
       return groupByQuery;
     }
 
-    final ScanQuery scanQuery = toScanQuery();
+    final ScanQuery scanQuery = toScanQuery(queryFeatureInspector);
     if (scanQuery != null) {
       return scanQuery;
     }
@@ -777,9 +781,10 @@ public class DruidQuery
    * @return query
    */
   @Nullable
-  public TimeseriesQuery toTimeseriesQuery()
+  private TimeseriesQuery toTimeseriesQuery(final QueryFeatureInspector queryFeatureInspector)
   {
-    if (grouping == null
+    if (!queryFeatureInspector.feature(QueryFeature.CAN_RUN_TIMESERIES)
+        || grouping == null
         || grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
         || grouping.getHavingFilter() != null) {
       return null;
@@ -824,7 +829,7 @@ public class DruidQuery
           timeseriesLimit = Ints.checkedCast(limit);
         }
 
-        switch (sorting.getSortKind(dimensionExpression.getOutputName())) {
+        switch (sorting.getTimeSortKind(dimensionExpression.getOutputName())) {
           case UNORDERED:
           case TIME_ASCENDING:
             descending = false;
@@ -886,8 +891,13 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  public TopNQuery toTopNQuery()
+  private TopNQuery toTopNQuery(final QueryFeatureInspector queryFeatureInspector)
   {
+    // Must be allowed by the QueryMaker.
+    if (!queryFeatureInspector.feature(QueryFeature.CAN_RUN_TOPN)) {
+      return null;
+    }
+
     // Must have GROUP BY one column, no GROUPING SETS, ORDER BY ≤ 1 column, LIMIT > 0 and ≤ maxTopNLimit,
     // no OFFSET, no HAVING.
     final boolean topNOk = grouping != null
@@ -972,7 +982,7 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  public GroupByQuery toGroupByQuery()
+  private GroupByQuery toGroupByQuery(final QueryFeatureInspector queryFeatureInspector)
   {
     if (grouping == null) {
       return null;
@@ -1085,7 +1095,7 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  public ScanQuery toScanQuery()
+  private ScanQuery toScanQuery(final QueryFeatureInspector queryFeatureInspector)
   {
     if (grouping != null) {
       // Scan cannot GROUP BY.
@@ -1105,7 +1115,7 @@ public class DruidQuery
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
 
-    final ScanQuery.Order order;
+    final List<ScanQuery.OrderBy> orderByColumns;
     long scanOffset = 0L;
     long scanLimit = 0L;
 
@@ -1123,33 +1133,32 @@ public class DruidQuery
         scanLimit = limit;
       }
 
-      final Sorting.SortKind sortKind = sorting.getSortKind(ColumnHolder.TIME_COLUMN_NAME);
-
-      if (sortKind == Sorting.SortKind.UNORDERED) {
-        order = ScanQuery.Order.NONE;
-      } else if (sortKind == Sorting.SortKind.TIME_ASCENDING) {
-        order = ScanQuery.Order.ASCENDING;
-      } else if (sortKind == Sorting.SortKind.TIME_DESCENDING) {
-        order = ScanQuery.Order.DESCENDING;
-      } else {
-        assert sortKind == Sorting.SortKind.NON_TIME;
-
-        // Scan cannot ORDER BY non-time columns.
-        List<String> orderByColumns
-            = sorting.getOrderBys().stream().map(OrderByColumnSpec::getDimension).collect(Collectors.toList());
-        plannerContext.setPlanningError("Scan query cannot order by non-time column %s", orderByColumns);
-        return null;
-      }
+      orderByColumns = sorting.getOrderBys().stream().map(
+          orderBy ->
+              new ScanQuery.OrderBy(
+                  orderBy.getDimension(),
+                  orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING
+                  ? ScanQuery.Order.DESCENDING
+                  : ScanQuery.Order.ASCENDING
+              )
+      ).collect(Collectors.toList());
     } else {
-      order = ScanQuery.Order.NONE;
+      orderByColumns = Collections.emptyList();
     }
 
-    // Compute the list of columns to select.
-    final Set<String> columns = new HashSet<>(outputRowSignature.getColumnNames());
-
-    if (order != ScanQuery.Order.NONE) {
-      columns.add(ColumnHolder.TIME_COLUMN_NAME);
+    if (!queryFeatureInspector.feature(QueryFeature.SCAN_CAN_ORDER_BY_NON_TIME)
+        && (orderByColumns.size() > 1
+            || orderByColumns.stream()
+                             .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME)))) {
+      // Cannot handle this ordering.
+      // Scan cannot ORDER BY non-time columns.
+      plannerContext.setPlanningError("Scan query cannot order by non-time column %s", orderByColumns);
+      return null;
     }
+
+    // Compute the list of columns to select, sorted and deduped.
+    final SortedSet<String> scanColumns = new TreeSet<>(outputRowSignature.getColumnNames());
+    orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
 
     return new ScanQuery(
         newDataSource,
@@ -1159,10 +1168,10 @@ public class DruidQuery
         0,
         scanOffset,
         scanLimit,
-        order,
         null,
+        orderByColumns,
         filtration.getDimFilter(),
-        Ordering.natural().sortedCopy(columns),
+        ImmutableList.copyOf(scanColumns),
         false,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );

@@ -73,7 +73,7 @@ import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
@@ -203,7 +203,7 @@ public class Rules
     // No instantiation.
   }
 
-  public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
+  public static List<Program> programs(final PlannerContext plannerContext)
   {
 
 
@@ -216,7 +216,7 @@ public class Rules
         );
 
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
@@ -234,16 +234,15 @@ public class Rules
     return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
-  private static List<RelOptRule> druidConventionRuleSet(
-      final PlannerContext plannerContext,
-      final QueryMaker queryMaker
-  )
+  private static List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
   {
-    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList.<RelOptRule>builder()
+    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
+        .<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext))
         .add(DruidRelToDruidRule.instance())
-        .add(new DruidTableScanRule(queryMaker))
-        .add(new DruidLogicalValuesRule(queryMaker))
+        .add(new DruidTableScanRule(plannerContext))
+        .add(new DruidLogicalValuesRule(plannerContext))
+        .add(new ExternalTableScanRule(plannerContext))
         .addAll(DruidRules.rules(plannerContext));
 
     return retVal.build();

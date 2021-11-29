@@ -31,7 +31,6 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -68,11 +67,10 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
       final Union unionRel,
       final List<String> unionColumnNames,
       final PartialDruidQuery partialQuery,
-      final QueryMaker queryMaker,
       final PlannerContext plannerContext
   )
   {
-    super(cluster, traitSet, queryMaker);
+    super(cluster, traitSet, plannerContext);
     this.unionRel = unionRel;
     this.unionColumnNames = unionColumnNames;
     this.partialQuery = partialQuery;
@@ -82,7 +80,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   public static DruidUnionDataSourceRel create(
       final Union unionRel,
       final List<String> unionColumnNames,
-      final QueryMaker queryMaker,
       final PlannerContext plannerContext
   )
   {
@@ -92,7 +89,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         unionRel,
         unionColumnNames,
         PartialDruidQuery.create(unionRel),
-        queryMaker,
         plannerContext
     );
   }
@@ -117,19 +113,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         unionRel,
         unionColumnNames,
         newQueryBuilder,
-        getQueryMaker(),
-        plannerContext
+        getPlannerContext()
     );
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
-    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
-    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
-
-    return getQueryMaker().runQuery(toDruidQuery(false));
   }
 
   @Override
@@ -214,7 +199,6 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         ),
         unionColumnNames,
         partialQuery,
-        getQueryMaker(),
         plannerContext
     );
   }
@@ -240,8 +224,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         (Union) unionRel.copy(unionRel.getTraitSet(), inputs),
         unionColumnNames,
         partialQuery,
-        getQueryMaker(),
-        plannerContext
+        getPlannerContext()
     );
   }
 
@@ -264,7 +247,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

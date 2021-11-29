@@ -1370,7 +1370,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         new SubstringDimExtractionFn(0, 1)
                                     )
                                 )
-                                .setAggregatorSpecs(new StringLastAggregatorFactory("a0", "v", 10))
+                                .setAggregatorSpecs(new StringLastAggregatorFactory("a0", "v", null, 10))
                                 .build()
                         ),
                         "j0.",

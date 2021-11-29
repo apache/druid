@@ -41,7 +41,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -84,16 +83,16 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       Join joinRel,
       Filter leftFilter,
       PartialDruidQuery partialQuery,
-      QueryMaker queryMaker
+      PlannerContext plannerContext
   )
   {
-    super(cluster, traitSet, queryMaker);
+    super(cluster, traitSet, plannerContext);
     this.joinRel = joinRel;
     this.left = joinRel.getLeft();
     this.right = joinRel.getRight();
     this.leftFilter = leftFilter;
     this.partialQuery = partialQuery;
-    this.plannerConfig = queryMaker.getPlannerContext().getPlannerConfig();
+    this.plannerConfig = plannerContext.getPlannerConfig();
   }
 
   /**
@@ -102,7 +101,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public static DruidJoinQueryRel create(
       final Join joinRel,
       final Filter leftFilter,
-      final QueryMaker queryMaker
+      final PlannerContext plannerContext
   )
   {
     return new DruidJoinQueryRel(
@@ -111,7 +110,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel,
         leftFilter,
         PartialDruidQuery.create(joinRel),
-        queryMaker
+        plannerContext
     );
   }
 
@@ -119,17 +118,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public PartialDruidQuery getPartialDruidQuery()
   {
     return partialQuery;
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
-    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
-    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
-
-    final DruidQuery query = toDruidQuery(false);
-    return getQueryMaker().runQuery(query);
   }
 
   @Override
@@ -141,7 +129,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel,
         leftFilter,
         newQueryBuilder,
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -235,7 +223,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         ),
         leftFilter,
         partialQuery,
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -274,7 +262,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel.copy(joinRel.getTraitSet(), inputs),
         leftFilter,
         getPartialDruidQuery(),
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -294,7 +282,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
