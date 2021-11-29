@@ -5162,7 +5162,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "Possible error: Scan query cannot order by non-time column [dim1]",
+        "Possible error: Scan query cannot order by non-time column [dim1 ASC]",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
