@@ -29,10 +29,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -48,7 +48,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class SegmentGenerator implements Closeable
 {
@@ -175,19 +174,25 @@ public class SegmentGenerator implements Closeable
       throw new ISE("No rows to index?");
     } else {
       try {
+        final IndexSpec indexSpec = new IndexSpec(new RoaringBitmapSerdeFactory(true), null, null, null);
+
         retVal = TestHelper
             .getTestIndexIO()
             .loadIndex(
                 TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                          .merge(
-                              indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList()),
+                          .mergeQueryableIndex(
+                              indexes,
                               false,
                               schemaInfo.getAggs()
                                         .stream()
                                         .map(AggregatorFactory::getCombiningFactory)
                                         .toArray(AggregatorFactory[]::new),
+                              null,
                               outDir,
-                              new IndexSpec(new RoaringBitmapSerdeFactory(true), null, null, null),
+                              indexSpec,
+                              indexSpec,
+                              new BaseProgressIndicator(),
+                              null,
                               -1
                           )
             );
