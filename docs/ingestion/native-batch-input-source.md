@@ -25,7 +25,7 @@ sidebar_label: "Input sources"
 
 The input source defines where your index task reads data for Apache Druid native batch ingestion. Only the native parallel task and simple task support the input source.
 
-For information general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
+For general information on native batch indexing and parallel task indexing, see [Native batch ingestion](./native-batch.md).
 
 > Firehose input has been deprecated. For information, see [Firehose](./native-batch-firehose.md). 
 
