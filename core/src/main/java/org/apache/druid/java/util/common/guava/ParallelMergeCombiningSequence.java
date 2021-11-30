@@ -359,7 +359,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       catch (Throwable t) {
         closeAllCursors(sequenceCursors);
         cancellationGizmo.cancel(t);
-        out.offer((ParallelMergeCombiningSequence.ResultBatch<T>) ResultBatch.TERMINAL);
+        // Should be the following, but can' change due to lack of
+        // unit tests.
+        // out.offer((ParallelMergeCombiningSequence.ResultBatch<T>) ResultBatch.TERMINAL);
+        out.offer(ResultBatch.TERMINAL);
       }
     }
 
