@@ -547,7 +547,7 @@ public class OverlordResourceTest
         .getEntity();
     Assert.assertEquals(7, responseObjects.size());
     Assert.assertEquals("id_5", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
+    Assert.assertTrue("DataSource Check ", "allow".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
