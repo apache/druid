@@ -42,7 +42,7 @@ Supported functions are `+`, `-`, `*`, `/`, and `quotient`.
 
 * `/` division always returns `0` if dividing by`0`, regardless of the numerator.
 * `quotient` division behaves like regular floating point division
-* Arithemtic post-aggregators always use floating point arithmetic.
+* Arithmetic post-aggregators always use floating point arithmetic.
 
 Arithmetic post-aggregators may also specify an `ordering`, which defines the order
 of resulting values when sorting results (this can be useful for topN queries for instance):
