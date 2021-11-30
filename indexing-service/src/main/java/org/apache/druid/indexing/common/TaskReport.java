@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -44,9 +44,13 @@ public interface TaskReport
    */
   Object getPayload();
 
+  /**
+   * Returns an order-preserving map that is suitable for passing into {@link TaskReportFileWriter#write}.
+   */
   static Map<String, TaskReport> buildTaskReports(TaskReport... taskReports)
   {
-    Map<String, TaskReport> taskReportMap = new HashMap<>();
+    // Use LinkedHashMap to preserve order of the reports.
+    Map<String, TaskReport> taskReportMap = new LinkedHashMap<>();
     for (TaskReport taskReport : taskReports) {
       taskReportMap.put(taskReport.getReportKey(), taskReport);
     }
