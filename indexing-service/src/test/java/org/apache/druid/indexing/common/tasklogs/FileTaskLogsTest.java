@@ -19,12 +19,16 @@
 
 package org.apache.druid.indexing.common.tasklogs;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -67,6 +71,28 @@ public class FileTaskLogsTest
     finally {
       FileUtils.deleteDirectory(tmpDir);
     }
+  }
+
+  @Test
+  public void testSimpleReport() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final File tmpDir = temporaryFolder.newFolder();
+    final File logDir = new File(tmpDir, "druid/logs");
+    final File reportFile = new File(tmpDir, "report.json");
+
+    final String taskId = "myTask";
+    final TestTaskReport testReport = new TestTaskReport(taskId);
+    final String testReportString = mapper.writeValueAsString(TaskReport.buildTaskReports(testReport));
+    Files.write(testReportString, reportFile, StandardCharsets.UTF_8);
+
+    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+    taskLogs.pushTaskReports("foo", reportFile);
+
+    Assert.assertEquals(
+        testReportString,
+        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get().openStream()))
+    );
   }
 
   @Test
@@ -122,5 +148,38 @@ public class FileTaskLogsTest
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
     return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
+  }
+
+  private static class TestTaskReport implements TaskReport
+  {
+    static final String KEY = "testReport";
+    static final Map<String, Object> PAYLOAD = ImmutableMap.of("foo", "bar");
+
+    private final String taskId;
+
+    public TestTaskReport(String taskId)
+    {
+      this.taskId = taskId;
+    }
+
+    @Override
+    @JsonProperty
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    @Override
+    public String getReportKey()
+    {
+      return KEY;
+    }
+
+    @Override
+    @JsonProperty
+    public Object getPayload()
+    {
+      return PAYLOAD;
+    }
   }
 }

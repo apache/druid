@@ -73,9 +73,17 @@ public class OverlordBlinkLeadershipTest
   public void testOverlordBlinkLeadership()
   {
     try {
-      RemoteTaskRunner remoteTaskRunner1 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
+      RemoteTaskRunner remoteTaskRunner1 = rtrUtils.makeRemoteTaskRunner(
+          remoteTaskRunnerConfig,
+          resourceManagement,
+          null
+      );
       remoteTaskRunner1.stop();
-      RemoteTaskRunner remoteTaskRunner2 = rtrUtils.makeRemoteTaskRunner(remoteTaskRunnerConfig, resourceManagement);
+      RemoteTaskRunner remoteTaskRunner2 = rtrUtils.makeRemoteTaskRunner(
+          remoteTaskRunnerConfig,
+          resourceManagement,
+          null
+      );
       remoteTaskRunner2.stop();
     }
     catch (Exception e) {

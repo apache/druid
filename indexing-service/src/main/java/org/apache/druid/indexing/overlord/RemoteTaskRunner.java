@@ -662,6 +662,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     final TaskLocation taskLocation = runningWorkItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
     final URL url = TaskRunnerUtils.makeTaskLocationURL(
         taskLocation,
         "/druid/worker/v1/chat/%s/liveReports",

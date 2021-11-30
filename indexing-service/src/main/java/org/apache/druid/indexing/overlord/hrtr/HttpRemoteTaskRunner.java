@@ -1010,6 +1010,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     } else {
       // Worker is still running this task
       TaskLocation taskLocation = taskRunnerWorkItem.getLocation();
+
+      if (TaskLocation.unknown().equals(taskLocation)) {
+        // No location known for this task. It may have not been assigned a location yet.
+        return Optional.absent();
+      }
+
       final URL url = TaskRunnerUtils.makeTaskLocationURL(
           taskLocation,
           "/druid/worker/v1/chat/%s/liveReports",
