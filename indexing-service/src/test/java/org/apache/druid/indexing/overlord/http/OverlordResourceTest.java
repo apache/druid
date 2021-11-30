@@ -870,7 +870,7 @@ public class OverlordResourceTest
         )
     );
 
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             createTaskInfo("id_1", Datasources.WIKIPEDIA),
             createTaskInfo("id_2", Datasources.BUZZFEED)
@@ -908,7 +908,7 @@ public class OverlordResourceTest
 
     // Verify that only the tasks of read access datasource are returned
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, null, null, null, null, req)
+        .getTasks(null, null, null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     for (TaskStatusPlus taskStatus : responseObjects) {
@@ -931,7 +931,7 @@ public class OverlordResourceTest
         )
     );
 
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             createTaskInfo("id_1", Datasources.WIKIPEDIA),
             createTaskInfo("id_2", Datasources.BUZZFEED)
@@ -950,7 +950,7 @@ public class OverlordResourceTest
 
     // Verify that only the tasks of read access datasource are returned
     expectedException.expect(WebApplicationException.class);
-    overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req);
+    overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, null, req);
   }
 
   @Test
