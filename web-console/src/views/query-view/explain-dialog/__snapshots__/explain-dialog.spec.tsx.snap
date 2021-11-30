@@ -112,6 +112,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
             className="query-explanation"
           >
             <Blueprint3.FormGroup
+              className="query-group"
               label="Query"
             >
               <Blueprint3.TextArea
@@ -146,7 +147,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               />
             </Blueprint3.FormGroup>
             <Blueprint3.FormGroup
-              className="signature"
+              className="signature-group"
               label="Signature"
             >
               <Blueprint3.InputGroup
@@ -175,6 +176,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
             className="query-explanation"
           >
             <Blueprint3.FormGroup
+              className="query-group"
               label="Query"
             >
               <Blueprint3.TextArea
@@ -214,7 +216,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
               />
             </Blueprint3.FormGroup>
             <Blueprint3.FormGroup
-              className="signature"
+              className="signature-group"
               label="Signature"
             >
               <Blueprint3.InputGroup
@@ -267,6 +269,7 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
       className="query-explanation"
     >
       <Blueprint3.FormGroup
+        className="query-group"
         label="Query"
       >
         <Blueprint3.TextArea
@@ -364,7 +367,7 @@ exports[`ExplainDialog matches snapshot on some data (one query) 1`] = `
         />
       </Blueprint3.FormGroup>
       <Blueprint3.FormGroup
-        className="signature"
+        className="signature-group"
         label="Signature"
       >
         <Blueprint3.InputGroup

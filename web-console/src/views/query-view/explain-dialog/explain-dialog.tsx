@@ -113,10 +113,10 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
     const queryString = JSONBig.stringify(queryExplanation.query, undefined, 2);
     return (
       <div className="query-explanation">
-        <FormGroup label="Query">
+        <FormGroup className="query-group" label="Query">
           <TextArea readOnly value={queryString} />
         </FormGroup>
-        <FormGroup className="signature" label="Signature">
+        <FormGroup className="signature-group" label="Signature">
           <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
         </FormGroup>
         <Button
