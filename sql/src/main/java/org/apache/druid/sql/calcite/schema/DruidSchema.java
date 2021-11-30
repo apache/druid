@@ -695,7 +695,7 @@ public class DruidSchema extends AbstractSchema
         if (segmentId == null) {
           log.warn("Got analysis for segment[%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
-          final RowSignature rowSignature = analysisToRowSignature(analysis); // Intern here
+          final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
           segmentMetadataInfo.compute(
               dataSource,
@@ -777,7 +777,7 @@ public class DruidSchema extends AbstractSchema
       }
     }
 
-    final RowSignature.Builder builder = RowSignature.builder(); // Intern here
+    final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
 
     final TableDataSource tableDataSource;
@@ -881,7 +881,7 @@ public class DruidSchema extends AbstractSchema
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
-    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder(); // Intern here
+    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
       if (entry.getValue().isError()) {
         // Skip columns with analysis errors.
@@ -898,7 +898,6 @@ public class DruidSchema extends AbstractSchema
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
     return ROW_SIGNATURE_INTERNER.intern(rowSignatureBuilder.build());
-    // return rowSignatureBuilder.build();
   }
 
   /**
