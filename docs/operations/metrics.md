@@ -62,6 +62,9 @@ Available Metrics
 |`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will re-send the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.|Varies.|
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL query response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+|`query/mergeBufferMaxNum`|Maximum number of merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |configuration value of `druid.processing.numMergeBuffers`|
+|`query/mergeBufferAvailNum`|Number of available merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |<= `query/mergeBufferMaxNum`|
+|`query/intermResultBufferAvailNum`|Number of available buffers used by intermediate query result. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. ||
 
 ### Historical
 
@@ -78,6 +81,12 @@ Available Metrics
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/mergeBufferMaxNum`|Maximum number of merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |configuration value of `druid.processing.numMergeBuffers`|
+|`query/mergeBufferAvailNum`|Number of available merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |<= `query/mergeBufferMaxNum`|
+|`query/intermResultBufferAvailNum`|Number of available buffers used by intermediate query result. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. ||
+|`thread/maxCount`|Number of Druid threads.| |configuration value of `druid.processing.numThreads`|
+|`thread/active`|Number of active Druid threads. | |< `thread/maxCount` |
+|`thread/task/pending`|Number of pending tasks in thread pool. | ||
 
 ### Real-time
 
@@ -88,9 +97,15 @@ Available Metrics
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if the QueryCountStatsMonitor module is included.||
-|`query/timeout/count`|number of timed out queries.|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/failed/count`|number of failed queries|This metric is only available if `QueryCountStatsMonitor` module is included.||
+|`query/interrupted/count`|number of queries interrupted due to cancellation.|This metric is only available if `QueryCountStatsMonitor` module is included.||
+|`query/timeout/count`|number of timed out queries.|This metric is only available if `QueryCountStatsMonitor` module is included.||
+|`query/mergeBufferMaxNum`|Maximum number of merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |configuration value of `druid.processing.numMergeBuffers`|
+|`query/mergeBufferAvailNum`|Number of available merge buffers. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. |<= `query/mergeBufferMaxNum`|
+|`query/intermResultBufferAvailNum`|Number of available buffers used by intermediate query result. |This metric is only available if `QueryBufferPoolStatsMonitor` module is included. ||
+|`thread/maxCount`|Number of Druid threads.| |configuration value of `druid.processing.numThreads`|
+|`thread/active`|Number of active Druid threads. | |< `thread/maxCount` |
+|`thread/task/pending`|Number of pending tasks in thread pool. | ||
 
 ### Jetty
 
@@ -178,6 +193,10 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|dataSource, taskId, taskType.|0|
 |`ingest/events/processed`|Number of events successfully processed per emission period.|dataSource, taskId, taskType.|Equal to your # of events per emission period.|
 |`ingest/rows/output`|Number of Druid rows persisted.|dataSource, taskId, taskType.|Your # of events with rollup.|
+|`ingest/rows/inMemory`|Number of Druid rows currently in memory.|dataSource.|Your # of events with rollup that are currently in memory.|
+|`ingest/rows/MaxInMemory`|Max number of Druid rows configured to be in memory before triggering persistence.|dataSource.|maxRowsInMemory in tuningConfig.|
+|`ingest/bytes/inMemory`|Number of bytes of Druid rows currently in memory.|dataSource.|Bytes of your events with rollup that are currently in memory.|
+|`ingest/bytes/maxInMemory`|Max number of bytes of Druid rows configured to be in memory before triggering persistence.|dataSource.|maxBytesInMemory in tuningConfig.|
 |`ingest/persists/count`|Number of times persist occurred.|dataSource, taskId, taskType.|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
