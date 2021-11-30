@@ -153,7 +153,7 @@ public class DruidSchemaAddSegmentBenchmark
   }
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
 
     druidSchema = new DruidSchemaForBenchmark(
