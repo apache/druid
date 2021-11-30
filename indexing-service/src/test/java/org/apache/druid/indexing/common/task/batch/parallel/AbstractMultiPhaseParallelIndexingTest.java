@@ -30,7 +30,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -55,8 +55,10 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -171,7 +173,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  private ParallelIndexSupervisorTask newTask(
+  protected ParallelIndexSupervisorTask newTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
@@ -277,6 +279,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 0,
                 null,
                 null,
+                null,
                 columns,
                 false,
                 null
@@ -287,8 +290,9 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
-    final SegmentLoader loader = new SegmentLoaderFactory(getIndexIO(), getObjectMapper())
+    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(getObjectMapper())
         .manufacturate(tempSegmentDir);
+    final SegmentLoader loader = new SegmentLocalCacheLoader(cacheManager, getIndexIO(), getObjectMapper());
     try {
       return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
     }

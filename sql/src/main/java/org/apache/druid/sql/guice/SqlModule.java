@@ -46,6 +46,7 @@ public class SqlModule implements Module
   public static final String PROPERTY_SQL_ENABLE_JSON_OVER_HTTP = "druid.sql.http.enable";
   public static final String PROPERTY_SQL_ENABLE_AVATICA = "druid.sql.avatica.enable";
   public static final String PROPERTY_SQL_VIEW_MANAGER_TYPE = "druid.sql.viewmanager.type";
+  public static final String PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE = "druid.sql.approxCountDistinct.function";
 
   @Inject
   private Properties props;

@@ -52,8 +52,9 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -102,7 +103,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
   private IndexIO indexIO;
   private File segmentCacheDir;
   private File segmentDeepStorageDir;
-  private SegmentLoaderLocalCacheManager segmentLoader;
+  private SegmentLocalCacheManager segmentCacheManager;
   private SegmentManager segmentManager;
   private BroadcastTableJoinableFactory joinableFactory;
 
@@ -125,8 +126,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
-    segmentLoader = new SegmentLoaderLocalCacheManager(
-        indexIO,
+    segmentCacheManager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig()
         {
           @Override
@@ -139,7 +139,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
         },
         objectMapper
     );
-    segmentManager = new SegmentManager(segmentLoader);
+    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
     joinableFactory = new BroadcastTableJoinableFactory(segmentManager);
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -338,7 +338,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
+    FileUtils.mkdirp(segmentDir);
 
     IndexMerger indexMerger =
         new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

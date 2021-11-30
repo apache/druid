@@ -23,7 +23,7 @@ title: "Stats aggregator"
   -->
 
 
-This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` as an extension.
+This Apache Druid extension includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-stats` in the extensions load list.
 
 ## Variance aggregator
 

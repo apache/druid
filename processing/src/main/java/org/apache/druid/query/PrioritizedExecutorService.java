@@ -192,7 +192,11 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   @Override
   public void execute(final Runnable runnable)
   {
-    delegate.execute(runnable);
+    if (runnable instanceof PrioritizedListenableFutureTask) {
+      delegate.execute(runnable);
+    } else {
+      delegate.execute(newTaskFor(runnable, null));
+    }
   }
 
   public int getQueueSize()

@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -34,8 +34,8 @@ public abstract class LongOutStringsInFunctionVectorProcessor extends BivariateF
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, ExprType.STRING),
-        CastToTypeVectorProcessor.cast(right, ExprType.STRING),
+        CastToTypeVectorProcessor.cast(left, ExpressionType.STRING),
+        CastToTypeVectorProcessor.cast(right, ExpressionType.STRING),
         maxVectorSize,
         new long[maxVectorSize]
     );
@@ -72,8 +72,8 @@ public abstract class LongOutStringsInFunctionVectorProcessor extends BivariateF
   }
 
   @Override
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
-    return ExprType.LONG;
+    return ExpressionType.LONG;
   }
 }

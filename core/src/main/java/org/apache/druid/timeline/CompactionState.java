@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 
 import java.util.Map;
@@ -40,6 +41,10 @@ import java.util.Objects;
 public class CompactionState
 {
   private final PartitionsSpec partitionsSpec;
+  private final DimensionsSpec dimensionsSpec;
+  // org.apache.druid.segment.transform.TransformSpec cannot be used here because it's in the 'processing' module which
+  // has a dependency on the 'core' module where this class is.
+  private final Map<String, Object> transformSpec;
   // org.apache.druid.segment.IndexSpec cannot be used here because it's in the 'processing' module which
   // has a dependency on the 'core' module where this class is.
   private final Map<String, Object> indexSpec;
@@ -50,11 +55,15 @@ public class CompactionState
   @JsonCreator
   public CompactionState(
       @JsonProperty("partitionsSpec") PartitionsSpec partitionsSpec,
+      @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
+      @JsonProperty("transformSpec") Map<String, Object> transformSpec,
       @JsonProperty("indexSpec") Map<String, Object> indexSpec,
       @JsonProperty("granularitySpec") Map<String, Object> granularitySpec
   )
   {
     this.partitionsSpec = partitionsSpec;
+    this.dimensionsSpec = dimensionsSpec;
+    this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
   }
@@ -63,6 +72,18 @@ public class CompactionState
   public PartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
+  }
+
+  @JsonProperty
+  public DimensionsSpec getDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getTransformSpec()
+  {
+    return transformSpec;
   }
 
   @JsonProperty
@@ -88,6 +109,8 @@ public class CompactionState
     }
     CompactionState that = (CompactionState) o;
     return Objects.equals(partitionsSpec, that.partitionsSpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(granularitySpec, that.granularitySpec);
   }
@@ -95,7 +118,7 @@ public class CompactionState
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionsSpec, indexSpec, granularitySpec);
+    return Objects.hash(partitionsSpec, dimensionsSpec, transformSpec, indexSpec, granularitySpec);
   }
 
   @Override
@@ -103,6 +126,8 @@ public class CompactionState
   {
     return "CompactionState{" +
            "partitionsSpec=" + partitionsSpec +
+           ", dimensionsSpec=" + dimensionsSpec +
+           ", transformSpec=" + transformSpec +
            ", indexSpec=" + indexSpec +
            ", granularitySpec=" + granularitySpec +
            '}';

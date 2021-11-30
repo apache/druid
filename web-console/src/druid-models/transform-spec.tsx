@@ -25,14 +25,14 @@ import { getLink } from '../links';
 import { TIME_COLUMN } from './timestamp-spec';
 
 export interface TransformSpec {
-  transforms?: Transform[];
-  filter?: Record<string, any>;
+  readonly transforms?: Transform[];
+  readonly filter?: Record<string, any>;
 }
 
 export interface Transform {
-  type: string;
-  name: string;
-  expression: string;
+  readonly type: string;
+  readonly name: string;
+  readonly expression: string;
 }
 
 export const TRANSFORM_FIELDS: Field<Transform>[] = [

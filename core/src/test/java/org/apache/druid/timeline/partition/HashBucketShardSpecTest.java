@@ -113,7 +113,7 @@ public class HashBucketShardSpecTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    mapper.registerSubtypes(new NamedType(HashBucketShardSpec.class, HashBucketShardSpec.TYPE));
+    mapper.registerSubtypes(new NamedType(HashBucketShardSpec.class, ShardSpec.Type.BUCKET_HASH));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
 
     final HashBucketShardSpec original = new HashBucketShardSpec(
@@ -124,7 +124,10 @@ public class HashBucketShardSpecTest
         mapper
     );
     final String json = mapper.writeValueAsString(original);
-    final HashBucketShardSpec fromJson = (HashBucketShardSpec) mapper.readValue(json, ShardSpec.class);
+    ShardSpec shardSpec = mapper.readValue(json, ShardSpec.class);
+    Assert.assertEquals(ShardSpec.Type.BUCKET_HASH, shardSpec.getType());
+
+    final HashBucketShardSpec fromJson = (HashBucketShardSpec) shardSpec;
     Assert.assertEquals(original, fromJson);
   }
 

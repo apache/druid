@@ -22,10 +22,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -41,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -49,7 +51,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -70,12 +71,12 @@ import java.util.stream.Collectors;
 /**
  * Base class for creating task that merges partial segments created by {@link PartialSegmentGenerateTask}.
  */
-abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionLocation> extends PerfectRollupWorkerTask
+abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollupWorkerTask
 {
   private static final Logger LOG = new Logger(PartialSegmentMergeTask.class);
 
 
-  private final PartialSegmentMergeIOConfig<P> ioConfig;
+  private final PartialSegmentMergeIOConfig ioConfig;
   private final int numAttempts;
   private final String supervisorTaskId;
   private final String subtaskSpecId;
@@ -88,7 +89,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       final String supervisorTaskId,
       @Nullable String subtaskSpecId,
       DataSchema dataSchema,
-      PartialSegmentMergeIOConfig<P> ioConfig,
+      PartialSegmentMergeIOConfig ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
       final Map<String, Object> context
@@ -142,8 +143,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     // Group partitionLocations by interval and partitionId
-    final Map<Interval, Int2ObjectMap<List<P>>> intervalToBuckets = new HashMap<>();
-    for (P location : ioConfig.getPartitionLocations()) {
+    final Map<Interval, Int2ObjectMap<List<PartitionLocation>>> intervalToBuckets = new HashMap<>();
+    for (PartitionLocation location : ioConfig.getPartitionLocations()) {
       intervalToBuckets.computeIfAbsent(location.getInterval(), k -> new Int2ObjectOpenHashMap<>())
                          .computeIfAbsent(location.getBucketId(), k -> new ArrayList<>())
                          .add(location);
@@ -186,8 +187,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
     );
 
     final File persistDir = toolbox.getPersistDir();
-    FileUtils.deleteQuietly(persistDir);
-    FileUtils.forceMkdir(persistDir);
+    org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     final Set<DataSegment> pushedSegments = mergeAndPushSegments(
         toolbox,
@@ -198,48 +199,41 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         intervalToUnzippedFiles
     );
 
-    taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments));
+    taskClient.report(
+        supervisorTaskId,
+        new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of())
+    );
 
     return TaskStatus.success(getId());
   }
 
   private Map<Interval, Int2ObjectMap<List<File>>> fetchSegmentFiles(
       TaskToolbox toolbox,
-      Map<Interval, Int2ObjectMap<List<P>>> intervalToBuckets
+      Map<Interval, Int2ObjectMap<List<PartitionLocation>>> intervalToBuckets
   ) throws IOException
   {
     final File tempDir = toolbox.getIndexingTmpDir();
-    FileUtils.deleteQuietly(tempDir);
-    FileUtils.forceMkdir(tempDir);
+    org.apache.commons.io.FileUtils.deleteQuietly(tempDir);
+    FileUtils.mkdirp(tempDir);
 
     final Map<Interval, Int2ObjectMap<List<File>>> intervalToUnzippedFiles = new HashMap<>();
     // Fetch partition files
-    for (Entry<Interval, Int2ObjectMap<List<P>>> entryPerInterval : intervalToBuckets.entrySet()) {
+    for (Entry<Interval, Int2ObjectMap<List<PartitionLocation>>> entryPerInterval : intervalToBuckets.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
-      for (Int2ObjectMap.Entry<List<P>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
+      for (Int2ObjectMap.Entry<List<PartitionLocation>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
         final int bucketId = entryPerBucketId.getIntKey();
-        final File partitionDir = FileUtils.getFile(
+        final File partitionDir = org.apache.commons.io.FileUtils.getFile(
             tempDir,
             interval.getStart().toString(),
             interval.getEnd().toString(),
             Integer.toString(bucketId)
         );
-        FileUtils.forceMkdir(partitionDir);
-        for (P location : entryPerBucketId.getValue()) {
-          final File zippedFile = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
-          try {
-            final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
-            FileUtils.forceMkdir(unzippedDir);
-            CompressionUtils.unzip(zippedFile, unzippedDir);
-            intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
-                                   .computeIfAbsent(bucketId, k -> new ArrayList<>())
-                                   .add(unzippedDir);
-          }
-          finally {
-            if (!zippedFile.delete()) {
-              LOG.warn("Failed to delete temp file[%s]", zippedFile);
-            }
-          }
+        FileUtils.mkdirp(partitionDir);
+        for (PartitionLocation location : entryPerBucketId.getValue()) {
+          final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
+          intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
+              .computeIfAbsent(bucketId, k -> new ArrayList<>())
+              .add(unzippedDir);
         }
       }
     }
@@ -346,8 +340,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
               indexesToMerge,
               dataSchema.getGranularitySpec().isRollup(),
               dataSchema.getAggregators(),
+              null,
               outDir,
               tuningConfig.getIndexSpec(),
+              tuningConfig.getIndexSpecForIntermediatePersists(),
+              new BaseProgressIndicator(),
               tuningConfig.getSegmentWriteOutMediumFactory(),
               tuningConfig.getMaxColumnsToMerge()
           )

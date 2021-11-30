@@ -54,7 +54,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -89,6 +89,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -157,7 +158,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -602,7 +602,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false);
+    taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null, null, false, false,
+                                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -665,7 +666,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
-        new SegmentLoaderFactory(null, new DefaultObjectMapper()),
+        new SegmentCacheManagerFactory(new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
@@ -924,12 +925,18 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
-      file.mkdirs();
+      FileUtils.mkdirp(file);
       segmentFiles.add(file);
     }
 
     final Task killUnusedSegmentsTask =
-        new KillUnusedSegmentsTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
+        new KillUnusedSegmentsTask(
+            null,
+            "test_kill_task",
+            Intervals.of("2011-04-01/P4D"),
+            null,
+            false
+        );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
     Assert.assertEquals(taskLocation, status.getLocation());
@@ -1417,6 +1424,61 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(bundleMap.isEmpty());
 
+  }
+
+  @Test
+  public void testLockRevoked() throws Exception
+  {
+    final Task task = new AbstractFixedIntervalTask(
+        "id1",
+        "id1",
+        new TaskResource("id1", 1),
+        "ds",
+        Intervals.of("2012-01-01/P1D"),
+        null
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return "test";
+      }
+
+      @Override
+      public void stopGracefully(TaskConfig taskConfig)
+      {
+      }
+
+      @Override
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      {
+        final Interval interval = Intervals.of("2012-01-01/P1D");
+        final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
+            TaskLockType.EXCLUSIVE,
+            interval
+        );
+
+        final TaskLock lock = toolbox.getTaskActionClient().submit(action);
+        if (lock == null) {
+          throw new ISE("Failed to get a lock");
+        }
+
+        final TaskLock lockBeforeRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertFalse(lockBeforeRevoke.isRevoked());
+
+        taskLockbox.revokeLock(getId(), lock);
+
+        final TaskLock lockAfterRevoke = toolbox.getTaskActionClient().submit(action);
+        Assert.assertTrue(lockAfterRevoke.isRevoked());
+        return TaskStatus.failure(getId(), "lock revoked test");
+      }
+    };
+
+    final TaskStatus status = runTask(task);
+    Assert.assertEquals(taskLocation, status.getLocation());
+    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
+    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
+    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
   private TaskStatus runTask(final Task task) throws Exception

@@ -36,8 +36,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.joda.time.Interval;
@@ -56,7 +56,7 @@ public class DataSourceAnalysisTest
   private static final LookupDataSource LOOKUP_LOOKYLOO = new LookupDataSource("lookyloo");
   private static final InlineDataSource INLINE = InlineDataSource.fromIterable(
       ImmutableList.of(new Object[0]),
-      RowSignature.builder().add("column", ValueType.STRING).build()
+      RowSignature.builder().add("column", ColumnType.STRING).build()
   );
 
   @Test

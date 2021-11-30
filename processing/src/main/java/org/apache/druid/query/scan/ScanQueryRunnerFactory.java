@@ -90,13 +90,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     // in single thread and in jetty thread instead of processing thread
     return (queryPlus, responseContext) -> {
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
+      ScanQuery.verifyOrderByForNativeExecution(query);
 
       // Note: this variable is effective only when queryContext has a timeout.
       // See the comment of ResponseContext.Key.TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
       responseContext.put(ResponseContext.Key.TIMEOUT_AT, timeoutAt);
 
-      if (query.getOrder().equals(ScanQuery.Order.NONE)) {
+      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(
@@ -113,7 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         List<Interval> intervalsOrdered = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
         List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
 
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (ScanQuery.Order.DESCENDING.equals(query.getTimeOrder())) {
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
@@ -364,6 +365,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       if (!(query instanceof ScanQuery)) {
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
+
+      ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
 
       // it happens in unit tests
       final Number timeoutAt = (Number) responseContext.get(ResponseContext.Key.TIMEOUT_AT);

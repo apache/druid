@@ -36,8 +36,9 @@ import java.util.Collections;
 
 public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
 {
+  public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
+
   private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchApproxCountDistinctSqlAggFunction();
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
 
   @Override
   public SqlAggFunction calciteFunction()

@@ -20,7 +20,7 @@ import React from 'react';
 
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
-import { oneOf } from '../utils';
+import { typeIs } from '../utils';
 
 export interface FlattenSpec {
   useFieldDiscovery?: boolean;
@@ -50,7 +50,7 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
     name: 'expr',
     type: 'string',
     placeholder: '$.thing',
-    defined: (flattenField: FlattenField) => oneOf(flattenField.type, 'path', 'jq'),
+    defined: typeIs('path', 'jq'),
     required: true,
     info: (
       <>

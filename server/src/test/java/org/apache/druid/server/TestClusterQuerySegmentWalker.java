@@ -38,6 +38,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext.Key;
@@ -45,7 +46,6 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -220,8 +220,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                     .transform(
                         segment ->
                             new SpecificSegmentQueryRunner<>(
-                                factory.createRunner(segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                    segment.getSegment()))),
+                                new ReferenceCountingSegmentQueryRunner<>(
+                                    factory,
+                                    segmentMapFn.apply(segment.getSegment()),
+                                    segment.getDescriptor()
+                                ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
                     )
@@ -274,17 +277,17 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private static class WindowedSegment
   {
-    private final Segment segment;
+    private final ReferenceCountingSegment segment;
     private final Interval interval;
 
-    public WindowedSegment(Segment segment, Interval interval)
+    public WindowedSegment(ReferenceCountingSegment segment, Interval interval)
     {
       this.segment = segment;
       this.interval = interval;
       Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
     }
 
-    public Segment getSegment()
+    public ReferenceCountingSegment getSegment()
     {
       return segment;
     }

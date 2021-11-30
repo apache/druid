@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.WriteOutBytes;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -226,7 +226,7 @@ public class CompressedColumnarIntsSerializerTest
     for (int i = 0; i < vals.length; ++i) {
       Assert.assertEquals(vals[i], columnarInts.get(i));
     }
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
   }
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
@@ -269,7 +269,7 @@ public class CompressedColumnarIntsSerializerTest
     for (int i = 0; i < vals.length; ++i) {
       Assert.assertEquals(vals[i], columnarInts.get(i));
     }
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
     mapper.close();
   }
 }

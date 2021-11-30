@@ -29,9 +29,21 @@ import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
 
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
+
+export type NumberLike = number | BigInt;
+
+export function isNumberLikeNaN(x: NumberLike): boolean {
+  return isNaN(Number(x));
+}
 
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
@@ -148,6 +160,13 @@ export function oneOf<T>(thing: T, ...options: T[]): boolean {
   return options.includes(thing);
 }
 
+export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
+  return x => {
+    if (x.type == null) return false;
+    return options.includes(x.type);
+  };
+}
+
 // ----------------------------
 
 export function countBy<T>(
@@ -221,36 +240,31 @@ export function uniq(array: readonly string[]): string[] {
   });
 }
 
-export function parseList(list: string): string[] {
-  if (!list) return [];
-  return list.split(',');
-}
-
 // ----------------------------
 
-export function formatInteger(n: number): string {
+export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
-export function formatBytes(n: number): string {
+export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
-export function formatBytesCompact(n: number): string {
+export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
 }
 
-export function formatMegabytes(n: number): string {
-  return numeral(n / 1048576).format('0,0.0');
+export function formatMegabytes(n: NumberLike): string {
+  return numeral(Number(n) / 1048576).format('0,0.0');
 }
 
-export function formatPercent(n: number): string {
-  return (n * 100).toFixed(2) + '%';
+export function formatPercent(n: NumberLike): string {
+  return (Number(n) * 100).toFixed(2) + '%';
 }
 
-export function formatMillions(n: number): string {
-  const s = (n / 1e6).toFixed(3);
-  if (s === '0.000') return String(Math.round(n));
+export function formatMillions(n: NumberLike): string {
+  const s = (Number(n) / 1e6).toFixed(3);
+  if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
 }
 
@@ -258,14 +272,15 @@ function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
 
-export function formatDuration(ms: number): string {
-  const timeInHours = Math.floor(ms / 3600000);
-  const timeInMin = Math.floor(ms / 60000) % 60;
-  const timeInSec = Math.floor(ms / 1000) % 60;
+export function formatDuration(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
   return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
 }
 
-export function pluralIfNeeded(n: number, singular: string, plural?: string): string {
+export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
   if (!plural) plural = singular + 's';
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
@@ -274,7 +289,7 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
 
 export function parseJson(json: string): any {
   try {
-    return JSON.parse(json);
+    return JSONBig.parse(json);
   } catch (e) {
     return undefined;
   }
@@ -282,7 +297,7 @@ export function parseJson(json: string): any {
 
 export function validJson(json: string): boolean {
   try {
-    JSON.parse(json);
+    JSONBig.parse(json);
     return true;
   } catch (e) {
     return false;
@@ -394,4 +409,8 @@ export function stringifyValue(value: unknown): string {
     default:
       return String(value);
   }
+}
+
+export function isInBackground(): boolean {
+  return document.visibilityState === 'hidden';
 }

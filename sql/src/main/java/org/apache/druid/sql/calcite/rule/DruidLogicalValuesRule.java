@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -50,12 +49,12 @@ import java.util.stream.Collectors;
  */
 public class DruidLogicalValuesRule extends RelOptRule
 {
-  private final QueryMaker queryMaker;
+  private final PlannerContext plannerContext;
 
-  public DruidLogicalValuesRule(QueryMaker queryMaker)
+  public DruidLogicalValuesRule(PlannerContext plannerContext)
   {
     super(operand(LogicalValues.class, any()));
-    this.queryMaker = queryMaker;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -67,7 +66,7 @@ public class DruidLogicalValuesRule extends RelOptRule
         .stream()
         .map(tuple -> tuple
             .stream()
-            .map(v -> getValueFromLiteral(v, queryMaker.getPlannerContext()))
+            .map(v -> getValueFromLiteral(v, plannerContext))
             .collect(Collectors.toList())
             .toArray(new Object[0])
         )
@@ -79,11 +78,12 @@ public class DruidLogicalValuesRule extends RelOptRule
     final DruidTable druidTable = new DruidTable(
         InlineDataSource.fromIterable(objectTuples, rowSignature),
         rowSignature,
+        null,
         true,
         false
     );
     call.transformTo(
-        DruidQueryRel.fullScan(values, druidTable, queryMaker)
+        DruidQueryRel.scanValues(values, druidTable, plannerContext)
     );
   }
 

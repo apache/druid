@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
@@ -48,7 +48,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
@@ -126,7 +126,7 @@ public class ExpressionFilter implements Filter
     };
 
 
-    final ExprType outputType = theExpr.getOutputType(factory);
+    final ExpressionType outputType = theExpr.getOutputType(factory);
 
     // for all vectorizable expressions, outputType will only ever be null in cases where there is absolutely no
     // input type information, so composed entirely of null constants or missing columns. the expression is
@@ -143,20 +143,20 @@ public class ExpressionFilter implements Filter
       // or not.
       return BooleanVectorValueMatcher.of(
           factory.getReadableVectorInspector(),
-          theExpr.eval(ExprUtils.nilBindings()).asBoolean()
+          theExpr.eval(InputBindings.nilBindings()).asBoolean()
       );
     }
 
     // if we got here, we really have to evaluate the expressions to match
-    switch (outputType) {
+    switch (outputType.getType()) {
       case LONG:
         return VectorValueMatcherColumnProcessorFactory.instance().makeLongProcessor(
-            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG),
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG),
             ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       case DOUBLE:
         return VectorValueMatcherColumnProcessorFactory.instance().makeDoubleProcessor(
-            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE),
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE),
             ExpressionVectorSelectors.makeVectorValueSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       case STRING:
@@ -180,34 +180,32 @@ public class ExpressionFilter implements Filter
       {
         final ExprEval eval = selector.getObject();
 
-        switch (eval.type()) {
-          case LONG_ARRAY:
-            final Long[] lResult = eval.asLongArray();
-            if (lResult == null) {
-              return false;
-            }
+        if (eval.type().isArray()) {
+          switch (eval.elementType().getType()) {
+            case LONG:
+              final Long[] lResult = eval.asLongArray();
+              if (lResult == null) {
+                return false;
+              }
 
-            return Arrays.stream(lResult).anyMatch(Evals::asBoolean);
+              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
+            case STRING:
+              final String[] sResult = eval.asStringArray();
+              if (sResult == null) {
+                return false;
+              }
 
-          case STRING_ARRAY:
-            final String[] sResult = eval.asStringArray();
-            if (sResult == null) {
-              return false;
-            }
+              return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
+            case DOUBLE:
+              final Double[] dResult = eval.asDoubleArray();
+              if (dResult == null) {
+                return false;
+              }
 
-            return Arrays.stream(sResult).anyMatch(Evals::asBoolean);
-
-          case DOUBLE_ARRAY:
-            final Double[] dResult = eval.asDoubleArray();
-            if (dResult == null) {
-              return false;
-            }
-
-            return Arrays.stream(dResult).anyMatch(Evals::asBoolean);
-
-          default:
-            return eval.asBoolean();
+              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(Evals::asBoolean);
+          }
         }
+        return eval.asBoolean();
       }
 
       @Override
@@ -250,7 +248,7 @@ public class ExpressionFilter implements Filter
   {
     if (bindingDetails.get().getRequiredBindings().isEmpty()) {
       // Constant expression.
-      if (expr.get().eval(ExprUtils.nilBindings()).asBoolean()) {
+      if (expr.get().eval(InputBindings.nilBindings()).asBoolean()) {
         return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
       } else {
         return bitmapResultFactory.wrapAllFalse(Filters.allFalse(selector));
@@ -265,12 +263,12 @@ public class ExpressionFilter implements Filter
           column,
           selector,
           bitmapResultFactory,
-          value -> expr.get().eval(identifierName -> {
+          value -> expr.get().eval(InputBindings.forFunction(identifierName -> {
             // There's only one binding, and it must be the single column, so it can safely be ignored in production.
             assert column.equals(identifierName);
             // convert null to Empty before passing to expressions if needed.
             return NullHandling.nullToEmptyIfNeeded(value);
-          }).asBoolean()
+          })).asBoolean()
       );
     }
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.util.SqlShuttle;
@@ -26,9 +27,12 @@ import org.apache.calcite.sql.validate.IdentifierNamespace;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.schema.NamedViewSchema;
+import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 
 import java.util.HashSet;
 import java.util.List;
@@ -44,15 +48,25 @@ import java.util.Set;
  */
 public class SqlResourceCollectorShuttle extends SqlShuttle
 {
-  private final Set<Resource> resources;
+  private final Set<ResourceAction> resourceActions;
+  private final PlannerContext plannerContext;
   private final SqlValidator validator;
-  private final String druidSchemaName;
 
-  public SqlResourceCollectorShuttle(SqlValidator validator, String druidSchemaName)
+  public SqlResourceCollectorShuttle(SqlValidator validator, PlannerContext plannerContext)
   {
     this.validator = validator;
-    this.resources = new HashSet<>();
-    this.druidSchemaName = druidSchemaName;
+    this.resourceActions = new HashSet<>();
+    this.plannerContext = plannerContext;
+  }
+
+  @Override
+  public SqlNode visit(SqlCall call)
+  {
+    if (call.getOperator() instanceof AuthorizableOperator) {
+      resourceActions.addAll(((AuthorizableOperator) call.getOperator()).computeResources(call));
+    }
+
+    return super.visit(call);
   }
 
   @Override
@@ -69,19 +83,22 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
         // 'schema'.'identifier'
         if (qualifiedNameParts.size() == 2) {
           final String schema = qualifiedNameParts.get(0);
-          if (druidSchemaName.equals(schema)) {
-            resources.add(new Resource(qualifiedNameParts.get(1), ResourceType.DATASOURCE));
-          } else if (NamedViewSchema.NAME.equals(schema)) {
-            resources.add(new Resource(qualifiedNameParts.get(1), ResourceType.VIEW));
+          final String resourceName = qualifiedNameParts.get(1);
+          final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);
+          if (resourceType != null) {
+            resourceActions.add(new ResourceAction(new Resource(resourceName, resourceType), Action.READ));
           }
+        } else if (qualifiedNameParts.size() > 2) {
+          // Don't expect to see more than 2 names (catalog?).
+          throw new ISE("Cannot analyze table idetifier %s", qualifiedNameParts);
         }
       }
     }
     return super.visit(id);
   }
 
-  public Set<Resource> getResources()
+  public Set<ResourceAction> getResourceActions()
   {
-    return resources;
+    return resourceActions;
   }
 }
