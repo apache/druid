@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -62,6 +63,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -195,6 +197,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+      null,
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
       mapper.readValue(
           mapper.writeValueAsString(
@@ -340,6 +343,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+            null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
                 getObjectMapper().writeValueAsString(
@@ -591,6 +595,59 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segments.get(i).getLastCompactionState()
       );
     }
+  }
+
+  @Test
+  public void testCompactionWithFilterInTransformSpec() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+    CompactionState expectedCompactionState = new CompactionState(
+        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
+        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        mapper.readValue(
+            mapper.writeValueAsString(
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    true,
+                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
+                )
+            ),
+            Map.class
+        )
+    );
+    Assert.assertEquals(
+        expectedCompactionState,
+        segments.get(0).getLastCompactionState()
+    );
   }
 
   @Test

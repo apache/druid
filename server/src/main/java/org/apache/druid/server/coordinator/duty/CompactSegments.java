@@ -26,6 +26,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -364,6 +365,14 @@ public class CompactSegments implements CoordinatorDuty
           dimensionsSpec = null;
         }
 
+        // Create transformSpec to send to compaction task
+        ClientCompactionTaskTransformSpec transformSpec = null;
+        if (config.getTransformSpec() != null) {
+          transformSpec = new ClientCompactionTaskTransformSpec(
+              config.getTransformSpec().getFilter()
+          );
+        }
+
         Boolean dropExisting = null;
         if (config.getIoConfig() != null) {
           dropExisting = config.getIoConfig().isDropExisting();
@@ -377,6 +386,7 @@ public class CompactSegments implements CoordinatorDuty
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             granularitySpec,
             dimensionsSpec,
+            transformSpec,
             dropExisting,
             newAutoCompactionContext(config.getTaskContext())
         );

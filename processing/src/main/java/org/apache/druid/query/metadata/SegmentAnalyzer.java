@@ -21,7 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,12 +39,12 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -58,9 +57,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 public class SegmentAnalyzer
@@ -99,32 +96,28 @@ public class SegmentAnalyzer
 
     // get length and column names from storageAdapter
     final int length = storageAdapter.getNumRows();
-    final Set<String> columnNames = new HashSet<>();
-    Iterables.addAll(columnNames, storageAdapter.getAvailableDimensions());
-    Iterables.addAll(columnNames, storageAdapter.getAvailableMetrics());
 
     Map<String, ColumnAnalysis> columns = new TreeMap<>();
 
-    Function<String, ColumnCapabilities> adapterCapabilitesFn =
-        storageAdapter instanceof IncrementalIndexStorageAdapter
-        ? ((IncrementalIndexStorageAdapter) storageAdapter)::getSnapshotColumnCapabilities
-        : storageAdapter::getColumnCapabilities;
-
-    for (String columnName : columnNames) {
-      final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
+    final RowSignature rowSignature = storageAdapter.getRowSignature();
+    for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
-      if (columnHolder != null) {
-        capabilities = columnHolder.getCapabilities();
+
+      if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
+        // See javadocs for getSnapshotColumnCapabilities for a discussion of why we need to do this.
+        capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
       } else {
-        // this can be removed if we get to the point where IncrementalIndexStorageAdapter.getColumnCapabilities
-        // accurately reports the capabilities
-        capabilities = adapterCapabilitesFn.apply(columnName);
+        capabilities = storageAdapter.getColumnCapabilities(columnName);
       }
 
       final ColumnAnalysis analysis;
+
       switch (capabilities.getType()) {
         case LONG:
-          analysis = analyzeNumericColumn(capabilities, length, Long.BYTES);
+          final int bytesPerRow =
+              ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
+
+          analysis = analyzeNumericColumn(capabilities, length, bytesPerRow);
           break;
         case FLOAT:
           analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
@@ -134,12 +127,13 @@ public class SegmentAnalyzer
           break;
         case STRING:
           if (index != null) {
-            analysis = analyzeStringColumn(capabilities, columnHolder);
+            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
           } else {
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
           break;
         case COMPLEX:
+          final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
           analysis = analyzeComplexColumn(capabilities, columnHolder);
           break;
         default:
@@ -149,16 +143,6 @@ public class SegmentAnalyzer
 
       columns.put(columnName, analysis);
     }
-
-    // Add time column too
-    ColumnCapabilities timeCapabilities = adapterCapabilitesFn.apply(ColumnHolder.TIME_COLUMN_NAME);
-    if (timeCapabilities == null) {
-      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
-    }
-    columns.put(
-        ColumnHolder.TIME_COLUMN_NAME,
-        analyzeNumericColumn(timeCapabilities, length, NUM_BYTES_IN_TIMESTAMP)
-    );
 
     return columns;
   }

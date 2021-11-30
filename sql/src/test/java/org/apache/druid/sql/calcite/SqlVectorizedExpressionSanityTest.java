@@ -132,7 +132,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
+        CalciteTests.createMockQueryMakerFactory(WALKER, CONGLOMERATE),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -183,8 +183,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
         final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
     ) {
-      final PlannerResult vectorPlan = vectorPlanner.plan(query);
-      final PlannerResult nonVectorPlan = nonVectorPlanner.plan(query);
+      final PlannerResult vectorPlan = vectorPlanner.plan();
+      final PlannerResult nonVectorPlan = nonVectorPlanner.plan();
       final Sequence<Object[]> vectorSequence = vectorPlan.run();
       final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
       Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);

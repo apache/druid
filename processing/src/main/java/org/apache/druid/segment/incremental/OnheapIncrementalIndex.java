@@ -44,7 +44,6 @@ import org.apache.druid.utils.JvmUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +58,15 @@ import java.util.concurrent.atomic.AtomicLong;
 public class OnheapIncrementalIndex extends IncrementalIndex
 {
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
+
+  /**
+   * Constant factor provided to {@link AggregatorFactory#guessAggregatorHeapFootprint(long)} for footprint estimates.
+   * This figure is large enough to catch most common rollup ratios, but not so large that it will cause persists to
+   * happen too often. If an actual workload involves a much higher rollup ratio, then this may lead to excessive
+   * heap usage. Users would have to work around that by lowering maxRowsInMemory or maxBytesInMemory.
+   */
+  private static final long ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION = 100;
+
   /**
    * overhead per {@link ConcurrentHashMap.Node}  or {@link java.util.concurrent.ConcurrentSkipListMap.Node} object
    */
@@ -113,11 +121,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    */
   private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
   {
+    final long rowsPerAggregator =
+        incrementalIndexSchema.isRollup() ? ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION : 1;
+
     long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
-    maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
-                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls()
-                                                                    + Long.BYTES * 2L)
-                                           .sum();
+
+    for (final AggregatorFactory aggregator : incrementalIndexSchema.getMetrics()) {
+      maxAggregatorIntermediateSize +=
+          (long) aggregator.guessAggregatorHeapFootprint(rowsPerAggregator) + 2L * Long.BYTES;
+    }
+
     return maxAggregatorIntermediateSize;
   }
 
