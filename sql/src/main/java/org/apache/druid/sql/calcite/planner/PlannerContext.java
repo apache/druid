@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
@@ -57,7 +58,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PlannerContext
 {
   // query context keys
-  public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
+  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";

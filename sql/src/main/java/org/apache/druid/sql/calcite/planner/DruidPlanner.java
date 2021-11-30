@@ -153,7 +153,7 @@ public class DruidPlanner implements Closeable
   }
 
   /**
-   * Prepare an SQL query for execution, including some initial parsing and validation and any dyanmic parameter type
+   * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
    * resolution, to support prepared statements via JDBC.
    *
    * In some future this could perhaps re-use some of the work done by {@link #validate()}
