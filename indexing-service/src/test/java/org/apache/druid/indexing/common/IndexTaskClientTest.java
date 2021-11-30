@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
@@ -82,10 +83,12 @@ public class IndexTaskClientTest
     EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(
                 Futures.immediateFuture(
-                    new StringFullResponseHolder(
-                        HttpResponseStatus.OK,
-                        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-                        StandardCharsets.UTF_8
+                    Either.value(
+                        new StringFullResponseHolder(
+                            HttpResponseStatus.OK,
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+                            StandardCharsets.UTF_8
+                        )
                     )
                 )
             )
