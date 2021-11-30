@@ -32,8 +32,8 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
+import org.apache.druid.collections.DummyNonBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.StupidPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
@@ -56,10 +56,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 
 /**
+ * This module is used to fulfill dependency injection of query processing and caching resources: buffer pools and
+ * thread pools on Broker. Broker does not need to be allocated an intermediate results pool.
+ * This is separated from DruidProcessingModule to separate the needs of the broker from the historicals
  */
-public class DruidProcessingModule implements Module
+
+public class BrokerProcessingModule implements Module
 {
-  private static final Logger log = new Logger(DruidProcessingModule.class);
+  private static final Logger log = new Logger(BrokerProcessingModule.class);
 
   @Override
   public void configure(Binder binder)
@@ -114,14 +118,7 @@ public class DruidProcessingModule implements Module
   @Global
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
-    verifyDirectMemory(config);
-
-    return new StupidPool<>(
-        "intermediate processing pool",
-        new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
-        config.getNumThreads(),
-        config.poolCacheMaxCount()
-    );
+    return DummyNonBlockingPool.instance();
   }
 
   @Provides
@@ -161,18 +158,17 @@ public class DruidProcessingModule implements Module
     try {
       final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
       final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
-                                (config.getNumMergeBuffers() + config.getNumThreads() + 1);
+                                (config.getNumMergeBuffers() + 1);
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             StringUtils.format(
                 "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
-                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)",
+                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + 1)",
                 maxDirectMemory,
                 memoryNeeded,
                 config.intermediateComputeSizeBytes(),
-                config.getNumMergeBuffers(),
-                config.getNumThreads()
+                config.getNumMergeBuffers()
             )
         );
       }
@@ -182,10 +178,9 @@ public class DruidProcessingModule implements Module
       log.info(
           "Unable to determine max direct memory size. If druid.processing.buffer.sizeBytes is explicitly configured, "
           + "then make sure to set -XX:MaxDirectMemorySize to at least \"druid.processing.buffer.sizeBytes * "
-          + "(druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)\", "
+          + "(druid.processing.numMergeBuffers[%,d] + 1)\", "
           + "or else set -XX:MaxDirectMemorySize to at least 25%% of maximum jvm heap size.",
-          config.getNumMergeBuffers(),
-          config.getNumThreads()
+          config.getNumMergeBuffers()
       );
     }
   }
