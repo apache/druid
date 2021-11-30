@@ -22,6 +22,7 @@ package org.apache.druid.security.basic.authentication.validator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
@@ -59,6 +60,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private final LruBlockCache cache;
 
   private final BasicAuthLDAPConfig ldapConfig;
+  // Custom overrides that can be passed via tests
+  @Nullable
+  private final Properties overrideProperties;
 
   @JsonCreator
   public LDAPCredentialsValidator(
@@ -92,6 +96,19 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         this.ldapConfig.getCredentialVerifyDuration(),
         this.ldapConfig.getCredentialMaxDuration()
     );
+    this.overrideProperties = null;
+  }
+
+  @VisibleForTesting
+  public LDAPCredentialsValidator(
+      final BasicAuthLDAPConfig ldapConfig,
+      final LruBlockCache cache,
+      final Properties overrideProperties
+  )
+  {
+    this.ldapConfig = ldapConfig;
+    this.cache = cache;
+    this.overrideProperties = overrideProperties;
   }
 
   Properties bindProperties(BasicAuthLDAPConfig ldapConfig)
@@ -119,6 +136,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     if (StringUtils.toLowerCase(ldapConfig.getUrl()).startsWith("ldaps://")) {
       properties.put(Context.SECURITY_PROTOCOL, "ssl");
       properties.put("java.naming.ldap.factory.socket", BasicSecuritySSLSocketFactory.class.getName());
+    }
+    if (null != overrideProperties) {
+      properties.putAll(overrideProperties);
     }
     return properties;
   }
@@ -249,7 +269,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
   }
 
-  private static class LruBlockCache extends LinkedHashMap<String, LdapUserPrincipal>
+  public static class LruBlockCache extends LinkedHashMap<String, LdapUserPrincipal>
   {
     private static final long serialVersionUID = 7509410739092012261L;
 
