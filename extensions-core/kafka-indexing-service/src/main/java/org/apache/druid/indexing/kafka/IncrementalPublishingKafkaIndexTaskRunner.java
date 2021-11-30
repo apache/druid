@@ -126,38 +126,35 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
-    final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
-    boolean doReset = false;
+    final Map<TopicPartition, Long> newOffsetInMetadata = new HashMap<>();
+
     if (task.getTuningConfig().isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
         final TopicPartition topicPartition = outOfRangePartition.getKey();
-        final long nextOffset = outOfRangePartition.getValue();
-        // seek to the beginning to get the least available offset
+        final long nextFetchingOffset = outOfRangePartition.getValue();
+
         StreamPartition<Integer> streamPartition = StreamPartition.of(
             topicPartition.topic(),
             topicPartition.partition()
         );
+
         final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (leastAvailableOffset == null) {
-          throw new ISE(
-              "got null sequence number for partition[%s] when fetching from kafka!",
-              topicPartition.partition()
-          );
+          throw new ISE("got null earliest sequence number for partition[%s] when fetching from kafka!",
+                        topicPartition.partition());
         }
-        // reset the seek
-        recordSupplier.seek(streamPartition, nextOffset);
-        // Reset consumer offset if resetOffsetAutomatically is set to true
-        // and the current message offset in the kafka partition is more than the
-        // next message offset that we are trying to fetch
-        if (leastAvailableOffset > nextOffset) {
-          doReset = true;
-          resetPartitions.put(topicPartition, nextOffset);
+
+        if (nextFetchingOffset < leastAvailableOffset) {
+          // reset offset to the least available position since it's unable to read messages from nextFetchingOffset
+          recordSupplier.seek(streamPartition, leastAvailableOffset);
+
+          newOffsetInMetadata.put(topicPartition, nextFetchingOffset);
         }
       }
     }
 
-    if (doReset) {
-      sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
+    if (!newOffsetInMetadata.isEmpty()) {
+      sendResetRequestAndWait(CollectionUtils.mapKeys(newOffsetInMetadata, streamPartition -> StreamPartition.of(
           streamPartition.topic(),
           streamPartition.partition()
       )), taskToolbox);
