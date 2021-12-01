@@ -80,11 +80,10 @@ public class DiscoverySideEffectsProviderTest
       Assert.assertTrue(isAllServicesDiscoverable);
       return null;
     }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
-    Mockito.doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
-           .when(lifecycle).addHandler(
-               ArgumentMatchers.any(Lifecycle.Handler.class),
-               ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS)
-           );
+    Mockito
+        .doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
+        .when(lifecycle)
+        .addHandler(ArgumentMatchers.any(Lifecycle.Handler.class), ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS));
     target = DiscoverySideEffectsProvider.withLegacyAnnouncer();
     createInjector().injectMembers(target);
   }
