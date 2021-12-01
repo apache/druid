@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.ByteStreams;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -29,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
