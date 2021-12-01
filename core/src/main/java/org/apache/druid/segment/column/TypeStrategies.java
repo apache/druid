@@ -439,14 +439,19 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(Object[] o1, Object[] o2)
+    public int compare(@Nullable Object[] o1, @Nullable Object[] o2)
     {
-      final int iter = Math.max(o1.length, o2.length);
-
       //noinspection ArrayEquality
       if (o1 == o2) {
         return 0;
       }
+      if (o1 == null) {
+        return -1;
+      }
+      if (o2 == null) {
+        return 1;
+      }
+      final int iter = Math.min(o1.length, o2.length);
       for (int i = 0; i < iter; i++) {
         final int cmp = elementComparator.compare(o1[i], o2[i]);
         if (cmp == 0) {
@@ -454,10 +459,7 @@ public class TypeStrategies
         }
         return cmp;
       }
-      if (o1.length > o2.length) {
-        return -1;
-      }
-      return 1;
+      return Integer.compare(o1.length, o2.length);
     }
   }
 }

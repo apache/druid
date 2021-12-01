@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -31,6 +32,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class TypeStrategiesTest
 {
@@ -100,6 +102,155 @@ public class TypeStrategiesTest
         return 0;
       }
     });
+  }
+
+  @Test
+  public void testStringComparator()
+  {
+    List<TypeStrategy<String>> strategies = ImmutableList.of(
+        ColumnType.STRING.getStrategy(),
+        ColumnType.STRING.getNullableStrategy()
+    );
+    for (TypeStrategy<String> strategy : strategies) {
+      Assert.assertEquals(-1, strategy.compare("a", "b"));
+      Assert.assertEquals(-1, strategy.compare(null, "b"));
+      //noinspection EqualsWithItself
+      Assert.assertEquals(0, strategy.compare("a", "a"));
+      Assert.assertEquals(1, strategy.compare("b", "a"));
+      Assert.assertEquals(1, strategy.compare("b", null));
+      Assert.assertEquals(-48, strategy.compare("1", "a"));
+      Assert.assertEquals(48, strategy.compare("a", "1"));
+    }
+  }
+
+  @Test
+  public void testDoubleComparator()
+  {
+    List<TypeStrategy<Double>> strategies = ImmutableList.of(
+        ColumnType.DOUBLE.getStrategy(),
+        ColumnType.DOUBLE.getNullableStrategy()
+    );
+    for (TypeStrategy<Double> strategy : strategies) {
+      Assert.assertEquals(-1, strategy.compare(0.01, 1.01));
+      Assert.assertEquals(-1, strategy.compare(null, 1.01));
+      //noinspection EqualsWithItself
+      Assert.assertEquals(0, strategy.compare(0.00001, 0.00001));
+      Assert.assertEquals(1, strategy.compare(1.01, 0.01));
+      Assert.assertEquals(1, strategy.compare(1.01, null));
+    }
+  }
+
+  @Test
+  public void testFloatComparator()
+  {
+    List<TypeStrategy<Float>> strategies = ImmutableList.of(
+        ColumnType.FLOAT.getStrategy(),
+        ColumnType.FLOAT.getNullableStrategy()
+    );
+    for (TypeStrategy<Float> strategy : strategies) {
+      Assert.assertEquals(-1, strategy.compare(0.01f, 1.01f));
+      //noinspection EqualsWithItself
+      Assert.assertEquals(0, strategy.compare(0.00001f, 0.00001f));
+      Assert.assertEquals(1, strategy.compare(1.01f, 0.01f));
+    }
+  }
+
+  @Test
+  public void testLongComparator()
+  {
+    List<TypeStrategy<Long>> strategies = ImmutableList.of(
+        ColumnType.LONG.getStrategy(),
+        ColumnType.LONG.getNullableStrategy()
+    );
+    for (TypeStrategy<Long> strategy : strategies) {
+      Assert.assertEquals(-1, strategy.compare(-1L, 1L));
+      Assert.assertEquals(-1, strategy.compare(null, 1L));
+      //noinspection EqualsWithItself
+      Assert.assertEquals(0, strategy.compare(1L, 1L));
+      Assert.assertEquals(1, strategy.compare(1L, -1L));
+      Assert.assertEquals(1, strategy.compare(1L, null));
+    }
+  }
+
+  @Test
+  public void testArrayComparator()
+  {
+    List<TypeStrategy<Object[]>> strategies = ImmutableList.of(
+        ColumnType.LONG_ARRAY.getStrategy(),
+        ColumnType.LONG_ARRAY.getNullableStrategy()
+    );
+    for (TypeStrategy<Object[]> strategy : strategies) {
+      Assert.assertEquals(-1, strategy.compare(new Long[]{1L, 1L, 2L}, new Long[]{1L, 2L, 3L}));
+      Assert.assertEquals(-1, strategy.compare(new Long[]{1L, 2L}, new Long[]{1L, 2L, 3L}));
+      Assert.assertEquals(-1, strategy.compare(new Long[]{}, new Long[]{1L}));
+      Assert.assertEquals(-1, strategy.compare(null, new Long[]{}));
+      //noinspection EqualsWithItself
+      Assert.assertEquals(0, strategy.compare(new Long[]{1L, 2L, 3L}, new Long[]{1L, 2L, 3L}));
+
+      Assert.assertEquals(1, strategy.compare(new Long[]{1L, 1L, 2L}, new Long[]{-1L, 2L, 3L}));
+      Assert.assertEquals(1, strategy.compare(new Long[]{1L, 2L, 2L}, new Long[]{1L, 2L, -3L}));
+      Assert.assertEquals(1, strategy.compare(new Long[]{1L, 2L}, new Long[]{-1L, 2L, 3L}));
+      Assert.assertEquals(1, strategy.compare(new Long[]{1L, 2L}, null));
+    }
+
+    strategies = ImmutableList.of(
+        ColumnType.ofArray(ColumnType.ofArray(ColumnType.DOUBLE)).getStrategy(),
+        ColumnType.ofArray(ColumnType.ofArray(ColumnType.DOUBLE)).getNullableStrategy()
+    );
+    for (TypeStrategy<Object[]> strategy : strategies) {
+      Assert.assertEquals(
+          -1,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.0}},
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -12.345}}
+          )
+      );
+      Assert.assertEquals(
+          -1,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -23.456}},
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -12.345}}
+          )
+      );
+      Assert.assertEquals(
+          -1,
+          strategy.compare(
+              null,
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -12.345}}
+          )
+      );
+      Assert.assertEquals(
+          -1,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.0}, null},
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -12.345}}
+          )
+      );
+
+      //noinspection EqualsWithItself
+      Assert.assertEquals(
+          0,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.0}, null},
+              new Object[]{new Object[]{1.0, 2.0}, null}
+          )
+      );
+
+      Assert.assertEquals(
+          1,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.1}},
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -12.345}}
+          )
+      );
+      Assert.assertEquals(
+          1,
+          strategy.compare(
+              new Object[]{new Object[]{1.0, 2.0}, new Object[]{1.1, -23.456}},
+              new Object[]{new Object[]{1.0, 2.0}, null}
+          )
+      );
+    }
   }
 
   @Test
