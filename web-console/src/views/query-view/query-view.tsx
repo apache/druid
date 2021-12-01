@@ -193,8 +193,10 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+    const queryRunner = new QueryRunner({
+      executor: (payload, isSql, cancelToken) => {
+        return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+      },
     });
 
     this.queryManager = new QueryManager({

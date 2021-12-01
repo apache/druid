@@ -246,6 +246,10 @@ export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
+export function formatNumber(n: NumberLike): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
