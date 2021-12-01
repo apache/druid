@@ -107,9 +107,10 @@ public abstract class ResponseContext
     String getName();
 
     /**
-     * The phase (header, trailer, none) where this key is emitted.
+     * Whether to return the key, value pair in the response header.
+     * If false, the value is for internal use only.
      */
-    Visibility getPhase();
+    boolean includeInHeader();
 
     /**
      * Reads a value of this key from a JSON stream. Used by {@link ResponseContextDeserializer}.
@@ -132,25 +133,6 @@ public abstract class ResponseContext
   }
 
   /**
-   * Where the key is emitted, if at all. Values in the context can be for internal
-   * use only: for return before the query results (header) or only after query
-   * results (trailer).
-   */
-  public enum Visibility
-  {
-    /**
-     * Keys to include in in the "X-Druid-Response-Context" header.
-     */
-    HEADER,
-
-    /**
-     * Keys that are not present in query responses at all. Generally used for internal state tracking within a
-     * single server.
-     */
-    NONE
-  }
-
-  /**
    * Abstract key class which provides most functionality except the
    * type-specific merge logic. Parsing is provided by an associated
    * parse function.
@@ -158,14 +140,14 @@ public abstract class ResponseContext
   public abstract static class AbstractKey implements Key
   {
     private final String name;
-    private final Visibility visibility;
+    private final boolean inHeader;
     private final boolean canDrop;
     private final Function<JsonParser, Object> parseFunction;
 
-    AbstractKey(String name, Visibility visibility, boolean canDrop, Class<?> serializedClass)
+    AbstractKey(String name, boolean inHeader, boolean canDrop, Class<?> serializedClass)
     {
       this.name = name;
-      this.visibility = visibility;
+      this.inHeader = inHeader;
       this.canDrop = canDrop;
       this.parseFunction = jp -> {
         try {
@@ -177,10 +159,10 @@ public abstract class ResponseContext
       };
     }
 
-    AbstractKey(String name, Visibility visibility, boolean canDrop, TypeReference<?> serializedTypeReference)
+    AbstractKey(String name, boolean inHeader, boolean canDrop, TypeReference<?> serializedTypeReference)
     {
       this.name = name;
-      this.visibility = visibility;
+      this.inHeader = inHeader;
       this.canDrop = canDrop;
       this.parseFunction = jp -> {
         try {
@@ -199,9 +181,9 @@ public abstract class ResponseContext
     }
 
     @Override
-    public Visibility getPhase()
+    public boolean includeInHeader()
     {
-      return visibility;
+      return inHeader;
     }
 
     @Override
@@ -228,9 +210,9 @@ public abstract class ResponseContext
    */
   public static class StringKey extends AbstractKey
   {
-    StringKey(String name, Visibility visibility, boolean canDrop)
+    StringKey(String name, boolean inHeader, boolean canDrop)
     {
-      super(name, visibility, canDrop, String.class);
+      super(name, inHeader, canDrop, String.class);
     }
 
     @Override
@@ -246,9 +228,9 @@ public abstract class ResponseContext
    */
   public static class BooleanKey extends AbstractKey
   {
-    BooleanKey(String name, Visibility visibility)
+    BooleanKey(String name, boolean inHeader)
     {
-      super(name, visibility, false, Boolean.class);
+      super(name, inHeader, false, Boolean.class);
     }
 
     @Override
@@ -263,9 +245,9 @@ public abstract class ResponseContext
    */
   public static class LongKey extends AbstractKey
   {
-    LongKey(String name, Visibility visibility)
+    LongKey(String name, boolean inHeader)
     {
-      super(name, visibility, false, Long.class);
+      super(name, inHeader, false, Long.class);
     }
 
     @Override
@@ -280,9 +262,9 @@ public abstract class ResponseContext
    */
   public static class CounterKey extends AbstractKey
   {
-    CounterKey(String name, Visibility visibility)
+    CounterKey(String name, boolean inHeader)
     {
-      super(name, visibility, false, Long.class);
+      super(name, inHeader, false, Long.class);
     }
 
     @Override
@@ -333,7 +315,7 @@ public abstract class ResponseContext
      */
     public static final Key UNCOVERED_INTERVALS = new AbstractKey(
         "uncoveredIntervals",
-        Visibility.HEADER, true,
+        true, true,
         new TypeReference<List<Interval>>()
         {
         })
@@ -353,7 +335,7 @@ public abstract class ResponseContext
      */
     public static final Key UNCOVERED_INTERVALS_OVERFLOWED = new BooleanKey(
         "uncoveredIntervalsOverflowed",
-        Visibility.HEADER);
+        true);
 
     /**
      * Map of most relevant query ID to remaining number of responses from query nodes.
@@ -369,7 +351,7 @@ public abstract class ResponseContext
      */
     public static final Key REMAINING_RESPONSES_FROM_QUERY_SERVERS = new AbstractKey(
         "remainingResponsesFromQueryServers",
-        Visibility.NONE, true,
+        false, true,
         Object.class)
     {
       @Override
@@ -390,7 +372,7 @@ public abstract class ResponseContext
      */
     public static final Key MISSING_SEGMENTS = new AbstractKey(
         "missingSegments",
-        Visibility.HEADER, true,
+        true, true,
         new TypeReference<List<SegmentDescriptor>>() {})
     {
       @Override
@@ -407,14 +389,14 @@ public abstract class ResponseContext
      * Entity tag. A part of HTTP cache validation mechanism.
      * Is being removed from the context before sending and used as a separate HTTP header.
      */
-    public static final Key ETAG = new StringKey("ETag", Visibility.NONE, true);
+    public static final Key ETAG = new StringKey("ETag", false, true);
 
     /**
      * Query total bytes gathered.
      */
     public static final Key QUERY_TOTAL_BYTES_GATHERED = new AbstractKey(
         "queryTotalBytesGathered",
-        Visibility.NONE, false,
+        false, false,
         new TypeReference<AtomicLong>() {})
     {
       @Override
@@ -430,7 +412,7 @@ public abstract class ResponseContext
      */
     public static final Key QUERY_FAIL_DEADLINE_MILLIS = new LongKey(
         "queryFailTime",
-        Visibility.NONE);
+        false);
 
     /**
      * This variable indicates when a running query should be expired,
@@ -440,7 +422,7 @@ public abstract class ResponseContext
      */
     public static final Key TIMEOUT_AT = new LongKey(
         "timeoutAt",
-        Visibility.NONE);
+        false);
 
     /**
      * The number of rows scanned by {@link org.apache.druid.query.scan.ScanQueryEngine}.
@@ -450,7 +432,7 @@ public abstract class ResponseContext
      */
     public static final Key NUM_SCANNED_ROWS = new CounterKey(
         "count",
-        Visibility.NONE);
+        false);
 
     /**
      * The total CPU time for threads related to Sequence processing of the query.
@@ -459,14 +441,14 @@ public abstract class ResponseContext
      */
     public static final Key CPU_CONSUMED_NANOS = new CounterKey(
         "cpuConsumed",
-        Visibility.NONE);
+        false);
 
     /**
      * Indicates if a {@link ResponseContext} was truncated during serialization.
      */
     public static final Key TRUNCATED = new BooleanKey(
         "truncated",
-        Visibility.HEADER);
+        false);
 
     /**
      * One and only global list of keys. This is a semi-constant: it is mutable
@@ -548,6 +530,16 @@ public abstract class ResponseContext
         throw new ISE("Key [%s] is not registered as a context key", name);
       }
       return key;
+    }
+
+    /**
+     * Returns a registered key associated with the given name, or
+     * {@code null} if the key is not registered. This form is for testing
+     * and for deserialization when the existence of the key is suspect.
+     */
+    public Key find(String name)
+    {
+      return registered_keys.get(name);
     }
   }
 
@@ -767,7 +759,7 @@ public abstract class ResponseContext
     final Map<Key, Object> headerMap =
         getDelegate().entrySet()
                      .stream()
-                     .filter(entry -> entry.getKey().getPhase() == Visibility.HEADER)
+                     .filter(entry -> entry.getKey().includeInHeader())
                      .collect(
                          Collectors.toMap(
                              Map.Entry::getKey,

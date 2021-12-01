@@ -31,7 +31,6 @@ import org.apache.druid.query.context.ResponseContext.CounterKey;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.context.ResponseContext.StringKey;
-import org.apache.druid.query.context.ResponseContext.Visibility;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,16 +38,17 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ResponseContextTest
 {
   // Droppable header key
   static final Key EXTN_STRING_KEY = new StringKey(
-      "extn_string_key", Visibility.HEADER, true);
+      "extn_string_key", true, true);
   // Non-droppable header key
   static final Key EXTN_COUNTER_KEY = new CounterKey(
-      "extn_counter_key", Visibility.HEADER);
+      "extn_counter_key", true);
 
   static {
     Keys.instance().registerKeys(new Key[] {
@@ -58,7 +58,7 @@ public class ResponseContextTest
   }
 
   static final Key UNREGISTERED_KEY = new StringKey(
-      "unregistered-key", Visibility.HEADER, true);
+      "unregistered-key", true, true);
 
   @Test(expected = IllegalStateException.class)
   public void putISETest()
@@ -271,6 +271,30 @@ public class ResponseContextTest
     );
   }
 
+  /**
+   * Tests the case in which the sender knows about a key that the
+   * receiver does not know about. The receiver will silently ignore
+   * such keys.
+   * @throws IOException
+   */
+  @Test
+  public void deserializeWithUnknownKeyTest() throws IOException
+  {
+    Map<String, Object> bogus = new HashMap<>();
+    bogus.put(Keys.ETAG.getName(), "eTag");
+    bogus.put("scalar", "doomed");
+    bogus.put("array", new String[]{"foo", "bar"});
+    Map<String, Object> objValue = new HashMap<>();
+    objValue.put("array", new String[]{"foo", "bar"});
+    bogus.put("obj", objValue);
+    bogus.put("null", null);
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    String serialized = mapper.writeValueAsString(bogus);
+    ResponseContext ctx = ResponseContext.deserialize(serialized, mapper);
+    Assert.assertEquals(1, ctx.getDelegate().size());
+    Assert.assertEquals("eTag", ctx.get(Keys.ETAG));
+  }
+
   // Interval value for the test. Must match the deserialized value.
   private static Interval interval(int n)
   {
@@ -334,16 +358,6 @@ public class ResponseContextTest
     Assert.assertEquals((Long) 110L, ctx.getRowScanCount());
     ctx.addCpuNanos(100L);
     Assert.assertEquals((Long) 100100L, ctx.getCpuNanos());
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void deserializeISETest() throws IOException
-  {
-    final DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ResponseContext.deserialize(
-        mapper.writeValueAsString(ImmutableMap.of("ETag_unexpected", "string-value")),
-        mapper
-    );
   }
 
   @Test
