@@ -131,24 +131,45 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     if (task.getTuningConfig().isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
         final TopicPartition topicPartition = outOfRangePartition.getKey();
-        final long nextFetchingOffset = outOfRangePartition.getValue();
+        final long outOfRangeOffset = outOfRangePartition.getValue();
 
         StreamPartition<Integer> streamPartition = StreamPartition.of(
             topicPartition.topic(),
             topicPartition.partition()
         );
 
-        final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (leastAvailableOffset == null) {
+        final Long earliestAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
+        if (earliestAvailableOffset == null) {
           throw new ISE("got null earliest sequence number for partition[%s] when fetching from kafka!",
                         topicPartition.partition());
         }
 
-        if (nextFetchingOffset < leastAvailableOffset) {
-          // reset offset to the least available position since it's unable to read messages from nextFetchingOffset
-          recordSupplier.seek(streamPartition, leastAvailableOffset);
-
-          newOffsetInMetadata.put(topicPartition, nextFetchingOffset);
+        if (outOfRangeOffset < earliestAvailableOffset) {
+          //
+          // In this case, it's probably because partition expires before the Druid could read from next offset
+          // so the messages in [outOfRangeOffset, earliestAvailableOffset) is lost.
+          // These lost messages could not be restored even a manual reset is performed
+          // So, it's reasonable to reset the offset the earliest available position
+          //
+          recordSupplier.seek(streamPartition, earliestAvailableOffset);
+          newOffsetInMetadata.put(topicPartition, outOfRangeOffset);
+        } else {
+          //
+          // There are two cases in theory here
+          // 1. outOfRangeOffset is in the range of [earliestAvailableOffset, latestAvailableOffset]
+          // 2. outOfRangeOffset is larger than latestAvailableOffset
+          //
+          // for scenario 1, we do nothing but just wait for a period time to retry
+          //                 since current offset is valid but maybe due to some temporary problem
+          //
+          // for scenario 2, how could this happen?
+          // Well, if the task first consumes from a topic on cluster A,
+          // and then supervisor spec is changed to consume from a same topic, where there are messages in this topic, on cluster B,
+          // this can lead to this case.
+          // For such case,
+          // offsets stored in meta should be cleared when submitting the supervisor spec,
+          // so the problem won't be left to manual reset or auto reset. Thus, we don't need to handle this complicated case here
+          //
         }
       }
     }
