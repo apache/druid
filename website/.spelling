@@ -1268,6 +1268,8 @@ un
 G1GC
 GroupBys
 QoS-type
+replicant
+replicants
  - ../docs/operations/dump-segment.md
 DumpSegment
 SegmentMetadata
@@ -1849,6 +1851,7 @@ preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
+replicant
 replicants
 resultsets
 roundRobin

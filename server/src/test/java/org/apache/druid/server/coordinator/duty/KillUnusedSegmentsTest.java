@@ -119,7 +119,10 @@ public class KillUnusedSegmentsTest
             null,
             null,
             1000,
-            Duration.ZERO
+            Duration.ZERO,
+            Duration.ZERO,
+            false,
+            1
         )
     );
 

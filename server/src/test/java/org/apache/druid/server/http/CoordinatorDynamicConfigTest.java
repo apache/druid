@@ -240,6 +240,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+                     + "  \"maxNonPrimaryReplicantsToLoad\": 0, \n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
@@ -272,7 +273,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -294,7 +295,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(5).build(actual);
@@ -316,7 +317,7 @@ public class CoordinatorDynamicConfigTest
         5,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
   }
 
@@ -334,6 +335,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": \"test1, test2\", \n"
+                     + "  \"maxNonPrimaryReplicantsToLoad\": 0, \n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
@@ -364,7 +366,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
   }
 
@@ -500,6 +502,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killAllDataSources\": true,\n"
+                     + "  \"maxNonPrimaryReplicantsToLoad\": 0, \n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
                      + "}\n";
 
@@ -531,7 +534,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
 
     //ensure whitelist is empty when killAllDataSources is true
@@ -566,6 +569,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
+                     + "  \"maxNonPrimaryReplicantsToLoad\": 0, \n"
                      + "  \"killAllDataSources\": true\n"
                      + "}\n";
 
@@ -597,7 +601,7 @@ public class CoordinatorDynamicConfigTest
         0,
         false,
         false,
-        Integer.MAX_VALUE
+        0
     );
   }
 

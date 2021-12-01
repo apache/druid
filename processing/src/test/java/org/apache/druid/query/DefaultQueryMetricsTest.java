@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -50,6 +51,7 @@ public class DefaultQueryMetricsTest
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+    NullHandling.initializeForTests();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)

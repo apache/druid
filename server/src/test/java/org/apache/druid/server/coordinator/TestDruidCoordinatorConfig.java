@@ -42,6 +42,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorDatasourceKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
+  private final Duration coordinatorPrimaryReplicantLoaderPeriod;
+  private final boolean loadPrimaryReplicantSeparately;
+  private final int dutiesRunnableExecutorThreadPoolSize;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -61,7 +64,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorDatasourceKillPeriod,
       Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      Duration getLoadQueuePeonRepeatDelay
+      Duration getLoadQueuePeonRepeatDelay,
+      Duration coordinatorPrimaryReplicantLoaderPeriod,
+      boolean loadPrimaryReplicantSeparately,
+      int dutiesRunnableExecutorThreadPoolSize
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -82,6 +88,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
+    this.coordinatorPrimaryReplicantLoaderPeriod = coordinatorPrimaryReplicantLoaderPeriod;
+    this.loadPrimaryReplicantSeparately = loadPrimaryReplicantSeparately;
+    this.dutiesRunnableExecutorThreadPoolSize = dutiesRunnableExecutorThreadPoolSize;
   }
 
   @Override
@@ -91,9 +100,21 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isLoadPrimaryReplicantSeparately()
+  {
+    return loadPrimaryReplicantSeparately;
+  }
+
+  @Override
   public Duration getCoordinatorPeriod()
   {
     return coordinatorPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorPrimaryReplicantLoaderPeriod()
+  {
+    return coordinatorPrimaryReplicantLoaderPeriod;
   }
 
   @Override
@@ -190,5 +211,11 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
+  }
+
+  @Override
+  public int getDutiesRunnableExecutorThreadPoolSize()
+  {
+    return dutiesRunnableExecutorThreadPoolSize;
   }
 }

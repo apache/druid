@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.duty.RunRules;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
@@ -70,6 +72,8 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
+  private final RunRules.RunRulesMode runRulesMode;
+  private final LoadRule.LoadRuleMode loadRuleMode;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -85,7 +89,9 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
       BalancerStrategy balancerStrategy,
-      Set<String> broadcastDatasources
+      Set<String> broadcastDatasources,
+      RunRules.RunRulesMode runRulesMode,
+      LoadRule.LoadRuleMode loadRuleMode
   )
   {
     this.startTimeNanos = startTimeNanos;
@@ -102,6 +108,8 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
+    this.runRulesMode = runRulesMode;
+    this.loadRuleMode = loadRuleMode;
   }
 
   public long getStartTimeNanos()
@@ -195,6 +203,16 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot;
   }
 
+  public RunRules.RunRulesMode getRunRulesMode()
+  {
+    return runRulesMode;
+  }
+
+  public LoadRule.LoadRuleMode getLoadRuleMode()
+  {
+    return loadRuleMode;
+  }
+
   public static Builder newBuilder()
   {
     return new Builder();
@@ -216,7 +234,9 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources
+        broadcastDatasources,
+        runRulesMode,
+        loadRuleMode
     );
   }
 
@@ -236,7 +256,9 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerStrategy,
-        broadcastDatasources
+        broadcastDatasources,
+        runRulesMode,
+        loadRuleMode
     );
   }
 
@@ -256,6 +278,8 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
+    private RunRules.RunRulesMode runRulesMode;
+    private LoadRule.LoadRuleMode loadRuleMode;
 
     private Builder()
     {
@@ -272,6 +296,8 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.broadcastDatasources = new HashSet<>();
+      this.runRulesMode = RunRules.RunRulesMode.ALL_RULES;
+      this.loadRuleMode = LoadRule.LoadRuleMode.ALL;
     }
 
     Builder(
@@ -288,7 +314,9 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorCompactionConfig coordinatorCompactionConfig,
         CoordinatorStats stats,
         BalancerStrategy balancerStrategy,
-        Set<String> broadcastDatasources
+        Set<String> broadcastDatasources,
+        RunRules.RunRulesMode runRulesMode,
+        LoadRule.LoadRuleMode loadRuleMode
     )
     {
       this.startTimeNanos = startTimeNanos;
@@ -305,6 +333,8 @@ public class DruidCoordinatorRuntimeParams
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
+      this.runRulesMode = runRulesMode;
+      this.loadRuleMode = loadRuleMode;
     }
 
     public DruidCoordinatorRuntimeParams build()
@@ -324,7 +354,9 @@ public class DruidCoordinatorRuntimeParams
           coordinatorCompactionConfig,
           stats,
           balancerStrategy,
-          broadcastDatasources
+          broadcastDatasources,
+          runRulesMode,
+          loadRuleMode
       );
     }
 
@@ -434,6 +466,18 @@ public class DruidCoordinatorRuntimeParams
     public Builder withBroadcastDatasources(Set<String> broadcastDatasources)
     {
       this.broadcastDatasources = broadcastDatasources;
+      return this;
+    }
+
+    public Builder withRunRulesMode(RunRules.RunRulesMode runRulesMode)
+    {
+      this.runRulesMode = runRulesMode;
+      return this;
+    }
+
+    public Builder withLoadRuleMode(LoadRule.LoadRuleMode loadRuleMode)
+    {
+      this.loadRuleMode = loadRuleMode;
       return this;
     }
   }

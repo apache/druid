@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -43,6 +44,17 @@ import java.util.Set;
  */
 public class RunRules implements CoordinatorDuty
 {
+
+  /**
+   * enum to indicate what rules that RunRules is set to execute.
+   * LOAD_RULE_ONLY means if Rule is not a LoadRule, to skip running it. It is a special case for the dedicated primary replicant loader.
+   */
+  public enum RunRulesMode
+  {
+    LOAD_RULE_ONLY,
+    ALL_RULES
+  }
+
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
   private static final int MAX_MISSING_RULES = 10;
 
@@ -129,6 +141,9 @@ public class RunRules implements CoordinatorDuty
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
+        if (params.getRunRulesMode().equals(RunRulesMode.LOAD_RULE_ONLY) && !(rule instanceof LoadRule)) {
+          continue;
+        }
         if (rule.appliesTo(segment, now)) {
           if (
               stats.getGlobalStat(

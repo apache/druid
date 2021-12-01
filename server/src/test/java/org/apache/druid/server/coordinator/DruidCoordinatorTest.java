@@ -70,13 +70,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -84,6 +86,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class DruidCoordinatorTest extends CuratorTestBase
 {
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
@@ -98,7 +101,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private SingleServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
-  private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
+  private ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon loadQueuePeon;
   private MetadataRuleManager metadataRuleManager;
   private CountDownLatch leaderAnnouncerLatch;
@@ -108,6 +111,23 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
+  private boolean loadPrimaryReplicantSeparately;
+
+  public DruidCoordinatorTest(boolean loadPrimaryReplicantSeparately)
+  {
+    this.loadPrimaryReplicantSeparately = loadPrimaryReplicantSeparately;
+  }
+
+  @Parameterized.Parameters(name = "{index}: loadPrimaryReplicantSeparately:{0}")
+  public static Iterable<Object[]> data()
+  {
+    return Arrays.asList(
+        new Object[][]{
+            {true},
+            {false}
+        }
+    );
+  }
 
   @Before
   public void setUp() throws Exception
@@ -157,7 +177,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         10,
-        new Duration("PT0s")
+        new Duration("PT0s"),
+        new Duration("PT1S"),
+        loadPrimaryReplicantSeparately,
+        1
     );
     pathChildrenCache = new PathChildrenCache(
         curator,

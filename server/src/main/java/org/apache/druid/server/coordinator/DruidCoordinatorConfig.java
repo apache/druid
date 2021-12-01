@@ -27,13 +27,25 @@ import org.skife.config.Default;
  */
 public abstract class DruidCoordinatorConfig
 {
+  @Config("druid.coordinator.dutiesRunnableExecutor.threadPoolSize")
+  @Default("1")
+  public abstract int getDutiesRunnableExecutorThreadPoolSize();
+
   @Config("druid.coordinator.startDelay")
   @Default("PT300s")
   public abstract Duration getCoordinatorStartDelay();
 
+  @Config("druid.coordinator.loadPrimaryReplicantSeparately")
+  @Default("false")
+  public abstract boolean isLoadPrimaryReplicantSeparately();
+
   @Config("druid.coordinator.period")
   @Default("PT60s")
   public abstract Duration getCoordinatorPeriod();
+
+  @Config("druid.coordinator.period.primaryReplicantLoaderPeriod")
+  @Default("PT60s")
+  public abstract Duration getCoordinatorPrimaryReplicantLoaderPeriod();
 
   @Config("druid.coordinator.period.indexingPeriod")
   @Default("PT1800s")

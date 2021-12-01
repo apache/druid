@@ -297,6 +297,18 @@ You can set the Coordinator heap to the same size as your Broker heap, or slight
 * The impact that modifying this config will have on your coordination time will be a function of how low you set the config value, the value for `maxSegmentsToMove` and the total number of segments in your cluster.
   * If your cluster has a relatively small number of segments, or you choose to move few segments per coordination cycle, there may not be much savings to be had here.
 
+#### Isolating Primary Replicant Loading Within Its Own Event Loop
+
+`druid.coordinator.loadPrimaryReplicantSeparately` with a period controlled by `druid.coordinator.period.primaryReplicantLoaderPeriod` can be used to remove primary replicant loading from the general coordinator event loop and put it on its own schedule.
+
+You will also need to bump `druid.coordinator.dutiesRunnableExecutor.threadPoolSize` above its default of 1 so the `DutiesRunnable` objects don't block each other.
+
+This configuration can make sense if you have a large cluster where coordination takes a long time. These long coordination times can block used segments from being loaded by Historical servers. If you constantly find yourself waiting for coordination cycles to complete so primary replicants can be loaded for used segments that are not currently served, this config pairing might be right for you.
+
+By enabling it, you enable a dedicated scheduled event loop on the coordinator for loading primary replicants. The general coordinator event loop will do all of its same jobs as before except for loading of primary replicants. Now, you may find that primary replicants are loaded faster, resulting in used segments being available for client query in more timely manner than before.
+
+Enabling this comes at a cost. The coordinator will now have to maintain another snapshot of the cluster state. Also, primary replicant loading will now be running in parallel to other Coordinator tasks which could result in more cpu use.
+
 ### Overlord
 
 The main performance-related setting on the Overlord is the heap size.

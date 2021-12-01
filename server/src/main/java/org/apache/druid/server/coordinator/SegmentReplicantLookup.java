@@ -130,6 +130,12 @@ public class SegmentReplicantLookup
     return retVal;
   }
 
+  public Map<String, Integer> getLoadingTiers(SegmentId segmentId)
+  {
+    Map<String, Integer> retVal = loadingSegments.row(segmentId);
+    return (retVal == null) ? new HashMap<>() : retVal;
+  }
+
   public int getTotalReplicants(SegmentId segmentId)
   {
     return getLoadedReplicants(segmentId) + getLoadingReplicants(segmentId);

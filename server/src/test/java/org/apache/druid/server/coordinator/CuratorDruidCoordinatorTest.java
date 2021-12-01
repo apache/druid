@@ -72,7 +72,6 @@ import org.junit.rules.TestRule;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -92,7 +91,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
   private ScheduledExecutorFactory scheduledExecutorFactory;
-  private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
+  private ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon sourceLoadQueuePeon;
   private LoadQueuePeon destinationLoadQueuePeon;
   private MetadataRuleManager metadataRuleManager;
@@ -183,7 +182,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null,
         null,
         10,
-        new Duration("PT0s")
+        new Duration("PT0s"),
+        Duration.ZERO,
+        false,
+        1
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,

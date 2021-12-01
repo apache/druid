@@ -104,7 +104,10 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        Duration.ZERO,
+        false,
+        1
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -140,7 +143,10 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        Duration.ZERO,
+        false,
+        1
     );
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Coordinator compaction configuration kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
@@ -189,7 +195,10 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        Duration.ZERO,
+        false,
+        1
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -292,7 +301,10 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        Duration.ZERO,
+        false,
+        1
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
@@ -410,7 +422,10 @@ public class KillCompactionConfigTest
         null,
         null,
         10,
-        null
+        null,
+        Duration.ZERO,
+        false,
+        1
     );
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
