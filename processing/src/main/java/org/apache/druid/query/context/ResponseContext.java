@@ -66,9 +66,9 @@ import java.util.stream.Collectors;
  * of information:
  * <ul>
  * <li>Information to be returned in the query response header.
- * (These are values tagged as {@link Visibility#HEADER}.)</li>
+ * These are values tagged as being in the header.</li>
  * <li>Values passed within a single server. These are tagged with
- * visibility {@link Visibility#NONE}.)</li>
+ * not being in the header.</li>
  * </ul>
  * Second, it performs multiple tasks:
  * <ul>
@@ -428,7 +428,7 @@ public abstract class ResponseContext
      * The number of rows scanned by {@link org.apache.druid.query.scan.ScanQueryEngine}.
      *
      * Named "count" for backwards compatibility with older data servers that still send this, even though it's now
-     * marked with {@link Visibility#NONE}.
+     * marked as internal.
      */
     public static final Key NUM_SCANNED_ROWS = new CounterKey(
         "count",
