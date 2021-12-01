@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.http.client.response;
 
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.Charset;
 
@@ -29,12 +28,11 @@ public class StringFullResponseHolder extends FullResponseHolder<String>
   private final StringBuilder builder;
 
   public StringFullResponseHolder(
-      HttpResponseStatus status,
       HttpResponse response,
       Charset charset
   )
   {
-    super(status, response);
+    super(response);
     this.builder = new StringBuilder(response.getContent().toString(charset));
   }
 
