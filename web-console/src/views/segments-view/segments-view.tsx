@@ -173,8 +173,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     const columns = compact([
       visibleColumns.shown('Segment ID') && `"segment_id"`,
       visibleColumns.shown('Datasource') && `"datasource"`,
-      visibleColumns.shown('Start') && `"start"`,
-      visibleColumns.shown('End') && `"end"`,
+      `"start"`,
+      `"end"`,
       visibleColumns.shown('Version') && `"version"`,
       visibleColumns.shown('Time span') &&
         `CASE
@@ -205,10 +205,6 @@ END AS "partitioning"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
       visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
-
-    if (!columns.length) {
-      columns.push(`"segment_id"`);
-    }
 
     return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
   }
@@ -625,6 +621,7 @@ END AS "partitioning"`,
               <BracedText
                 text={row.original.is_available ? formatInteger(row.value) : '(unknown)'}
                 braces={numRowsValues}
+                unselectableThousandsSeparator
               />
             ),
           },
