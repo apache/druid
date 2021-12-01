@@ -1342,7 +1342,7 @@ public class OverlordResourceTest
     final TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString(), null))
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString(), EasyMock.isNull()))
             .andReturn(Collections.emptyList());
     EasyMock.replay(
         taskRunner,
