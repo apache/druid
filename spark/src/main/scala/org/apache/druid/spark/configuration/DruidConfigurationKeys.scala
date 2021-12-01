@@ -53,22 +53,26 @@ object DruidConfigurationKeys {
   private[spark] val timeoutMillisecondsDefaultKey: (String, Int) = (timeoutMillisecondsKey, 300000)
 
   // Common configs
-  val useCompactSketchesKey: String = "useCompactSketches" // Default: false
-  val useDefaultValueForNull: String = "useDefaultValueForNull" // Default: true
+  val useCompactSketchesKey: String = "useCompactSketches"
+  val useDefaultValueForNull: String = "useDefaultValueForNull"
   private[spark] val useCompactSketchesDefaultKey: (String, Boolean) = (useCompactSketchesKey, false)
   private[spark] val useDefaultValueForNullDefaultKey: (String, Boolean) = (useDefaultValueForNull, true)
 
   // Reader Configs
   val readerPrefix: String = "reader"
   val segmentsKey: String = "segments"
-  val vectorizeKey: String = "vectorize" // Default: false, experimental key!
-  val batchSizeKey: String = "batchSize" // Default: 512
+  val vectorizeKey: String = "vectorize" // Experimental key!
+  val batchSizeKey: String = "batchSize"
   val useSparkConfForDeepStorageKey: String = "useClusterConfForDeepStorage"
-  val allowIncompletePartitionsKey: String = "allowIncompletePartitions" // Default: false
+  val allowIncompletePartitionsKey: String = "allowIncompletePartitions"
+  val timestampColumnKey: String = "timestampColumn"
+  val timestampFormatKey: String = "timestampFormat"
   private[spark] val vectorizeDefaultKey: (String, Boolean) = (vectorizeKey, false)
   private[spark] val batchSizeDefaultKey: (String, Int) = (batchSizeKey, 512)
   private[spark] val useSparkConfForDeepStorageDefaultKey: (String, Boolean) = (useSparkConfForDeepStorageKey, false)
   private[spark] val allowIncompletePartitionsDefaultKey: (String, Boolean) = (allowIncompletePartitionsKey, false)
+  private[spark] val timestampColumnDefaultReaderKey: (String, String) = (timestampColumnKey, "__time")
+  private[spark] val timestampFormatDefaultReaderKey: (String, String) = (timestampFormatKey, "millis")
 
 
   val deepStorageTypeKey: String = "deepStorageType"

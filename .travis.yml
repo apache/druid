@@ -320,11 +320,42 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk15
 
+    - &test_spark_module
+      <<: *test_processing_module # Using the processing module settings for now
+      name: "(openjdk8) spark module test"
+      env:
+        - MAVEN_PROJECTS='spark'
+
+    - <<: *test_spark_module
+      name: "(openjdk11) spark module test"
+      stage: Tests - phase 2
+      jdk: openjdk11
+
+    - <<: *test_spark_module
+      name: "(openjdk15) spark module test"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
+    - &test_spark_module_sqlcompat
+      <<: *test_spark_module
+      name: "(openjdk8) spark module test (SQL Compatibility)"
+      before_script: *setup_sqlcompat
+
+    - <<: *test_spark_module_sqlcompat
+      name: "(openjdk11) spark module test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk11
+
+    - <<: *test_spark_module_sqlcompat
+      name: "(openjdk15) spark module test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
     - &test_other_modules
       <<: *test_processing_module
       name: "(openjdk8) other modules test"
       env:
-        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests'
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!spark'
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"

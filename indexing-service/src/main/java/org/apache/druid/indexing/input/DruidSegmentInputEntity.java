@@ -41,14 +41,14 @@ public class DruidSegmentInputEntity implements InputEntity
   private final DataSegment segment;
   private final Interval intervalFilter;
 
-  DruidSegmentInputEntity(SegmentLoader segmentLoader, DataSegment segment, Interval intervalFilter)
+  public DruidSegmentInputEntity(SegmentLoader segmentLoader, DataSegment segment, Interval intervalFilter)
   {
     this.segmentLoader = segmentLoader;
     this.segment = segment;
     this.intervalFilter = intervalFilter;
   }
 
-  Interval getIntervalFilter()
+  public Interval getIntervalFilter()
   {
     return intervalFilter;
   }

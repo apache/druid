@@ -19,20 +19,24 @@
 
 package org.apache.druid.spark.v2.reader
 
+import org.apache.druid.data.input.impl.{DimensionsSpec, TimestampSpec}
+import org.apache.druid.data.input.{ColumnsFilter, InputEntityReader, InputRowSchema}
+import org.apache.druid.indexing.input.{DruidSegmentInputEntity, DruidSegmentInputFormat}
 import org.apache.druid.java.util.common.FileUtils
 import org.apache.druid.query.filter.DimFilter
-import org.apache.druid.segment.realtime.firehose.{IngestSegmentFirehose, WindowedStorageAdapter}
-import org.apache.druid.segment.transform.TransformSpec
-import org.apache.druid.segment.QueryableIndexStorageAdapter
-import org.apache.druid.spark.configuration.{Configuration, SerializableHadoopConfiguration}
+import org.apache.druid.segment.loading.SegmentLoader
+import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys, SerializableHadoopConfiguration}
 import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.utils.SchemaUtils
+import org.apache.druid.spark.v2.INDEX_IO
+import org.apache.druid.timeline.DataSegment
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 import org.apache.spark.sql.types.StructType
 
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, seqAsJavaListConverter}
+import java.io.File
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class DruidInputPartitionReader(
                                  segmentStr: String,
@@ -55,38 +59,41 @@ class DruidInputPartitionReader(
     useDefaultNullHandling
   ) with InputPartitionReader[InternalRow] with Logging {
 
-  private val firehose: IngestSegmentFirehose = DruidInputPartitionReader.makeFirehose(
-    new WindowedStorageAdapter(
-      new QueryableIndexStorageAdapter(queryableIndex), segment.getInterval
-    ),
+  private val availableColumns =
+    segment.asQueryableIndex().getColumnNames + conf.get(DruidConfigurationKeys.timestampColumnDefaultReaderKey)
+
+  private val inputEntityReaderRows = DruidInputPartitionReader.makeInputFormat(
+    dataSegment,
+    segmentLoader,
+    tmpDir,
     filter.orNull,
-    schema.fieldNames.toList
-  )
+    conf.get(DruidConfigurationKeys.timestampColumnDefaultReaderKey),
+    conf.get(DruidConfigurationKeys.timestampFormatDefaultReaderKey),
+    SchemaUtils.getDimensionsSpecFromIndex(segment.asQueryableIndex()),
+    schema.fieldNames.toList.filter(availableColumns.contains(_))
+  ).read()
 
   override def next(): Boolean = {
-    firehose.hasMore
+    inputEntityReaderRows.hasNext
   }
 
   override def get(): InternalRow = {
-    SchemaUtils.convertInputRowToSparkRow(firehose.nextRow(), schema, useDefaultNullHandling)
+    SchemaUtils.convertInputRowToSparkRow(inputEntityReaderRows.next(), schema, useDefaultNullHandling)
   }
 
   override def close(): Unit = {
     try {
-      if (Option(firehose).nonEmpty) {
-        firehose.close()
-      }
-      if (Option(queryableIndex).nonEmpty) {
-        queryableIndex.close()
+      if (Option(segment).nonEmpty) {
+        segment.close()
       }
       if (Option(tmpDir).nonEmpty) {
         FileUtils.deleteDirectory(tmpDir)
       }
     } catch {
       case e: Exception =>
-        // Since we're just going to rethrow e and tearing down the JVM will clean up the firehose and queryable index
-        // even if we can't, the only leak we have to worry about is the temp file. Spark should clean up temp files as
-        // well, but rather than rely on that we'll try to take care of it ourselves.
+        // Since we're just going to rethrow e and tearing down the JVM will clean up the segment even if we can't, the
+        // only leak we have to worry about is the temp file. Spark should clean up temp files as well, but rather than
+        // rely on that we'll try to take care of it ourselves.
         logWarn("Encountered exception attempting to close a DruidInputPartitionReader!")
         if (Option(tmpDir).nonEmpty && tmpDir.exists()) {
           FileUtils.deleteDirectory(tmpDir)
@@ -97,16 +104,35 @@ class DruidInputPartitionReader(
 }
 
 private[v2] object DruidInputPartitionReader {
-  private def makeFirehose(
-                            adapter: WindowedStorageAdapter,
-                            filter: DimFilter,
-                            columns: List[String]): IngestSegmentFirehose = {
-    // This could be in-lined into the return, but this is more legible
-    val availableDimensions = adapter.getAdapter.getAvailableDimensions.asScala.toSet
-    val availableMetrics = adapter.getAdapter.getAvailableMetrics.asScala.toSet
-    val dimensions = columns.filter(availableDimensions.contains).asJava
-    val metrics = columns.filter(availableMetrics.contains).asJava
+  private def makeInputFormat(
+                               segment: DataSegment,
+                               segmentLoader: SegmentLoader,
+                               loadDir: File,
+                               filter: DimFilter,
+                               timestampColumnName: String,
+                               timestampColumnFormat: String,
+                               dimensionsSpec: DimensionsSpec,
+                               columns: Seq[String]
+                             ): InputEntityReader = {
+    val inputFormat = new DruidSegmentInputFormat(INDEX_IO, filter)
+    val timestampSpec = new TimestampSpec(timestampColumnName, timestampColumnFormat, null) // scalastyle:ignore null
 
-    new IngestSegmentFirehose(List(adapter).asJava, TransformSpec.NONE, dimensions, metrics, filter)
+    val inputSchema = new InputRowSchema(
+      timestampSpec,
+      dimensionsSpec,
+      ColumnsFilter.inclusionBased(columns.toSet.asJava)
+    )
+
+    val inputSource = new DruidSegmentInputEntity(
+      segmentLoader,
+      segment,
+      segment.getInterval
+    )
+
+    inputFormat.createReader(
+      inputSchema,
+      inputSource,
+      loadDir
+    )
   }
 }
