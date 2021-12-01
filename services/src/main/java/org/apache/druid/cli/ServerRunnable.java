@@ -19,15 +19,15 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
-import com.google.inject.multibindings.Multibinder;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -42,7 +42,10 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
-import java.util.List;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -59,7 +62,7 @@ public abstract class ServerRunnable extends GuiceRunnable
   @Override
   public void run()
   {
-    final Injector injector = makeInjector();
+    final Injector injector = makeInjector(getNodeRoles(getProperties()));
     final Lifecycle lifecycle = initLifecycle(injector);
 
     try {
@@ -70,34 +73,26 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  public static void bindNodeRoleAndAnnouncer(Binder binder, DiscoverySideEffectsProvider discoverySideEffectsProvider)
-  {
-    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
-    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
+  protected abstract Set<NodeRole> getNodeRoles(Properties properties);
 
-    bindAnnouncer(
-        binder,
-        discoverySideEffectsProvider
-    );
-  }
-
-  public static void bindNodeRoleAndAnnouncer(
-      Binder binder,
-      Class<? extends Annotation> annotation,
-      DiscoverySideEffectsProvider discoverySideEffectsProvider
+  public static void bindDruidServiceType(
+      final Binder binder,
+      final Map<NodeRole, Named> serviceTypes
   )
   {
-    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
-    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
-
-    bindAnnouncer(
+    MapBinder<NodeRole, Set<Class<? extends DruidService>>> serviceBinder = MapBinder.newMapBinder(
         binder,
-        annotation,
-        discoverySideEffectsProvider
+        new TypeLiteral<NodeRole>(){},
+        new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+    );
+    serviceTypes.forEach(
+        (role, serviceType) -> serviceBinder
+            .addBinding(role)
+            .to(Key.get(new TypeLiteral<Set<Class<? extends DruidService>>>(){}, serviceType))
     );
   }
 
-  private static void bindAnnouncer(
+  public static void bindAnnouncer(
       final Binder binder,
       final DiscoverySideEffectsProvider provider
   )
@@ -109,7 +104,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
   }
 
-  private static void bindAnnouncer(
+  public static void bindAnnouncer(
       final Binder binder,
       final Class<? extends Annotation> annotation,
       final DiscoverySideEffectsProvider provider
@@ -133,44 +128,6 @@ public abstract class ServerRunnable extends GuiceRunnable
     {
     }
 
-    public static class Builder
-    {
-      private NodeRole nodeRole;
-      private List<Class<? extends DruidService>> serviceClasses = ImmutableList.of();
-      private boolean useLegacyAnnouncer;
-
-      public Builder(final NodeRole nodeRole)
-      {
-        this.nodeRole = nodeRole;
-      }
-
-      public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
-      {
-        this.serviceClasses = serviceClasses;
-        return this;
-      }
-
-      public Builder useLegacyAnnouncer(final boolean useLegacyAnnouncer)
-      {
-        this.useLegacyAnnouncer = useLegacyAnnouncer;
-        return this;
-      }
-
-      public DiscoverySideEffectsProvider build()
-      {
-        return new DiscoverySideEffectsProvider(
-            nodeRole,
-            serviceClasses,
-            useLegacyAnnouncer
-        );
-      }
-    }
-
-    public static Builder builder(final NodeRole nodeRole)
-    {
-      return new Builder(nodeRole);
-    }
-
     @Inject
     @Self
     private DruidNode druidNode;
@@ -187,87 +144,76 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private Injector injector;
 
-    private final NodeRole nodeRole;
-    private final List<Class<? extends DruidService>> serviceClasses;
+    @Inject
+    @Self
+    private Set<NodeRole> nodeRoles; // this set can be different from the keySet of serviceClasses
+
+    @Inject
+    private Map<NodeRole, Set<Class<? extends DruidService>>> serviceClasses;
+
     private final boolean useLegacyAnnouncer;
 
-    private DiscoverySideEffectsProvider(
-        final NodeRole nodeRole,
-        final List<Class<? extends DruidService>> serviceClasses,
-        final boolean useLegacyAnnouncer
-    )
+    public static DiscoverySideEffectsProvider create()
     {
-      this.nodeRole = nodeRole;
-      this.serviceClasses = serviceClasses;
-      this.useLegacyAnnouncer = useLegacyAnnouncer;
+      return new DiscoverySideEffectsProvider(false);
     }
 
-    @VisibleForTesting
-    DiscoverySideEffectsProvider(
-        final NodeRole nodeRole,
-        final List<Class<? extends DruidService>> serviceClasses,
-        final boolean useLegacyAnnouncer,
-        final DruidNode druidNode,
-        final DruidNodeAnnouncer announcer,
-        final ServiceAnnouncer legacyAnnouncer,
-        final Lifecycle lifecycle,
-        final Injector injector
-    )
+    public static DiscoverySideEffectsProvider withLegacyAnnouncer()
     {
-      this.nodeRole = nodeRole;
-      this.serviceClasses = serviceClasses;
+      return new DiscoverySideEffectsProvider(true);
+    }
+
+    private DiscoverySideEffectsProvider(final boolean useLegacyAnnouncer)
+    {
       this.useLegacyAnnouncer = useLegacyAnnouncer;
-      this.druidNode = druidNode;
-      this.announcer = announcer;
-      this.legacyAnnouncer = legacyAnnouncer;
-      this.lifecycle = lifecycle;
-      this.injector = injector;
     }
 
     @Override
     public Child get()
     {
-      ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
-      for (Class<? extends DruidService> clazz : serviceClasses) {
-        DruidService service = injector.getInstance(clazz);
-        if (service.isDiscoverable()) {
-          builder.put(service.getName(), service);
-        } else {
-          log.info(
-              "Service[%s] is not discoverable. This will not be listed as a service provided by this node.",
-              service.getName()
-          );
+      for (NodeRole nodeRole : nodeRoles) {
+        ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
+        for (Class<? extends DruidService> clazz : serviceClasses.getOrDefault(nodeRole, Collections.emptySet())) {
+          DruidService service = injector.getInstance(clazz);
+          if (service.isDiscoverable()) {
+            builder.put(service.getName(), service);
+          } else {
+            log.info(
+                "Service[%s] is not discoverable. This will not be listed as a service provided by this node.",
+                service.getName()
+            );
+          }
         }
+        DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
+
+        lifecycle.addHandler(
+            new Lifecycle.Handler()
+            {
+              @Override
+              public void start()
+              {
+                announcer.announce(discoveryDruidNode);
+
+                if (useLegacyAnnouncer) {
+                  legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
+                }
+              }
+
+              @Override
+              public void stop()
+              {
+                // Reverse order vs. start().
+
+                if (useLegacyAnnouncer) {
+                  legacyAnnouncer.unannounce(discoveryDruidNode.getDruidNode());
+                }
+
+                announcer.unannounce(discoveryDruidNode);
+              }
+            },
+            Lifecycle.Stage.ANNOUNCEMENTS
+        );
       }
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
-
-      lifecycle.addHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start()
-            {
-              announcer.announce(discoveryDruidNode);
-
-              if (useLegacyAnnouncer) {
-                legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
-              }
-            }
-
-            @Override
-            public void stop()
-            {
-              // Reverse order vs. start().
-
-              if (useLegacyAnnouncer) {
-                legacyAnnouncer.unannounce(discoveryDruidNode.getDruidNode());
-              }
-
-              announcer.unannounce(discoveryDruidNode);
-            }
-          },
-          Lifecycle.Stage.ANNOUNCEMENTS
-      );
       return new Child();
     }
   }

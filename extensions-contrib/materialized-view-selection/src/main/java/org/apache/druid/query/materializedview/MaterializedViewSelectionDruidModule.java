@@ -28,11 +28,13 @@ import com.google.inject.Singleton;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.LoadOn;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.metrics.MetricsModule;
 
 import java.util.List;
 
+@LoadOn(roles = "broker")
 public class MaterializedViewSelectionDruidModule implements DruidModule
 {
   @Override 

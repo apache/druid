@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -44,6 +46,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
+import org.apache.druid.guice.CoordinatorServiceModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -155,11 +158,20 @@ public class CliCoordinator extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return isOverlord(properties)
+           ? ImmutableSet.of(NodeRole.COORDINATOR, NodeRole.OVERLORD)
+           : ImmutableSet.of(NodeRole.COORDINATOR);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     List<Module> modules = new ArrayList<>();
 
     modules.add(JettyHttpClientModule.global());
+    modules.add(new CoordinatorServiceModule());
 
     modules.add(
         new Module()
@@ -298,10 +310,15 @@ public class CliCoordinator extends ServerRunnable
                 KillCompactionConfig.class
             );
 
-            bindNodeRoleAndAnnouncer(
+            bindDruidServiceType(
+                binder,
+                ImmutableMap.of(NodeRole.COORDINATOR, Names.named(CoordinatorServiceModule.COORDINATOR_SERVICE_KEY))
+            );
+
+            bindAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

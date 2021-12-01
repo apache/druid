@@ -21,6 +21,8 @@ package org.apache.druid.cli;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -29,11 +31,10 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.discovery.DataNodeService;
-import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
+import org.apache.druid.guice.HistoricalServiceModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -62,6 +63,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 @Command(
     name = "historical",
@@ -85,6 +87,12 @@ public class CliHistorical extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.HISTORICAL);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
@@ -92,6 +100,7 @@ public class CliHistorical extends ServerRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
+        new HistoricalServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
@@ -121,12 +130,14 @@ public class CliHistorical extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
 
-          bindNodeRoleAndAnnouncer(
+          bindDruidServiceType(
               binder,
-              DiscoverySideEffectsProvider
-                  .builder(NodeRole.HISTORICAL)
-                  .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
-                  .build()
+              ImmutableMap.of(NodeRole.HISTORICAL, Names.named(HistoricalServiceModule.HISTORICAL_SERVICE_KEY))
+          );
+
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider.create()
           );
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);

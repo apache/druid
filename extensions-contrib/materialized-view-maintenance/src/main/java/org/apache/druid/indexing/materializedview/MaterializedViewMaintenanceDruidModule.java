@@ -25,10 +25,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.annotations.LoadOn;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
+@LoadOn(roles = "overlord")
 public class MaterializedViewMaintenanceDruidModule implements DruidModule 
 {
   @Override

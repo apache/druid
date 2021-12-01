@@ -20,6 +20,8 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
@@ -35,6 +37,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
+import org.apache.druid.guice.RouterServiceModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,6 +61,8 @@ import org.apache.druid.server.router.TieredBrokerSelectorStrategy;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  */
@@ -76,6 +81,12 @@ public class CliRouter extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.ROUTER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
@@ -84,6 +95,7 @@ public class CliRouter extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
+        new RouterServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
@@ -113,7 +125,12 @@ public class CliRouter extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           DiscoveryModule.register(binder, Self.class);
 
-          bindNodeRoleAndAnnouncer(binder, DiscoverySideEffectsProvider.builder(NodeRole.ROUTER).build());
+          bindDruidServiceType(
+              binder,
+              ImmutableMap.of(NodeRole.ROUTER, Names.named(RouterServiceModule.ROUTER_SERVICE_KEY))
+          );
+
+          bindAnnouncer(binder, DiscoverySideEffectsProvider.create());
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

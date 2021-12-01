@@ -20,6 +20,8 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -31,10 +33,10 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
-import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.DruidProcessingModule;
+import org.apache.druid.guice.IndexerServiceModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -80,6 +82,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -108,6 +111,12 @@ public class CliIndexer extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.INDEXER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
@@ -115,6 +124,7 @@ public class CliIndexer extends ServerRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
+        new IndexerServiceModule(),
         new Module()
         {
           @Override
@@ -165,14 +175,14 @@ public class CliIndexer extends ServerRunnable
               LifecycleModule.register(binder, ZkCoordinator.class);
             }
 
-            bindNodeRoleAndAnnouncer(
+            bindDruidServiceType(
                 binder,
-                DiscoverySideEffectsProvider
-                    .builder(NodeRole.INDEXER)
-                    .serviceClasses(
-                        ImmutableList.of(LookupNodeService.class, WorkerNodeService.class, DataNodeService.class)
-                    )
-                    .build()
+                ImmutableMap.of(NodeRole.INDEXER, Names.named(IndexerServiceModule.INDEXER_SERVICE_KEY))
+            );
+
+            bindAnnouncer(
+                binder,
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
