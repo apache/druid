@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -169,14 +168,6 @@ public class CliMiddleManager extends ServerRunnable
                   .in(LazySingleton.class);
 
             LifecycleModule.register(binder, Server.class);
-
-            bindDruidServiceType(
-                binder,
-                ImmutableMap.of(
-                    NodeRole.MIDDLE_MANAGER,
-                    Names.named(MiddleManagerServiceModule.MIDDLE_MANAGER_SERVICE_KEY)
-                )
-            );
 
             bindAnnouncer(
                 binder,

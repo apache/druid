@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -174,11 +173,6 @@ public class CliIndexer extends ServerRunnable
             if (isZkEnabled) {
               LifecycleModule.register(binder, ZkCoordinator.class);
             }
-
-            bindDruidServiceType(
-                binder,
-                ImmutableMap.of(NodeRole.INDEXER, Names.named(IndexerServiceModule.INDEXER_SERVICE_KEY))
-            );
 
             bindAnnouncer(
                 binder,

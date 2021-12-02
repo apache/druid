@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -162,11 +161,6 @@ public class CliBroker extends ServerRunnable
           if (isZkEnabled) {
             LifecycleModule.register(binder, ZkCoordinator.class);
           }
-
-          bindDruidServiceType(
-              binder,
-              ImmutableMap.of(NodeRole.BROKER, Names.named(BrokerServiceModule.BROKER_SERVICE_KEY))
-          );
 
           bindAnnouncer(
               binder,

@@ -24,22 +24,27 @@ import com.google.inject.name.Named;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 
 public class BrokerServiceModule extends AbstractDruidServiceModule
 {
-  public static final String BROKER_SERVICE_KEY = "brokerService";
-
   @ProvidesIntoSet
-  @Named(BROKER_SERVICE_KEY)
+  @Named(NodeRole.BROKER_JSON_NAME)
   public Class<? extends DruidService> getDataNodeService()
   {
     return DataNodeService.class;
   }
 
   @ProvidesIntoSet
-  @Named(BROKER_SERVICE_KEY)
+  @Named(NodeRole.BROKER_JSON_NAME)
   public Class<? extends DruidService> getLookupNodeService()
   {
     return LookupNodeService.class;
+  }
+
+  @Override
+  protected NodeRole getNodeRoleKey()
+  {
+    return NodeRole.BROKER;
   }
 }

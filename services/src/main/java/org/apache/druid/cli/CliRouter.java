@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -37,7 +36,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
-import org.apache.druid.guice.RouterServiceModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -95,7 +93,6 @@ public class CliRouter extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
-        new RouterServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
@@ -124,11 +121,6 @@ public class CliRouter extends ServerRunnable
           LifecycleModule.register(binder, RouterResource.class);
           LifecycleModule.register(binder, Server.class);
           DiscoveryModule.register(binder, Self.class);
-
-          bindDruidServiceType(
-              binder,
-              ImmutableMap.of(NodeRole.ROUTER, Names.named(RouterServiceModule.ROUTER_SERVICE_KEY))
-          );
 
           bindAnnouncer(binder, DiscoverySideEffectsProvider.create());
 

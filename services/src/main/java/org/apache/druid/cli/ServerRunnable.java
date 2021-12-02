@@ -25,9 +25,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
-import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Named;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -74,23 +71,6 @@ public abstract class ServerRunnable extends GuiceRunnable
   }
 
   protected abstract Set<NodeRole> getNodeRoles(Properties properties);
-
-  public static void bindDruidServiceType(
-      final Binder binder,
-      final Map<NodeRole, Named> serviceTypes
-  )
-  {
-    MapBinder<NodeRole, Set<Class<? extends DruidService>>> serviceBinder = MapBinder.newMapBinder(
-        binder,
-        new TypeLiteral<NodeRole>(){},
-        new TypeLiteral<Set<Class<? extends DruidService>>>(){}
-    );
-    serviceTypes.forEach(
-        (role, serviceType) -> serviceBinder
-            .addBinding(role)
-            .to(Key.get(new TypeLiteral<Set<Class<? extends DruidService>>>(){}, serviceType))
-    );
-  }
 
   public static void bindAnnouncer(
       final Binder binder,

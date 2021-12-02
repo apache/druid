@@ -24,22 +24,27 @@ import com.google.inject.name.Named;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 
 public class HistoricalServiceModule extends AbstractDruidServiceModule
 {
-  public static final String HISTORICAL_SERVICE_KEY = "historicalService";
-
   @ProvidesIntoSet
-  @Named(HISTORICAL_SERVICE_KEY)
+  @Named(NodeRole.HISTORICAL_JSON_NAME)
   public Class<? extends DruidService> getDataNodeService()
   {
     return DataNodeService.class;
   }
 
   @ProvidesIntoSet
-  @Named(HISTORICAL_SERVICE_KEY)
+  @Named(NodeRole.HISTORICAL_JSON_NAME)
   public Class<? extends DruidService> getLookupNodeService()
   {
     return LookupNodeService.class;
+  }
+
+  @Override
+  protected NodeRole getNodeRoleKey()
+  {
+    return NodeRole.HISTORICAL;
   }
 }

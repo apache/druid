@@ -27,7 +27,10 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
@@ -110,6 +113,12 @@ public abstract class GuiceRunnable implements Runnable
       return binder -> {
         Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
         nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
+
+        MapBinder.newMapBinder(
+            binder,
+            new TypeLiteral<NodeRole>(){},
+            new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+        );
       };
     }
   }

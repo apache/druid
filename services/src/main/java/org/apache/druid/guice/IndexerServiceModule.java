@@ -24,30 +24,35 @@ import com.google.inject.name.Named;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 
 public class IndexerServiceModule extends AbstractDruidServiceModule
 {
-  public static final String INDEXER_SERVICE_KEY = "indexerService";
-
   @ProvidesIntoSet
-  @Named(INDEXER_SERVICE_KEY)
+  @Named(NodeRole.INDEXER_JSON_NAME)
   public Class<? extends DruidService> getDataNodeService()
   {
     return DataNodeService.class;
   }
 
   @ProvidesIntoSet
-  @Named(INDEXER_SERVICE_KEY)
+  @Named(NodeRole.INDEXER_JSON_NAME)
   public Class<? extends DruidService> getWorkerNodeService()
   {
     return WorkerNodeService.class;
   }
 
   @ProvidesIntoSet
-  @Named(INDEXER_SERVICE_KEY)
+  @Named(NodeRole.INDEXER_JSON_NAME)
   public Class<? extends DruidService> getLookupNodeService()
   {
     return LookupNodeService.class;
+  }
+
+  @Override
+  protected NodeRole getNodeRoleKey()
+  {
+    return NodeRole.INDEXER;
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -129,11 +128,6 @@ public class CliHistorical extends ServerRunnable
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());
-
-          bindDruidServiceType(
-              binder,
-              ImmutableMap.of(NodeRole.HISTORICAL, Names.named(HistoricalServiceModule.HISTORICAL_SERVICE_KEY))
-          );
 
           bindAnnouncer(
               binder,

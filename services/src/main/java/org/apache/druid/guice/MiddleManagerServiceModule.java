@@ -22,16 +22,21 @@ package org.apache.druid.guice;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.google.inject.name.Named;
 import org.apache.druid.discovery.DruidService;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 
 public class MiddleManagerServiceModule extends AbstractDruidServiceModule
 {
-  public static final String MIDDLE_MANAGER_SERVICE_KEY = "middleManagerService";
-
   @ProvidesIntoSet
-  @Named(MIDDLE_MANAGER_SERVICE_KEY)
+  @Named(NodeRole.MIDDLE_MANAGER_JSON_NAME)
   public Class<? extends DruidService> getWorkerNodeService()
   {
     return WorkerNodeService.class;
+  }
+
+  @Override
+  protected NodeRole getNodeRoleKey()
+  {
+    return NodeRole.MIDDLE_MANAGER;
   }
 }

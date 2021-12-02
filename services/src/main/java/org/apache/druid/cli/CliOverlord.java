@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -53,7 +52,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.OverlordServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -171,7 +169,6 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
-        new OverlordServiceModule(),
         new Module()
         {
           @Override
@@ -266,11 +263,6 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
             }
-
-            bindDruidServiceType(
-                binder,
-                ImmutableMap.of(NodeRole.OVERLORD, Names.named(OverlordServiceModule.OVERLORD_SERVICE_KEY))
-            );
 
             bindAnnouncer(
                 binder,

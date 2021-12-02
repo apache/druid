@@ -20,13 +20,20 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.MultibindingsScanner;
+import org.apache.druid.discovery.DruidService;
+import org.apache.druid.discovery.NodeRole;
+
+import java.util.Set;
 
 /**
- * An abstract module for dynamic registration of {@link org.apache.druid.discovery.DruidService}.
- * DruidServices are bound to a set which is mapped to a certain {@link org.apache.druid.discovery.NodeRole}.
- * See {@link org.apache.druid.cli.ServerRunnable#bindDruidServiceType} for how the map is bound.
+ * An abstract module for dynamic registration of {@link DruidService}.
+ * DruidServices are bound to a set which is mapped to a certain {@link NodeRole}.
+ * See {@link org.apache.druid.cli.GuiceRunnable#registerNodeRoleModule} for how the map is bound.
  *
  * To register a DruidService, create a class something like below:
  *
@@ -46,9 +53,25 @@ import com.google.inject.multibindings.MultibindingsScanner;
  */
 public abstract class AbstractDruidServiceModule implements Module
 {
+  protected abstract NodeRole getNodeRoleKey();
+
   @Override
   public void configure(Binder binder)
   {
+    configure(binder, getNodeRoleKey());
+  }
+
+  public static void configure(Binder binder, NodeRole role)
+  {
     binder.install(MultibindingsScanner.asModule());
+    MapBinder<NodeRole, Set<Class<? extends DruidService>>> serviceBinder = MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<NodeRole>(){},
+        new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+    );
+    serviceBinder
+        .addBinding(role)
+        .to(Key.get(new TypeLiteral<Set<Class<? extends DruidService>>>(){}, role.getDruidServiceInjectName()));
+
   }
 }
