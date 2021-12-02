@@ -41,7 +41,7 @@ import java.util.Set;
  *   public class MyModule extends AbstractDruidServiceModule
  *   {
  *     @ProvidesIntoSet
- *     @Named("myNodeTypeKey")
+ *     @Named("jsonNameOfNodeRole")
  *     public Class<? extends DruidService> getDataNodeService()
  *     {
  *       return DataNodeService.class;
@@ -50,6 +50,7 @@ import java.util.Set;
  * </pre>
  *
  * and add it in {@link org.apache.druid.cli.ServerRunnable#getModules}.
+ * The key of Named annotation should be the {@link NodeRole#jsonName}.
  */
 public abstract class AbstractDruidServiceModule implements Module
 {
@@ -72,6 +73,5 @@ public abstract class AbstractDruidServiceModule implements Module
     serviceBinder
         .addBinding(role)
         .to(Key.get(new TypeLiteral<Set<Class<? extends DruidService>>>(){}, role.getDruidServiceInjectName()));
-
   }
 }

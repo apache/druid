@@ -52,7 +52,7 @@ import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.LoadOn;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
@@ -509,15 +509,15 @@ public class Initialization
 
     private boolean shouldLoadOnCurrentNodeType(Object object)
     {
-      LoadOn loadOn = object.getClass().getAnnotation(LoadOn.class);
-      if (loadOn != null) {
-        Set<NodeRole> rolesPredicate = Arrays.stream(loadOn.roles())
-                                             .map(NodeRole::fromJsonName)
-                                             .collect(Collectors.toSet());
-        return rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      LoadScope loadScope = object.getClass().getAnnotation(LoadScope.class);
+      if (loadScope == null) {
+        // always load if annotation is not specified
+        return true;
       }
-      // always load if annotation is not specified
-      return true;
+      Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
+                                           .map(NodeRole::fromJsonName)
+                                           .collect(Collectors.toSet());
+      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)

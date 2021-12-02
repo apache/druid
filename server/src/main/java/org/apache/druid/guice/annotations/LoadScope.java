@@ -27,12 +27,12 @@ import java.lang.annotation.Target;
 /**
  * An annotation to specify node types that each {@link com.google.inject.Module} can be loaded on.
  * In other words, you can specify particular node types for each module using this annotation,
- * so that those modeuls can be loaded on only those particular node types.
+ * so that those modules can be loaded on only those particular node types.
  * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}.
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface LoadOn
+public @interface LoadScope
 {
   String[] roles();
 }

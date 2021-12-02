@@ -37,7 +37,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.annotations.LoadOn;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
@@ -536,7 +536,7 @@ public class InitializationTest
     Assert.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
   }
 
-  @LoadOn(roles = {"emperor", "druid"})
+  @LoadScope(roles = {"emperor", "druid"})
   private static class LoadOnAnnotationTestModule implements com.google.inject.Module
   {
     @Override
