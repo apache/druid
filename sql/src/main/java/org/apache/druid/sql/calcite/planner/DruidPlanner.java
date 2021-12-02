@@ -445,6 +445,7 @@ public class DruidPlanner implements Closeable
       throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
     }
     catch (Exception e) {
+      log.error(e, "Unknown exception encountered while converting to native queries for explanation.");
       throw new ISE("Unable to convert the RelNode structure to DruidQuery for explaining");
     }
 
