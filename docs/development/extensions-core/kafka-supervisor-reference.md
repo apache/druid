@@ -166,7 +166,9 @@ Supported `inputFormat`s include:
 - `json`
 - `kafka`
 - `avro_stream`
+- `avro_ocf`
 - `protobuf`
+
 
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
