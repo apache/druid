@@ -393,7 +393,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                   },
             headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
-            Cell: function QueryOutputTableCell(row) {
+            Cell(row) {
               const value = row.value;
               return (
                 <div>
