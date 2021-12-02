@@ -6878,7 +6878,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testtest() throws Exception
+  public void testExplainMultipleTopLevelUnionAllQueries() throws Exception
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
