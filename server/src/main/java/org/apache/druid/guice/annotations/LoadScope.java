@@ -29,6 +29,8 @@ import java.lang.annotation.Target;
  * In other words, you can specify particular node types for each module using this annotation,
  * so that those modules can be loaded on only those particular node types.
  * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}.
+ *
+ * A module is loaded in every node if this annotation is missing.
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

@@ -62,6 +62,9 @@ public abstract class AbstractDruidServiceModule implements Module
     configure(binder, getNodeRoleKey());
   }
 
+  /**
+   * A helper method for extensions which do not implement Module directly. 
+   */
   public static void configure(Binder binder, NodeRole role)
   {
     binder.install(MultibindingsScanner.asModule());
