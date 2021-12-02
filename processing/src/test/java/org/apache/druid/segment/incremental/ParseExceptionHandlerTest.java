@@ -42,7 +42,7 @@ public class ParseExceptionHandlerTest
   @Test
   public void testMetricWhenAllConfigurationsAreTurnedOff()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
@@ -60,7 +60,7 @@ public class ParseExceptionHandlerTest
   @Test
   public void testLogParseExceptions()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
@@ -91,7 +91,7 @@ public class ParseExceptionHandlerTest
   @Test
   public void testMaxAllowedParseExceptionsThrowExceptionWhenItHitsMax()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final int maxAllowedParseExceptions = 3;
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -129,7 +129,7 @@ public class ParseExceptionHandlerTest
     Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptions());
     int exceptionCounter = 0;
     for (; exceptionCounter < maxSavedParseExceptions; exceptionCounter++) {
-      parseExceptionHandler.handle(new ParseException(StringUtils.format("test %d", exceptionCounter)));
+      parseExceptionHandler.handle(new ParseException(null, StringUtils.format("test %d", exceptionCounter)));
     }
     Assert.assertEquals(3, rowIngestionMeters.getUnparseable());
     Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptions().size());
@@ -140,7 +140,7 @@ public class ParseExceptionHandlerTest
       );
     }
     for (; exceptionCounter < 5; exceptionCounter++) {
-      parseExceptionHandler.handle(new ParseException(StringUtils.format("test %d", exceptionCounter)));
+      parseExceptionHandler.handle(new ParseException(null, StringUtils.format("test %d", exceptionCounter)));
     }
     Assert.assertEquals(5, rowIngestionMeters.getUnparseable());
 

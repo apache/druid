@@ -21,6 +21,8 @@ package org.apache.druid.java.util.common.parsers;
 
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
+
 /**
  * ParseException can be thrown on both ingestion side and query side.
  *
@@ -39,24 +41,27 @@ public class ParseException extends RuntimeException
 {
   private final boolean fromPartiallyValidRow;
   private final long timeOfExceptionMillis;
+  private final String input;
 
-  public ParseException(String formatText, Object... arguments)
+  public ParseException(@Nullable String input, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
     this.fromPartiallyValidRow = false;
     this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
-  public ParseException(boolean fromPartiallyValidRow, String formatText, Object... arguments)
+  public ParseException(@Nullable String input, boolean fromPartiallyValidRow, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.input = input;
     this.fromPartiallyValidRow = fromPartiallyValidRow;
     this.timeOfExceptionMillis = System.currentTimeMillis();
   }
 
-  public ParseException(Throwable cause, String formatText, Object... arguments)
+  public ParseException(@Nullable String input, Throwable cause, String formatText, Object... arguments)
   {
-    this(false, StringUtils.nonStrictFormat(formatText, arguments), cause);
+    this(input, false, StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 
   public boolean isFromPartiallyValidRow()
@@ -67,5 +72,11 @@ public class ParseException extends RuntimeException
   public long getTimeOfExceptionMillis()
   {
     return timeOfExceptionMillis;
+  }
+
+  @Nullable
+  public String getInput()
+  {
+    return input;
   }
 }

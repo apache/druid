@@ -649,9 +649,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       log.error(pe, "Encountered parse exception");
     }
 
-    if (parseExceptionHandler.getSavedParseExceptions() != null) {
-      parseExceptionHandler.getSavedParseExceptions().add(pe);
-    }
+    parseExceptionHandler.handle(pe);
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > spec.getTuningConfig().getMaxParseExceptions()) {

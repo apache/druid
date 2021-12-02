@@ -99,6 +99,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     }
     catch (Exception e) {
       throw new ParseException(
+          rawMapToPrint(theMap),
           e,
           "Timestamp[%s] is unparseable! Event: %s",
           timestampSpec.getRawTimestamp(theMap),
@@ -107,6 +108,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     }
     if (timestamp == null) {
       throw new ParseException(
+          rawMapToPrint(theMap),
           "Timestamp[%s] is unparseable! Event: %s",
           timestampSpec.getRawTimestamp(theMap),
           rawMapToPrint(theMap)
@@ -114,6 +116,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     }
     if (!Intervals.ETERNITY.contains(timestamp)) {
       throw new ParseException(
+          rawMapToPrint(theMap),
           "Encountered row with timestamp[%s] that cannot be represented as a long: [%s]",
           timestamp,
           rawMapToPrint(theMap)

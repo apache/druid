@@ -19,25 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Test;
-
-public class IncrementalIndexAddResultTest
+public class ParseExceptionReport
 {
-  @Test
-  public void testIsRowAdded()
-  {
-    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L).isRowAdded());
-    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").isRowAdded());
-    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, new ParseException(null, "test")).isRowAdded());
-  }
 
-  @Test
-  public void testHasParseException()
-  {
-    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L).hasParseException());
-    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").hasParseException());
-    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L, new ParseException(null, "test")).hasParseException());
-  }
 }
