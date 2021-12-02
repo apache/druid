@@ -154,6 +154,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
 |round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
+|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns 0 or `null` if `druid.generic.useDefaultValueForNull=false` |
 |scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) returns the signum function of the argument x|
 |sin|sin(x) returns the trigonometric sine of an angle x|

@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark.compression;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.ColumnValueGenerator;
@@ -29,6 +30,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 @State(Scope.Benchmark)
@@ -385,11 +387,11 @@ public class BaseColumnarLongsFromGeneratorBenchmark extends BaseColumnarLongsBe
     return StringUtils.format("%s-%s-%s-%s.bin", encoding, distribution, rows, nullProbability);
   }
 
-  static File getTmpDir()
+  static File getTmpDir() throws IOException
   {
     final String dirPath = "tmp/encoding/longs/";
     File dir = new File(dirPath);
-    dir.mkdirs();
+    FileUtils.mkdirp(dir);
     return dir;
   }
 }

@@ -1094,7 +1094,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'recordsPerFetch',
           type: 'number',
-          defaultValue: 2000,
+          defaultValue: 4000,
           defined: typeIs('kinesis'),
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
@@ -1114,7 +1114,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'fetchDelayMillis',
           type: 'number',
-          defaultValue: 1000,
+          defaultValue: 0,
           defined: typeIs('kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },

@@ -19,13 +19,28 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Strings;
+import org.apache.druid.common.exception.SanitizableException;
+
+import java.util.function.Function;
+
 /**
  */
-public class UOE extends UnsupportedOperationException
+public class UOE extends UnsupportedOperationException implements SanitizableException
 {
   public UOE(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
+  @Override
+  public Exception sanitize(Function<String, String> errorMessageTransformFunction)
+  {
+    String transformedErrorMessage = errorMessageTransformFunction.apply(getMessage());
+    if (Strings.isNullOrEmpty(transformedErrorMessage)) {
+      return new UOE("");
+    } else {
+      return new UOE(transformedErrorMessage);
+    }
+  }
 }

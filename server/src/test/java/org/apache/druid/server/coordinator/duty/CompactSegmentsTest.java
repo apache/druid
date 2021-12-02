@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -30,14 +31,18 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -58,6 +63,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -66,9 +73,11 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -387,12 +396,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, ImmutableMap.of(), ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, ImmutableMap.of(), ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -671,6 +680,8 @@ public class CompactSegmentsTest
             ),
             null,
             null,
+            null,
+            null,
             null
         )
     );
@@ -684,6 +695,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
@@ -726,6 +739,8 @@ public class CompactSegmentsTest
                 null
             ),
             null,
+            null,
+            null,
             new UserCompactionTaskIOConfig(true),
             null
         )
@@ -736,6 +751,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         dropExistingCapture.capture(),
@@ -779,6 +796,8 @@ public class CompactSegmentsTest
             ),
             null,
             null,
+            null,
+            null,
             null
         )
     );
@@ -788,6 +807,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         dropExistingCapture.capture(),
@@ -831,6 +852,8 @@ public class CompactSegmentsTest
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
             null,
+            null,
+            null,
             null
         )
     );
@@ -845,6 +868,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
         ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
@@ -854,6 +879,123 @@ public class CompactSegmentsTest
     Assert.assertNotNull(actual);
     ClientCompactionTaskGranularitySpec expected = new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testCompactWithDimensionSpec()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskDimensionsSpec> dimensionsSpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskDimensionsSpec.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        dimensionsSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    ClientCompactionTaskDimensionsSpec actual = dimensionsSpecArgumentCaptor.getValue();
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), actual.getDimensions());
+  }
+
+  @Test
+  public void testCompactWithoutDimensionSpec()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskDimensionsSpec> dimensionsSpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskDimensionsSpec.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        dimensionsSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    ClientCompactionTaskDimensionsSpec actual = dimensionsSpecArgumentCaptor.getValue();
+    Assert.assertNull(actual);
   }
 
   @Test
@@ -891,6 +1033,8 @@ public class CompactSegmentsTest
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, true),
             null,
+            null,
+            null,
             null
         )
     );
@@ -904,6 +1048,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
@@ -947,6 +1093,8 @@ public class CompactSegmentsTest
             ),
             null,
             new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
+            null,
+            null,
             null
         )
     );
@@ -983,6 +1131,8 @@ public class CompactSegmentsTest
             ),
             new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
             null,
+            null,
+            null,
             null
         )
     );
@@ -1001,6 +1151,8 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
@@ -1064,6 +1216,124 @@ public class CompactSegmentsTest
         Intervals.of("2017-01-01T00:00:00/2017-01-01T12:00:00"),
         compactionTask.getIoConfig().getInputSpec().getInterval()
     );
+  }
+
+  @Test
+  public void testCompactWithTransformSpec()
+  {
+    NullHandling.initializeForTests();
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskTransformSpec> transformSpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskTransformSpec.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        transformSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    ClientCompactionTaskTransformSpec actual = transformSpecArgumentCaptor.getValue();
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(new SelectorDimFilter("dim1", "foo", null), actual.getFilter());
+  }
+
+  @Test
+  public void testCompactWithoutTransformSpec()
+  {
+    final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    compactionConfigs.add(
+        new DataSourceCompactionConfig(
+            dataSource,
+            0,
+            500L,
+            null,
+            new Period("PT0H"), // smaller than segment interval
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                partitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                3,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ),
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    doCompactSegments(compactSegments, compactionConfigs);
+    ArgumentCaptor<ClientCompactionTaskTransformSpec> transformSpecArgumentCaptor = ArgumentCaptor.forClass(
+        ClientCompactionTaskTransformSpec.class);
+    Mockito.verify(mockIndexingServiceClient).compactSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        transformSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    ClientCompactionTaskTransformSpec actual = transformSpecArgumentCaptor.getValue();
+    Assert.assertNull(actual);
   }
 
   @Test
@@ -1400,6 +1670,8 @@ public class CompactSegmentsTest
               ),
               null,
               null,
+              null,
+              null,
               null
           )
       );
@@ -1502,7 +1774,7 @@ public class CompactSegmentsTest
       compactSegments(
           timeline,
           segments,
-          compactionTaskQuery.getTuningConfig()
+          compactionTaskQuery
       );
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
     }
@@ -1515,7 +1787,7 @@ public class CompactSegmentsTest
     private void compactSegments(
         VersionedIntervalTimeline<String, DataSegment> timeline,
         List<DataSegment> segments,
-        ClientCompactionTaskQueryTuningConfig tuningConfig
+        ClientCompactionTaskQuery clientCompactionTaskQuery
     )
     {
       Preconditions.checkArgument(segments.size() > 1);
@@ -1539,13 +1811,29 @@ public class CompactSegmentsTest
       final String version = "newVersion_" + compactVersionSuffix++;
       final long segmentSize = segments.stream().mapToLong(DataSegment::getSize).sum() / 2;
       final PartitionsSpec compactionPartitionsSpec;
-      if (tuningConfig.getPartitionsSpec() instanceof DynamicPartitionsSpec) {
+      if (clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec() instanceof DynamicPartitionsSpec) {
         compactionPartitionsSpec = new DynamicPartitionsSpec(
-            tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
-            ((DynamicPartitionsSpec) tuningConfig.getPartitionsSpec()).getMaxTotalRowsOr(Long.MAX_VALUE)
+            clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment(),
+            ((DynamicPartitionsSpec) clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec()).getMaxTotalRowsOr(Long.MAX_VALUE)
         );
       } else {
-        compactionPartitionsSpec = tuningConfig.getPartitionsSpec();
+        compactionPartitionsSpec = clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec();
+      }
+
+      Map<String, Object> transformSpec = null;
+      try {
+        if (clientCompactionTaskQuery.getTransformSpec() != null) {
+          transformSpec = jsonMapper.readValue(
+              jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
+                                                                                       .getFilter(), null)),
+              new TypeReference<Map<String, Object>>()
+              {
+              }
+          );
+        }
+      }
+      catch (JsonProcessingException e) {
+        throw new IAE("Invalid Json payload");
       }
 
       for (int i = 0; i < 2; i++) {
@@ -1559,6 +1847,12 @@ public class CompactSegmentsTest
             shardSpecFactory.apply(i, 2),
             new CompactionState(
                 compactionPartitionsSpec,
+                clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
+                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions(),
+                    null,
+                    null
+                ),
+                transformSpec,
                 ImmutableMap.of(
                     "bitmap",
                     ImmutableMap.of("type", "roaring", "compressRunOnSerialization", true),

@@ -30,8 +30,8 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
@@ -334,7 +334,7 @@ public class MultiValueStringOperatorConversions
       if (!expr.isLiteral()) {
         return null;
       }
-      String[] lit = expr.eval(ExprUtils.nilBindings()).asStringArray();
+      String[] lit = expr.eval(InputBindings.nilBindings()).asStringArray();
       if (lit == null || lit.length == 0) {
         return null;
       }

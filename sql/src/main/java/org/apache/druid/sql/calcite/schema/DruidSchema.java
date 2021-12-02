@@ -791,7 +791,7 @@ public class DruidSchema extends AbstractSchema
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DruidTable(tableDataSource, builder.build(), null, isJoinable, isBroadcast);
   }
 
   @VisibleForTesting
@@ -884,15 +884,9 @@ public class DruidSchema extends AbstractSchema
         continue;
       }
 
-      ColumnType valueType = null;
-      try {
-        valueType = ColumnType.fromString(entry.getValue().getType());
-      }
-      catch (IllegalArgumentException ignored) {
-      }
+      ColumnType valueType = entry.getValue().getTypeSignature();
 
-      // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly
-      // what kind of complex column it is, which we may want to preserve some day.
+      // this shouldn't happen, but if it does assume types are some flavor of COMPLEX.
       if (valueType == null) {
         valueType = ColumnType.UNKNOWN_COMPLEX;
       }

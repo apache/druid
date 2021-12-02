@@ -392,7 +392,7 @@ public class TestHelper
           Assert.assertEquals(
               message,
               (Object[]) expectedValue,
-              (Object[]) ExprEval.coerceListToArray((List) actualValue, true)
+              (Object[]) ExprEval.coerceListToArray((List) actualValue, true).rhs
           );
         } else {
           Assert.assertArrayEquals(

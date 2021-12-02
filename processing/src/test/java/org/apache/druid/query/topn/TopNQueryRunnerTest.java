@@ -290,7 +290,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index"),
-                        new DoubleFirstAggregatorFactory("first", "index")
+                        new DoubleFirstAggregatorFactory("first", "index", null)
                     )
                 )
             )
@@ -826,8 +826,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .build();
 
@@ -935,8 +935,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new FloatFirstAggregatorFactory("first", "index"),
-            new FloatLastAggregatorFactory("last", "index")
+            new FloatFirstAggregatorFactory("first", "index", null),
+            new FloatLastAggregatorFactory("last", "index", null)
         )
         .build();
 
@@ -1044,8 +1044,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new FloatFirstAggregatorFactory("first", "indexFloat"),
-            new FloatLastAggregatorFactory("last", "indexFloat")
+            new FloatFirstAggregatorFactory("first", "indexFloat", null),
+            new FloatLastAggregatorFactory("last", "indexFloat", null)
         )
         .build();
 
@@ -6068,6 +6068,71 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("diy_decomposed_sum", 192046.1060180664D)
                         .put("array_agg_distinct", new String[]{"mezzanine", "premium"})
                         .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testExpressionAggregatorComplex()
+  {
+
+    // sorted by array hyperunique expression
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric("carExpr")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(
+            ImmutableList.of(
+                new CardinalityAggregatorFactory(
+                    "car",
+                    ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
+                    false
+                ),
+                new ExpressionLambdaAggregatorFactory(
+                    "carExpr",
+                    ImmutableSet.of("quality"),
+                    null,
+                    "hyper_unique()",
+                    null,
+                    null,
+                    "hyper_unique_add(quality, __acc)",
+                    "hyper_unique_add(carExpr, __acc)",
+                    null,
+                    "hyper_unique_estimate(o)",
+                    null,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        )
+        .build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
+                                .put("car", 9.019833517963864)
+                                .put("carExpr", 9.019833517963864)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
+                                .put("car", 2.000977198748901)
+                                .put("carExpr", 2.000977198748901)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
+                                .put("car", 2.000977198748901)
+                                .put("carExpr", 2.000977198748901)
+                                .build()
                 )
             )
         )

@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -128,4 +129,15 @@ public interface InputEntity
   {
     return Predicates.alwaysFalse();
   }
+
+  /**
+   * Returns a reset condition that the caller should retry on.
+   * The returned condition should be used when reading data from this InputEntity such as in {@link #fetch}
+   * or {@link RetryingInputEntity}.
+   */
+  default Predicate<Throwable> getResetCondition()
+  {
+    return RetryingInputStream.DEFAULT_RESET_CONDITION;
+  }
+
 }

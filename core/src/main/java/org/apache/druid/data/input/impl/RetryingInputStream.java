@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingInputStream;
 import org.apache.druid.data.input.impl.prefetch.Fetcher;
@@ -27,6 +28,7 @@ import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketException;
@@ -39,31 +41,49 @@ import java.net.SocketException;
  */
 public class RetryingInputStream<T> extends InputStream
 {
+
+  public static final Predicate<Throwable> DEFAULT_RETRY_CONDITION = Predicates.alwaysFalse();
+  public static final Predicate<Throwable> DEFAULT_RESET_CONDITION = RetryingInputStream::isConnectionReset;
+
   private static final Logger log = new Logger(RetryingInputStream.class);
 
   private final T object;
   private final ObjectOpenFunction<T> objectOpenFunction;
   private final Predicate<Throwable> retryCondition;
+  private final Predicate<Throwable> resetCondition;
   private final int maxRetry;
 
   private CountingInputStream delegate;
   private long startOffset;
 
+  /**
+   *
+   * @param object The object entity to open
+   * @param objectOpenFunction How to open the object
+   * @param retryCondition A predicate on a throwable to indicate if stream should retry. This defaults to
+   *                       {@link IOException}, not retryable, when null is passed
+   * @param resetCondition A predicate on a throwable to indicate if stream should reset. This defaults to
+   *                       a generic reset test, see {@link #isConnectionReset(Throwable)} when null is passed
+   * @param maxRetry      The maximum times to retry. Defaults to {@link RetryUtils#DEFAULT_MAX_TRIES} when null
+   * @throws IOException
+   */
   public RetryingInputStream(
       T object,
       ObjectOpenFunction<T> objectOpenFunction,
-      Predicate<Throwable> retryCondition,
-      int maxRetry
+      @Nullable Predicate<Throwable> retryCondition,
+      @Nullable Predicate<Throwable> resetCondition,
+      @Nullable Integer maxRetry
   ) throws IOException
   {
     this.object = object;
     this.objectOpenFunction = objectOpenFunction;
-    this.retryCondition = retryCondition;
-    this.maxRetry = maxRetry;
+    this.retryCondition = retryCondition == null ? DEFAULT_RETRY_CONDITION : retryCondition;
+    this.resetCondition = resetCondition == null ? DEFAULT_RESET_CONDITION : resetCondition;
+    this.maxRetry = maxRetry == null ? RetryUtils.DEFAULT_MAX_TRIES : maxRetry;
     this.delegate = new CountingInputStream(objectOpenFunction.open(object));
   }
 
-  private boolean isConnectionReset(Throwable t)
+  private static boolean isConnectionReset(Throwable t)
   {
     return (t instanceof SocketException && (t.getMessage() != null && t.getMessage().contains("Connection reset"))) ||
            (t.getCause() != null && isConnectionReset(t.getCause()));
@@ -71,7 +91,7 @@ public class RetryingInputStream<T> extends InputStream
 
   private void waitOrThrow(Throwable t, int nTry) throws IOException
   {
-    final boolean isConnectionReset = isConnectionReset(t);
+    final boolean isConnectionReset = resetCondition.apply(t);
     if (isConnectionReset || retryCondition.apply(t)) {
       if (isConnectionReset) {
         // Re-open the input stream on connection reset

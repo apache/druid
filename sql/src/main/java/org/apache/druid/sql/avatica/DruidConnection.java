@@ -63,7 +63,11 @@ public class DruidConnection
   @GuardedBy("connectionLock")
   private boolean open = true;
 
-  public DruidConnection(final String connectionId, final int maxStatements, final Map<String, Object> context)
+  public DruidConnection(
+      final String connectionId,
+      final int maxStatements,
+      final Map<String, Object> context
+  )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId);
     this.maxStatements = maxStatements;

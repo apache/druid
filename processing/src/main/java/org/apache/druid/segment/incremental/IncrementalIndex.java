@@ -109,6 +109,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @return column selector factory
    */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
+      final Supplier<RowSignature> rowSignatureSupplier,
       final VirtualColumns virtualColumns,
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
@@ -118,7 +119,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         in::get,
-        RowSignature.empty(),
+        rowSignatureSupplier::get,
         true
     );
 
@@ -127,7 +128,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final boolean isComplexMetric = agg.getType().is(ValueType.COMPLEX);
+        final boolean isComplexMetric = agg.getIntermediateType().is(ValueType.COMPLEX);
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -137,7 +138,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-          final String complexTypeName = agg.getType().getComplexTypeName();
+          final String complexTypeName = agg.getIntermediateType().getComplexTypeName();
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", complexTypeName);
@@ -264,6 +265,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.deserializeComplexMetrics = deserializeComplexMetrics;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
+    this.metricDescs = Maps.newLinkedHashMap();
+    this.dimensionDescs = Maps.newLinkedHashMap();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -274,7 +277,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
     initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
-    this.metricDescs = Maps.newLinkedHashMap();
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
@@ -282,7 +284,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     }
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
-    this.dimensionDescs = Maps.newLinkedHashMap();
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
@@ -938,7 +939,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       this.index = index;
       this.name = factory.getName();
 
-      ColumnType valueType = factory.getType();
+      ColumnType valueType = factory.getIntermediateType();
 
       if (valueType.isNumeric()) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
@@ -986,7 +987,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       final boolean deserializeComplexMetrics
   )
   {
-    return makeColumnSelectorFactory(virtualColumns, agg, in, deserializeComplexMetrics);
+    Supplier<RowSignature> signatureSupplier = () -> {
+      Map<String, ColumnCapabilities> capabilitiesMap = getColumnCapabilities();
+      RowSignature.Builder bob = RowSignature.builder();
+      for (Map.Entry<String, ColumnCapabilities> capabilitiesEntry : capabilitiesMap.entrySet()) {
+        bob.add(capabilitiesEntry.getKey(), capabilitiesEntry.getValue().toColumnType());
+      }
+      return bob.build();
+    };
+    return makeColumnSelectorFactory(signatureSupplier, virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()

@@ -28,6 +28,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -198,6 +200,43 @@ public class HttpIndexingServiceClientTest
   }
 
   @Test
+  public void testGetTaskReportStatusNotFound() throws Exception
+  {
+    String taskId = "testTaskId";
+    HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    String errorMsg = "No task reports were found for this task. "
+                      + "The task may not exist, or it may not have completed yet.";
+    ChannelBuffer buf = ChannelBuffers.buffer(errorMsg.length());
+    buf.writeBytes(errorMsg.getBytes(StandardCharsets.UTF_8));
+
+    EasyMock.expect(response.getContent()).andReturn(buf);
+    EasyMock.replay(response);
+
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        HttpResponseStatus.NOT_FOUND,
+        response,
+        StandardCharsets.UTF_8
+    ).addChunk("");
+
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(responseHolder)
+            .anyTimes();
+
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/task/testTaskId/reports")
+            ))
+            .anyTimes();
+    EasyMock.replay(druidLeaderClient);
+
+    final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
+    Assert.assertNull(actualResponse);
+
+    EasyMock.verify(druidLeaderClient, response);
+  }
+
+  @Test
   public void testGetTaskReportEmpty() throws Exception
   {
     String taskId = "testTaskId";
@@ -228,4 +267,6 @@ public class HttpIndexingServiceClientTest
 
     EasyMock.verify(druidLeaderClient, response);
   }
+
 }
+
