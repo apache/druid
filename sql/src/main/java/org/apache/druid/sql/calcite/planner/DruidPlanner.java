@@ -431,25 +431,26 @@ public class DruidPlanner implements Closeable
    */
   private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
   {
-    // Only if rel is an instance of DruidUnionRel, do we run multiple native queries corresponding to single SQL query
-    // Also, DruidUnionRel can only be a top level node, so we don't need to check for this condition in the subsequent
-    // child nodes
     ObjectMapper jsonMapper = plannerContext.getJsonMapper();
     List<DruidQuery> druidQueryList;
-    if (rel instanceof DruidUnionRel) {
-      druidQueryList = rel.getInputs().stream().map(childRel -> (DruidRel<?>) childRel).map(childRel -> {
-        if (childRel instanceof DruidUnionRel) {
-          log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
-          throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
-        }
-        return childRel.toDruidQuery(false);
-      }).collect(Collectors.toList());
-    } else {
-      druidQueryList = ImmutableList.of(rel.toDruidQuery(false));
+    try {
+      druidQueryList = flattenOutermostRel(rel)
+          .stream()
+          .map(druidRel -> druidRel.toDruidQuery(false))
+          .collect(Collectors.toList());
+
+    }
+    catch (UnsupportedOperationException unsupportedOperationException) {
+      log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
+      throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
+    }
+    catch (Exception e) {
+      throw new ISE("Unable to convert the RelNode structure to DruidQuery for explaining");
     }
 
     // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
-    // serializing the "queryType"
+    // serializing the "queryType". Another method would be to create a POJO containing query and signature, and then
+    // serializing it using normal list method.
     ArrayNode nativeQueriesArrayNode = jsonMapper.createArrayNode();
 
     for (DruidQuery druidQuery : druidQueryList) {
@@ -461,6 +462,47 @@ public class DruidPlanner implements Closeable
     }
 
     return jsonMapper.writeValueAsString(nativeQueriesArrayNode);
+  }
+
+  /**
+   * Given a {@link DruidRel}, this method recursively flattens the Rels if they are of the type {@link DruidUnionRel}
+   * It is implicitly assumed that the {@link DruidUnionRel} can never be the child of a non {@link DruidUnionRel}
+   * node
+   * For eg, a DruidRel structure of kind:
+   * DruidUnionRel
+   *  DruidUnionRel
+   *    DruidRel (A)
+   *    DruidRel (B)
+   *  DruidRel(C)
+   * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
+   * @param outermostDruidRel The outermost rel which is to be flattened
+   * @return a list of DruidRel's which donot have a DruidUnionRel nested in between them
+   */
+  private List<DruidRel<?>> flattenOutermostRel(DruidRel<?> outermostDruidRel)
+  {
+    List<DruidRel<?>> druidRels = new ArrayList<>();
+    flattenOutermostRel(outermostDruidRel, druidRels);
+    return druidRels;
+  }
+
+  /**
+   * Recursive function (DFS) which traverses the nodes and collects the corresponding {@link DruidRel} into a list if
+   * they are not of the type {@link DruidUnionRel} or else calls the method with the child nodes. The DFS order of the
+   * nodes are retained, since that is the order in which they will actually be called in {@link DruidUnionRel#runQuery()}
+   * @param druidRel The current relNode
+   * @param flattendListAccumulator Accumulator list which needs to be appended by this method
+   */
+  private void flattenOutermostRel(DruidRel<?> druidRel, List<DruidRel<?>> flattendListAccumulator)
+  {
+    if (druidRel instanceof DruidUnionRel) {
+      DruidUnionRel druidUnionRel = (DruidUnionRel) druidRel;
+      druidUnionRel.getInputs().forEach(innerRelNode -> {
+        DruidRel<?> innerDruidRelNode = (DruidRel<?>) innerRelNode; // This type conversion should always be possible
+        flattenOutermostRel(innerDruidRelNode, flattendListAccumulator);
+      });
+    } else {
+      flattendListAccumulator.add(druidRel);
+    }
   }
 
   /**
