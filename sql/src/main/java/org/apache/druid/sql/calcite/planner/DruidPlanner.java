@@ -71,8 +71,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -222,7 +224,11 @@ public class DruidPlanner implements Closeable
       }
       catch (Exception e2) {
         e.addSuppressed(e2);
-        log.noStackTrace().warn(e, "Failed to plan the query '%s'", plannerContext.getSql());
+        Logger logger = log;
+        if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
+          logger = log.noStackTrace();
+        }
+        logger.warn(e, "Failed to plan the query '%s'", plannerContext.getSql());
         String errorMessage = plannerContext.getPlanningError();
         if (null == errorMessage && cannotPlanException instanceof UnsupportedSQLQueryException) {
           errorMessage = cannotPlanException.getMessage();
