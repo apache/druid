@@ -84,8 +84,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
-  private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
+  private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
+      new TypeReference<Map<String, Object>>()
       {
       };
 
@@ -429,7 +429,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @Nullable
-  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
+  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
+      throws IOException, InterruptedException
   {
     final StringFullResponseHolder response = fetchLookupsForTier(tier);
     if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
@@ -454,7 +455,25 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       );
       return null;
     } else {
-      return jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_REFERENCE);
+      Map<String, Object> lookupNameToGenericConfig =
+          jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
+      Map<String, LookupExtractorFactoryContainer> lookupNameToConfig = new HashMap<>(lookupNameToGenericConfig.size());
+      for (Map.Entry<String, Object> lookupNameAndConfig : lookupNameToGenericConfig.entrySet()) {
+        String lookupName = lookupNameAndConfig.getKey();
+        byte[] lookupConfigBytes = jsonMapper.writeValueAsBytes(lookupNameAndConfig.getValue());
+        try {
+          LookupExtractorFactoryContainer lookupConfig = jsonMapper.readValue(lookupConfigBytes, LookupExtractorFactoryContainer.class);
+          lookupNameToConfig.put(lookupName, lookupConfig);
+        }
+        catch (IOException e) {
+          LOG.warn("Lookup [%s] for tier [%s] could not be serialized properly. Please check its configuration. Error: %s",
+                   lookupName,
+                   tier,
+                   e.getMessage()
+          );
+        }
+      }
+      return lookupNameToConfig;
     }
   }
 
