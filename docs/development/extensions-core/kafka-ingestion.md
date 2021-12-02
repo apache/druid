@@ -253,7 +253,6 @@ FROM "wikiticker"
 kafka.header.environment  kafka.key	 kafka.timestamp
 development               wiki-edit	 1636399229823
 ```
-
 For more information, see [`kafka` data format](../../ingestion/data-formats.md#kafka).
 ## Submit a supervisor spec
 
