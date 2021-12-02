@@ -1843,7 +1843,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.populateCache`|true, false|Populate the cache on the Broker.|false|
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the Broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the Broker.|false|
-|`druid.broker.cache.useSegmentMergedResultCache`|true, false|Enable segment merged result cache on the Broker.|false|
+|`druid.broker.cache.useSegmentMergedResultCache`|true, false|Enable segment merged result cache on the Broker. This cache option can be useful for queries need to scan both historical and realtime segments and with time range filter, like the day so far or this week/month/year so far.|false|
 |`druid.broker.cache.populateSegmentMergedResultCache`|true, false|Populate segment merged result cache on the Broker.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
 |`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|

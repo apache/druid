@@ -419,7 +419,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           Sequence<T> mergedHistoricalSegmentsSequence = segmentSequences.size() == 1
                                                          ? segmentSequences.get(0)
                                                          : merge(segmentSequences);
-          if (populateSegmentMergedResultCache) {
+          if (populateSegmentMergedResultCache && !segmentsByReplicationTargetServer.isEmpty()) {
             final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
             List<SegmentDescriptor> historicalSegmentDescriptors = segmentsByReplicationTargetServer
                 .values()
