@@ -169,7 +169,6 @@ Supported `inputFormat`s include:
 - `avro_ocf`
 - `protobuf`
 
-
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
