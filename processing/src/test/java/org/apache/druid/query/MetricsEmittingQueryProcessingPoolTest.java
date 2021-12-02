@@ -38,6 +38,10 @@ public class MetricsEmittingQueryProcessingPoolTest
   {
     PrioritizedExecutorService service = Mockito.mock(PrioritizedExecutorService.class);
     Mockito.when(service.getQueueSize()).thenReturn(10);
+    Mockito.when(service.getActiveThreadCount()).thenReturn(1);
+    Mockito.when(service.getPendingTaskCount()).thenReturn(5l);
+    Mockito.when(service.getMaxThreadCount()).thenReturn(8);
+
     ExecutorServiceMonitor monitor = new ExecutorServiceMonitor();
     List<Event> events = new ArrayList<>();
     MetricsEmittingQueryProcessingPool processingPool = new MetricsEmittingQueryProcessingPool(service, monitor);
@@ -52,9 +56,15 @@ public class MetricsEmittingQueryProcessingPoolTest
       }
     };
     monitor.doMonitor(serviceEmitter);
-    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(4, events.size());
     Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getMetric(), "segment/scan/pending");
     Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getValue(), 10);
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(1))).getMetric(), "thread/active");
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(1))).getValue(), 1);
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(2))).getMetric(), "thread/task/pending");
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(2))).getValue(), 5l);
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(3))).getMetric(), "thread/maxCount");
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(3))).getValue(), 8);
   }
 
   @Test

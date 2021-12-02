@@ -57,6 +57,10 @@ public class FireDepartmentMetricsTest
     metrics.snapshot();
     metrics.markProcessingDone(20);
     Assert.assertEquals(10, metrics.snapshot().messageGap());
+    Assert.assertEquals(0, metrics.bytesInMemory());
+    Assert.assertEquals(0, metrics.maxBytesInMemory());
+    Assert.assertEquals(0, metrics.rowsInMemory());
+    Assert.assertEquals(0, metrics.maxRowsInMemory());
   }
 
   @Test
@@ -71,5 +75,4 @@ public class FireDepartmentMetricsTest
         completionTime >= current && completionTime < (current + 10_000)
     );
   }
-
 }

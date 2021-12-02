@@ -38,12 +38,20 @@
   "query/cache/total/timeouts" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/errors" : { "dimensions" : [], "type" : "gauge" },
 
+  "query/mergeBufferMaxNum" : { "dimensions" : [], "type" : "gauge"},
+  "query/mergeBufferAvailNum" : { "dimensions" : [], "type" : "gauge"},
+  "query/intermResultBufferAvailNum" : { "dimensions" : [], "type" : "gauge"},
+
   "ingest/events/thrownAway" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/rows/inMemory" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/rows/maxInMemory" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/bytes/inMemory" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/bytes/maxInMemory" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/persists/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persists/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/persists/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
@@ -95,6 +103,10 @@
   "segment/used" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
   "segment/usedPercent" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "convertRange" : true },
   "segment/pendingDelete" : { "dimensions" : [], "type" : "gauge"},
+
+  "thread/active" : { "dimensions" : [], "type" : "gauge"},
+  "thread/task/pending" : { "dimensions" : [], "type" : "gauge"},
+  "thread/maxCount" : { "dimensions" : [], "type" : "gauge"},
 
   "jvm/pool/committed" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
   "jvm/pool/init" : { "dimensions" : ["poolKind", "poolName"], "type" : "gauge" },
