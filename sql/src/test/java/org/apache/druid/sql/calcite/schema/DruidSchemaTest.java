@@ -69,7 +69,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1098,7 +1097,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     RowSignature signature = DruidSchema.analysisToRowSignature(
         new SegmentAnalysis(
             "id",
-            ImmutableList.of(new Interval(1L, 2L)),
+            ImmutableList.of(Intervals.utc(1L, 2L)),
             ImmutableMap.of(
                 "a",
                 new ColumnAnalysis(
@@ -1147,7 +1146,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     RowSignature signature = DruidSchema.analysisToRowSignature(
         new SegmentAnalysis(
             "id",
-            ImmutableList.of(new Interval(1L, 2L)),
+            ImmutableList.of(Intervals.utc(1L, 2L)),
             ImmutableMap.of(
                 "a",
                 new ColumnAnalysis(
