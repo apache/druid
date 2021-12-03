@@ -27,20 +27,39 @@ import javax.annotation.Nullable;
 public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
+  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
 
+  @JsonProperty("useStrictBooleans")
+  private final boolean useStrictBooleans;
+
   @JsonCreator
-  public ExpressionProcessingConfig(@JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays)
+  public ExpressionProcessingConfig(
+      @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
+      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans
+  )
   {
     this.allowNestedArrays = allowNestedArrays == null
                              ? Boolean.valueOf(System.getProperty(NESTED_ARRAYS_CONFIG_STRING, "false"))
                              : allowNestedArrays;
+    if (useStrictBooleans == null) {
+      this.useStrictBooleans = Boolean.parseBoolean(
+          System.getProperty(NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "false")
+      );
+    } else {
+      this.useStrictBooleans = useStrictBooleans;
+    }
   }
 
   public boolean allowNestedArrays()
   {
     return allowNestedArrays;
+  }
+
+  public boolean isUseStrictBooleans()
+  {
+    return useStrictBooleans;
   }
 }

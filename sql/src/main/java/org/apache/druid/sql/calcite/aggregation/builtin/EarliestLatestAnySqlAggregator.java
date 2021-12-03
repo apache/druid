@@ -35,6 +35,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
@@ -76,18 +77,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     EARLIEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
       {
         switch (type.getType()) {
           case LONG:
-            return new LongFirstAggregatorFactory(name, fieldName);
+            return new LongFirstAggregatorFactory(name, fieldName, timeColumn);
           case FLOAT:
-            return new FloatFirstAggregatorFactory(name, fieldName);
+            return new FloatFirstAggregatorFactory(name, fieldName, timeColumn);
           case DOUBLE:
-            return new DoubleFirstAggregatorFactory(name, fieldName);
+            return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw new ISE("Cannot build EARLIEST aggregatorFactory for type[%s]", type);
         }
@@ -96,18 +97,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     LATEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
       {
         switch (type.getType()) {
           case LONG:
-            return new LongLastAggregatorFactory(name, fieldName);
+            return new LongLastAggregatorFactory(name, fieldName, timeColumn);
           case FLOAT:
-            return new FloatLastAggregatorFactory(name, fieldName);
+            return new FloatLastAggregatorFactory(name, fieldName, timeColumn);
           case DOUBLE:
-            return new DoubleLastAggregatorFactory(name, fieldName);
+            return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            return new StringLastAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw new ISE("Cannot build LATEST aggregatorFactory for type[%s]", type);
         }
@@ -116,7 +117,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     ANY_VALUE {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
       {
         switch (type.getType()) {
           case LONG:
@@ -136,6 +137,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     abstract AggregatorFactory createAggregatorFactory(
         String name,
         String fieldName,
+        String timeColumn,
         ColumnType outputType,
         int maxStringBytes
     );
@@ -183,20 +185,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
 
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
-    final String fieldName;
-
-    if (args.get(0).isDirectColumnAccess()) {
-      fieldName = args.get(0).getDirectColumn();
-    } else {
-      final RelDataType dataType = rexNodes.get(0).getType();
-      final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, args.get(0), dataType);
-      fieldName = virtualColumn.getOutputName();
-    }
-
-    // Second arg must be a literal, if it exists (the type signature below requires it).
-    final int maxBytes = rexNodes.size() > 1 ? RexLiteral.intValue(rexNodes.get(1)) : -1;
-
     final ColumnType outputType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
       throw new ISE(
@@ -206,17 +194,72 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       );
     }
 
+    final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+
+    final AggregatorFactory theAggFactory;
+    switch (args.size()) {
+      case 1:
+        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
+        break;
+      case 2:
+        if (!outputType.isNumeric()) { // translates (expr, maxBytesPerString) signature
+          theAggFactory = aggregatorType.createAggregatorFactory(
+              aggregatorName,
+              fieldName,
+              null,
+              outputType,
+              RexLiteral.intValue(rexNodes.get(1))
+          );
+        } else { // translates (expr, timeColumn) signature
+          theAggFactory = aggregatorType.createAggregatorFactory(
+              aggregatorName,
+              fieldName,
+              getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+              outputType,
+              -1
+          );
+        }
+        break;
+      case 3:
+        theAggFactory = aggregatorType.createAggregatorFactory(
+            aggregatorName,
+            fieldName,
+            getColumnName(plannerContext, virtualColumnRegistry, args.get(2), rexNodes.get(2)),
+            outputType,
+            RexLiteral.intValue(rexNodes.get(1))
+        );
+        break;
+      default:
+        throw new IAE(
+            "aggregation[%s], Invalid number of arguments[%,d] to Earliest/Latest/Any operator",
+            aggregatorName,
+            args.size()
+        );
+    }
+
     return Aggregation.create(
-        Collections.singletonList(
-            aggregatorType.createAggregatorFactory(
-                aggregatorName,
-                fieldName,
-                outputType,
-                maxBytes
-            )
-        ),
+        Collections.singletonList(theAggFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorName) : null
     );
+  }
+
+  private String getColumnName(
+      PlannerContext plannerContext,
+      VirtualColumnRegistry virtualColumnRegistry,
+      DruidExpression arg,
+      RexNode rexNode
+  )
+  {
+    String columnName;
+    if (arg.isDirectColumnAccess()) {
+      columnName = arg.getDirectColumn();
+    } else {
+      final RelDataType dataType = rexNode.getType();
+      final VirtualColumn virtualColumn =
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
+      columnName = virtualColumn.getOutputName();
+    }
+    return columnName;
   }
 
   static class EarliestLatestReturnTypeInference implements SqlReturnTypeInference
@@ -262,6 +305,17 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
                   "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
                   OperandTypes.ANY,
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
+              ),
+              OperandTypes.sequence(
+                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
+                  OperandTypes.ANY,
+                  OperandTypes.NUMERIC
+              ),
+              OperandTypes.sequence(
+                  "'" + aggregatorType.name() + "(expr, maxBytesPerString, timeColumn)'\n",
+                  OperandTypes.ANY,
+                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL),
+                  OperandTypes.NUMERIC
               )
           ),
           SqlFunctionCategory.STRING,

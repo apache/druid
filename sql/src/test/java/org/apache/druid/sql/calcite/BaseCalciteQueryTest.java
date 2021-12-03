@@ -191,6 +191,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   };
 
+  public static final PlannerConfig PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN = new PlannerConfig()
+  {
+    @Override
+    public boolean isUseNativeQueryExplain()
+    {
+      return true;
+    }
+  };
+
   public static final String DUMMY_SQL_ID = "dummy";
   public static final String LOS_ANGELES = "America/Los_Angeles";
 

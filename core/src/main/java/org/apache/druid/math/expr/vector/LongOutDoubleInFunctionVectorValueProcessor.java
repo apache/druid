@@ -22,42 +22,32 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link BivariateFunctionVectorProcessor} for processing (double[], long[]) -> double[]
+ * specialized {@link UnivariateFunctionVectorValueProcessor} for processing (long[]) -> long[]
  */
-public abstract class DoubleOutDoubleLongInFunctionVectorProcessor
-    extends BivariateFunctionVectorProcessor<double[], long[], double[]>
+public abstract class LongOutDoubleInFunctionVectorValueProcessor extends UnivariateFunctionVectorValueProcessor<double[], long[]>
 {
-  public DoubleOutDoubleLongInFunctionVectorProcessor(
-      ExprVectorProcessor<double[]> left,
-      ExprVectorProcessor<long[]> right,
-      int maxVectorSize
-  )
+  public LongOutDoubleInFunctionVectorValueProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
   {
-    super(
-        CastToTypeVectorProcessor.cast(left, ExpressionType.DOUBLE),
-        CastToTypeVectorProcessor.cast(right, ExpressionType.LONG),
-        maxVectorSize,
-        new double[maxVectorSize]
-    );
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new long[maxVectorSize]);
   }
 
-  public abstract double apply(double left, long right);
+  public abstract long apply(double input);
 
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.DOUBLE;
+    return ExpressionType.LONG;
   }
 
   @Override
-  final void processIndex(double[] leftInput, long[] rightInput, int i)
+  final void processIndex(double[] input, int i)
   {
-    outValues[i] = apply(leftInput[i], rightInput[i]);
+    outValues[i] = apply(input[i]);
   }
 
   @Override
-  final ExprEvalVector<double[]> asEval()
+  final ExprEvalVector<long[]> asEval()
   {
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    return new ExprEvalLongVector(outValues, outNulls);
   }
 }

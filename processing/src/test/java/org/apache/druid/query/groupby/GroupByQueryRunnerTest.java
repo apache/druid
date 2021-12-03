@@ -2598,8 +2598,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
@@ -2691,8 +2691,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ROWS_COUNT,
             QueryRunnerTestHelper.INDEX_LONG_SUM,
             QueryRunnerTestHelper.QUALITY_CARDINALITY,
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
@@ -6361,8 +6361,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
             QueryRunnerTestHelper.ROWS_COUNT,
-            new LongFirstAggregatorFactory("innerfirst", "index"),
-            new LongLastAggregatorFactory("innerlast", "index")
+            new LongFirstAggregatorFactory("innerfirst", "index", null),
+            new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .overrideContext(ImmutableMap.of("finalize", true))
@@ -6373,8 +6373,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setDimensions(Collections.emptyList())
         .setAggregatorSpecs(
-            new LongFirstAggregatorFactory("first", "innerfirst"),
-            new LongLastAggregatorFactory("last", "innerlast")
+            new LongFirstAggregatorFactory("first", "innerfirst", null),
+            new LongLastAggregatorFactory("last", "innerlast", null)
         )
         .setGranularity(QueryRunnerTestHelper.MONTH_GRAN)
         .build();
@@ -11205,6 +11205,41 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "v", 14400000L, "rows", 2L, "twosum", 6L),
         makeRow(query, "2011-04-01", "v", 16900000L, "rows", 2L, "twosum", 6L),
         makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L, "twosum", 18L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+  }
+
+  @Test
+  public void testGroupByOnVirtualColumnTimeFloor()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "v",
+                "timestamp_floor(__time, 'P1D')",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setDimensions(
+            new DefaultDimensionSpec("v", "v", ColumnType.LONG)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setLimit(5)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "v", 1301616000000L, "rows", 13L), // 04-01
+        makeRow(query, "2011-04-01", "v", 1301702400000L, "rows", 13L)  // 04-02
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

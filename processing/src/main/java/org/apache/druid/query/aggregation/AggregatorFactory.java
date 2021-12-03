@@ -303,6 +303,23 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * Returns a best guess as to how much memory the on-heap {@link Aggregator} returned by {@link #factorize} will
+   * require when a certain number of rows have been aggregated into it.
+   *
+   * The main user of this method is {@link org.apache.druid.segment.incremental.OnheapIncrementalIndex}, which
+   * uses it to determine when to persist the current in-memory data to disk.
+   *
+   * Important note for callers! In nearly all cases, callers that wish to constrain memory would be better off
+   * using {@link #factorizeBuffered} or {@link #factorizeVector}, which offer precise control over how much memory
+   * is being used.
+   */
+  public int guessAggregatorHeapFootprint(long rows)
+  {
+    // By default, guess that on-heap footprint is equal to off-heap footprint.
+    return getMaxIntermediateSizeWithNulls();
+  }
+
+  /**
    * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
    */
   public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)

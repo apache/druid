@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -77,12 +77,14 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       SerializablePair.createNullHandlingComparator(Float::compare, true);
 
   private final String fieldName;
+  private final String timeColumn;
   private final String name;
 
   @JsonCreator
   public FloatFirstAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("timeColumn") @Nullable final String timeColumn
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -90,6 +92,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
   }
 
   @Override
@@ -100,7 +103,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       return NIL_AGGREGATOR;
     } else {
       return new FloatFirstAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -114,7 +117,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new FloatFirstBufferAggregator(
-          metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
+          metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector
       );
     }
@@ -155,7 +158,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
 
-    return new FloatFirstAggregatorFactory(name, name)
+    return new FloatFirstAggregatorFactory(name, name, timeColumn)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -220,7 +223,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new FloatFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new FloatFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override
@@ -253,21 +256,25 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public String getTimeColumn()
+  {
+    return timeColumn;
+  }
+
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(timeColumn, fieldName);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.FLOAT_FIRST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.FLOAT_FIRST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(timeColumn)
+        .build();
   }
 
   @Override
@@ -302,13 +309,13 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
 
     FloatFirstAggregatorFactory that = (FloatFirstAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name);
+    return fieldName.equals(that.fieldName) && timeColumn.equals(that.timeColumn) && name.equals(that.name);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(fieldName, name);
+    return Objects.hash(fieldName, name, timeColumn);
   }
 
   @Override
@@ -317,6 +324,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
     return "FloatFirstAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", timeColumn='" + timeColumn + '\'' +
            '}';
   }
 }

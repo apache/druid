@@ -65,8 +65,10 @@ The following built-in functions are available.
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
-|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
+|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
+|isnull|isnull(expr) returns 1 if the value is null, else 0|
+|notnull|notnull(expr) returns 1 if the value is not null, else 0|
 |bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## String functions
@@ -249,6 +251,14 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 
+## Other functions
+
+| function | description |
+| --- | --- |
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
+
 
 ## Vectorization Support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
@@ -257,16 +267,44 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useStrictBooleans=true`)
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* boolean functions: `isnull`, `notnull` are supported for string and numeric types
+* conditional functions: `nvl` is supported for string and numeric types
+* string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
 
+## Logical operator modes
+Prior to the 0.23 release of Apache Druid, boolean function expressions have inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. 
 
-## Other functions
+After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useStrictBooleans=true`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
 
-| function | description |
-| --- | --- |
-| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
-| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
-| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
+For the "or" operator:
+* `true || null`, `null || true`, -> `1`
+* `false || null`, `null || false`, `null || null`-> `null`
+
+For the "and" operator:
+* `true && null`, `null && true`, `null && null` -> `null`
+* `false && null`, `null && false` -> `0`
+
+Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
+* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
+* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
+
+Legacy behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `'troo'`
+* `'troo' || 'true'` -> `'true'`
+
+SQL compatible behavior:
+* `100 && 11` -> `1`
+* `0.7 || 0.3` -> `1`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `0`
+* `'troo' || 'true'` -> `1`
+
+
