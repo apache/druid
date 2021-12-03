@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -63,6 +64,22 @@ public class IndexTaskUtils
     }
 
     return events;
+  }
+
+  @Nullable
+  public static List<ParseExceptionReport> getReportListFromSavedParseExceptions(
+      CircularBuffer<ParseExceptionReport> savedParseExceptionReports
+  )
+  {
+    if (savedParseExceptionReports == null) {
+      return null;
+    }
+    List<ParseExceptionReport> reports = new ArrayList<>();
+    for (int i = 0; i < savedParseExceptionReports.size(); i++) {
+      reports.add(savedParseExceptionReports.getLatest(i));
+    }
+
+    return reports;
   }
 
   /**

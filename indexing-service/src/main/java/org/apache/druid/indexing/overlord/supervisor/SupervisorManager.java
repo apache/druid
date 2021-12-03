@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 
@@ -188,7 +189,7 @@ public class SupervisorManager
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
   }
 
-  public Optional<List<String>> getSupervisorParseErrors(String id)
+  public Optional<List<ParseExceptionReport>> getSupervisorParseErrors(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getParseErrors());

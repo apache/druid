@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 public final class JacksonUtils
@@ -38,10 +37,6 @@ public final class JacksonUtils
       };
   public static final TypeReference<Map<String, Boolean>> TYPE_REFERENCE_MAP_STRING_BOOLEAN =
       new TypeReference<Map<String, Boolean>>()
-      {
-      };
-  public static final TypeReference<List<String>> TYPE_REFERENCE_LIST_STRING =
-      new TypeReference<List<String>>()
       {
       };
 

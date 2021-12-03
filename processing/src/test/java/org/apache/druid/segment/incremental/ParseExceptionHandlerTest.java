@@ -85,7 +85,7 @@ public class ParseExceptionHandlerTest
         Integer.MAX_VALUE,
         0
     );
-    Assert.assertNull(parseExceptionHandler.getSavedParseExceptions());
+    Assert.assertNull(parseExceptionHandler.getSavedParseExceptionReports());
   }
 
   @Test
@@ -126,17 +126,17 @@ public class ParseExceptionHandlerTest
         Integer.MAX_VALUE,
         maxSavedParseExceptions
     );
-    Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptions());
+    Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptionReports());
     int exceptionCounter = 0;
     for (; exceptionCounter < maxSavedParseExceptions; exceptionCounter++) {
       parseExceptionHandler.handle(new ParseException(null, StringUtils.format("test %d", exceptionCounter)));
     }
     Assert.assertEquals(3, rowIngestionMeters.getUnparseable());
-    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptions().size());
+    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptionReports().size());
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i),
-          parseExceptionHandler.getSavedParseExceptions().get(i).getMessage()
+          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
       );
     }
     for (; exceptionCounter < 5; exceptionCounter++) {
@@ -144,11 +144,11 @@ public class ParseExceptionHandlerTest
     }
     Assert.assertEquals(5, rowIngestionMeters.getUnparseable());
 
-    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptions().size());
+    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptionReports().size());
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i + 2),
-          parseExceptionHandler.getSavedParseExceptions().get(i).getMessage()
+          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
       );
     }
   }

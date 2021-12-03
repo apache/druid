@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -49,7 +50,7 @@ public interface Supervisor
     return ImmutableMap.of();
   }
 
-  default List<String> getParseErrors()
+  default List<ParseExceptionReport> getParseErrors()
   {
     return ImmutableList.of();
   }

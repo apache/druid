@@ -73,6 +73,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -1099,9 +1100,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions(),
-        true
+    List<ParseExceptionReport> buildSegmentsParseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
@@ -1585,9 +1585,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions(),
-        true
+    List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     return Response.ok(events).build();
   }

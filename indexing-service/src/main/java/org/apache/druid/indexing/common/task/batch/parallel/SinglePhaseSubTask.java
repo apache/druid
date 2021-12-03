@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -262,6 +263,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           inputSource,
           toolbox.getIndexingTmpDir()
       );
+
+      Thread.sleep(60000);
       
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
@@ -489,7 +492,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    Map<String, List<ParseExceptionReport>> events = new HashMap<>();
 
     boolean needsBuildSegments = false;
 
@@ -509,9 +512,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              parseExceptionHandler.getSavedParseExceptions(),
-              false
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              parseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -635,9 +637,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> parseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions(),
-        false
+    List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
 
     if (parseExceptionMessages != null) {

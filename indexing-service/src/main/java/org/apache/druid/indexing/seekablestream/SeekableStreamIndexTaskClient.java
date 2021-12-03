@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -31,6 +32,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -45,6 +47,11 @@ import java.util.TreeMap;
 
 public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> extends IndexTaskClient
 {
+  private static final TypeReference<List<ParseExceptionReport>> TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT =
+      new TypeReference<List<ParseExceptionReport>>()
+      {
+      };
+
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
 
   public SeekableStreamIndexTaskClient(
@@ -224,7 +231,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     }
   }
 
-  public List<String> getParseErrors(final String id)
+  public List<ParseExceptionReport> getParseErrors(final String id)
   {
     log.debug("getParseErrors task[%s]", id);
 
@@ -238,7 +245,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       );
       return response.getContent() == null || response.getContent().isEmpty()
              ? Collections.emptyList()
-             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_LIST_STRING);
+             : deserialize(response.getContent(), TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT);
     }
     catch (NoTaskLocationException e) {
       return Collections.emptyList();
@@ -392,7 +399,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     return doAsync(() -> getMovingAverages(id));
   }
 
-  public ListenableFuture<List<String>> getParseErrorsAsync(final String id)
+  public ListenableFuture<List<ParseExceptionReport>> getParseErrorsAsync(final String id)
   {
     return doAsync(() -> getParseErrors(id));
   }

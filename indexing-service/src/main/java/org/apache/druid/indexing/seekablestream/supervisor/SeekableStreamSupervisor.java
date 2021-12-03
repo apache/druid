@@ -86,6 +86,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
@@ -322,12 +323,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     private final String groupId;
     private final String taskId;
-    private final List<String> errors;
+    private final List<ParseExceptionReport> errors;
 
     public ErrorsFromTaskResult(
         int groupId,
         String taskId,
-        List<String> errors
+        List<ParseExceptionReport> errors
     )
     {
       this.groupId = String.valueOf(groupId);
@@ -345,7 +346,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return taskId;
     }
 
-    public List<String> getErrors()
+    public List<ParseExceptionReport> getErrors()
     {
       return errors;
     }
@@ -691,7 +692,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final ReentrantLock recordSupplierLock = new ReentrantLock();
-  private List<String> lastKnownParseErrors = new ArrayList<>();
+  private List<ParseExceptionReport> lastKnownParseErrors = new ArrayList<>();
 
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
@@ -1168,7 +1169,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public List<String> getParseErrors()
+  public List<ParseExceptionReport> getParseErrors()
   {
     try {
       if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() <= 0) {
@@ -1264,7 +1265,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private List<String> getCurrentParseErrors()
+  private List<ParseExceptionReport> getCurrentParseErrors()
       throws InterruptedException, ExecutionException, TimeoutException
   {
     final List<ListenableFuture<ErrorsFromTaskResult>> futures = new ArrayList<>();
@@ -1276,7 +1277,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futures.add(
             Futures.transform(
                 taskClient.getParseErrorsAsync(taskId),
-                (Function<List<String>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                (Function<List<ParseExceptionReport>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
                     groupId,
                     taskId,
                     taskErrors
@@ -1294,7 +1295,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   taskClient.getParseErrorsAsync(taskId),
-                  (Function<List<String>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                  (Function<List<ParseExceptionReport>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
                       groupId,
                       taskId,
                       taskErrors
@@ -1307,7 +1308,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     // We use a tree set to sort the parse errors by time, and eliminate duplicates across calls to this method
-    TreeSet<String> parseErrorsTreeSet = new TreeSet<>(lastKnownParseErrors);
+    TreeSet<ParseExceptionReport> parseErrorsTreeSet = new TreeSet<>(lastKnownParseErrors);
 
     List<ErrorsFromTaskResult> results = Futures.successfulAsList(futures)
                                                .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
@@ -1326,8 +1327,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           spec.getSpec().getIOConfig().getTaskCount();
     parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
 
-    final List<String> limitedParseErrors = new ArrayList<>();
-    Iterator<String> descendingIterator = parseErrorsTreeSet.descendingIterator();
+    final List<ParseExceptionReport> limitedParseErrors = new ArrayList<>();
+    Iterator<ParseExceptionReport> descendingIterator = parseErrorsTreeSet.descendingIterator();
     for (int i = 0; i < parseErrorLimit; i++) {
       limitedParseErrors.add(descendingIterator.next());
     }

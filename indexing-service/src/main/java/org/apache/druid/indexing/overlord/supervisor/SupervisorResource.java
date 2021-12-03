@@ -33,6 +33,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -291,7 +292,7 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          Optional<List<String>> parseErrors = manager.getSupervisorParseErrors(id);
+          Optional<List<ParseExceptionReport>> parseErrors = manager.getSupervisorParseErrors(id);
           if (!parseErrors.isPresent()) {
             return Response.status(Response.Status.NOT_FOUND)
                            .entity(
