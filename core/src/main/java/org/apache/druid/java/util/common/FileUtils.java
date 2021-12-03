@@ -380,6 +380,25 @@ public class FileUtils
   }
 
   /**
+   * Create "directory" and all intermediate directories as needed. If the directory is successfully created, or already
+   * exists, returns quietly. Otherwise, throws an IOException.
+   *
+   * Simpler to use than {@link File#mkdirs()}, and more reliable since it is safe from races where two threads try
+   * to create the same directory at the same time.
+   *
+   * The name is inspired by UNIX {@code mkdir -p}, which has the same behavior.
+   */
+  @SuppressForbidden(reason = "File#mkdirs")
+  public static void mkdirp(final File directory) throws IOException
+  {
+    // isDirectory check after mkdirs is necessary in case of concurrent calls to mkdirp, because two concurrent
+    // calls to mkdirs cannot both succeed.
+    if (!directory.mkdirs() && !directory.isDirectory()) {
+      throw new IOE("Cannot create directory [%s]", directory);
+    }
+  }
+
+  /**
    * Equivalent to {@link org.apache.commons.io.FileUtils#deleteDirectory(File)}. Exists here mostly so callers
    * can avoid dealing with our FileUtils and the Commons FileUtils having the same name.
    */

@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -52,7 +53,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -89,12 +90,15 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   );
 
   @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return Iterables.concat(super.getJacksonModules(), new DoublesSketchModule().getJacksonModules());
+  }
+
+  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
   {
     DoublesSketchModule.registerSerde();
-    for (Module mod : new DoublesSketchModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-    }
 
     final QueryableIndex index =
         IndexBuilder.create(CalciteTests.getJsonMapper())
@@ -159,7 +163,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"m1\" * 2)",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -317,13 +321,13 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "CAST(\"dim1\", 'DOUBLE')",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       ),
                       new ExpressionVirtualColumn(
                           "v1",
                           "(CAST(\"dim1\", 'DOUBLE') * 2)",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -471,7 +475,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         )
                         .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(new DefaultDimensionSpec("d0", "_d0", ValueType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             new DoublesSketchAggregatorFactory("_a0:agg", "a0", 128)
                         )
@@ -528,7 +532,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"cnt\" + 123)",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -780,8 +784,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(

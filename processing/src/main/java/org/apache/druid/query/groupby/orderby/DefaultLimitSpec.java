@@ -44,6 +44,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
@@ -195,11 +196,11 @@ public class DefaultLimitSpec implements LimitSpec
           break;
         }
 
-        final ValueType columnType = getOrderByType(columnSpec, dimensions);
+        final ColumnType columnType = getOrderByType(columnSpec, dimensions);
         final StringComparator naturalComparator;
-        if (columnType == ValueType.STRING) {
+        if (columnType.is(ValueType.STRING)) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (ValueType.isNumeric(columnType)) {
+        } else if (columnType.isNumeric()) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;
@@ -272,7 +273,7 @@ public class DefaultLimitSpec implements LimitSpec
     return this;
   }
 
-  private ValueType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
+  private ColumnType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
   {
     for (DimensionSpec dimSpec : dimensions) {
       if (columnSpec.getDimension().equals(dimSpec.getOutputName())) {

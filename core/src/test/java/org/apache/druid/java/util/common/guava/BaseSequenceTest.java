@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class BaseSequenceTest
 {
@@ -35,14 +36,14 @@ public class BaseSequenceTest
   public void testSanity() throws Exception
   {
     final List<Integer> vals = Arrays.asList(1, 2, 3, 4, 5);
-    SequenceTestHelper.testAll(Sequences.simple(vals), vals);
+    SequenceTestHelper.testAll(makeBaseSequence(vals), vals);
   }
 
   @Test
   public void testNothing() throws Exception
   {
     final List<Integer> vals = Collections.emptyList();
-    SequenceTestHelper.testAll(Sequences.simple(vals), vals);
+    SequenceTestHelper.testAll(makeBaseSequence(vals), vals);
   }
 
   @Test
@@ -88,4 +89,23 @@ public class BaseSequenceTest
     SequenceTestHelper.testClosed(closedCounter, seq);
   }
 
+  private static <T> Sequence<T> makeBaseSequence(final Iterable<T> iterable)
+  {
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        {
+          @Override
+          public Iterator<T> make()
+          {
+            return iterable.iterator();
+          }
+
+          @Override
+          public void cleanup(Iterator<T> iterFromMake)
+          {
+
+          }
+        }
+    );
+  }
 }

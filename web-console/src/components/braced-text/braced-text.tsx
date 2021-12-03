@@ -42,7 +42,7 @@ export function findMostNumbers(strings: string[]): string {
       longestNumLengthPlusOne = numLengthPlusOne;
     }
   }
-  return longest;
+  return longest.replace(/K/g, 'M');
 }
 
 function lengthAfterLastDot(str: string): number | undefined {

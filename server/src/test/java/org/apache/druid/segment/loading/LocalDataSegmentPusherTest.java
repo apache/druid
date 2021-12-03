@@ -22,7 +22,7 @@ package org.apache.druid.segment.loading;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -140,7 +140,7 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
 
     File unzipDir = new File(config.storageDirectory, "unzip");
-    FileUtils.forceMkdir(unzipDir);
+    FileUtils.mkdirp(unzipDir);
     CompressionUtils.unzip(
         new File(config.storageDirectory, "/ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index.zip"),
         unzipDir

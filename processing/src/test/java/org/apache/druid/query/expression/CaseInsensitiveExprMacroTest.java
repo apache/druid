@@ -135,7 +135,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
 
     final ExprEval<?> result = eval(
         "icontains_string(a, null)",
-        InputBindings.withSuppliers(ImmutableMap.of("a", () -> null))
+        InputBindings.nilBindings()
     );
     Assert.assertEquals(
         ExprEval.ofBoolean(true, ExprType.LONG).value(),
@@ -146,7 +146,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearchOnNull()
   {
-    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.withSuppliers(ImmutableMap.of("a", () -> null)));
+    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.nilBindings());
     Assert.assertEquals(
         ExprEval.ofBoolean(!NullHandling.sqlCompatible(), ExprType.LONG).value(),
         result.value()

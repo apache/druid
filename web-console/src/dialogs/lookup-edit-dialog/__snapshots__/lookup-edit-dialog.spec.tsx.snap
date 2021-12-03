@@ -283,7 +283,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 The table which contains the key value pairs. This will become the table value in the SQL query:
               </p>
               <p>
-                SELECT keyColumn, valueColumn, tsColumn? FROM namespace.
+                SELECT keyColumn, valueColumn, tsColumn? FROM 
                 <strong>
                   table
                 </strong>
@@ -306,7 +306,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 <strong>
                   keyColumn
                 </strong>
-                , valueColumn, tsColumn? FROM namespace.table WHERE filter
+                , valueColumn, tsColumn? FROM table WHERE filter
               </p>
             </React.Fragment>,
             "name": "extractionNamespace.keyColumn",
@@ -325,7 +325,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 <strong>
                   valueColumn
                 </strong>
-                , tsColumn? FROM namespace.table WHERE filter
+                , tsColumn? FROM table WHERE filter
               </p>
             </React.Fragment>,
             "name": "extractionNamespace.valueColumn",
@@ -344,7 +344,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 <strong>
                   tsColumn
                 </strong>
-                ? FROM namespace.table WHERE filter
+                ? FROM table WHERE filter
               </p>
             </React.Fragment>,
             "label": "Timestamp column",
@@ -359,8 +359,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 The filter to be used when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter in the SQL query:
               </p>
               <p>
-                SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE
-                 
+                SELECT keyColumn, valueColumn, tsColumn? FROM table WHERE 
                 <strong>
                   filter
                 </strong>

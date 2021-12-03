@@ -105,6 +105,7 @@ public class NamespacedExtractorModuleTest
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
+        null,
         null
     );
     CacheScheduler.VersionedCache versionedCache = factory.generateCache(namespace, null, null, scheduler);
@@ -126,6 +127,7 @@ public class NamespacedExtractorModuleTest
         null, null,
         new UriExtractionNamespace.ObjectMapperFlatDataParser(UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
         new Period(0),
+        null,
         null
     );
     try (CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 1_000)) {
@@ -149,6 +151,7 @@ public class NamespacedExtractorModuleTest
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
+        null,
         null
     );
     try (CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 1_000)) {
@@ -170,6 +173,7 @@ public class NamespacedExtractorModuleTest
             UriExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
         new Period(0),
+        null,
         null
     );
     Assert.assertEquals(0, scheduler.getActiveEntries());

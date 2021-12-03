@@ -90,6 +90,7 @@
         "dfs.datanode.use.datanode.hostname" : "true",
         "yarn.resourcemanager.hostname" : "druid-it-hadoop",
         "yarn.nodemanager.vmem-check-enabled" : "false",
+        "mapreduce.job.classloader": "true",
         "mapreduce.map.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
         "mapreduce.job.user.classpath.first" : "true",
         "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",

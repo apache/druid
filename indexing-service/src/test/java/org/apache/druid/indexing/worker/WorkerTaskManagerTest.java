@@ -181,8 +181,8 @@ public class WorkerTaskManagerTest
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
 
-    workerTaskManager.getAssignedTaskDir().mkdirs();
-    workerTaskManager.getCompletedTaskDir().mkdirs();
+    FileUtils.mkdirp(workerTaskManager.getAssignedTaskDir());
+    FileUtils.mkdirp(workerTaskManager.getCompletedTaskDir());
 
     // create a task in assigned task directory, to simulate MM shutdown right after a task was assigned.
     jsonMapper.writeValue(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()), task1);

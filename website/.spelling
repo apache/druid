@@ -78,7 +78,9 @@ Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
+Float.NEGATIVE_INFINITY.
 Float.POSITIVE_INFINITY
+Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
@@ -137,7 +139,9 @@ LZ4
 LZO
 LimitSpec
 Long.MAX_VALUE
+Long.MAX_VALUE.
 Long.MIN_VALUE
+Long.MIN_VALUE.
 Lucene
 MapBD
 MapDB
@@ -419,6 +423,7 @@ timeseries
 timestamp
 timestamps
 tradeoffs
+transformSpec
 tsv
 ulimit
 unannounce
@@ -469,7 +474,7 @@ druid-s3-extensions
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
@@ -510,6 +515,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -781,6 +792,7 @@ PT30M
 PT30S
 PT5S
 PT80S
+SASL
 SegmentWriteOutMediumFactory
 UNABLE_TO_CONNECT_TO_STREAM
 UNHEALTHY_SUPERVISOR
@@ -1192,6 +1204,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
@@ -1286,6 +1299,8 @@ bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1311,6 +1326,9 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1693,6 +1711,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1763,6 +1782,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1926,3 +1946,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+_n_

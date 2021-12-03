@@ -32,6 +32,10 @@ import java.io.Closeable;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
  * org.apache.druid.segment.ColumnValueSelector} objects.
+ *
+ * During ingestion, {@link org.apache.druid.segment.incremental.OnheapIncrementalIndex} uses instances of this class
+ * from multiple threads. In particular, ingestion threads call {@link #aggregate()} simultaneously with query threads
+ * calling the various "get" methods. Instances of this class must be thread-safe.
  */
 @ExtensionPoint
 public interface Aggregator extends Closeable

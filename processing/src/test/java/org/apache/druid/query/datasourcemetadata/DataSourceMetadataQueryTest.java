@@ -62,12 +62,12 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testQuerySerialization() throws IOException
   {
-    Query query = Druids.newDataSourceMetadataQueryBuilder()
+    Query<?> query = Druids.newDataSourceMetadataQueryBuilder()
                         .dataSource("testing")
                         .build();
 
     String json = JSON_MAPPER.writeValueAsString(query);
-    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
+    Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }
@@ -93,7 +93,7 @@ public class DataSourceMetadataQueryTest
 
     final ObjectMapper mapper = new DefaultObjectMapper();
 
-    final Query serdeQuery = mapper.readValue(
+    final Query<?> serdeQuery = mapper.readValue(
         mapper.writeValueAsBytes(
             mapper.readValue(
                 mapper.writeValueAsString(
@@ -103,7 +103,7 @@ public class DataSourceMetadataQueryTest
         ), Query.class
     );
 
-    Assert.assertEquals(1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals((Integer) 1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
     Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
     Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
     Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
@@ -232,7 +232,7 @@ public class DataSourceMetadataQueryTest
         );
 
     Assert.assertEquals(segments.size(), 2);
-    // should only have the latest segments. 
+    // should only have the latest segments.
     List<LogicalSegment> expected = Arrays.asList(
         new LogicalSegment()
         {

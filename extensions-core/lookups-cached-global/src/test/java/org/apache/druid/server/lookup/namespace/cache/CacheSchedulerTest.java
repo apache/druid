@@ -188,6 +188,7 @@ public class CacheSchedulerTest
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
+        null,
         null
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
@@ -349,6 +350,7 @@ public class CacheSchedulerTest
             UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(period),
+        null,
         null
     );
   }

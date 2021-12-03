@@ -46,8 +46,8 @@ import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -74,42 +74,42 @@ public class InformationSchema extends AbstractSchema
   private static final String COLUMNS_TABLE = "COLUMNS";
   private static final RowSignature SCHEMATA_SIGNATURE = RowSignature
       .builder()
-      .add("CATALOG_NAME", ValueType.STRING)
-      .add("SCHEMA_NAME", ValueType.STRING)
-      .add("SCHEMA_OWNER", ValueType.STRING)
-      .add("DEFAULT_CHARACTER_SET_CATALOG", ValueType.STRING)
-      .add("DEFAULT_CHARACTER_SET_SCHEMA", ValueType.STRING)
-      .add("DEFAULT_CHARACTER_SET_NAME", ValueType.STRING)
-      .add("SQL_PATH", ValueType.STRING)
+      .add("CATALOG_NAME", ColumnType.STRING)
+      .add("SCHEMA_NAME", ColumnType.STRING)
+      .add("SCHEMA_OWNER", ColumnType.STRING)
+      .add("DEFAULT_CHARACTER_SET_CATALOG", ColumnType.STRING)
+      .add("DEFAULT_CHARACTER_SET_SCHEMA", ColumnType.STRING)
+      .add("DEFAULT_CHARACTER_SET_NAME", ColumnType.STRING)
+      .add("SQL_PATH", ColumnType.STRING)
       .build();
   private static final RowSignature TABLES_SIGNATURE = RowSignature
       .builder()
-      .add("TABLE_CATALOG", ValueType.STRING)
-      .add("TABLE_SCHEMA", ValueType.STRING)
-      .add("TABLE_NAME", ValueType.STRING)
-      .add("TABLE_TYPE", ValueType.STRING)
-      .add("IS_JOINABLE", ValueType.STRING)
-      .add("IS_BROADCAST", ValueType.STRING)
+      .add("TABLE_CATALOG", ColumnType.STRING)
+      .add("TABLE_SCHEMA", ColumnType.STRING)
+      .add("TABLE_NAME", ColumnType.STRING)
+      .add("TABLE_TYPE", ColumnType.STRING)
+      .add("IS_JOINABLE", ColumnType.STRING)
+      .add("IS_BROADCAST", ColumnType.STRING)
       .build();
   private static final RowSignature COLUMNS_SIGNATURE = RowSignature
       .builder()
-      .add("TABLE_CATALOG", ValueType.STRING)
-      .add("TABLE_SCHEMA", ValueType.STRING)
-      .add("TABLE_NAME", ValueType.STRING)
-      .add("COLUMN_NAME", ValueType.STRING)
-      .add("ORDINAL_POSITION", ValueType.STRING)
-      .add("COLUMN_DEFAULT", ValueType.STRING)
-      .add("IS_NULLABLE", ValueType.STRING)
-      .add("DATA_TYPE", ValueType.STRING)
-      .add("CHARACTER_MAXIMUM_LENGTH", ValueType.STRING)
-      .add("CHARACTER_OCTET_LENGTH", ValueType.STRING)
-      .add("NUMERIC_PRECISION", ValueType.STRING)
-      .add("NUMERIC_PRECISION_RADIX", ValueType.STRING)
-      .add("NUMERIC_SCALE", ValueType.STRING)
-      .add("DATETIME_PRECISION", ValueType.STRING)
-      .add("CHARACTER_SET_NAME", ValueType.STRING)
-      .add("COLLATION_NAME", ValueType.STRING)
-      .add("JDBC_TYPE", ValueType.LONG)
+      .add("TABLE_CATALOG", ColumnType.STRING)
+      .add("TABLE_SCHEMA", ColumnType.STRING)
+      .add("TABLE_NAME", ColumnType.STRING)
+      .add("COLUMN_NAME", ColumnType.STRING)
+      .add("ORDINAL_POSITION", ColumnType.STRING)
+      .add("COLUMN_DEFAULT", ColumnType.STRING)
+      .add("IS_NULLABLE", ColumnType.STRING)
+      .add("DATA_TYPE", ColumnType.STRING)
+      .add("CHARACTER_MAXIMUM_LENGTH", ColumnType.STRING)
+      .add("CHARACTER_OCTET_LENGTH", ColumnType.STRING)
+      .add("NUMERIC_PRECISION", ColumnType.STRING)
+      .add("NUMERIC_PRECISION_RADIX", ColumnType.STRING)
+      .add("NUMERIC_SCALE", ColumnType.STRING)
+      .add("DATETIME_PRECISION", ColumnType.STRING)
+      .add("CHARACTER_SET_NAME", ColumnType.STRING)
+      .add("COLLATION_NAME", ColumnType.STRING)
+      .add("JDBC_TYPE", ColumnType.LONG)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
 
@@ -420,6 +420,8 @@ public class InformationSchema extends AbstractSchema
                   boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(type.getSqlTypeName());
                   boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
+
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : type.getSqlTypeName().toString();
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA
@@ -428,7 +430,7 @@ public class InformationSchema extends AbstractSchema
                       String.valueOf(field.getIndex()), // ORDINAL_POSITION
                       "", // COLUMN_DEFAULT
                       type.isNullable() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
-                      type.getSqlTypeName().toString(), // DATA_TYPE
+                      typeName, // DATA_TYPE
                       null, // CHARACTER_MAXIMUM_LENGTH
                       null, // CHARACTER_OCTET_LENGTH
                       isNumeric ? String.valueOf(type.getPrecision()) : null, // NUMERIC_PRECISION

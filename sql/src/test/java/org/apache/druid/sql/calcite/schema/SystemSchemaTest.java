@@ -68,8 +68,8 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -297,6 +297,8 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
+      null,
+      null,
       Collections.singletonMap("test", "map"),
       Collections.singletonMap("test2", "map2")
   );
@@ -1311,15 +1313,15 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(client, request, responseHandler);
 
-    // Verify that no row is returned for Datasource Read user
+    // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
         .toList();
     Assert.assertTrue(rows.isEmpty());
 
-    // Verify that 2 rows are is returned for Datasource Write user
+    // Verify that 2 rows are returned for Datasource Read user
     rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .scan(createDataContext(Users.DATASOURCE_READ))
         .toList();
     Assert.assertEquals(2, rows.size());
 
@@ -1430,15 +1432,15 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(client, request, responseHandler);
 
-    // Verify that no row is returned for Datasource Read user
+    // Verify that no row is returned for Datasource Write user
     List<Object[]> rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
+        .scan(createDataContext(Users.DATASOURCE_WRITE))
         .toList();
     Assert.assertTrue(rows.isEmpty());
 
     // Verify that 1 row is returned for Datasource Write user
     rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
+        .scan(createDataContext(Users.DATASOURCE_READ))
         .toList();
     Assert.assertEquals(1, rows.size());
 
@@ -1521,13 +1523,13 @@ public class SystemSchemaTest extends CalciteTestBase
             return new Access(false);
           }
           // Allow access to a Datasource if
-          // - any user requests Read access
           // - Super User or Datasource Write User requests Write access
+          // - Super User or Datasource Read User requests Read access
           if (resource.getType().equals(ResourceType.DATASOURCE)) {
             return new Access(
-                action == Action.READ
-                || username.equals(Users.SUPER)
-                || username.equals(Users.DATASOURCE_WRITE)
+                username.equals(Users.SUPER)
+                || (action == Action.READ && username.equals(Users.DATASOURCE_READ))
+                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
             );
           }
 
@@ -1547,13 +1549,13 @@ public class SystemSchemaTest extends CalciteTestBase
       for (int i = 0; i < row.length; i++) {
         final Class<?> expectedClass;
 
-        final ValueType columnType =
+        final ColumnType columnType =
             signature.getColumnType(i)
                      .orElseThrow(() -> new ISE("Encountered null column type"));
 
         final boolean nullable = rowType.getFieldList().get(i).getType().isNullable();
 
-        switch (columnType) {
+        switch (columnType.getType()) {
           case LONG:
             expectedClass = Long.class;
             break;

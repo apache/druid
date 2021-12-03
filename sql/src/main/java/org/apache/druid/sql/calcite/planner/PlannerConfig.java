@@ -32,6 +32,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
 
   @JsonProperty
@@ -69,6 +70,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean authorizeSystemTablesDirectly = false;
+
+  @JsonProperty
+  private boolean useNativeQueryExplain = false;
 
   @JsonProperty
   private boolean forceHashBasedMergeForSegmentsTable = false;
@@ -140,6 +144,11 @@ public class PlannerConfig
     return authorizeSystemTablesDirectly;
   }
 
+  public boolean isUseNativeQueryExplain()
+  {
+    return useNativeQueryExplain;
+  }
+
   public boolean isForceHashBasedMergeForSegmentsTable()
   {
     return forceHashBasedMergeForSegmentsTable;
@@ -173,6 +182,11 @@ public class PlannerConfig
         context,
         CTX_KEY_COMPUTE_INNER_JOIN_COST_AS_FILTER,
         computeInnerJoinCostAsFilter
+    );
+    newConfig.useNativeQueryExplain = getContextBoolean(
+        context,
+        CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+        isUseNativeQueryExplain()
     );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
@@ -223,6 +237,7 @@ public class PlannerConfig
            && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
            && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
            && authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly
+           && useNativeQueryExplain == that.useNativeQueryExplain
            && forceHashBasedMergeForSegmentsTable == that.forceHashBasedMergeForSegmentsTable
            && serializeComplexValues == that.serializeComplexValues
            && Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod)
@@ -245,6 +260,7 @@ public class PlannerConfig
         useGroupingSetForExactDistinct,
         computeInnerJoinCostAsFilter,
         authorizeSystemTablesDirectly,
+        useNativeQueryExplain,
         forceHashBasedMergeForSegmentsTable,
         serializeComplexValues
     );
@@ -266,6 +282,7 @@ public class PlannerConfig
            ", useGroupingSetForExactDistinct=" + useGroupingSetForExactDistinct +
            ", computeInnerJoinCostAsFilter=" + computeInnerJoinCostAsFilter +
            ", authorizeSystemTablesDirectly=" + authorizeSystemTablesDirectly +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", forceHashBasedMergeForSegmentsTable=" + forceHashBasedMergeForSegmentsTable +
            ", serializeComplexValues=" + serializeComplexValues +
            '}';
