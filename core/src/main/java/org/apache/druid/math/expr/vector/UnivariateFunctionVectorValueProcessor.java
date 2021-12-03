@@ -26,14 +26,14 @@ import org.apache.druid.math.expr.Expr;
  * output, and are backed by a primitive value instead of an object value (and need to use the null vector instead of
  * checking the vector itself for nulls)
  */
-public abstract class UnivariateFunctionVectorProcessor<TInput, TOutput> implements ExprVectorProcessor<TOutput>
+public abstract class UnivariateFunctionVectorValueProcessor<TInput, TOutput> implements ExprVectorProcessor<TOutput>
 {
   final ExprVectorProcessor<TInput> processor;
   final int maxVectorSize;
   final boolean[] outNulls;
   final TOutput outValues;
 
-  public UnivariateFunctionVectorProcessor(
+  public UnivariateFunctionVectorValueProcessor(
       ExprVectorProcessor<TInput> processor,
       int maxVectorSize,
       TOutput outValues

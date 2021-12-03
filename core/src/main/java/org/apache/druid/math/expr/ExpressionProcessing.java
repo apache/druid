@@ -48,11 +48,17 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests(@Nullable Boolean allowNestedArrays)
   {
-    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays);
+    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null);
+  }
+
+  @VisibleForTesting
+  public static void initializeForStrictBooleansTests(boolean useStrict)
+  {
+    INSTANCE = new ExpressionProcessingConfig(null, useStrict);
   }
 
   /**
-   * whether nulls should be replaced with default value.
+   * [['is expression support for'],['nested arrays'],['enabled?']]
    */
   public static boolean allowNestedArrays()
   {
@@ -64,5 +70,15 @@ public class ExpressionProcessing
       );
     }
     return INSTANCE.allowNestedArrays();
+  }
+
+
+  public static boolean useStrictBooleans()
+  {
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
+    if (INSTANCE == null) {
+      throw new IllegalStateException("ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()");
+    }
+    return INSTANCE.isUseStrictBooleans();
   }
 }
