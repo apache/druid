@@ -72,9 +72,10 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     if (QueryContexts.hasTimeout(newQuery)) {
       failTime = this.startTimeMillis + QueryContexts.getTimeout(newQuery);
     } else {
-      final long time = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
-      failTime = time > 0 ? time : Long.MAX_VALUE;
+      failTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
     }
-    return newQuery.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime));
+    return newQuery.withOverriddenContext(
+        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime > 0 ? failTime : Long.MAX_VALUE)
+    );
   }
 }

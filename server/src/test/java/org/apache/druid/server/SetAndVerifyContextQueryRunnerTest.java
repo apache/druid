@@ -63,6 +63,32 @@ public class SetAndVerifyContextQueryRunnerTest
   }
 
   @Test
+  public void testTimeoutDefaultTooBigAndOverflows()
+  {
+    Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+        .build();
+
+    ServerConfig defaultConfig = new ServerConfig()
+    {
+      @Override
+      public long getDefaultQueryTimeout()
+      {
+        return Long.MAX_VALUE;
+      }
+    };
+
+    QueryRunner<ScanResultValue> mockRunner = EasyMock.createMock(QueryRunner.class);
+    SetAndVerifyContextQueryRunner<ScanResultValue> queryRunner = new SetAndVerifyContextQueryRunner<>(defaultConfig, mockRunner);
+
+    Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
+
+    // timeout is not set, default timeout has been set to long.max, make sure timeout is still in the future
+    Assert.assertEquals((Long) Long.MAX_VALUE, transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME));
+  }
+
+  @Test
   public void testTimeoutZeroIsNotImmediateTimeoutDefaultServersideMax()
   {
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
@@ -79,11 +105,9 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
 
     // timeout is set to 0, so withTimeoutAndMaxScatterGatherBytes should set QUERY_FAIL_TIME to be the current
-    // time + default query timeout at the time the method was called
-    // this means that the fail time should be greater than the current time when checking
-    Assert.assertTrue(
-        System.currentTimeMillis() < (Long) transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME)
-    );
+    // time + max query timeout at the time the method was called
+    // since default is long max, expect long max since current time would overflow
+    Assert.assertEquals((Long) Long.MAX_VALUE, transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME));
   }
 
   @Test
@@ -110,7 +134,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
 
     // timeout is set to 0, so withTimeoutAndMaxScatterGatherBytes should set QUERY_FAIL_TIME to be the current
-    // time + default query timeout at the time the method was called
+    // time + max query timeout at the time the method was called
     // this means that the fail time should be greater than the current time when checking
     Assert.assertTrue(
         System.currentTimeMillis() < (Long) transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME)
