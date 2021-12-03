@@ -32,7 +32,6 @@ import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
@@ -40,18 +39,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 @Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
 @ResourceFilters(ConfigResourceFilter.class)
 class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);
-
-  private static final TypeReference<LookupsState<LookupExtractorFactoryContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
-      new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
-      {
-      };
 
   private static final TypeReference<LookupsState<Object>> LOOKUPS_STATE_GENERIC_REFERENCE =
       new TypeReference<LookupsState<Object>>()
@@ -80,43 +73,17 @@ class LookupListeningResource extends ListenerResource
             final Map<String, LookupExtractorFactoryContainer> current;
             final Map<String, LookupExtractorFactoryContainer> toLoad;
             try {
-              //state = mapper.readValue(inputStream, LOOKUPS_STATE_TYPE_REFERENCE);
-
-              ////
               stateGeneric = mapper.readValue(inputStream, LOOKUPS_STATE_GENERIC_REFERENCE);
-              current = new HashMap<>(stateGeneric.getCurrent().size());
-              toLoad = new HashMap<>(stateGeneric.getToLoad().size());
-              for (Map.Entry<String, Object> lookupNameAndConfig : stateGeneric.getCurrent().entrySet()) {
-                String lookupName = lookupNameAndConfig.getKey();
-                byte[] lookupConfigBytes = mapper.writeValueAsBytes(lookupNameAndConfig.getValue());
-                try {
-                  LookupExtractorFactoryContainer lookupConfig = mapper.readValue(lookupConfigBytes, LookupExtractorFactoryContainer.class);
-                  current.put(lookupName, lookupConfig);
-                }
-                catch (IOException e) {
-                  LOG.warn("Current lookup [%s] could not be serialized properly. Please check its configuration. Error: %s",
-                           lookupName,
-                           e.getMessage()
-                  );
-                }
-              }
+              current = LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+                  stateGeneric.getCurrent(),
+                  mapper
+              );
+              toLoad = LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+                  stateGeneric.getToLoad(),
+                  mapper
+              );
 
-              for (Map.Entry<String, Object> lookupNameAndConfig : stateGeneric.getToLoad().entrySet()) {
-                String lookupName = lookupNameAndConfig.getKey();
-                byte[] lookupConfigBytes = mapper.writeValueAsBytes(lookupNameAndConfig.getValue());
-                try {
-                  LookupExtractorFactoryContainer lookupConfig = mapper.readValue(lookupConfigBytes, LookupExtractorFactoryContainer.class);
-                  toLoad.put(lookupName, lookupConfig);
-                }
-                catch (IOException e) {
-                  LOG.warn("Lookup to load [%s]  could not be serialized properly. Please check its configuration. Error: %s",
-                           lookupName,
-                           e.getMessage()
-                  );
-                }
-              }
               state = new LookupsState<>(current, toLoad, stateGeneric.getToDrop());
-              ////
             }
             catch (final IOException ex) {
               LOG.debug(ex, "Bad request");

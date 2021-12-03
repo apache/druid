@@ -457,23 +457,10 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     } else {
       Map<String, Object> lookupNameToGenericConfig =
           jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
-      Map<String, LookupExtractorFactoryContainer> lookupNameToConfig = new HashMap<>(lookupNameToGenericConfig.size());
-      for (Map.Entry<String, Object> lookupNameAndConfig : lookupNameToGenericConfig.entrySet()) {
-        String lookupName = lookupNameAndConfig.getKey();
-        byte[] lookupConfigBytes = jsonMapper.writeValueAsBytes(lookupNameAndConfig.getValue());
-        try {
-          LookupExtractorFactoryContainer lookupConfig = jsonMapper.readValue(lookupConfigBytes, LookupExtractorFactoryContainer.class);
-          lookupNameToConfig.put(lookupName, lookupConfig);
-        }
-        catch (IOException e) {
-          LOG.warn("Lookup [%s] for tier [%s] could not be serialized properly. Please check its configuration. Error: %s",
-                   lookupName,
-                   tier,
-                   e.getMessage()
-          );
-        }
-      }
-      return lookupNameToConfig;
+      return LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+          lookupNameToGenericConfig,
+          jsonMapper
+      );
     }
   }
 
