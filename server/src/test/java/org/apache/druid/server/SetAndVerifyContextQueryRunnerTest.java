@@ -63,7 +63,7 @@ public class SetAndVerifyContextQueryRunnerTest
   }
 
   @Test
-  public void testTimeoutZeroIsNotImmediateTimeout()
+  public void testTimeoutZeroIsNotImmediateTimeoutDefaultServersideMax()
   {
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
@@ -72,6 +72,37 @@ public class SetAndVerifyContextQueryRunnerTest
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
+
+    QueryRunner<ScanResultValue> mockRunner = EasyMock.createMock(QueryRunner.class);
+    SetAndVerifyContextQueryRunner<ScanResultValue> queryRunner = new SetAndVerifyContextQueryRunner<>(defaultConfig, mockRunner);
+
+    Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
+
+    // timeout is set to 0, so withTimeoutAndMaxScatterGatherBytes should set QUERY_FAIL_TIME to be the current
+    // time + default query timeout at the time the method was called
+    // this means that the fail time should be greater than the current time when checking
+    Assert.assertTrue(
+        System.currentTimeMillis() < (Long) transformed.getContextValue(DirectDruidClient.QUERY_FAIL_TIME)
+    );
+  }
+
+  @Test
+  public void testTimeoutZeroIsNotImmediateTimeoutExplicitServersideMax()
+  {
+    Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .build();
+
+    ServerConfig defaultConfig = new ServerConfig()
+    {
+      @Override
+      public long getMaxQueryTimeout()
+      {
+        return 1000L;
+      }
+    };
 
     QueryRunner<ScanResultValue> mockRunner = EasyMock.createMock(QueryRunner.class);
     SetAndVerifyContextQueryRunner<ScanResultValue> queryRunner = new SetAndVerifyContextQueryRunner<>(defaultConfig, mockRunner);

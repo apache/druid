@@ -56,10 +56,12 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 
   public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
-    final long serverTimeout = Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout());
     Query<T> newQuery = QueryContexts.verifyMaxQueryTimeout(
         QueryContexts.withMaxScatterGatherBytes(
-            QueryContexts.withDefaultTimeout(query, serverTimeout),
+            QueryContexts.withDefaultTimeout(
+                query,
+                Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout())
+            ),
             serverConfig.getMaxScatterGatherBytes()
         ),
         serverConfig.getMaxQueryTimeout()
@@ -70,7 +72,8 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     if (QueryContexts.hasTimeout(newQuery)) {
       failTime = this.startTimeMillis + QueryContexts.getTimeout(newQuery);
     } else {
-      failTime = this.startTimeMillis + serverTimeout;
+      final long time = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
+      failTime = time > 0 ? time : Long.MAX_VALUE;
     }
     return newQuery.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime));
   }
