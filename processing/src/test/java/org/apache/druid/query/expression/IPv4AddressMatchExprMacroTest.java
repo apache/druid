@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -179,7 +180,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   private boolean eval(Expr... args)
   {
     Expr expr = apply(Arrays.asList(args));
-    ExprEval eval = expr.eval(ExprUtils.nilBindings());
+    ExprEval eval = expr.eval(InputBindings.nilBindings());
     return eval.asBoolean();
   }
 

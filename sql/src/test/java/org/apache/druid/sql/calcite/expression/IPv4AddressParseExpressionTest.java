@@ -22,8 +22,8 @@ package org.apache.druid.sql.calcite.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +41,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
   private static final Long NULL = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
 
   private static final String VAR = "f";
-  private static final RowSignature ROW_SIGNATURE = RowSignature.builder().add(VAR, ValueType.FLOAT).build();
+  private static final RowSignature ROW_SIGNATURE = RowSignature.builder().add(VAR, ColumnType.FLOAT).build();
   private static final Map<String, Object> BINDINGS = ImmutableMap.of(VAR, 3.14);
 
   private IPv4AddressParseOperatorConversion target;

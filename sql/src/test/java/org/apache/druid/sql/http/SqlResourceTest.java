@@ -22,15 +22,17 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
@@ -43,6 +45,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -61,6 +64,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -70,6 +74,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -85,6 +90,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
@@ -93,11 +99,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -105,6 +114,15 @@ public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DUMMY_SQL_QUERY_ID = "dummy";
+
+  private static final List<String> EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS =
+      Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8");
+
+  private static final List<String> EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS =
+      Arrays.asList("LONG", "LONG", "STRING", "STRING", "STRING", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING");
+
+  private static final List<String> EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS =
+      Arrays.asList("TIMESTAMP", "BIGINT", "VARCHAR", "VARCHAR", "VARCHAR", "FLOAT", "DOUBLE", "OTHER", "VARCHAR");
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -118,11 +136,13 @@ public class SqlResourceTest extends CalciteTestBase
   private HttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier = new SettableSupplier<>();
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier = new SettableSupplier<>();
+  private final SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier = new SettableSupplier<>();
 
   private boolean sleep = false;
 
@@ -180,7 +200,7 @@ public class SqlResourceTest extends CalciteTestBase
         return false;
       }
     };
-    final SchemaPlus rootSchema = CalciteTests.createMockRootSchema(
+    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
         plannerConfig,
@@ -211,7 +231,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -232,33 +252,36 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     final ServiceEmitter emitter = new NoopServiceEmitter();
-    resource = new SqlResource(
-        JSON_MAPPER,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        new SqlLifecycleFactory(
+    sqlLifecycleFactory = new SqlLifecycleFactory(
+        plannerFactory,
+        emitter,
+        testRequestLogger,
+        scheduler
+    )
+    {
+      @Override
+      public SqlLifecycle factorize()
+      {
+        return new TestSqlLifecycle(
             plannerFactory,
             emitter,
             testRequestLogger,
-            scheduler
-        )
-        {
-          @Override
-          public SqlLifecycle factorize()
-          {
-            return new TestSqlLifecycle(
-                plannerFactory,
-                emitter,
-                testRequestLogger,
-                scheduler,
-                System.currentTimeMillis(),
-                System.nanoTime(),
-                validateAndAuthorizeLatchSupplier,
-                planLatchSupplier,
-                executeLatchSupplier
-            );
-          }
-        },
-        lifecycleManager
+            scheduler,
+            System.currentTimeMillis(),
+            System.nanoTime(),
+            validateAndAuthorizeLatchSupplier,
+            planLatchSupplier,
+            executeLatchSupplier,
+            sequenceMapFnSupplier
+        );
+      }
+    };
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig()
     );
   }
 
@@ -350,6 +373,8 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             ResultFormat.OBJECT,
             false,
+            false,
+            false,
             null,
             null
         )
@@ -370,6 +395,8 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT ?",
             ResultFormat.OBJECT,
+            false,
+            false,
             false,
             null,
             ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
@@ -392,6 +419,8 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             ResultFormat.OBJECT,
             false,
+            false,
+            false,
             ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
             null
         )
@@ -413,6 +442,8 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT MAX(__time) as t1, MAX(__time) FILTER(WHERE dim1 = 'non_existing') as t2 FROM druid.foo",
             ResultFormat.OBJECT,
             false,
+            false,
+            false,
             null,
             null
         )
@@ -421,10 +452,14 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z") // t2 represents Long.MIN converted to a timestamp
+            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z")
+            // t2 represents Long.MIN converted to a timestamp
         ) :
         ImmutableList.of(
-            Maps.transformValues(ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""), (val) -> "".equals(val) ? null : val)
+            Maps.transformValues(
+                ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""),
+                (val) -> "".equals(val) ? null : val
+            )
         ),
         rows
     );
@@ -434,7 +469,15 @@ public class SqlResourceTest extends CalciteTestBase
   public void testFieldAliasingSelect() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1", ResultFormat.OBJECT, false, null, null)
+        new SqlQuery(
+            "SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            null,
+            null
+        )
     ).rhs;
 
     Assert.assertEquals(
@@ -449,7 +492,15 @@ public class SqlResourceTest extends CalciteTestBase
   public void testFieldAliasingGroupBy() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2", ResultFormat.OBJECT, false, null, null)
+        new SqlQuery(
+            "SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            null,
+            null
+        )
     ).rhs;
 
     Assert.assertEquals(
@@ -501,8 +552,81 @@ public class SqlResourceTest extends CalciteTestBase
                 nullStr
             )
         ),
-        doPost(new SqlQuery(query, ResultFormat.ARRAY, false, null, null), new TypeReference<List<List<Object>>>() {}).rhs
+        doPost(
+            new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
+            new TypeReference<List<List<Object>>>() {}
+        ).rhs
     );
+  }
+
+  @Test
+  public void testArrayResultFormatWithErrorAfterFirstRow() throws Exception
+  {
+    sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
+
+    final String query = "SELECT cnt FROM foo";
+    final Pair<QueryException, String> response =
+        doPostRaw(new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null), req);
+
+    // Truncated response: missing final ]
+    Assert.assertNull(response.lhs);
+    Assert.assertEquals("[[1],[1]", response.rhs);
+  }
+
+  @Test
+  public void testObjectResultFormatWithErrorAfterFirstRow() throws Exception
+  {
+    sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
+
+    final String query = "SELECT cnt FROM foo";
+    final Pair<QueryException, String> response =
+        doPostRaw(new SqlQuery(query, ResultFormat.OBJECT, false, false, false, null, null), req);
+
+    // Truncated response: missing final ]
+    Assert.assertNull(response.lhs);
+    Assert.assertEquals("[{\"cnt\":1},{\"cnt\":1}", response.rhs);
+  }
+
+  @Test
+  public void testArrayLinesResultFormatWithErrorAfterFirstRow() throws Exception
+  {
+    sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
+
+    final String query = "SELECT cnt FROM foo";
+    final Pair<QueryException, String> response =
+        doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, false, false, null, null), req);
+
+    // Truncated response: missing final LFLF
+    Assert.assertNull(response.lhs);
+    Assert.assertEquals("[1]\n[1]", response.rhs);
+  }
+
+  @Test
+  public void testObjectLinesResultFormatWithErrorAfterFirstRow() throws Exception
+  {
+    sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
+
+    final String query = "SELECT cnt FROM foo";
+    final Pair<QueryException, String> response =
+        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, false, false, null, null), req);
+
+    // Truncated response: missing final LFLF
+    Assert.assertNull(response.lhs);
+    Assert.assertEquals("{\"cnt\":1}\n{\"cnt\":1}", response.rhs);
+  }
+
+  @Test
+  public void testCsvResultFormatWithErrorAfterFirstRow() throws Exception
+  {
+    sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
+
+    final String query = "SELECT cnt FROM foo";
+    final Pair<QueryException, String> response =
+        doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, false, false, null, null), req);
+
+    // Truncated response: missing final LFLF
+    Assert.assertNull(response.lhs);
+    Assert.assertEquals("1\n1\n", response.rhs);
   }
 
   @Test
@@ -513,7 +637,9 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8"),
+            EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS,
+            EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS,
+            EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS,
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
                 1,
@@ -537,7 +663,10 @@ public class SqlResourceTest extends CalciteTestBase
                 nullStr
             )
         ),
-        doPost(new SqlQuery(query, ResultFormat.ARRAY, true, null, null), new TypeReference<List<List<Object>>>() {}).rhs
+        doPost(
+            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+            new TypeReference<List<List<Object>>>() {}
+        ).rhs
     );
   }
 
@@ -546,7 +675,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<QueryException, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)
+        new SqlQuery(query, ResultFormat.ARRAYLINES, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -591,18 +720,17 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<QueryException, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)
+        new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
-    Assert.assertEquals(5, lines.size());
-    Assert.assertEquals(
-        Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8"),
-        JSON_MAPPER.readValue(lines.get(0), List.class)
-    );
+    Assert.assertEquals(7, lines.size());
+    Assert.assertEquals(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS, JSON_MAPPER.readValue(lines.get(0), List.class));
+    Assert.assertEquals(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS, JSON_MAPPER.readValue(lines.get(1), List.class));
+    Assert.assertEquals(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS, JSON_MAPPER.readValue(lines.get(2), List.class));
     Assert.assertEquals(
         Arrays.asList(
             "2000-01-01T00:00:00.000Z",
@@ -615,7 +743,7 @@ public class SqlResourceTest extends CalciteTestBase
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
             nullStr
         ),
-        JSON_MAPPER.readValue(lines.get(1), List.class)
+        JSON_MAPPER.readValue(lines.get(3), List.class)
     );
     Assert.assertEquals(
         Arrays.asList(
@@ -629,10 +757,10 @@ public class SqlResourceTest extends CalciteTestBase
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
             nullStr
         ),
-        JSON_MAPPER.readValue(lines.get(2), List.class)
+        JSON_MAPPER.readValue(lines.get(4), List.class)
     );
-    Assert.assertEquals("", lines.get(3));
-    Assert.assertEquals("", lines.get(4));
+    Assert.assertEquals("", lines.get(5));
+    Assert.assertEquals("", lines.get(6));
   }
 
   @Test
@@ -675,7 +803,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .build()
         ).stream().map(transformer).collect(Collectors.toList()),
         doPost(
-            new SqlQuery(query, ResultFormat.OBJECT, false, null, null),
+            new SqlQuery(query, ResultFormat.OBJECT, false, false, false, null, null),
             new TypeReference<List<Map<String, Object>>>() {}
         ).rhs
     );
@@ -686,7 +814,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<QueryException, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)
+        new SqlQuery(query, ResultFormat.OBJECTLINES, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -739,11 +867,137 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testObjectLinesResultFormatWithMinimalHeader() throws Exception
+  {
+    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
+    final Pair<QueryException, String> pair =
+        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, false, false, null, null));
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
+    final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
+        m,
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+    );
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    final Map<String, Object> expectedHeader = new HashMap<>();
+    for (final String column : EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS) {
+      expectedHeader.put(column, null);
+    }
+
+    Assert.assertEquals(5, lines.size());
+    Assert.assertEquals(expectedHeader, JSON_MAPPER.readValue(lines.get(0), Object.class));
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("__time", "2000-01-01T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "")
+                .put("dim2", "a")
+                .put("dim3", "[\"a\",\"b\"]")
+                .put("m1", 1.0)
+                .put("m2", 1.0)
+                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("EXPR$8", "")
+                .build()
+        ),
+        JSON_MAPPER.readValue(lines.get(1), Object.class)
+    );
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("__time", "2000-01-02T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "10.1")
+                .put("dim2", "")
+                .put("dim3", "[\"b\",\"c\"]")
+                .put("m1", 2.0)
+                .put("m2", 2.0)
+                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("EXPR$8", "")
+                .build()
+        ),
+        JSON_MAPPER.readValue(lines.get(2), Object.class)
+    );
+    Assert.assertEquals("", lines.get(3));
+    Assert.assertEquals("", lines.get(4));
+  }
+
+  @Test
+  public void testObjectLinesResultFormatWithFullHeader() throws Exception
+  {
+    final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
+    final Pair<QueryException, String> pair =
+        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
+    Assert.assertNull(pair.lhs);
+    final String response = pair.rhs;
+    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
+    final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
+        m,
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+    );
+    final List<String> lines = Splitter.on('\n').splitToList(response);
+
+    final Map<String, Object> expectedHeader = new HashMap<>();
+    for (int i = 0; i < EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS.size(); i++) {
+      expectedHeader.put(
+          EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS.get(i),
+          ImmutableMap.of(
+              ObjectWriter.TYPE_HEADER_NAME, EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS.get(i),
+              ObjectWriter.SQL_TYPE_HEADER_NAME, EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS.get(i)
+          )
+      );
+    }
+
+    Assert.assertEquals(5, lines.size());
+    Assert.assertEquals(expectedHeader, JSON_MAPPER.readValue(lines.get(0), Object.class));
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("__time", "2000-01-01T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "")
+                .put("dim2", "a")
+                .put("dim3", "[\"a\",\"b\"]")
+                .put("m1", 1.0)
+                .put("m2", 1.0)
+                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("EXPR$8", "")
+                .build()
+        ),
+        JSON_MAPPER.readValue(lines.get(1), Object.class)
+    );
+    Assert.assertEquals(
+        transformer.apply(
+            ImmutableMap
+                .<String, Object>builder()
+                .put("__time", "2000-01-02T00:00:00.000Z")
+                .put("cnt", 1)
+                .put("dim1", "10.1")
+                .put("dim2", "")
+                .put("dim3", "[\"b\",\"c\"]")
+                .put("m1", 2.0)
+                .put("m2", 2.0)
+                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("EXPR$8", "")
+                .build()
+        ),
+        JSON_MAPPER.readValue(lines.get(2), Object.class)
+    );
+    Assert.assertEquals("", lines.get(3));
+    Assert.assertEquals("", lines.get(4));
+  }
+
+  @Test
   public void testCsvResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<QueryException, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.CSV, false, null, null)
+        new SqlQuery(query, ResultFormat.CSV, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -765,7 +1019,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<QueryException, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.CSV, true, null, null)
+        new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -773,7 +1027,9 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "__time,cnt,dim1,dim2,dim3,m1,m2,unique_dim1,EXPR$8",
+            String.join(",", EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS),
+            String.join(",", EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS),
+            String.join(",", EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS),
             "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
@@ -788,7 +1044,15 @@ public class SqlResourceTest extends CalciteTestBase
   {
     Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, false, queryContext, null)
+        new SqlQuery(
+            "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            queryContext,
+            null
+        )
     ).rhs;
 
     Assert.assertEquals(
@@ -864,7 +1128,9 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT DISTINCT dim1 FROM foo",
             ResultFormat.OBJECT,
             false,
-            ImmutableMap.of("maxMergingDictionarySize", 1, "sqlQueryId", "id"),
+            false,
+            false,
+            ImmutableMap.of("maxMergingDictionarySize", 1, BaseQuery.SQL_QUERY_ID, "id"),
             null
         )
     ).lhs;
@@ -882,7 +1148,7 @@ public class SqlResourceTest extends CalciteTestBase
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
     EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
-    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"));
     EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
     EasyMock.replay(badQuery);
     final QueryException exception = doPost(badQuery).lhs;
@@ -890,6 +1156,121 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testErrorResponseReturnSameQueryIdWhenSetInContext() throws Exception
+  {
+    String queryId = "id123";
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", queryId));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final Response response = resource.doPost(badQuery, req);
+    Assert.assertNotEquals(200, response.getStatus());
+    final MultivaluedMap<String, Object> headers = response.getMetadata();
+    Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
+    Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
+    Assert.assertEquals(queryId, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0));
+  }
+
+  @Test
+  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext() throws Exception
+  {
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final Response response = resource.doPost(badQuery, req);
+    Assert.assertNotEquals(200, response.getStatus());
+    final MultivaluedMap<String, Object> headers = response.getMetadata();
+    Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
+    Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
+    Assert.assertFalse(Strings.isNullOrEmpty(headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0).toString()));
+  }
+
+  @Test
+  public void testUnsupportedQueryThrowsExceptionWithFilterResponse() throws Exception
+  {
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig()
+        {
+          @Override
+          public boolean isShowDetailedJettyErrors()
+          {
+            return true;
+          }
+
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
+          }
+        }
+    );
+
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertNull(exception.getMessage());
+    Assert.assertNull(exception.getHost());
+    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertNull(exception.getErrorClass());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testAssertionErrorThrowsErrorWithFilterResponse() throws Exception
+  {
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        sqlLifecycleFactory,
+        lifecycleManager,
+        new ServerConfig()
+        {
+          @Override
+          public boolean isShowDetailedJettyErrors()
+          {
+            return true;
+          }
+
+          @Override
+          public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+          {
+            return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
+          }
+        }
+    );
+
+    String errorMessage = "could not assert";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new Error(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertNull(exception.getMessage());
+    Assert.assertNull(exception.getHost());
+    Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.UNKNOWN_EXCEPTION);
+    Assert.assertNull(exception.getErrorClass());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -909,10 +1290,12 @@ public class SqlResourceTest extends CalciteTestBase
                   "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
                   null,
                   false,
-                  ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
+                  false,
+                  false,
+                  ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
                   null
               ),
-              makeExpectedReq()
+              makeRegularUserReq()
           );
         }
         catch (Exception e) {
@@ -950,11 +1333,13 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, "sqlQueryId", sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, BaseQuery.SQL_QUERY_ID, sqlQueryId);
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
             ResultFormat.OBJECT,
+            false,
+            false,
             false,
             queryContext,
             null
@@ -979,7 +1364,7 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(1, TimeUnit.SECONDS));
@@ -1010,7 +1395,7 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
@@ -1040,12 +1425,37 @@ public class SqlResourceTest extends CalciteTestBase
     Future<Response> future = executorService.submit(
         () -> resource.doPost(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
-            makeExpectedReq()
+            makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
     Response response = resource.cancelQuery("invalidQuery", mockRequestForCancel());
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+
+    Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
+
+    execLatch.countDown();
+    response = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testCancelForbidden() throws Exception
+  {
+    final String sqlQueryId = "toCancel";
+    CountDownLatch planLatch = new CountDownLatch(1);
+    planLatchSupplier.set(new NonnullPair<>(planLatch, true));
+    CountDownLatch execLatch = new CountDownLatch(1);
+    executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
+    Future<Response> future = executorService.submit(
+        () -> resource.doPost(
+            createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM forbiddenDatasource"),
+            makeSuperUserReq()
+        )
+    );
+    Assert.assertTrue(planLatch.await(1, TimeUnit.SECONDS));
+    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
@@ -1074,7 +1484,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, ImmutableMap.of("sqlQueryId", sqlQueryId), null);
+    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
   }
 
   private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
@@ -1098,7 +1508,8 @@ public class SqlResourceTest extends CalciteTestBase
     return doPostRaw(query, req);
   }
 
-  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, HttpServletRequest req) throws Exception
+  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, HttpServletRequest req)
+      throws Exception
   {
     return doPost(query, req, new TypeReference<List<Map<String, Object>>>()
     {
@@ -1128,7 +1539,14 @@ public class SqlResourceTest extends CalciteTestBase
     if (response.getStatus() == 200) {
       final StreamingOutput output = (StreamingOutput) response.getEntity();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      output.write(baos);
+      try {
+        output.write(baos);
+      }
+      catch (Exception ignored) {
+        // Suppress errors and return the response so far. Similar to what the real web server would do, if it
+        // started writing a 200 OK and then threw an exception in the middle.
+      }
+
       return Pair.of(
           null,
           new String(baos.toByteArray(), StandardCharsets.UTF_8)
@@ -1141,24 +1559,34 @@ public class SqlResourceTest extends CalciteTestBase
     }
   }
 
-  private HttpServletRequest makeExpectedReq()
+  private HttpServletRequest makeSuperUserReq()
+  {
+    return makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT);
+  }
+
+  private HttpServletRequest makeRegularUserReq()
+  {
+    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
+  }
+
+  private HttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
   {
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .andReturn(authenticationResult)
             .anyTimes();
     EasyMock.replay(req);
     return req;
@@ -1180,11 +1608,26 @@ public class SqlResourceTest extends CalciteTestBase
     return req;
   }
 
+  private static Function<Sequence<Object[]>, Sequence<Object[]>> errorAfterSecondRowMapFn()
+  {
+    return results -> {
+      final AtomicLong rows = new AtomicLong();
+      return results.map(row -> {
+        if (rows.incrementAndGet() == 3) {
+          throw new ISE("Oh no!");
+        } else {
+          return row;
+        }
+      });
+    };
+  }
+
   private static class TestSqlLifecycle extends SqlLifecycle
   {
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier;
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier;
     private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier;
+    private final SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier;
 
     private TestSqlLifecycle(
         PlannerFactory plannerFactory,
@@ -1195,13 +1638,15 @@ public class SqlResourceTest extends CalciteTestBase
         long startNs,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
-        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier
+        SettableSupplier<NonnullPair<CountDownLatch, Boolean>> executeLatchSupplier,
+        SettableSupplier<Function<Sequence<Object[]>, Sequence<Object[]>>> sequenceMapFnSupplier
     )
     {
       super(plannerFactory, emitter, requestLogger, queryScheduler, startMs, startNs);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;
+      this.sequenceMapFnSupplier = sequenceMapFnSupplier;
     }
 
     @Override
@@ -1253,9 +1698,12 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     public Sequence<Object[]> execute()
     {
+      final Function<Sequence<Object[]>, Sequence<Object[]>> sequenceMapFn =
+          Optional.ofNullable(sequenceMapFnSupplier.get()).orElse(Function.identity());
+
       if (executeLatchSupplier.get() != null) {
         if (executeLatchSupplier.get().rhs) {
-          Sequence<Object[]> sequence = super.execute();
+          Sequence<Object[]> sequence = sequenceMapFn.apply(super.execute());
           executeLatchSupplier.get().lhs.countDown();
           return sequence;
         } else {
@@ -1267,10 +1715,10 @@ public class SqlResourceTest extends CalciteTestBase
           catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
-          return super.execute();
+          return sequenceMapFn.apply(super.execute());
         }
       } else {
-        return super.execute();
+        return sequenceMapFn.apply(super.execute());
       }
     }
   }

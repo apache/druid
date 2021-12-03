@@ -31,8 +31,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -84,6 +84,21 @@ public class DoublesSketchAggregatorFactoryTest
   }
 
   @Test
+  public void testGuessAggregatorHeapFootprint()
+  {
+    DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
+        "myFactory",
+        "myField",
+        128,
+        null
+    );
+    Assert.assertEquals(64, factory.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, factory.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(4128, factory.guessAggregatorHeapFootprint(1000));
+    Assert.assertEquals(34848, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
+  }
+
+  @Test
   public void testMaxIntermediateSize()
   {
     DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory(
@@ -127,13 +142,13 @@ public class DoublesSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("doublesSketch", null)
                     .add("doublesSketchMerge", null)
-                    .add("doublesSketch-access", ValueType.COMPLEX)
-                    .add("doublesSketch-finalize", ValueType.LONG)
-                    .add("doublesSketchMerge-access", ValueType.COMPLEX)
-                    .add("doublesSketchMerge-finalize", ValueType.LONG)
+                    .add("doublesSketch-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketch-finalize", ColumnType.LONG)
+                    .add("doublesSketchMerge-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketchMerge-finalize", ColumnType.LONG)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

@@ -136,3 +136,21 @@ homeDirectory: /home/druid
 uidNumber: 7
 gidNumber: 7
 userPassword: helloworld
+
+dn: uid=datasourceAndSysUser,ou=Users,dc=example,dc=org
+uid: datasourceAndSysUser
+cn: datasourceAndSysUser
+sn: datasourceAndSysUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/datasourceAndSysUser
+uidNumber: 8
+gidNumber: 8
+userPassword: helloworld
+
+dn: cn=datasourceWithSysGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceWithSysGroup
+description: datasourceWithSysGroup users
+uniqueMember: uid=datasourceAndSysUser,ou=Users,dc=example,dc=org

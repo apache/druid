@@ -75,7 +75,7 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringFirstAggregatorFactory(FIRST_CLIENT_TYPE, CLIENT_TYPE, 1024))
+                .withMetrics(new StringFirstAggregatorFactory(FIRST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
@@ -118,10 +118,10 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringFirstAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
-                                          new StringFirstAggregatorFactory("folding", FIRST_CLIENT_TYPE, 1024),
-                                          new StringFirstAggregatorFactory("nonexistent", "nonexistent", 1024),
-                                          new StringFirstAggregatorFactory("numeric", "cnt", 1024)
+                                          new StringFirstAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
+                                          new StringFirstAggregatorFactory("folding", FIRST_CLIENT_TYPE, null, 1024),
+                                          new StringFirstAggregatorFactory("nonexistent", "nonexistent", null, 1024),
+                                          new StringFirstAggregatorFactory("numeric", "cnt", null, 1024)
                                       )
                                   )
                                   .build();

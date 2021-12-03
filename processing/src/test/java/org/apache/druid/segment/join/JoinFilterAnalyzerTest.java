@@ -36,7 +36,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.FalseFilter;
@@ -405,7 +405,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new ExpressionVirtualColumn(
                 "v1",
                 "concat('virtual-column-', \"channel\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -476,7 +476,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new ExpressionVirtualColumn(
                 "v0",
                 "upper(\"r1.regionName\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -763,7 +763,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "reverse(countryIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     Assert.assertEquals(
@@ -997,7 +997,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "concat(countryIsoCode, regionIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1087,7 +1087,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "concat(countryIsoCode, regionIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -2376,13 +2376,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
           new ExpressionVirtualColumn(
               rewrittenRegionIsoCodeColumnName,
               "(upper [(lower [regionIsoCode])])",
-              ValueType.STRING,
+              ColumnType.STRING,
               ExprMacroTable.nil()
           ),
           new ExpressionVirtualColumn(
               rewrittenCountryIsoCodeColumnName,
               "(upper [(lower [countryIsoCode])])",
-              ValueType.STRING,
+              ColumnType.STRING,
               ExprMacroTable.nil()
           )
       );

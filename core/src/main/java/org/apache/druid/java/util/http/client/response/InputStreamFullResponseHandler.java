@@ -32,7 +32,7 @@ public class InputStreamFullResponseHandler implements HttpResponseHandler<Input
   @Override
   public ClientResponse<InputStreamFullResponseHolder> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
-    InputStreamFullResponseHolder holder = new InputStreamFullResponseHolder(response.getStatus(), response);
+    InputStreamFullResponseHolder holder = new InputStreamFullResponseHolder(response);
     holder.addChunk(getContentBytes(response.getContent()));
     return ClientResponse.finished(holder);
   }

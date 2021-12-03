@@ -22,10 +22,10 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,11 +39,12 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -71,25 +72,31 @@ import java.util.stream.Collectors;
 @Path("/druid/v2/sql/")
 public class SqlResource
 {
+  public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
+  public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
+  public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
   private final SqlLifecycleFactory sqlLifecycleFactory;
   private final SqlLifecycleManager sqlLifecycleManager;
+  private final ServerConfig serverConfig;
 
   @Inject
   public SqlResource(
       @Json ObjectMapper jsonMapper,
       AuthorizerMapper authorizerMapper,
       SqlLifecycleFactory sqlLifecycleFactory,
-      SqlLifecycleManager sqlLifecycleManager
+      SqlLifecycleManager sqlLifecycleManager,
+      ServerConfig serverConfig
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.serverConfig = serverConfig;
   }
 
   @POST
@@ -120,7 +127,7 @@ public class SqlResource
       final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
       try {
-        return Response
+        final Response.ResponseBuilder responseBuilder = Response
             .ok(
                 (StreamingOutput) outputStream -> {
                   Exception e = null;
@@ -132,7 +139,11 @@ public class SqlResource
                     writer.writeResponseStart();
 
                     if (sqlQuery.includeHeader()) {
-                      writer.writeHeader(rowTransformer.getFieldList());
+                      writer.writeHeader(
+                          rowTransformer.getRowType(),
+                          sqlQuery.includeTypesHeader(),
+                          sqlQuery.includeSqlTypesHeader()
+                      );
                     }
 
                     while (!yielder.isDone()) {
@@ -159,8 +170,13 @@ public class SqlResource
                   }
                 }
             )
-            .header("X-Druid-SQL-Query-Id", sqlQueryId)
-            .build();
+            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+
+        if (sqlQuery.includeHeader()) {
+          responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
+        }
+
+        return responseBuilder.build();
       }
       catch (Throwable e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
@@ -170,29 +186,31 @@ public class SqlResource
     }
     catch (QueryCapacityExceededException cap) {
       endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
-      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
+      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap, sqlQueryId);
     }
     catch (QueryUnsupportedException unsupported) {
       endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
-      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
+      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported, sqlQueryId);
     }
     catch (QueryTimeoutException timeout) {
       endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
-      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
+      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout, sqlQueryId);
     }
     catch (SqlPlanningException | ResourceLimitExceededException e) {
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, e, sqlQueryId);
     }
     catch (ForbiddenException e) {
       endLifecycleWithoutEmittingMetrics(sqlQueryId, lifecycle);
-      throw e; // let ForbiddenExceptionMapper handle this
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
+                                             .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
-    catch (Exception e) {
+    // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
+    catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Exception exceptionToReport;
+      final Throwable exceptionToReport;
 
       if (e instanceof RelOptPlanner.CannotPlanException) {
         exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
@@ -202,7 +220,8 @@ public class SqlResource
 
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
+          QueryInterruptedException.wrapIfNeeded(exceptionToReport),
+          sqlQueryId
       );
     }
     finally {
@@ -230,11 +249,17 @@ public class SqlResource
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 
-  private Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+  private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId)
+      throws JsonProcessingException
   {
     return Response.status(status)
                    .type(MediaType.APPLICATION_JSON_TYPE)
-                   .entity(jsonMapper.writeValueAsBytes(e))
+                   .entity(
+                       jsonMapper.writeValueAsBytes(
+                           serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e)
+                       )
+                   )
+                   .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
                    .build();
   }
 
@@ -252,13 +277,13 @@ public class SqlResource
     if (lifecycles.isEmpty()) {
       return Response.status(Status.NOT_FOUND).build();
     }
-    Set<Resource> resources = lifecycles
+    Set<ResourceAction> resources = lifecycles
         .stream()
-        .flatMap(lifecycle -> lifecycle.getAuthorizedResources().stream())
+        .flatMap(lifecycle -> lifecycle.getRequiredResourceActions().stream())
         .collect(Collectors.toSet());
     Access access = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        Iterables.transform(resources, AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+        resources,
         authorizerMapper
     );
 
@@ -268,8 +293,7 @@ public class SqlResource
       lifecycles.forEach(SqlLifecycle::cancel);
       return Response.status(Status.ACCEPTED).build();
     } else {
-      // Return 404 for authorization failures as well
-      return Response.status(Status.NOT_FOUND).build();
+      return Response.status(Status.FORBIDDEN).build();
     }
   }
 }

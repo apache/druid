@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -37,6 +38,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -80,14 +82,14 @@ public class SegmentLocalCacheManagerTest
   }
 
   @Test
-  public void testIfSegmentIsLoaded()
+  public void testIfSegmentIsLoaded() throws IOException
   {
     final DataSegment cachedSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
     final File cachedSegmentFile = new File(
         localSegmentCacheFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    cachedSegmentFile.mkdirs();
+    FileUtils.mkdirp(cachedSegmentFile);
 
     Assert.assertTrue("Expect cache hit", manager.isSegmentCached(cachedSegment));
 
@@ -117,7 +119,7 @@ public class SegmentLocalCacheManagerTest
         localStorageFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
 
@@ -163,7 +165,7 @@ public class SegmentLocalCacheManagerTest
         segmentSrcFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
 
@@ -211,7 +213,7 @@ public class SegmentLocalCacheManagerTest
         segmentSrcFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
 
@@ -261,7 +263,7 @@ public class SegmentLocalCacheManagerTest
         segmentSrcFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
 
@@ -310,7 +312,7 @@ public class SegmentLocalCacheManagerTest
         segmentSrcFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
 
@@ -336,7 +338,7 @@ public class SegmentLocalCacheManagerTest
         segmentSrcFolder,
         "test_segment_loader/2014-11-20T00:00:00.000Z_2014-11-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    localSegmentFile2.mkdirs();
+    FileUtils.mkdirp(localSegmentFile2);
     final File indexZip2 = new File(localSegmentFile2, "index.zip");
     indexZip2.createNewFile();
 
@@ -504,7 +506,7 @@ public class SegmentLocalCacheManagerTest
   {
     // manually create a local segment under segmentSrcFolder
     final File localSegmentFile = new File(segmentSrcFolder, localSegmentPath);
-    localSegmentFile.mkdirs();
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     indexZip.createNewFile();
   }
@@ -746,7 +748,7 @@ public class SegmentLocalCacheManagerTest
         localStorageFolder,
         "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
     );
-    Assert.assertTrue(localSegmentFile.mkdirs());
+    FileUtils.mkdirp(localSegmentFile);
     final File indexZip = new File(localSegmentFile, "index.zip");
     Assert.assertTrue(indexZip.createNewFile());
 

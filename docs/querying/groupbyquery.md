@@ -451,9 +451,9 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`maxIntermediateRows`|Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for this query.|None|
-|`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
-|`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
+|`maxIntermediateRows`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxIntermediateRows` for a groupBy v1 query.|None|
+|`maxResults`|Ignored by groupBy v2. Can be used to lower the value of `druid.query.groupBy.maxResults` for a groupBy v1 query.|None|
+|`useOffheap`|Ignored by groupBy v2, and no longer supported for groupBy v1. Enabling this option with groupBy v1 will result in an error. For off-heap aggregation, switch to groupBy v2, which always operates off-heap.|false|
 
 #### Array based result rows
 

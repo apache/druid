@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -152,6 +153,14 @@ public class CliCoordinator extends ServerRunnable
     if (beOverlord) {
       log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);
     }
+  }
+
+  @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return isOverlord(properties)
+           ? ImmutableSet.of(NodeRole.COORDINATOR, NodeRole.OVERLORD)
+           : ImmutableSet.of(NodeRole.COORDINATOR);
   }
 
   @Override
@@ -298,10 +307,10 @@ public class CliCoordinator extends ServerRunnable
                 KillCompactionConfig.class
             );
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

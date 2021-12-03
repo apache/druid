@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.junit.Assert;
@@ -39,5 +40,16 @@ public class TaskRunnerUtilsTest
     Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo%20bar%26/log", url.toString());
     Assert.assertEquals("1.2.3.4:8290", url.getAuthority());
     Assert.assertEquals("/druid/worker/v1/task/foo%20bar%26/log", url.getPath());
+  }
+
+  @Test
+  public void testMakeTaskLocationURL()
+  {
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        new TaskLocation("1.2.3.4", 8090, 8290),
+        "/druid/worker/v1/task/%s/log",
+        "foo bar&"
+    );
+    Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo%20bar%26/log", url.toString());
   }
 }

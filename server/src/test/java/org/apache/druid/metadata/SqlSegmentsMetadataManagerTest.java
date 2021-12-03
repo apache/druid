@@ -35,6 +35,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -443,7 +444,7 @@ public class SqlSegmentsMetadataManagerTest
     awaitDataSourceAppeared(newDataSource);
     Assert.assertNotNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(newDataSource));
 
-    Assert.assertTrue(sqlSegmentsMetadataManager.markSegmentAsUnused(newSegment.getId().toString()));
+    Assert.assertTrue(sqlSegmentsMetadataManager.markSegmentAsUnused(newSegment.getId()));
     awaitDataSourceDisappeared(newDataSource);
     Assert.assertNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(newDataSource));
   }
@@ -706,38 +707,13 @@ public class SqlSegmentsMetadataManagerTest
 
     publisher.publishSegment(newSegment1);
     publisher.publishSegment(newSegment2);
-    final ImmutableSet<String> segmentIds =
-        ImmutableSet.of(newSegment1.getId().toString(), newSegment1.getId().toString());
+    final ImmutableSet<SegmentId> segmentIds =
+        ImmutableSet.of(newSegment1.getId(), newSegment1.getId());
 
-    Assert.assertEquals(segmentIds.size(), sqlSegmentsMetadataManager.markSegmentsAsUnused(newDataSource, segmentIds));
+    Assert.assertEquals(segmentIds.size(), sqlSegmentsMetadataManager.markSegmentsAsUnused(segmentIds));
     sqlSegmentsMetadataManager.poll();
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
-    );
-  }
-
-  @Test
-  public void testMarkSegmentsAsUnusedInvalidDataSource() throws IOException
-  {
-    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
-
-    final String newDataSource = "wikipedia2";
-    final DataSegment newSegment1 = createNewSegment1(newDataSource);
-
-    final DataSegment newSegment2 = createNewSegment1(newDataSource);
-
-    publisher.publishSegment(newSegment1);
-    publisher.publishSegment(newSegment2);
-    final ImmutableSet<String> segmentIds =
-        ImmutableSet.of(newSegment1.getId().toString(), newSegment2.getId().toString());
-    // none of the segments are in data source
-    Assert.assertEquals(0, sqlSegmentsMetadataManager.markSegmentsAsUnused("wrongDataSource", segmentIds));
-    sqlSegmentsMetadataManager.poll();
-    Assert.assertEquals(
-        ImmutableSet.of(segment1, segment2, newSegment1, newSegment2),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
   }

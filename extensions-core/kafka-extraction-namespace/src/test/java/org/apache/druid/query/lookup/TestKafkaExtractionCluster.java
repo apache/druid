@@ -91,6 +91,9 @@ public class TestKafkaExtractionCluster
   {
     zkServer = new TestingCluster(1);
     zkServer.start();
+    closer.register(() -> {
+      zkServer.stop();
+    });
 
     kafkaServer = new KafkaServer(
           getBrokerProperties(),
@@ -99,6 +102,10 @@ public class TestKafkaExtractionCluster
           false);
 
     kafkaServer.startup();
+    closer.register(() -> {
+      kafkaServer.shutdown();
+      kafkaServer.awaitShutdown();
+    });
     log.info("---------------------------Started Kafka Broker ---------------------------");
 
     log.info("---------------------------Publish Messages to topic-----------------------");
@@ -150,7 +157,7 @@ public class TestKafkaExtractionCluster
   private Map<String, String> getConsumerProperties()
   {
     final Map<String, String> props = new HashMap<>(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().port();
+    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
     props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     return props;
   }
@@ -194,7 +201,7 @@ public class TestKafkaExtractionCluster
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().port();
+    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
     kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());

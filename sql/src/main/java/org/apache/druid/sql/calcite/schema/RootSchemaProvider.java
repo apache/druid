@@ -19,14 +19,15 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.ISE;
 
-import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
  *
  * All the provided schema are added to the rootSchema.
  */
-public class RootSchemaProvider implements Provider<SchemaPlus>
+public class RootSchemaProvider implements Provider<DruidSchemaCatalog>
 {
   private final Set<NamedSchema> namedSchemas;
 
@@ -48,18 +49,20 @@ public class RootSchemaProvider implements Provider<SchemaPlus>
   }
 
   @Override
-  public SchemaPlus get()
+  public DruidSchemaCatalog get()
   {
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    List<String> schemaNames = namedSchemas.stream()
-                                           .map(NamedSchema::getSchemaName)
-                                           .collect(Collectors.toList());
-    Set<String> uniqueSchemaNames = new HashSet<>(schemaNames);
-    if (uniqueSchemaNames.size() < schemaNames.size()) {
-      throw new ISE("Found multiple schemas registered to the same name. "
-                    + "The list of registered schemas are %s", schemaNames);
+    final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
+    final Map<String, NamedSchema> schemasByName = Maps.newHashMapWithExpectedSize(namedSchemas.size());
+    for (NamedSchema schema : namedSchemas) {
+      if (schemasByName.containsKey(schema.getSchemaName())) {
+        throw new ISE(
+            "Found multiple schemas registered to the same name. The list of registered schemas are %s",
+            namedSchemas.stream().map(NamedSchema::getSchemaName).collect(Collectors.toList())
+        );
+      }
+      schemasByName.put(schema.getSchemaName(), schema);
+      rootSchema.add(schema.getSchemaName(), schema.getSchema());
     }
-    namedSchemas.forEach(schema -> rootSchema.add(schema.getSchemaName(), schema.getSchema()));
-    return rootSchema;
+    return new DruidSchemaCatalog(rootSchema, ImmutableMap.copyOf(schemasByName));
   }
 }

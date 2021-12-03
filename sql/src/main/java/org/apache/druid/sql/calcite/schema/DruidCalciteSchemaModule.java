@@ -26,7 +26,6 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -45,7 +44,7 @@ public class DruidCalciteSchemaModule implements Module
     binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
 
     // Should only be used by the information schema
-    binder.bind(SchemaPlus.class)
+    binder.bind(DruidSchemaCatalog.class)
           .annotatedWith(Names.named(INCOMPLETE_SCHEMA))
           .toProvider(RootSchemaProvider.class)
           .in(Scopes.SINGLETON);
@@ -65,9 +64,9 @@ public class DruidCalciteSchemaModule implements Module
 
   @Provides
   @Singleton
-  private SchemaPlus getRootSchema(@Named(INCOMPLETE_SCHEMA) SchemaPlus rootSchema, InformationSchema informationSchema)
+  private DruidSchemaCatalog getRootSchema(@Named(INCOMPLETE_SCHEMA) DruidSchemaCatalog rootSchema, InformationSchema informationSchema)
   {
-    rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.getRootSchema().add(INFORMATION_SCHEMA_NAME, informationSchema);
     return rootSchema;
   }
 }

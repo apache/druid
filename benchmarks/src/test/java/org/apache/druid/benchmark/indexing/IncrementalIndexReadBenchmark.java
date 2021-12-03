@@ -95,7 +95,7 @@ public class IncrementalIndexReadBenchmark
   }
 
   private AppendableIndexSpec appendableIndexSpec;
-  private IncrementalIndex<?> incIndex;
+  private IncrementalIndex incIndex;
   private GeneratorSchemaInfo schemaInfo;
 
   @Setup
@@ -130,7 +130,7 @@ public class IncrementalIndexReadBenchmark
     }
   }
 
-  private IncrementalIndex<?> makeIncIndex()
+  private IncrementalIndex makeIncIndex()
   {
     return appendableIndexSpec.builder()
         .setIndexSchema(

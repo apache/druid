@@ -22,10 +22,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -41,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -185,8 +187,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     );
 
     final File persistDir = toolbox.getPersistDir();
-    FileUtils.deleteQuietly(persistDir);
-    FileUtils.forceMkdir(persistDir);
+    org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     final Set<DataSegment> pushedSegments = mergeAndPushSegments(
         toolbox,
@@ -197,7 +199,10 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments));
+    taskClient.report(
+        supervisorTaskId,
+        new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of())
+    );
 
     return TaskStatus.success(getId());
   }
@@ -208,8 +213,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   ) throws IOException
   {
     final File tempDir = toolbox.getIndexingTmpDir();
-    FileUtils.deleteQuietly(tempDir);
-    FileUtils.forceMkdir(tempDir);
+    org.apache.commons.io.FileUtils.deleteQuietly(tempDir);
+    FileUtils.mkdirp(tempDir);
 
     final Map<Interval, Int2ObjectMap<List<File>>> intervalToUnzippedFiles = new HashMap<>();
     // Fetch partition files
@@ -217,13 +222,13 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       final Interval interval = entryPerInterval.getKey();
       for (Int2ObjectMap.Entry<List<PartitionLocation>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
         final int bucketId = entryPerBucketId.getIntKey();
-        final File partitionDir = FileUtils.getFile(
+        final File partitionDir = org.apache.commons.io.FileUtils.getFile(
             tempDir,
             interval.getStart().toString(),
             interval.getEnd().toString(),
             Integer.toString(bucketId)
         );
-        FileUtils.forceMkdir(partitionDir);
+        FileUtils.mkdirp(partitionDir);
         for (PartitionLocation location : entryPerBucketId.getValue()) {
           final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
           intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
@@ -335,8 +340,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               indexesToMerge,
               dataSchema.getGranularitySpec().isRollup(),
               dataSchema.getAggregators(),
+              null,
               outDir,
               tuningConfig.getIndexSpec(),
+              tuningConfig.getIndexSpecForIntermediatePersists(),
+              new BaseProgressIndicator(),
               tuningConfig.getSegmentWriteOutMediumFactory(),
               tuningConfig.getMaxColumnsToMerge()
           )
