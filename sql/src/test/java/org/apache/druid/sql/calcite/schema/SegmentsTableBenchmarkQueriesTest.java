@@ -117,19 +117,23 @@ public class SegmentsTableBenchmarkQueriesTest extends SegmentsTableQueryTestSui
   {
     String sql = QUERIES.get(query);
 
+    FORCE_HASH_BASED_MERGE_SUPPLIER.set(true);
+    final List<Object[]> resultBasedHash;
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(ImmutableMap.of(), sql)) {
-      FORCE_HASH_BASED_MERGE_SUPPLIER.set(true);
-      final PlannerResult plannerResultForHash = planner.plan(sql);
-      final List<Object[]> resultBasedHash = plannerResultForHash.run().toList();
+      final PlannerResult plannerResultForHash = planner.plan();
+      resultBasedHash = plannerResultForHash.run().toList();
+    }
 
-      FORCE_HASH_BASED_MERGE_SUPPLIER.set(false);
-      final PlannerResult plannerResultForSort = planner.plan(sql);
-      final List<Object[]> resultBasedSort = plannerResultForSort.run().toList();
+    FORCE_HASH_BASED_MERGE_SUPPLIER.set(false);
+    final List<Object[]> resultBasedSort;
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(ImmutableMap.of(), sql)) {
+      final PlannerResult plannerResultForSort = planner.plan();
+      resultBasedSort = plannerResultForSort.run().toList();
+    }
 
-      Assert.assertEquals(resultBasedHash.size(), resultBasedSort.size());
-      for (int i = 0; i < resultBasedHash.size(); i++) {
-        Assert.assertArrayEquals(resultBasedHash.get(i), resultBasedSort.get(i));
-      }
+    Assert.assertEquals(resultBasedHash.size(), resultBasedSort.size());
+    for (int i = 0; i < resultBasedHash.size(); i++) {
+      Assert.assertArrayEquals(resultBasedHash.get(i), resultBasedSort.get(i));
     }
   }
 }

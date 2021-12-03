@@ -131,7 +131,7 @@ public class SegmentsTableBenchmark extends SegmentsTableQueryTestSuite
     String sql = QUERIES.get(Integer.parseInt(this.sql));
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(ImmutableMap.of(), sql)) {
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
