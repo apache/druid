@@ -22,17 +22,17 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link UnivariateFunctionVectorProcessor} for processing (long[]) -> double[]
+ * specialized {@link UnivariateFunctionVectorValueProcessor} for processing (double[]) -> double[]
  */
-public abstract class DoubleOutLongInFunctionVectorProcessor
-    extends UnivariateFunctionVectorProcessor<long[], double[]>
+public abstract class DoubleOutDoubleInFunctionVectorValueProcessor
+    extends UnivariateFunctionVectorValueProcessor<double[], double[]>
 {
-  public DoubleOutLongInFunctionVectorProcessor(ExprVectorProcessor<long[]> processor, int maxVectorSize)
+  public DoubleOutDoubleInFunctionVectorValueProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG), maxVectorSize, new double[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new double[maxVectorSize]);
   }
 
-  public abstract double apply(long input);
+  public abstract double apply(double input);
 
   @Override
   public ExpressionType getOutputType()
@@ -41,7 +41,7 @@ public abstract class DoubleOutLongInFunctionVectorProcessor
   }
 
   @Override
-  final void processIndex(long[] input, int i)
+  final void processIndex(double[] input, int i)
   {
     outValues[i] = apply(input[i]);
   }

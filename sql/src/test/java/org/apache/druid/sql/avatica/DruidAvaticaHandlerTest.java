@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -232,7 +233,7 @@ public abstract class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
-    propertiesLosAngeles.setProperty("sqlQueryId", DUMMY_SQL_QUERY_ID);
+    propertiesLosAngeles.setProperty(BaseQuery.SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(url, propertiesLosAngeles);
   }
 

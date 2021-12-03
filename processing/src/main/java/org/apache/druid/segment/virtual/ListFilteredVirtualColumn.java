@@ -257,6 +257,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return delegate.getBitmap(idMapping.getReverseId(idx));
     }
+
     @Override
     public int getCardinality()
     {

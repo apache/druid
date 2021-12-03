@@ -21,34 +21,14 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExpressionType;
 
-/**
- * specialized {@link UnivariateFunctionVectorProcessor} for processing (double[]) -> double[]
- */
-public abstract class DoubleOutDoubleInFunctionVectorProcessor
-    extends UnivariateFunctionVectorProcessor<double[], double[]>
+public abstract class SymmetricalBivariateFunctionVectorProcessor<T> extends BivariateFunctionVectorProcessor<T, T, T>
 {
-  public DoubleOutDoubleInFunctionVectorProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
+  public SymmetricalBivariateFunctionVectorProcessor(
+      ExpressionType outputType,
+      ExprVectorProcessor<T> left,
+      ExprVectorProcessor<T> right
+  )
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new double[maxVectorSize]);
-  }
-
-  public abstract double apply(double input);
-
-  @Override
-  public ExpressionType getOutputType()
-  {
-    return ExpressionType.DOUBLE;
-  }
-
-  @Override
-  final void processIndex(double[] input, int i)
-  {
-    outValues[i] = apply(input[i]);
-  }
-
-  @Override
-  final ExprEvalVector<double[]> asEval()
-  {
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    super(outputType, left, right);
   }
 }

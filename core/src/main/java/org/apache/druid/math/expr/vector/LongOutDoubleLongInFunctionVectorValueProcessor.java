@@ -22,12 +22,12 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link BivariateFunctionVectorProcessor} for processing (double[], long[]) -> long[]
+ * specialized {@link BivariateFunctionVectorValueProcessor} for processing (double[], long[]) -> long[]
  */
-public abstract class LongOutDoubleLongInFunctionVectorProcessor
-    extends BivariateFunctionVectorProcessor<double[], long[], long[]>
+public abstract class LongOutDoubleLongInFunctionVectorValueProcessor
+    extends BivariateFunctionVectorValueProcessor<double[], long[], long[]>
 {
-  public LongOutDoubleLongInFunctionVectorProcessor(
+  public LongOutDoubleLongInFunctionVectorValueProcessor(
       ExprVectorProcessor<double[]> left,
       ExprVectorProcessor<long[]> right,
       int maxVectorSize

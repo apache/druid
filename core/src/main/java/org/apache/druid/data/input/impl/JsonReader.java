@@ -65,6 +65,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   private final ObjectMapper mapper;
   private final InputEntity source;
   private final InputRowSchema inputRowSchema;
+  private final JsonFactory jsonFactory;
 
   JsonReader(
       InputRowSchema inputRowSchema,
@@ -78,6 +79,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
     this.source = source;
     this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
     this.mapper = mapper;
+    this.jsonFactory = new JsonFactory();
   }
 
   @Override
@@ -92,7 +94,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
     final List<InputRow> inputRows;
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+    try (JsonParser parser = jsonFactory.createParser(intermediateRow)) {
       final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
       inputRows = FluentIterable.from(() -> delegate)
                                 .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
@@ -117,7 +119,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   @Override
   protected List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+    try (JsonParser parser = jsonFactory.createParser(intermediateRow)) {
       final MappingIterator<Map> delegate = mapper.readValues(parser, Map.class);
       return FluentIterable.from(() -> delegate)
                            .transform(map -> (Map<String, Object>) map)
