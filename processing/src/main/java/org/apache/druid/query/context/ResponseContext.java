@@ -462,7 +462,7 @@ public abstract class ResponseContext
      * Thread-safe structure is required since there is no guarantee that {@link #registerKey(Key)}
      * would be called only from class static blocks.
      */
-    private final ConcurrentMap<String, Key> registered_keys = new ConcurrentSkipListMap<>();
+    private final ConcurrentMap<String, Key> registeredKeys = new ConcurrentSkipListMap<>();
 
     static {
       instance().registerKeys(new Key[]
@@ -503,7 +503,7 @@ public abstract class ResponseContext
      */
     public void registerKey(Key key)
     {
-      if (registered_keys.putIfAbsent(key.getName(), key) != null) {
+      if (registeredKeys.putIfAbsent(key.getName(), key) != null) {
         throw new IAE("Key [%s] has already been registered as a context key", key.getName());
       }
     }
@@ -525,7 +525,7 @@ public abstract class ResponseContext
      */
     public Key keyOf(String name)
     {
-      Key key = registered_keys.get(name);
+      Key key = registeredKeys.get(name);
       if (key == null) {
         throw new ISE("Key [%s] is not registered as a context key", name);
       }
@@ -539,7 +539,7 @@ public abstract class ResponseContext
      */
     public Key find(String name)
     {
-      return registered_keys.get(name);
+      return registeredKeys.get(name);
     }
   }
 
