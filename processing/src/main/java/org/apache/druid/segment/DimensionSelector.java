@@ -34,6 +34,8 @@ import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelecto
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Selector for a string-typed column, either single- or multi-valued. This is named a "dimension" selector for legacy
@@ -161,6 +163,27 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       return constant(value);
     } else {
       return constant(extractionFn.apply(value));
+    }
+  }
+
+  static DimensionSelector multiConstant(@Nullable final List<String> values)
+  {
+    if (values == null || values.isEmpty()) {
+      return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+    } else {
+      return new ConstantMultiValueDimensionSelector(values);
+    }
+  }
+
+  static DimensionSelector multiConstant(@Nullable final List<String> values, @Nullable final ExtractionFn extractionFn)
+  {
+    if (extractionFn == null) {
+      return multiConstant(values);
+    } else {
+      if (values == null) {
+        return constant(extractionFn.apply(null));
+      }
+      return multiConstant(values.stream().map(extractionFn::apply).collect(Collectors.toList()));
     }
   }
 
