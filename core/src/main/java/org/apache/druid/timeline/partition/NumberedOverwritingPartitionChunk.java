@@ -60,6 +60,12 @@ public class NumberedOverwritingPartitionChunk<T> implements PartitionChunk<T>
   }
 
   @Override
+  public boolean abutsCompatible(PartitionChunk<T> chunk)
+  {
+    return false;
+  }
+
+  @Override
   public boolean isStart()
   {
     return true;

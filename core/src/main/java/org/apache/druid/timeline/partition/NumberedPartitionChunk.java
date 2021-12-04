@@ -73,6 +73,17 @@ public class NumberedPartitionChunk<T> implements PartitionChunk<T>
   }
 
   @Override
+  public boolean abutsCompatible(PartitionChunk<T> chunk)
+  {
+    if (chunk instanceof NumberedOverwritingPartitionChunk) {
+      NumberedOverwritingPartitionChunk<T> castedOverwriteOther = (NumberedOverwritingPartitionChunk<T>) chunk;
+      return castedOverwriteOther.getChunkNumber() == PartitionIds.NON_ROOT_GEN_START_PARTITION_ID;
+    } else {
+      return false;
+    }
+  }
+
+  @Override
   public boolean isStart()
   {
     return chunks > 0 ? chunkNumber == 0 : true;

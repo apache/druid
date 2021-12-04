@@ -1572,4 +1572,22 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2019-01-01/2019-01-04"), Partitions.INCOMPLETE_OK)
     );
   }
+
+  @Test
+  public void testWhenHigherPartOfCorePartitionSetIsPartiallyOvershadowed()
+  {
+    final String intervalString = "2019-01-01/2019-01-02";
+    // The core partition set is [0, 3).
+    // Add the first segment in the core partition set.
+    add(intervalString, "0", makeNumbered("0", 0, 3, 0));
+    // Add a segment partially overshadowing the core partition set of [1, 3).
+    add("2019-01-01/2019-01-02", "0", makeNumberedOverwriting("0", 0, 1, 1, 3, 1, 1));
+    Assert.assertEquals(
+        ImmutableSet.of(
+            makeNumbered("0", 0, 3, 0).getObject(),
+            makeNumberedOverwriting("0", 0, 1, 1, 3, 1, 1).getObject()
+        ),
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of(intervalString), Partitions.ONLY_COMPLETE)
+    );
+  }
 }

@@ -70,6 +70,12 @@ public class IntegerPartitionChunk<T extends Overshadowable> implements Partitio
   }
 
   @Override
+  public boolean abutsCompatible(PartitionChunk<T> chunk)
+  {
+    return false;
+  }
+
+  @Override
   public boolean isStart()
   {
     return start == null;

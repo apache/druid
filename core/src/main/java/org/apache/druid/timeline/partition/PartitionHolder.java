@@ -102,7 +102,10 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     while (iter.hasNext()) {
       PartitionChunk<T> next = iter.next();
       if (!curr.abuts(next)) {
-        return false;
+        if (!(curr.abutsCompatible(next)
+            && overshadowableManager.findAtomicUpdateGroupWith(next, OvershadowableManager.State.STANDBY) == null)) {
+          return false;
+        }
       }
 
       if (next.isEnd()) {

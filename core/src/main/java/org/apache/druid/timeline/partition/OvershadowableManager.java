@@ -220,7 +220,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * minorVersion with {@link PartitionChunk}.
    */
   @Nullable
-  private AtomicUpdateGroup<T> findAtomicUpdateGroupWith(PartitionChunk<T> chunk, State state)
+  AtomicUpdateGroup<T> findAtomicUpdateGroupWith(PartitionChunk<T> chunk, State state)
   {
     final Short2ObjectSortedMap<AtomicUpdateGroup<T>> versionToGroup = getStateMap(state).get(
         RootPartitionRange.of(chunk)

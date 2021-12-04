@@ -47,6 +47,15 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
   boolean abuts(PartitionChunk<T> chunk);
 
   /**
+   * Determines if this PartitionChunk abuts another PartitionChunk of a different but compatible type.  A sequence of abutting PartitionChunks should
+   * start with an object where isStart() == true and eventually end with an object where isEnd() == true.
+   *
+   * @param chunk input chunk
+   * @return true if this chunk abuts the input chunk
+   */
+  boolean abutsCompatible(PartitionChunk<T> chunk);
+
+  /**
    * Returns true if this chunk is the beginning of the partition. Most commonly, that means it represents the range
    * [-infinity, X) for some concrete X.
    *

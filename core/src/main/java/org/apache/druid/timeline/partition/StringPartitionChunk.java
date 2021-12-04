@@ -79,6 +79,12 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
   }
 
   @Override
+  public boolean abutsCompatible(PartitionChunk<T> chunk)
+  {
+    return false;
+  }
+
+  @Override
   public boolean isStart()
   {
     return start == null;
