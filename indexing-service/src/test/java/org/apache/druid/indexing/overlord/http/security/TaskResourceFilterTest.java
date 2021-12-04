@@ -23,13 +23,13 @@ import com.google.common.base.Optional;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.server.initialization.jetty.NotFoundException;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
@@ -74,15 +74,15 @@ public class TaskResourceFilterTest
     EasyMock.replay(containerRequest);
     EasyMock.replay(taskStorageQueryAdapter);
 
-    WebApplicationException expected = null;
+    NotFoundException expected = null;
     try {
       resourceFilter.filter(containerRequest);
     }
-    catch (WebApplicationException e) {
+    catch (NotFoundException e) {
       expected = e;
     }
     Assert.assertNotNull(expected);
-    Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    Assert.assertEquals(expected.getStatusCode(), Response.Status.NOT_FOUND);
     EasyMock.verify(containerRequest);
     EasyMock.verify(taskStorageQueryAdapter);
   }

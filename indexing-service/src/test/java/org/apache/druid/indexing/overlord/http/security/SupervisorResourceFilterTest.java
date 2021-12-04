@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.server.initialization.jetty.NotFoundException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -38,7 +39,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
@@ -142,16 +142,16 @@ public class SupervisorResourceFilterTest
     EasyMock.replay(containerRequest);
     EasyMock.replay(supervisorManager);
 
-    WebApplicationException expected = null;
+    NotFoundException expected = null;
     try {
       resourceFilter.filter(containerRequest);
     }
-    catch (WebApplicationException e) {
+    catch (NotFoundException e) {
       expected = e;
     }
 
     Assert.assertNotNull(expected);
-    Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    Assert.assertEquals(expected.getStatusCode(), Response.Status.NOT_FOUND);
     EasyMock.verify(containerRequest);
     EasyMock.verify(supervisorManager);
   }
