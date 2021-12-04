@@ -39,7 +39,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |`type`|This String should be [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator)|yes|
 |`name`|A String for the output (result) name of the calculation.|yes|
 |`fieldName`|A String for the name of the input field.|yes|
-|`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be a power of 2 from 4 to 21 inclusively.|no, defaults to `12`|
+|`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be between 4 and 21 inclusively.|no, defaults to `12`|
 |`tgtHllType`|The type of the target HLL sketch. Must be `HLL_4`, `HLL_6` or `HLL_8` |no, defaults to `HLL_4`|
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
 

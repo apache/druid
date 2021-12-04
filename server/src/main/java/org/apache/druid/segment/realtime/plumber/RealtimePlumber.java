@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
@@ -443,8 +444,11 @@ public class RealtimePlumber implements Plumber
                     indexes,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
+                    null,
                     mergedTarget,
                     config.getIndexSpec(),
+                    config.getIndexSpecForIntermediatePersists(),
+                    new BaseProgressIndicator(),
                     config.getSegmentWriteOutMediumFactory(),
                     -1
                 );

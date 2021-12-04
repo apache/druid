@@ -34,6 +34,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
   private final Ordering<? super T> ordering;
   private final Sequence<? extends Sequence<T>> baseSequences;
 
+  @SuppressWarnings("unchecked")
   public MergeSequence(
       Ordering<? super T> ordering,
       Sequence<? extends Sequence<? extends T>> baseSequences

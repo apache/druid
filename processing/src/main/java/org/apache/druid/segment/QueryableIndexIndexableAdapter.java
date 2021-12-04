@@ -198,7 +198,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final TimeAndDimsPointer markedRowPointer;
 
     boolean first = true;
-    int memoizedOffset = -1;
 
     RowIteratorImpl()
     {
@@ -333,20 +332,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       for (int i = 0; i < rowMetricSelectors.length; i++) {
         markedMetricSelectors[i].setValueFrom(rowMetricSelectors[i]);
       }
-    }
-
-    /**
-     * Used in {@link RowFilteringIndexAdapter}
-     */
-    void memoizeOffset()
-    {
-      memoizedOffset = offset.getOffset();
-    }
-
-    void resetToMemoizedOffset()
-    {
-      offset.setCurrentOffset(memoizedOffset);
-      setRowPointerValues();
     }
   }
 
