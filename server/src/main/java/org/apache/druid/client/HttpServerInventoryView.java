@@ -193,7 +193,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         lifecycleLock.exitStart();
       }
 
-      log.info("Started HttpServerInventoryView.");
+      log.info("Started %s.", execNamePrefix);
     }
   }
 
@@ -205,13 +205,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("can't stop.");
       }
 
-      log.info("Stopping HttpServerInventoryView.");
+      log.info("Stopping %s.", execNamePrefix);
 
       if (executor != null) {
         executor.shutdownNow();
       }
 
-      log.info("Stopped HttpServerInventoryView.");
+      log.info("Stopped %s.", execNamePrefix);
     }
   }
 

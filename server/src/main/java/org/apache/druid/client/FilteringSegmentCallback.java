@@ -26,6 +26,12 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
+/**
+ * A SegmentCallback that is called only when the given filter satisfies.
+ * {@link  #segmentViewInitialized()} is an exception and always called
+ * when the view is initialized without using the filter.
+ * Callback methods return {@link CallbackAction#CONTINUE} when the filter does not satisfy.
+ */
 public class FilteringSegmentCallback implements SegmentCallback
 {
 
