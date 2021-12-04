@@ -2604,6 +2604,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
+    boolean earlyStopRequested = false;
 
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       Integer groupId = entry.getKey();
@@ -2622,7 +2623,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
         log.info("Early stop requested - signalling tasks to complete");
 
-        earlyStopTime = null;
+        earlyStopRequested = true;
         stopTasksEarly = true;
       }
 
@@ -2633,6 +2634,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futureGroupIds.add(groupId);
         futures.add(checkpointTaskGroup(group, true));
       }
+    }
+
+    if (earlyStopRequested) {
+      earlyStopTime = null;
     }
 
     List<Map<PartitionIdType, SequenceOffsetType>> results = Futures.successfulAsList(futures)
