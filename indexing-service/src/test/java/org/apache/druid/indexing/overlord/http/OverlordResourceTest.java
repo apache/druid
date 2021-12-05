@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -65,7 +66,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -1190,7 +1190,7 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.enableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(ImmutableMap.of(host, "enabled"), response.getEntity());
   }
 
@@ -1213,7 +1213,7 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.disableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(ImmutableMap.of(host, "disabled"), response.getEntity());
   }
 
@@ -1236,7 +1236,7 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.enableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());
     Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
@@ -1259,7 +1259,7 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.disableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.getStatus());
     Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
@@ -1280,7 +1280,7 @@ public class OverlordResourceTest
         configManager
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.code(), response.getStatus());
   }
 
   @Test
@@ -1299,7 +1299,7 @@ public class OverlordResourceTest
         configManager
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
@@ -1319,7 +1319,7 @@ public class OverlordResourceTest
         configManager
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
@@ -1340,7 +1340,7 @@ public class OverlordResourceTest
         configManager
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
@@ -1387,7 +1387,7 @@ public class OverlordResourceTest
         provisioningStrategy
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(expectedWorkerCapacity * maxNumWorkers, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
@@ -1434,7 +1434,7 @@ public class OverlordResourceTest
         provisioningStrategy
     );
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK.code(), response.getStatus());
     Assert.assertEquals(workerInfos.stream().findFirst().get().getWorker().getCapacity(), ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
     Assert.assertEquals(invalidExpectedCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }

@@ -30,6 +30,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -50,8 +52,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
@@ -508,11 +508,11 @@ public class WorkerTaskManager
               StringFullResponseHolder fullResponseHolder = overlordClient.go(
                   overlordClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
                                 .setContent(jsonMapper.writeValueAsBytes(taskIds))
-                                .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
-                                .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+                                .addHeader(HttpHeaderNames.ACCEPT.toString(), MediaType.APPLICATION_JSON)
+                                .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), MediaType.APPLICATION_JSON)
 
               );
-              if (fullResponseHolder.getStatus().getCode() == 200) {
+              if (fullResponseHolder.getStatus().code() == 200) {
                 String responseContent = fullResponseHolder.getContent();
                 taskStatusesFromOverlord = jsonMapper.readValue(
                     responseContent,
@@ -521,7 +521,7 @@ public class WorkerTaskManager
                     }
                 );
                 log.debug("Received completed task status response [%s].", responseContent);
-              } else if (fullResponseHolder.getStatus().getCode() == 404) {
+              } else if (fullResponseHolder.getStatus().code() == 404) {
                 // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
                 // this if clause should be removed in a future release.
                 log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
@@ -529,7 +529,7 @@ public class WorkerTaskManager
               } else {
                 log.info(
                     "Got non-success code[%s] from overlord while getting active tasks. will retry on next scheduled run.",
-                    fullResponseHolder.getStatus().getCode()
+                    fullResponseHolder.getStatus().code()
                 );
               }
             }

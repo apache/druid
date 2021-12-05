@@ -20,13 +20,13 @@
 package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -70,70 +70,55 @@ public class JankyServersTest
     closingServerSocket = new ServerSocket(0);
 
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = silentServerSocket.accept();
-                  InputStream in = clientSocket.getInputStream()
-              ) {
-                while (in.read() != -1) {
-                  /* Do nothing. Read bytes till the end of the stream. */
-                }
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = silentServerSocket.accept();
+                InputStream in = clientSocket.getInputStream()
+            ) {
+              while (in.read() != -1) {
+                /* Do nothing. Read bytes till the end of the stream. */
               }
-              catch (Exception e) {
-                // Suppress
-              }
+            }
+            catch (Exception e) {
+              // Suppress
             }
           }
         }
     );
 
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = closingServerSocket.accept();
-                  InputStream in = clientSocket.getInputStream()
-              ) {
-                in.read();
-                clientSocket.close();
-              }
-              catch (Exception e) {
-                // Suppress
-              }
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = closingServerSocket.accept();
+                InputStream in = clientSocket.getInputStream()
+            ) {
+              in.read();
+              clientSocket.close();
+            }
+            catch (Exception e) {
+              // Suppress
             }
           }
         }
     );
 
     exec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            while (!Thread.currentThread().isInterrupted()) {
-              try (
-                  Socket clientSocket = echoServerSocket.accept();
-                  OutputStream out = clientSocket.getOutputStream();
-                  InputStream in = clientSocket.getInputStream()
-              ) {
-                int b;
-                while ((b = in.read()) != -1) {
-                  out.write(b);
-                }
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = echoServerSocket.accept();
+                OutputStream out = clientSocket.getOutputStream();
+                InputStream in = clientSocket.getInputStream()
+            ) {
+              int b;
+              while ((b = in.read()) != -1) {
+                out.write(b);
               }
-              catch (Exception e) {
-                // Suppress
-              }
+            }
+            catch (Exception e) {
+              // Suppress
             }
           }
         }
@@ -162,15 +147,8 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      Throwable e = null;
-      try {
-        future.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
-
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
+      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e.getCause() instanceof ReadTimeoutException);
     }
     finally {
       lifecycle.stop();
@@ -191,15 +169,8 @@ public class JankyServersTest
               new Duration(100L)
           );
 
-      Throwable e = null;
-      try {
-        future.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
-
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
+      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e.getCause() instanceof ReadTimeoutException);
     }
     finally {
       lifecycle.stop();
@@ -223,15 +194,8 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-      }
-
-      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, response::get);
+      Assert.assertTrue("ChannelException thrown by 'get'", e.getCause() instanceof ChannelException);
     }
     finally {
       lifecycle.stop();
@@ -250,16 +214,9 @@ public class JankyServersTest
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", closingServerSocket.getLocalPort()))),
               StatusResponseHandler.getInstance()
           );
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-        e1.printStackTrace();
-      }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, response::get);
+      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e.getCause()));
     }
     finally {
       lifecycle.stop();
@@ -280,16 +237,8 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      Throwable e = null;
-      try {
-        response.get();
-      }
-      catch (ExecutionException e1) {
-        e = e1.getCause();
-        e1.printStackTrace();
-      }
-
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, response::get);
+      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e.getCause()));
     }
     finally {
       lifecycle.stop();
@@ -304,49 +253,52 @@ public class JankyServersTest
   }
 
   @Test
-  public void testHttpEchoServer() throws Throwable
+  public void testHttpEchoServer()
   {
-    final Lifecycle lifecycle = new Lifecycle();
-    try {
-      final HttpClientConfig config = HttpClientConfig.builder().build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
-      final ListenableFuture<StatusResponseHolder> response = client
-          .go(
-              new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", echoServerSocket.getLocalPort()))),
-              StatusResponseHandler.getInstance()
-          );
+    ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> {
+      final Lifecycle lifecycle = new Lifecycle();
+      try {
+        final HttpClientConfig config = HttpClientConfig.builder().build();
+        HttpClientInit.createClient(config, lifecycle)
+                      .go(
+                          new Request(
+                              HttpMethod.GET,
+                              new URL(StringUtils.format("http://localhost:%d/", echoServerSocket.getLocalPort()))
+                          ),
+                          StatusResponseHandler.getInstance()
+                      )
+                      .get();
+      }
+      finally {
+        lifecycle.stop();
+      }
+    });
 
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("java.lang.IllegalArgumentException: invalid version format: GET");
-
-      response.get();
-    }
-    finally {
-      lifecycle.stop();
-    }
+    Assert.assertEquals("java.lang.IllegalArgumentException: invalid version format: GET", exception.getMessage());
   }
 
   @Test
-  public void testHttpsEchoServer() throws Throwable
+  public void testHttpsEchoServer()
   {
-    final Lifecycle lifecycle = new Lifecycle();
-    try {
-      final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+    final ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> {
+      final Lifecycle lifecycle = new Lifecycle();
+      try {
+        final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
+        HttpClientInit.createClient(config, lifecycle)
+                      .go(
+                          new Request(
+                              HttpMethod.GET,
+                              new URL(StringUtils.format("https://localhost:%d/", echoServerSocket.getLocalPort()))
+                          ),
+                          StatusResponseHandler.getInstance()
+                      )
+                      .get();
+      }
+      finally {
+        lifecycle.stop();
+      }
+    });
 
-      final ListenableFuture<StatusResponseHolder> response = client
-          .go(
-              new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", echoServerSocket.getLocalPort()))),
-              StatusResponseHandler.getInstance()
-          );
-
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool");
-
-      response.get();
-    }
-    finally {
-      lifecycle.stop();
-    }
+    Assert.assertEquals("io.netty.channel.ChannelException: Faulty channel in resource pool", exception.getMessage());
   }
 }

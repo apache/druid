@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.InputStream;
 
@@ -34,18 +34,17 @@ public class InputStreamResponseHandler implements HttpResponseHandler<Appendabl
   public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-    in.add(getContentBytes(response.getContent()));
     return ClientResponse.finished(in);
   }
 
   @Override
   public ClientResponse<AppendableByteArrayInputStream> handleChunk(
       ClientResponse<AppendableByteArrayInputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
-    clientResponse.getObj().add(getContentBytes(chunk.getContent()));
+    clientResponse.getObj().add(getContentBytes(chunk.content()));
     return clientResponse;
   }
 
@@ -67,7 +66,7 @@ public class InputStreamResponseHandler implements HttpResponseHandler<Appendabl
     obj.exceptionCaught(e);
   }
 
-  private byte[] getContentBytes(ChannelBuffer content)
+  private byte[] getContentBytes(ByteBuf content)
   {
     byte[] contentBytes = new byte[content.readableBytes()];
     content.readBytes(contentBytes);

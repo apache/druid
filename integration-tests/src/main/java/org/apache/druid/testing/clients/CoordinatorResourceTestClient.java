@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -38,8 +40,6 @@ import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.timeline.DataSegment;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -183,10 +183,10 @@ public class CoordinatorResourceTestClient
           responseHandler
       ).get();
 
-      if (response.getStatus().getCode() == HttpResponseStatus.NO_CONTENT.getCode()) {
+      if (response.getStatus().code() == HttpResponseStatus.NO_CONTENT.code()) {
         return null;
       }
-      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+      if (response.getStatus().code() != HttpResponseStatus.OK.code()) {
         throw new ISE(
             "Error while making request to url[%s] status[%s] content[%s]",
             url,
@@ -315,10 +315,10 @@ public class CoordinatorResourceTestClient
           responseHandler
       ).get();
 
-      if (response.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
+      if (response.getStatus().code() == HttpResponseStatus.NOT_FOUND.code()) {
         return null;
       }
-      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+      if (response.getStatus().code() != HttpResponseStatus.OK.code()) {
         throw new ISE(
             "Error while making request to url[%s] status[%s] content[%s]",
             url,

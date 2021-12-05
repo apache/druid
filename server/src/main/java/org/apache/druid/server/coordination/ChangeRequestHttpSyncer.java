@@ -27,6 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -36,8 +38,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -217,8 +217,8 @@ public class ChangeRequestHttpSyncer<T>
 
       ListenableFuture<InputStream> syncRequestFuture = httpClient.go(
           new Request(HttpMethod.GET, new URL(baseServerURL, req))
-              .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-              .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
+              .addHeader(HttpHeaderNames.ACCEPT.toString(), SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+              .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           responseHandler,
           Duration.millis(serverHttpTimeout)
       );

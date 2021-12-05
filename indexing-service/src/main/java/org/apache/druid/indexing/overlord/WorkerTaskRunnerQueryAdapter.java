@@ -22,6 +22,8 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.TimeoutException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
@@ -31,8 +33,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import java.net.URL;
@@ -110,8 +110,8 @@ public class WorkerTaskRunnerQueryAdapter
             "Action [%s] failed for worker [%s] with status %s(%s)",
             action,
             workerHost,
-            response.getStatus().getCode(),
-            response.getStatus().getReasonPhrase()
+            response.getStatus().code(),
+            response.getStatus().reasonPhrase()
         );
       }
     }

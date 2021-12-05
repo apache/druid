@@ -22,6 +22,11 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -30,11 +35,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.easymock.EasyMock;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -43,7 +43,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 public class IndexTaskClientTest
@@ -86,8 +85,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.value(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-                            StandardCharsets.UTF_8
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
                         )
                     )
                 )
@@ -115,8 +113,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
-                            StandardCharsets.UTF_8
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
                         ).addChunk("Error")
                     )
                 )
@@ -127,8 +124,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.value(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-                            StandardCharsets.UTF_8
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
                         )
                     )
                 )
@@ -166,8 +162,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            incorrectResponse,
-                            StandardCharsets.UTF_8
+                            incorrectResponse
                         )
                     )
                 )
@@ -178,8 +173,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.value(
                         new StringFullResponseHolder(
-                            correctResponse,
-                            StandardCharsets.UTF_8
+                            correctResponse
                         )
                     )
                 )
@@ -208,8 +202,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST),
-                            StandardCharsets.UTF_8
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)
                         ).addChunk("Error")
                     )
                 )
@@ -240,8 +233,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
-                            StandardCharsets.UTF_8
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
                         ).addChunk("Error")
                     )
                 )
@@ -274,7 +266,7 @@ public class IndexTaskClientTest
             .andReturn(
                 Futures.immediateFuture(
                     Either.error(
-                        new StringFullResponseHolder(response, StandardCharsets.UTF_8).addChunk("Error")
+                        new StringFullResponseHolder(response).addChunk("Error")
                     )
                 )
             )
