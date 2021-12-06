@@ -53,7 +53,7 @@ public class SetAndVerifyContextQueryRunnerTest
 
     Query<ScanResultValue> transformed = queryRunner.withTimeoutAndMaxScatterGatherBytes(query, defaultConfig);
 
-    Thread.sleep(1);
+    Thread.sleep(100);
     // timeout is set to 1, so withTimeoutAndMaxScatterGatherBytes should set QUERY_FAIL_TIME to be the current
     // time + 1 at the time the method was called
     // this means that after sleeping for 1 millis, the fail time should be less than the current time when checking
@@ -124,7 +124,7 @@ public class SetAndVerifyContextQueryRunnerTest
       @Override
       public long getMaxQueryTimeout()
       {
-        return 1000L;
+        return 10000L;
       }
     };
 
