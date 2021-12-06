@@ -17,40 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.guice;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.server.initialization.ZkPathsConfig;
+import com.google.inject.multibindings.ProvidesIntoSet;
+import com.google.inject.name.Named;
+import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.discovery.DruidService;
+import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeRole;
 
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class BrokerServiceModule extends AbstractDruidServiceModule
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
+  @ProvidesIntoSet
+  @Named(NodeRole.BROKER_JSON_NAME)
+  public Class<? extends DruidService> getDataNodeService()
+  {
+    return DataNodeService.class;
+  }
 
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
+  @ProvidesIntoSet
+  @Named(NodeRole.BROKER_JSON_NAME)
+  public Class<? extends DruidService> getLookupNodeService()
+  {
+    return LookupNodeService.class;
+  }
 
   @Override
-  public ServerInventoryView get()
+  protected NodeRole getNodeRoleKey()
   {
-    return new SingleServerInventoryView(
-        zkPaths,
-        curator,
-        jsonMapper,
-        Predicates.alwaysTrue()
-    );
+    return NodeRole.BROKER;
   }
 }
