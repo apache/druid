@@ -23,7 +23,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * This class is different from {@link org.apache.calcite.plan.RelOptPlanner.CannotPlanException} in that the error
+ * This class is different from {@link RelOptPlanner.CannotPlanException} in that the error
  * messages are user-friendly unlike its parent class. This exception class should be used instead of
  * {@link org.apache.druid.java.util.common.ISE} or {@link org.apache.druid.java.util.common.IAE} when processing is
  * to be halted during planning. Similarly, Druid planner can catch this exception and know that the error

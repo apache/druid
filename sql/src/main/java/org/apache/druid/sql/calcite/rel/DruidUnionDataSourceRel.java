@@ -133,7 +133,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
       final DataSource dataSource = query.getDataSource();
       if (!(dataSource instanceof TableDataSource)) {
         getPlannerContext().setPlanningError("SQL requires union with input of '%s' type that is not supported."
-                + "Union operation is only supported between regular tables. ",
+                + " Union operation is only supported between regular tables. ",
             dataSource.getClass().getSimpleName());
         throw new CannotBuildQueryException(druidRel);
       }
