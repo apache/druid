@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.BrokerInternalQueryConfig;
@@ -31,7 +30,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
@@ -69,7 +67,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(value = 1)
 @Warmup(iterations = 3)
 @Measurement(iterations = 15)
-public class DruidSchemaAddSegmentBenchmark
+public class DruidSchemaInternRowSignatureBenchmark
 {
 
   @Param({"10000"})
