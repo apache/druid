@@ -399,7 +399,12 @@ public class DruidPlanner implements Closeable
         // Show the native queries instead of Calcite's explain if the legacy flag is turned off
         if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
           DruidRel<?> druidRel = (DruidRel<?>) rel;
-          explanation = explainSqlPlanAsNativeQueries(druidRel);
+          try {
+            explanation = explainSqlPlanAsNativeQueries(druidRel);
+          }
+          catch (Exception ex) {
+            log.warn(ex, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
+          }
         }
       }
       final Set<Resource> resources =
@@ -409,10 +414,6 @@ public class DruidPlanner implements Closeable
     catch (JsonProcessingException jpe) {
       // this should never happen, we create the Resources here, not a user
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
-      resourcesString = null;
-    }
-    catch (ISE ise) {
-      log.error(ise, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan");
       resourcesString = null;
     }
     final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
