@@ -64,6 +64,8 @@ public class HdfsStorageAuthentication
               || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
             log.info("Trying to authenticate user [%s] with keytab [%s]..", principal, keytab);
             UserGroupInformation.loginUserFromKeytab(principal, keytab);
+          }  else {
+            log.debug("HdfsStorageAuthentication#authenticate() was called, but I am already authenticated!");
           }
         }
         catch (IOException e) {

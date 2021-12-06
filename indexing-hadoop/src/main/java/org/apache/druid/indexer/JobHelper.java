@@ -111,6 +111,8 @@ public class JobHelper
               || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
             log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
             UserGroupInformation.loginUserFromKeytab(principal, keytab);
+          } else {
+            log.debug("JobHelper#authenticate() was called, but I am already authenticated!");
           }
         }
         catch (IOException e) {
@@ -409,6 +411,9 @@ public class JobHelper
       boolean jobSucceeded,
       HadoopIngestionSpec indexerSchema)
   {
+    // Ensure we are authenticated before we try to delete intermediate paths!
+    authenticate();
+
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
     final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);
