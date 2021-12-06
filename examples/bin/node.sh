@@ -40,7 +40,7 @@ CONF_DIR="${DRUID_CONF_DIR:=conf/druid}"
 PID_DIR="${DRUID_PID_DIR:=var/druid/pids}"
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
-JAVA_BIN_DIR="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
+JAVA_BIN_DIR="$(. /"$WHEREAMI"/java-util && get_java_bin_dir)"
 
 # Remove possilble ending slash
 LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/log}"
