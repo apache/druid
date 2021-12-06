@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -178,11 +177,8 @@ public class IndexBuilder
         );
       }
       final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
-          indexMerger.merge(
-              Lists.transform(
-                  persisted,
-                  QueryableIndexIndexableAdapter::new
-              ),
+          indexMerger.mergeQueryableIndex(
+              persisted,
               true,
               Iterables.toArray(
                   Iterables.transform(
@@ -191,8 +187,12 @@ public class IndexBuilder
                   ),
                   AggregatorFactory.class
               ),
+              null,
               new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
               indexSpec,
+              indexSpec,
+              new BaseProgressIndicator(),
+              null,
               -1
           )
       );

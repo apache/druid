@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * This class provides a mechansim to influence whether or not indexes are used for a {@link Filter} during processing
+ * This class provides a mechanism to influence whether or not indexes are used for a {@link Filter} during processing
  * by {@link org.apache.druid.segment.QueryableIndexStorageAdapter#analyzeFilter} (i.e. will a {@link Filter} be a "pre"
  * filter in which we union indexes for all values that match the filter to create a
  * {@link org.apache.druid.segment.BitmapOffset}/{@link org.apache.druid.segment.vector.BitmapVectorOffset}, or will it

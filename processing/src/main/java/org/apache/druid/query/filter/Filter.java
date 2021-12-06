@@ -83,7 +83,6 @@ public interface Filter
    */
   double estimateSelectivity(BitmapIndexSelector indexSelector);
 
-
   /**
    * Get a ValueMatcher that applies this filter to row values.
    *

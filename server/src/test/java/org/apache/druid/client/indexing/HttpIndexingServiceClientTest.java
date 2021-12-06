@@ -89,11 +89,11 @@ public class HttpIndexingServiceClientTest
     };
 
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
         response,
         StandardCharsets.UTF_8
     ).addChunk(jsonMapper.writeValueAsString(samplerResponse));
@@ -142,11 +142,11 @@ public class HttpIndexingServiceClientTest
       }
     };
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.INTERNAL_SERVER_ERROR,
         response,
         StandardCharsets.UTF_8
     ).addChunk("");
@@ -170,13 +170,13 @@ public class HttpIndexingServiceClientTest
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
 
     Map<String, Object> dummyResponse = ImmutableMap.of("test", "value");
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
         response,
         StandardCharsets.UTF_8
     ).addChunk(jsonMapper.writeValueAsString(dummyResponse));
@@ -209,11 +209,11 @@ public class HttpIndexingServiceClientTest
     ChannelBuffer buf = ChannelBuffers.buffer(errorMsg.length());
     buf.writeBytes(errorMsg.getBytes(StandardCharsets.UTF_8));
 
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(buf);
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.NOT_FOUND,
         response,
         StandardCharsets.UTF_8
     ).addChunk("");
@@ -241,11 +241,11 @@ public class HttpIndexingServiceClientTest
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        HttpResponseStatus.OK,
         response,
         StandardCharsets.UTF_8
     ).addChunk("");

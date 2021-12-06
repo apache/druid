@@ -1332,6 +1332,7 @@ public class CompactionTaskTest
         RETRY_POLICY_FACTORY
     );
 
+    @SuppressWarnings("unused")
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-01"))
         .build();
@@ -2012,6 +2013,7 @@ public class CompactionTaskTest
       this.segments = segments;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
@@ -2160,7 +2162,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    public SettableColumnValueSelector<?> makeNewSettableColumnValueSelector()
     {
       return null;
     }
