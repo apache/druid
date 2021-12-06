@@ -434,21 +434,11 @@ public class DruidPlanner implements Closeable
   {
     ObjectMapper jsonMapper = plannerContext.getJsonMapper();
     List<DruidQuery> druidQueryList;
-    try {
-      druidQueryList = flattenOutermostRel(rel)
-          .stream()
-          .map(druidRel -> druidRel.toDruidQuery(false))
-          .collect(Collectors.toList());
+    druidQueryList = flattenOutermostRel(rel)
+        .stream()
+        .map(druidRel -> druidRel.toDruidQuery(false))
+        .collect(Collectors.toList());
 
-    }
-    catch (UnsupportedOperationException unsupportedOperationException) {
-      log.error("DruidUnionRel can only be the outermost RelNode. This error shouldn't be encountered");
-      throw new ISE("DruidUnionRel is only supported at the outermost RelNode.");
-    }
-    catch (Exception e) {
-      log.error(e, "Unknown exception encountered while converting to native queries for explanation.");
-      throw new ISE("Unable to convert the RelNode structure to DruidQuery for explaining");
-    }
 
     // Putting the queries as object node in an ArrayNode, since directly returning a list causes issues when
     // serializing the "queryType". Another method would be to create a POJO containing query and signature, and then
