@@ -624,7 +624,7 @@ public class DruidSchema extends AbstractSchema
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+  protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
     final Set<SegmentId> retVal = new HashSet<>();
 

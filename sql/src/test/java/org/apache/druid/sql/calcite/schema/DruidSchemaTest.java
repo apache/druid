@@ -218,7 +218,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
       }
 
       @Override
-      Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+      protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
       {
         if (throwException) {
           throwException = false;
