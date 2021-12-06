@@ -21,6 +21,7 @@ package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
@@ -45,6 +47,7 @@ import org.easymock.EasyMock;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -52,18 +55,24 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 3)
+@Measurement(iterations = 15)
 public class DruidSchemaAddSegmentBenchmark
 {
-  @Param({"1000"})
+
+  @Param({"10000"})
   private int iterations;
 
   private DruidSchemaForBenchmark druidSchema;
@@ -93,6 +102,12 @@ public class DruidSchemaAddSegmentBenchmark
       );
     }
 
+    @Override
+    public Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+    {
+      return super.refreshSegments(segments);
+    }
+
 
     @Override
     public void addSegment(final DruidServerMetadata server, final DataSegment segment)
@@ -103,42 +118,31 @@ public class DruidSchemaAddSegmentBenchmark
     @Override
     protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
     {
+      final int numColumns = 1000;
+      Map<String, ColumnAnalysis> columnToAnalysisMap = new HashMap<>();
+      for (int i = 0; i < numColumns; ++i) {
+        columnToAnalysisMap.put(
+            "col" + i,
+            new ColumnAnalysis(
+                ColumnType.STRING,
+                null,
+                false,
+                false,
+                40,
+                null,
+                null,
+                null,
+                null
+            )
+        );
+      }
       return Sequences.simple(
           Lists.transform(
               Lists.newArrayList(segments),
               (segment) -> new SegmentAnalysis(
                   segment.toString(),
                   ImmutableList.of(segment.getInterval()),
-                  ImmutableMap.of(
-                      "col1",
-                      new ColumnAnalysis(
-                          ColumnType.STRING,
-                          null,
-                          false,
-                          false,
-                          40,
-                          null,
-                          null,
-                          null,
-                          null
-                      ),
-                      "col2",
-                      new ColumnAnalysis(ColumnType.LONG, null, false, false, 40, null, null, null, null),
-                      "col2",
-                      new ColumnAnalysis(
-                          ColumnType.DOUBLE,
-                          null,
-                          false,
-                          false,
-                          40,
-                          null,
-                          null,
-                          null,
-                          null
-                      ),
-                      "col2",
-                      new ColumnAnalysis(ColumnType.FLOAT, null, false, false, 40, null, null, null, null)
-                  ),
+                  columnToAnalysisMap,
                   40,
                   40,
                   null,
@@ -148,6 +152,24 @@ public class DruidSchemaAddSegmentBenchmark
               )
           )
       );
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class MyState
+  {
+    SegmentId segmentId;
+
+    @Setup(Level.Iteration)
+    public void setup()
+    {
+      segmentId = SegmentId.of("dummy", Intervals.ETERNITY, "1", new LinearShardSpec(0));
+    }
+
+    @TearDown(Level.Iteration)
+    public void teardown()
+    {
+      segmentId = null;
     }
   }
 
@@ -187,10 +209,13 @@ public class DruidSchemaAddSegmentBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addSegments(Blackhole blackhole)
+  public void addSegments(MyState state, Blackhole blackhole) throws IOException
   {
+    druidSchema.addSegment(serverMetadata, dataSegment);
     for (int i = 0; i < iterations; ++i) {
-      druidSchema.addSegment(serverMetadata, dataSegment);
+      blackhole.consume(
+          druidSchema.refreshSegments(ImmutableSet.of(state.segmentId))
+      );
     }
   }
 }
