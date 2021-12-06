@@ -66,12 +66,6 @@ public class BrokerProcessingModuleTest
   }
 
   @Test
-  public void testProcessingExecutorPool()
-  {
-    target.getProcessingExecutorPool(druidProcessingConfig);
-  }
-
-  @Test
   public void testMergeBufferPool()
   {
     target.getMergeBufferPool(druidProcessingConfig);
@@ -88,7 +82,7 @@ public class BrokerProcessingModuleTest
         return "processing-test-%s";
       }
     };
-    DruidProcessingModule module = new DruidProcessingModule();
+    BrokerProcessingModule module = new BrokerProcessingModule();
     module.getMergeProcessingPoolProvider(config);
   }
 

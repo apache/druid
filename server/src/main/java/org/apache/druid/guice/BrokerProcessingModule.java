@@ -38,13 +38,14 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.MetricsEmittingQueryProcessingPool;
+import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.utils.JvmUtils;
@@ -98,10 +99,18 @@ public class BrokerProcessingModule implements Module
   @Provides
   @ManageLifecycle
   public QueryProcessingPool getProcessingExecutorPool(
-      DruidProcessingConfig config
+      DruidProcessingConfig config,
+      ExecutorServiceMonitor executorServiceMonitor,
+      Lifecycle lifecycle
   )
   {
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return new MetricsEmittingQueryProcessingPool(
+        PrioritizedExecutorService.create(
+            lifecycle,
+            config
+        ),
+        executorServiceMonitor
+    );
   }
 
   @Provides
