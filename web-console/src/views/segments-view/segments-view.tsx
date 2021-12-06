@@ -191,6 +191,7 @@ END AS "time_span"`,
   WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
   WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
   WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
+  WHEN "shard_spec" LIKE '%"type":"range"%' THEN 'range'
   WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
   WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
   WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'

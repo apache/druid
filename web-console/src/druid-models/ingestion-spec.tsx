@@ -1342,7 +1342,7 @@ export function adjustForceGuaranteedRollup(spec: Partial<IngestionSpec>) {
   const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
     spec = deepDelete(spec, 'spec.tuningConfig.forceGuaranteedRollup');
-  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
+  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim', 'range')) {
     spec = deepSet(spec, 'spec.tuningConfig.forceGuaranteedRollup', true);
   }
 
@@ -1526,11 +1526,18 @@ export function getSecondaryPartitionRelatedFormFields(
           ),
         },
         {
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
+          type: 'string-array',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'range',
+          required: true,
+          info: <p>The dimensions to partition on.</p>,
+        },
+        {
           name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1547,7 +1554,7 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1559,7 +1566,8 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'boolean',
           defaultValue: false,
           hideInMore: true,
-          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
+          defined: s =>
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
           info: (
             <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will
@@ -1629,10 +1637,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 10,
     min: 1,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
@@ -1640,10 +1646,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 100,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.
