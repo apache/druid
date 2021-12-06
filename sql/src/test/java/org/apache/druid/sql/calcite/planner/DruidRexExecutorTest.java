@@ -175,8 +175,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
         DruidExpression.fromExpression("array(50,12)"),
-        Expressions.toDrui
-        dExpression(
+        Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
             reduced.get(0)
