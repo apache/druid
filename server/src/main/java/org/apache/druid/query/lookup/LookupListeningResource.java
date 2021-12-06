@@ -74,11 +74,11 @@ class LookupListeningResource extends ListenerResource
             final Map<String, LookupExtractorFactoryContainer> toLoad;
             try {
               stateGeneric = mapper.readValue(inputStream, LOOKUPS_STATE_GENERIC_REFERENCE);
-              current = LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+              current = LookupUtils.tryConvertObjectMapToLookupConfigMap(
                   stateGeneric.getCurrent(),
                   mapper
               );
-              toLoad = LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+              toLoad = LookupUtils.tryConvertObjectMapToLookupConfigMap(
                   stateGeneric.getToLoad(),
                   mapper
               );

@@ -117,7 +117,7 @@ public class LookupUtilsTest
   }
 
   @Test
-  public void test_convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors_allValid() throws IOException
+  public void test_tryConvertObjectMapToLookupConfigMap_allValid() throws IOException
   {
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
     Map<String, LookupExtractorFactoryContainer> validLookupExpected = mapper.readValue(
@@ -128,13 +128,13 @@ public class LookupUtilsTest
         LOOKUP_VALID,
         LOOKUPS_ALL_GENERIC_REFERENCE);
     Map<String, LookupExtractorFactoryContainer> actualLookup =
-        LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(validLookupGeneric, mapper);
+        LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
     Assert.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
   }
 
   @Test
-  public void test_convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors_allInvalid_emptyMap()
+  public void test_tryConvertObjectMapToLookupConfigMap_allInvalid_emptyMap()
       throws IOException
   {
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
@@ -143,13 +143,13 @@ public class LookupUtilsTest
         LOOKUP_WITH_KEY_COLUMN_BUT_NO_VALUE_COLUMN,
         LOOKUPS_ALL_GENERIC_REFERENCE);
     Map<String, LookupExtractorFactoryContainer> actualLookup =
-        LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(validLookupGeneric, mapper);
+        LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
     Assert.assertTrue(actualLookup.isEmpty());
   }
 
   @Test
-  public void test_convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors_goodAndBadConfigs_skipsBad()
+  public void test_tryConvertObjectMapToLookupConfigMap_goodAndBadConfigs_skipsBad()
       throws IOException
   {
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
@@ -161,7 +161,7 @@ public class LookupUtilsTest
         LOOKSUPS_INVALID_AND_VALID,
         LOOKUPS_ALL_GENERIC_REFERENCE);
     Map<String, LookupExtractorFactoryContainer> actualLookup =
-        LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(validLookupGeneric, mapper);
+        LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
     Assert.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
   }

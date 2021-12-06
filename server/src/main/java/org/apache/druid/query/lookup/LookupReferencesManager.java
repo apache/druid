@@ -457,7 +457,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     } else {
       Map<String, Object> lookupNameToGenericConfig =
           jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
-      return LookupUtils.convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+      return LookupUtils.tryConvertObjectMapToLookupConfigMap(
           lookupNameToGenericConfig,
           jsonMapper
       );

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 
@@ -49,7 +50,7 @@ public class LookupUtils
    * @param objectMapper The object mapper to use to convert bytes to {@link LookupExtractorFactoryContainer}
    * @return
    */
-  public static Map<String, LookupExtractorFactoryContainer> convertObjectMapToLookupExtractorFactoryContainerMapAndSkipErrors(
+  public static Map<String, LookupExtractorFactoryContainer> tryConvertObjectMapToLookupConfigMap(
       Map<String, Object> lookupNameToGenericConfig,
       ObjectMapper objectMapper
   )
@@ -58,21 +59,37 @@ public class LookupUtils
         Maps.newHashMapWithExpectedSize(lookupNameToGenericConfig.size());
     for (Map.Entry<String, Object> lookupNameAndConfig : lookupNameToGenericConfig.entrySet()) {
       String lookupName = lookupNameAndConfig.getKey();
-      try {
-        byte[] lookupConfigBytes = objectMapper.writeValueAsBytes(lookupNameAndConfig.getValue());
-        LookupExtractorFactoryContainer lookupConfig = objectMapper.readValue(
-            lookupConfigBytes,
-            LookupExtractorFactoryContainer.class
-        );
+      LookupExtractorFactoryContainer lookupConfig = tryConvertObjectToLookupConfig(
+          lookupName,
+          lookupNameAndConfig.getValue(),
+          objectMapper
+      );
+      if (lookupConfig != null) {
         lookupNameToConfig.put(lookupName, lookupConfig);
       }
-      catch (IOException e) {
-        LOG.warn("Lookup [%s] could not be serialized properly. Please check its configuration. Error: %s",
-                 lookupName,
-                 e.getMessage()
-        );
-      }
+
     }
     return lookupNameToConfig;
+  }
+
+  @Nullable
+  private static LookupExtractorFactoryContainer tryConvertObjectToLookupConfig(
+      String lookupName,
+      Object o,
+      ObjectMapper objectMapper) {
+    try {
+      byte[] lookupConfigBytes = objectMapper.writeValueAsBytes(o);
+      return objectMapper.readValue(
+          lookupConfigBytes,
+          LookupExtractorFactoryContainer.class
+      );
+    }
+    catch (IOException e) {
+      LOG.warn("Lookup [%s] could not be serialized properly. Please check its configuration. Error: %s",
+               lookupName,
+               e.getMessage()
+      );
+    }
+    return null;
   }
 }
