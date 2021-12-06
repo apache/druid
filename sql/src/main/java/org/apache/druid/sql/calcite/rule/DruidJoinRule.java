@@ -267,7 +267,8 @@ public class DruidJoinRule extends RelOptRule
 
       if (!subCondition.isA(SqlKind.EQUALS)) {
         // If it's not EQUALS, it's not supported.
-        plannerContext.setPlanningError("Only equal conditions are supported in joins");
+        plannerContext.setPlanningError("SQL requires a join with '%s' condition that is not supported.",
+            subCondition.getKind());
         return Optional.empty();
       }
 
@@ -283,7 +284,7 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) operands.get(0));
       } else {
         // Cannot handle this condition.
-        plannerContext.setPlanningError("Operands type are unsupported for the join condition. Druid does not support constants in join condition.");
+        plannerContext.setPlanningError("SQL is resulting in a join that have unsupported operand types.");
         return Optional.empty();
       }
     }
@@ -298,7 +299,7 @@ public class DruidJoinRule extends RelOptRule
         if (distinctRightColumns > 1) {
           // it means that the join's right side is lookup and the join condition contains both key and value columns of lookup.
           // currently, the lookup datasource in the native engine doesn't support using value column in the join condition.
-          plannerContext.setPlanningError("When joining with lookup, only key column is supported in the join condition");
+          plannerContext.setPlanningError("SQL is resulting in a join involving lookup where value column is used in the condition.");
           return Optional.empty();
         }
       }

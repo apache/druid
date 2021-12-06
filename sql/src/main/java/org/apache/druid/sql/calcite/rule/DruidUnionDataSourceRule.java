@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -118,7 +119,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
     }
 
     if (!unionRel.all && null != plannerContext) {
-      plannerContext.setPlanningError("'UNION ALL' is supported but 'UNION' is not supported.");
+      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
     return unionRel.all && isUnionCompatible(first, second, plannerContext);
   }
@@ -133,7 +134,10 @@ public class DruidUnionDataSourceRule extends RelOptRule
     }
     if (!firstColumnNames.equals(secondColumnNames)) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("When unioning two tables, column names queried for each table must be same");
+        plannerContext.setPlanningError("SQL requires union between two tables and column names queried for " +
+            "each table are different Left: %s, Right: %s.",
+            firstColumnNames.orElse(Collections.emptyList()),
+            secondColumnNames.orElse(Collections.emptyList()));
       }
       return false;
     }
@@ -186,13 +190,14 @@ public class DruidUnionDataSourceRule extends RelOptRule
       return Optional.of(((DruidUnionDataSourceRel) druidRel).getUnionColumnNames());
     } else if (druidTable.isPresent()) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("Union operation is only supported between simple table scans without " +
-            "any filter or aliasing. Column types of tables being unioned should be of same type.");
+        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans " +
+            "and involve a filter or aliasing. Or column types of tables being unioned are not of same type.");
       }
       return Optional.empty();
     } else {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("Union operation is supported between regular tables. Lookup, join, inline or query datasources are not supported.");
+        plannerContext.setPlanningError("SQL requires union with input of a datasource type that is not supported."
+            + " Union operation is only supported between regular tables. ");
       }
       return Optional.empty();
     }

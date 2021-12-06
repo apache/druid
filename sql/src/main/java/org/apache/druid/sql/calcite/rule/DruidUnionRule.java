@@ -76,7 +76,7 @@ public class DruidUnionRule extends RelOptRule
           )
       );
     } else {
-      plannerContext.setPlanningError("'UNION ALL' is supported but 'UNION' is not supported.");
+      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
   }
 }

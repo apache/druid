@@ -3118,7 +3118,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   // This query is expected to fail as we do not support join with constant in the on condition
   // (see issue https://github.com/apache/druid/issues/9942 for more information)
   // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9942 is fixed
-  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinOnConstantShouldFail(Map<String, Object> queryContext) throws Exception
   {
@@ -3135,7 +3135,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       );
     }
     catch (RelOptPlanner.CannotPlanException cpe) {
-      Assert.assertEquals(cpe.getMessage(), "Possible error: Operands type are unsupported for the join condition. Druid does not support constants in join condition.");
+      Assert.assertEquals(cpe.getMessage(), "Possible error: SQL is resulting in a join that have unsupported operand types.");
       return;
     }
     Assert.fail("Expected an exception of type: " + RelOptPlanner.CannotPlanException.class);

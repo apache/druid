@@ -2606,8 +2606,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
-        "Possible error: Union operation is only supported between simple table scans without " +
-        "any filter or aliasing. Column types of tables being unioned should be of same type.");
+        "Possible error: SQL requires union between inputs that are not simple table scans and involve a " +
+            "filter or aliasing. Or column types of tables being unioned are not of same type.");
   }
 
   @Test
@@ -2621,7 +2621,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Possible error: When unioning two tables, column names queried for each table must be same"
+        "Possible error: SQL requires union between two tables " +
+            "and column names queried for each table are different Left: [dim1], Right: [dim2]."
     );
   }
 
@@ -2632,7 +2633,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     assertQueryIsUnplannable(
         "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
-        "Possible error: 'UNION ALL' is supported but 'UNION' is not supported."
+        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
 
@@ -2647,8 +2648,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "Possible error: Union operation is only supported between simple table scans without any filter " +
-            "or aliasing. Column types of tables being unioned should be of same type."
+        "Possible error: SQL requires union between inputs that are not simple table scans and involve " +
+            "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 
@@ -2747,7 +2748,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
         + "GROUP BY 1, 2",
-        "Possible error: When unioning two tables, column names queried for each table must be same"
+        "Possible error: SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
     );
   }
 
@@ -5162,17 +5163,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "Possible error: Scan query cannot order by non-time column [dim1 ASC]",
+        "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
-        "Possible error: Only equal conditions are supported in joins",
+        "Possible error: SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
 
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
-        "Possible error: Only equal conditions are supported in joins"
+        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported."
 
     );
 
@@ -5231,7 +5232,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
         "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2",
-        "Possible error: Only equal conditions are supported in joins"
+        "Possible error: SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported."
     );
   }
 
@@ -5243,7 +5244,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_HLL,
         "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
-        "Possible error: Aggregation [COUNT(DISTINCT $0)] is not supported"
+        "Possible error: SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
     );
   }
 

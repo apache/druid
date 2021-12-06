@@ -406,6 +406,7 @@ public class DruidQuery
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
+        plannerContext.setPlanningError("SQL requires a group-by on a column of type %s that is unsupported.", outputType);
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
 
@@ -516,7 +517,9 @@ public class DruidQuery
       );
 
       if (aggregation == null) {
-        plannerContext.setPlanningError("Aggregation [%s] is not supported", aggCall);
+        if (null == plannerContext.getPlanningError()) {
+          plannerContext.setPlanningError("Aggregation [%s] is not supported", aggCall);
+        }
         throw new CannotBuildQueryException(aggregate, aggCall);
       }
 
@@ -1152,7 +1155,7 @@ public class DruidQuery
                              .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME)))) {
       // Cannot handle this ordering.
       // Scan cannot ORDER BY non-time columns.
-      plannerContext.setPlanningError("Scan query cannot order by non-time column %s", orderByColumns);
+      plannerContext.setPlanningError("SQL query requires order by non-time column %s that is not supported.", orderByColumns);
       return null;
     }
 

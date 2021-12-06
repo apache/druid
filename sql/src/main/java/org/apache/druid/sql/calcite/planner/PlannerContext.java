@@ -256,11 +256,18 @@ public class PlannerContext
     this.nativeQueryIds.add(queryId);
   }
 
+  @Nullable
   public String getPlanningError()
   {
     return planningError;
   }
 
+  /**
+   * Sets the planning error in the context that will be shown to the user if the SQL query cannot be translated
+   * to a native query. This error is often a hint and thus should be phrased as such. Also, the final plan can
+   * be very different from SQL that user has written. So again, the error should be phrased to indicate this gap
+   * clearly.
+   */
   public void setPlanningError(String formatText, Object... arguments)
   {
     planningError = StringUtils.nonStrictFormat(formatText, arguments);

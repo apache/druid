@@ -126,14 +126,17 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     for (final RelNode relNode : unionRel.getInputs()) {
       final DruidRel<?> druidRel = (DruidRel<?>) relNode;
       if (!DruidRels.isScanOrMapping(druidRel, false)) {
-        plannerContext.setPlanningError("Union operation is only supported between simple table scans without any filter or aliasing");
+        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans " +
+            "and involve a filter or aliasing");
         throw new CannotBuildQueryException(druidRel);
       }
 
       final DruidQuery query = druidRel.toDruidQuery(false);
       final DataSource dataSource = query.getDataSource();
       if (!(dataSource instanceof TableDataSource)) {
-        plannerContext.setPlanningError("Union operation is only supported between regular tables. Lookup, join, inline or query datasources are not supported.");
+        plannerContext.setPlanningError("SQL requires union with input of '%s' type that is not supported."
+                + "Union operation is only supported between regular tables. ",
+            dataSource.getClass().getSimpleName());
         throw new CannotBuildQueryException(druidRel);
       }
 
