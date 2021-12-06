@@ -1230,6 +1230,40 @@ export function fillDataSourceNameIfNeeded(spec: Partial<IngestionSpec>): Partia
   return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
+export function guessDataSourceNameFromInputSource(inputSource: InputSource): string | undefined {
+  switch (inputSource.type) {
+    case 'local':
+      if (inputSource.filter && filterIsFilename(inputSource.filter)) {
+        return basenameFromFilename(inputSource.filter);
+      } else if (inputSource.baseDir) {
+        return filenameFromPath(inputSource.baseDir);
+      } else {
+        return;
+      }
+
+    case 's3':
+    case 'azure':
+    case 'google': {
+      const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
+      const uriPath =
+        (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
+      return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
+    }
+
+    case 'http':
+      return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;
+
+    case 'druid':
+      return inputSource.dataSource;
+
+    case 'inline':
+      return 'inline_data';
+
+    default:
+      return;
+  }
+}
+
 export function guessDataSourceName(spec: Partial<IngestionSpec>): string | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig');
   if (!ioConfig) return;
@@ -1239,39 +1273,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     case 'index_parallel': {
       const inputSource = ioConfig.inputSource;
       if (!inputSource) return;
-
-      switch (inputSource.type) {
-        case 'local':
-          if (inputSource.filter && filterIsFilename(inputSource.filter)) {
-            return basenameFromFilename(inputSource.filter);
-          } else if (inputSource.baseDir) {
-            return filenameFromPath(inputSource.baseDir);
-          } else {
-            return;
-          }
-
-        case 's3':
-        case 'azure':
-        case 'google': {
-          const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
-          const uriPath =
-            (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
-          return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
-        }
-
-        case 'http':
-          return Array.isArray(inputSource.uris)
-            ? filenameFromPath(inputSource.uris[0])
-            : undefined;
-
-        case 'druid':
-          return inputSource.dataSource;
-
-        case 'inline':
-          return 'inline_data';
-      }
-
-      return;
+      return guessDataSourceNameFromInputSource(inputSource);
     }
 
     case 'kafka':
