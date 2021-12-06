@@ -172,7 +172,7 @@ public class CaffeineCache implements org.apache.druid.client.cache.Cache
   }
 
   @VisibleForTesting
-  Cache<NamedKey, byte[]> getCache()
+  public Cache<NamedKey, byte[]> getCache()
   {
     return cache;
   }

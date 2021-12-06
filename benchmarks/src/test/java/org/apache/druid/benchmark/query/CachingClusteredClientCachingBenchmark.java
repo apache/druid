@@ -185,8 +185,8 @@ public class CachingClusteredClientCachingBenchmark
   private static final Logger LOG = new Logger(CachingClusteredClientCachingBenchmark.class);
   private static final int PROCESSING_BUFFER_SIZE = 250 * 1024 * 1024;
   private static final String DATA_SOURCE = "ds";
-  //  private static final int TEST_POOL_SIZE = 4;
   private static final int TEST_POOL_SIZE = (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75);
+  private static final boolean USE_PARALLEL_MERGE_POOL = false;
 
   static {
     NullHandling.initializeForTests();
@@ -209,7 +209,7 @@ public class CachingClusteredClientCachingBenchmark
   );
 
   private final int numProcessingThreads = 4;
-  private final Cache cache = CaffeineCache.create(new CaffeineCacheConfig()
+  private final CaffeineCache cache = CaffeineCache.create(new CaffeineCacheConfig()
   {
     @Override
     public long getSizeInBytes()
@@ -408,7 +408,7 @@ public class CachingClusteredClientCachingBenchmark
       @Override
       public boolean useParallelMergePool()
       {
-        return true;
+        return USE_PARALLEL_MERGE_POOL;
       }
     };
 
@@ -545,8 +545,8 @@ public class CachingClusteredClientCachingBenchmark
     return new NonnullPair<>(dataSegment, index);
   }
 
-  @TearDown(Level.Trial)
-  public void tearDown() throws IOException
+  @TearDown(Level.Iteration)
+  public void tearDownIteration()
   {
     CachePopulatorStats.Snapshot snapshot = cachePopulatorStats.snapshot();
     LOG.info(
@@ -555,6 +555,12 @@ public class CachingClusteredClientCachingBenchmark
         snapshot.getNumError(),
         snapshot.getNumOversized()
     );
+    cache.getCache().invalidateAll();
+  }
+
+  @TearDown(Level.Trial)
+  public void tearDown() throws IOException
+  {
     closer.close();
     forkJoinPool.shutdownNow();
   }
