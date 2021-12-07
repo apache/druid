@@ -59,7 +59,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
   {
     try {
       // add empty initial buffer since SequenceInputStream will peek the first element right away
-      queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER));
+      queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
     }
     catch (InterruptedException e) {
       log.warn(e, "Thread interrupted while taking from queue");
@@ -107,13 +107,11 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     final ByteBuf byteBuf = chunk.content();
     final int bytes = byteBuf.readableBytes();
     if (bytes > 0) {
-      try (ByteBufInputStream channelStream = new ByteBufInputStream(byteBuf)) {
-        queue.put(channelStream);
+      try {
+        // input streams will be closed by the consumer as we iterate through them in SequenceInputStream
+        queue.put(new ByteBufInputStream(byteBuf)); // lgtm [java/input-resource-leak]
         // Queue.size() can be expensive in some implementations, but LinkedBlockingQueue.size is just an AtomicLong
         log.debug("Added stream. Queue length %d", queue.size());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
@@ -134,17 +132,12 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
         // after done is set to true, regardless of the rest of the stream's state.
-        queue.put(ByteSource.empty().openStream());
+        queue.put(new ByteBufInputStream(Unpooled.EMPTY_BUFFER)); // lgtm [java/input-resource-leak]
         log.debug("Added terminal empty stream");
       }
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-      catch (IOException e) {
-        // This should never happen
-        log.error(e, "The empty stream threw an IOException");
         throw new RuntimeException(e);
       }
       finally {
