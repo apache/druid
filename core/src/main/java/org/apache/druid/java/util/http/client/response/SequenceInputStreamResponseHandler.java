@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import com.google.common.io.ByteSource;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
