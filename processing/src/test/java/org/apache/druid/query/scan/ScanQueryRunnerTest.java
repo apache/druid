@@ -913,7 +913,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    responseContext.add(ResponseContext.Key.TIMEOUT_AT, System.currentTimeMillis());
+    responseContext.putTimeoutTime(System.currentTimeMillis());
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
     }

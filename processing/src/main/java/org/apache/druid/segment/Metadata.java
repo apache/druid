@@ -113,14 +113,6 @@ public class Metadata
     return container.get(key);
   }
 
-  public Metadata put(String key, @Nullable Object value)
-  {
-    if (value != null) {
-      container.put(key, value);
-    }
-    return this;
-  }
-
   // arbitrary key-value pairs from the metadata just follow the semantics of last one wins if same
   // key exists in multiple input Metadata containers
   // for others e.g. Aggregators, appropriate merging is done

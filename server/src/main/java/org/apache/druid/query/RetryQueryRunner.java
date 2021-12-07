@@ -33,10 +33,9 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.segment.SegmentMissingException;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -54,7 +53,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   private final ObjectMapper jsonMapper;
 
   /**
-   * Runnable executed after the broker creates query distribution tree for the first attempt. This is only
+   * Runnable executed after the broker creates the query distribution tree for the first attempt. This is only
    * for testing and must not be used in production code.
    */
   private final Runnable runnableAfterFirstAttempt;
@@ -142,10 +141,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     // The missingSegments in the responseContext is only valid when all servers have responded to the broker.
     // The remainingResponses MUST be not null but 0 in the responseContext at this point.
     final ConcurrentHashMap<String, Integer> idToRemainingResponses =
-        (ConcurrentHashMap<String, Integer>) Preconditions.checkNotNull(
-            context.get(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS),
+        Preconditions.checkNotNull(
+            context.getRemainingResponses(),
             "%s in responseContext",
-            Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS.getName()
+            Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS.getName()
         );
 
     final int remainingResponses = Preconditions.checkNotNull(
@@ -157,7 +156,11 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       throw new ISE("Failed to check missing segments due to missing responses from [%d] servers", remainingResponses);
     }
 
-    final Object maybeMissingSegments = context.get(ResponseContext.Key.MISSING_SEGMENTS);
+    // TODO: the sender's response may contain a truncated list of missing segments.
+    // Truncation is aggregated in the response context given as a parameter.
+    // Check the getTruncated() value: if true, then the we don't know the full set of
+    // missing segments.
+    final List<SegmentDescriptor> maybeMissingSegments = context.getMissingSegments();
     if (maybeMissingSegments == null) {
       return Collections.emptyList();
     }
@@ -171,7 +174,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   }
 
   /**
-   * A lazy iterator populating {@link Sequence} by retrying the query. The first returned sequence is always the base
+   * A lazy iterator populating a {@link Sequence} by retrying the query. The first returned sequence is always the base
    * sequence from the baseQueryRunner. Subsequent sequences are created dynamically whenever it retries the query. All
    * the sequences populated by this iterator will be merged (not combined) with the base sequence.
    *
@@ -179,7 +182,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
    * each underlying sequence and pushes them to a {@link java.util.PriorityQueue}. Whenever it pops from the queue,
    * it pushes a new item from the sequence where the returned item was originally from. Since the first returned
    * sequence from this iterator is always the base sequence, the MergeSequence will call {@link Sequence#toYielder}
-   * on the base sequence first which in turn initializing query distribution tree. Once this tree is built, the query
+   * on the base sequence first which in turn initializes the query distribution tree. Once this tree is built, the query
    * servers (historicals and realtime tasks) will lock all segments to read and report missing segments to the broker.
    * If there are missing segments reported, this iterator will rewrite the query with those reported segments and
    * reissue the rewritten query.
@@ -229,7 +232,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           retryCount++;
           LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), retryCount);
 
-          context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
+          context.initializeMissingSegments();
           final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
               Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
           );

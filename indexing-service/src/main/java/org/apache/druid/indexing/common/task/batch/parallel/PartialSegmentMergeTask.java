@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -339,8 +340,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               indexesToMerge,
               dataSchema.getGranularitySpec().isRollup(),
               dataSchema.getAggregators(),
+              null,
               outDir,
               tuningConfig.getIndexSpec(),
+              tuningConfig.getIndexSpecForIntermediatePersists(),
+              new BaseProgressIndicator(),
               tuningConfig.getSegmentWriteOutMediumFactory(),
               tuningConfig.getMaxColumnsToMerge()
           )

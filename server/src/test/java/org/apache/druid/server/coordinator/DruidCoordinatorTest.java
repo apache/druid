@@ -29,12 +29,12 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.SingleServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
@@ -95,7 +95,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private DataSourcesSnapshot dataSourcesSnapshot;
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
-  private SingleServerInventoryView serverInventoryView;
+  private BatchServerInventoryView serverInventoryView;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private DruidServer druidServer;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
@@ -113,7 +113,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void setUp() throws Exception
   {
     druidServer = EasyMock.createMock(DruidServer.class);
-    serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
+    serverInventoryView = EasyMock.createMock(BatchServerInventoryView.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);

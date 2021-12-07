@@ -52,7 +52,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -127,11 +126,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     // schemaless mode.
     final Set<String> columnsToRead = Sets.newLinkedHashSet(
         Iterables.filter(
-            Iterables.concat(
-                Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
-                storageAdapter.getAdapter().getAvailableDimensions(),
-                storageAdapter.getAdapter().getAvailableMetrics()
-            ),
+            storageAdapter.getAdapter().getRowSignature().getColumnNames(),
             columnsFilter::apply
         )
     );

@@ -91,7 +91,7 @@ public class DruidStatementTest extends CalciteTestBase
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,

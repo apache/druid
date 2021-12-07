@@ -37,6 +37,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -89,6 +90,7 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.IndexIO;
@@ -237,8 +239,8 @@ public class CompactionTaskTest
     AGGREGATORS.add(new CountAggregatorFactory("agg_0"));
     AGGREGATORS.add(new LongSumAggregatorFactory("agg_1", "long_dim_1"));
     AGGREGATORS.add(new LongMaxAggregatorFactory("agg_2", "long_dim_2"));
-    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3"));
-    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
+    AGGREGATORS.add(new FloatFirstAggregatorFactory("agg_3", "float_dim_3", null));
+    AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4", null));
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
       SEGMENT_MAP.put(
@@ -422,6 +424,25 @@ public class CompactionTaskTest
       throw iae;
     }
     Assert.fail("Should not have reached here!");
+  }
+
+  @Test
+  public void testCreateCompactionTaskWithTransformSpec()
+  {
+    ClientCompactionTaskTransformSpec transformSpec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.transformSpec(transformSpec);
+    final CompactionTask taskCreatedWithTransformSpec = builder.build();
+    Assert.assertEquals(
+        transformSpec,
+        taskCreatedWithTransformSpec.getTransformSpec()
+    );
   }
 
   @Test(expected = IAE.class)
@@ -850,6 +871,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -920,6 +942,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
+        null,
         null,
         null,
         null,
@@ -997,6 +1020,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1071,6 +1095,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1135,6 +1160,7 @@ public class CompactionTaskTest
         customSpec,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1177,6 +1203,7 @@ public class CompactionTaskTest
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
+        null,
         customMetricsSpec,
         null,
         COORDINATOR_CLIENT,
@@ -1213,6 +1240,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         null,
@@ -1259,6 +1287,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1283,6 +1312,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1302,6 +1332,7 @@ public class CompactionTaskTest
         RETRY_POLICY_FACTORY
     );
 
+    @SuppressWarnings("unused")
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-01"))
         .build();
@@ -1315,6 +1346,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
@@ -1355,6 +1387,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
+        null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
@@ -1389,6 +1422,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(
@@ -1434,6 +1468,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
         RETRY_POLICY_FACTORY,
@@ -1468,6 +1503,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
@@ -1507,6 +1543,7 @@ public class CompactionTaskTest
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
         null,
+        null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
@@ -1529,6 +1566,7 @@ public class CompactionTaskTest
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
+        null,
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
@@ -1975,6 +2013,7 @@ public class CompactionTaskTest
       this.segments = segments;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
@@ -2123,7 +2162,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    public SettableColumnValueSelector<?> makeNewSettableColumnValueSelector()
     {
       return null;
     }

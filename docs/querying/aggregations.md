@@ -143,79 +143,85 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `doubleFirst` aggregator
 
-`doubleFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`doubleFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "doubleFirst",
   "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `doubleLast` aggregator
 
-`doubleLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`doubleLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "doubleLast",
   "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `floatFirst` aggregator
 
-`floatFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`floatFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "floatFirst",
   "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `floatLast` aggregator
 
-`floatLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`floatLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "floatLast",
   "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `longFirst` aggregator
 
-`longFirst` computes the metric value with the minimum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`longFirst` computes the metric value with the minimum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "longFirst",
   "name" : <output_name>,
-  "fieldName" : <metric_name>
+  "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `longLast` aggregator
 
-`longLast` computes the metric value with the maximum timestamp or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
+`longLast` computes the metric value with the maximum value for time column or 0 in default mode, or `null` in SQL-compatible mode if no row exists.
 
 ```json
 {
   "type" : "longLast",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
 #### `stringFirst` aggregator
 
-`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exists.
+`stringFirst` computes the metric value with the minimum value for time column or `null` if no row exists.
 
 ```json
 {
@@ -223,6 +229,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "maxStringBytes" : <integer> # (optional, defaults to 1024)
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 
@@ -230,7 +237,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 #### `stringLast` aggregator
 
-`stringLast` computes the metric value with the maximum timestamp or `null` if no row exists.
+`stringLast` computes the metric value with the maximum value for time column or `null` if no row exists.
 
 ```json
 {
@@ -238,6 +245,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "maxStringBytes" : <integer> # (optional, defaults to 1024)
+  "timeColumn" : <time_column_name> # (optional, defaults to __time)
 }
 ```
 

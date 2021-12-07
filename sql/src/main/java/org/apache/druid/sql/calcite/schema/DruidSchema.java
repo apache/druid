@@ -791,7 +791,7 @@ public class DruidSchema extends AbstractSchema
     } else {
       tableDataSource = new TableDataSource(dataSource);
     }
-    return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return new DruidTable(tableDataSource, builder.build(), null, isJoinable, isBroadcast);
   }
 
   @VisibleForTesting
@@ -875,7 +875,8 @@ public class DruidSchema extends AbstractSchema
         .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
   }
 
-  private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
+  @VisibleForTesting
+  static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
@@ -886,9 +887,18 @@ public class DruidSchema extends AbstractSchema
 
       ColumnType valueType = entry.getValue().getTypeSignature();
 
-      // this shouldn't happen, but if it does assume types are some flavor of COMPLEX.
+      // this shouldn't happen, but if it does, first try to fall back to legacy type information field in case
+      // standard upgrade order was not followed for 0.22 to 0.23+, and if that also fails, then assume types are some
+      // flavor of COMPLEX.
       if (valueType == null) {
-        valueType = ColumnType.UNKNOWN_COMPLEX;
+        // at some point in the future this can be simplified to the contents of the catch clause here, once the
+        // likelyhood of upgrading from some version lower than 0.23 is low
+        try {
+          valueType = ColumnType.fromString(entry.getValue().getType());
+        }
+        catch (IllegalArgumentException ignored) {
+          valueType = ColumnType.UNKNOWN_COMPLEX;
+        }
       }
 
       rowSignatureBuilder.add(entry.getKey(), valueType);

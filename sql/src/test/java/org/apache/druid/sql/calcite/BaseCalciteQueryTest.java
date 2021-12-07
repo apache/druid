@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -76,10 +77,11 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -184,6 +186,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     @Override
     public boolean isAuthorizeSystemTablesDirectly()
+    {
+      return true;
+    }
+  };
+
+  public static final PlannerConfig PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN = new PlannerConfig()
+  {
+    @Override
+    public boolean isUseNativeQueryExplain()
     {
       return true;
     }
@@ -478,13 +489,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public QueryLogHook getQueryLogHook()
   {
+    queryJsonMapper = createQueryJsonMapper();
     return queryLogHook = QueryLogHook.create(queryJsonMapper);
   }
 
   @Before
   public void setUp() throws Exception
   {
-    queryJsonMapper = createQueryJsonMapper();
     walker = createQuerySegmentWalker();
 
     // also register the static injected mapper, though across multiple test runs
@@ -555,15 +566,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public Iterable<? extends Module> getJacksonModules()
   {
-    return new LookupSerdeModule().getJacksonModules();
+    final List<Module> modules = new ArrayList<>(new LookupSerdeModule().getJacksonModules());
+    modules.add(new SimpleModule().registerSubtypes(ExternalDataSource.class));
+    return modules;
   }
 
-  public void assertQueryIsUnplannable(final String sql)
+  public void assertQueryIsUnplannable(final String sql, String expectedError)
   {
-    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql);
+    assertQueryIsUnplannable(PLANNER_CONFIG_DEFAULT, sql, expectedError);
   }
 
-  public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql)
+  public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql, String expectedError)
   {
     Exception e = null;
     try {
@@ -577,6 +590,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       log.error(e, "Expected CannotPlanException for query: %s", sql);
       Assert.fail(sql);
     }
+    Assert.assertEquals(sql, expectedError, e.getMessage());
   }
 
   /**
@@ -698,7 +712,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
    */
-  private <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
+  public <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
   {
     return query.withDataSource(recursivelyOverrideContext(query.getDataSource(), context))
                 .withOverriddenContext(context);
@@ -945,7 +959,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  public Set<Resource> analyzeResources(
+  public Set<ResourceAction> analyzeResources(
       PlannerConfig plannerConfig,
       String sql,
       AuthenticationResult authenticationResult
@@ -961,7 +975,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     SqlLifecycle lifecycle = lifecycleFactory.factorize();
     lifecycle.initialize(sql, ImmutableMap.of());
-    return lifecycle.runAnalyzeResources(authenticationResult).getResources();
+    return lifecycle.runAnalyzeResources(authenticationResult).getResourceActions();
   }
 
   public SqlLifecycleFactory getSqlLifecycleFactory(
@@ -983,7 +997,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        new TestQueryMakerFactory(
+            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+            objectMapper
+        ),
         operatorTable,
         macroTable,
         plannerConfig,
