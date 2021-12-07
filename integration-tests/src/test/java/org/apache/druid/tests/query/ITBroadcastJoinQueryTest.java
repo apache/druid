@@ -36,6 +36,7 @@ import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.Guice;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 @Test(groups = TestNGGroup.QUERY)
@@ -66,6 +67,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   @Inject
   IntegrationTestingConfig config;
 
+  @Ignore
   @Test
   public void testBroadcastJoin() throws Exception
   {
