@@ -202,12 +202,13 @@ public class RowSignature implements ColumnInspector
     RowSignature that = (RowSignature) o;
     return hashCode == that.hashCode &&
            columnTypes.equals(that.columnTypes) &&
-           columnNames.equals(that.columnNames);
+           columnNames.equals(that.columnNames) &&
+           columnPositions.equals(that.columnPositions);
   }
 
   private int computeHashCode()
   {
-    return Objects.hash(columnTypes, columnNames);
+    return Objects.hash(columnTypes, columnNames, columnPositions);
   }
 
   @Override
