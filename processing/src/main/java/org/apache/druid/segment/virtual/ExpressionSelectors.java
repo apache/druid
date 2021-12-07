@@ -202,7 +202,8 @@ public class ExpressionSelectors
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
       if (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT)) {
-        return DimensionSelector.multiConstant(Arrays.asList(baseSelector.getObject().asStringArray()), extractionFn);
+        final String[] value = baseSelector.getObject().asStringArray();
+        return DimensionSelector.multiConstant(value == null ? value : Arrays.asList(value), extractionFn);
       }
       return DimensionSelector.constant(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
