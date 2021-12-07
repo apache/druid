@@ -852,7 +852,7 @@ Specify objects to ingest as either:
 |--------|-----------|-------|---------|
 |`type`|Set value to `s3`.|None|yes|
 |`uris`| JSON array of URIs defining the location of S3 objects to ingest |None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
-|`prefixes`|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
+|`prefixes`| JSON array of URIs defining the URI prefixes for the locations of S3 objects to ingest. Druid skips empty objects starting with one of the given prefixes.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`objects`](#s3-input-objects)|JSON array of S3 Objects to ingest.|None|`uris` or `prefixes` or [`objects`](#s3-input-objects) must be set|
 |[`properties`](#s3-input-properties-object)|Properties Object to override the default S3 configuration.|None|No (defaults will be used if not given)
 
