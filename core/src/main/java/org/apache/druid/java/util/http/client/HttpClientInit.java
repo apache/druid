@@ -115,9 +115,6 @@ public class HttpClientInit
         .option(ChannelOption.AUTO_READ, false)
         .handler(new HttpClientInitializer());
 
-    // TODO figure out logging
-    InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
-
     try {
       lifecycle.addMaybeStartHandler(
           new Lifecycle.Handler()
