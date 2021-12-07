@@ -513,7 +513,7 @@ END AS "partitioning"`,
         pivotBy={groupByInterval ? ['interval'] : []}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length > STANDARD_TABLE_PAGE_SIZE}
+        showPagination
         columns={[
           {
             Header: 'Segment ID',
