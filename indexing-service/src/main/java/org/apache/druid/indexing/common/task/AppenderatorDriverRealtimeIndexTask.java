@@ -638,16 +638,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   private void handleParseException(ParseException pe)
   {
-    if (pe.isFromPartiallyValidRow()) {
-      rowIngestionMeters.incrementProcessedWithError();
-    } else {
-      rowIngestionMeters.incrementUnparseable();
-    }
-
-    if (spec.getTuningConfig().isLogParseExceptions()) {
-      log.error(pe, "Encountered parse exception");
-    }
-
     parseExceptionHandler.handle(pe);
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()

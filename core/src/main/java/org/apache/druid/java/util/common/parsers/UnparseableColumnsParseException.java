@@ -21,6 +21,12 @@ package org.apache.druid.java.util.common.parsers;
 
 import java.util.List;
 
+/**
+ * This type of ParseException is meant to be used within ingestion to hold parse exception information for
+ * rows that were partially parseable but had one or more unparseable columns, such as when passing a non-numeric
+ * value to a numeric column. There may be several such exceptions in a given row, so this exception can hold
+ * multiple column exception messages.
+ */
 public class UnparseableColumnsParseException extends ParseException
 {
   private final List<String> columnExceptionMessages;

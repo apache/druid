@@ -131,7 +131,7 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
     Descriptors.Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
-          null,
+          messageType,
           StringUtils.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,

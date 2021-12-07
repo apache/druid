@@ -171,6 +171,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -181,6 +182,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unchecked")
@@ -1573,19 +1575,35 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    Map<String, Object> unparseableEvents = ImmutableMap.of(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1]]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float]",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to long]",
-            "Unable to parse [] as the intermediateRow resulted in empty input row",
-            "Unable to parse row [unparseable]",
-            "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
-        )
-    );
+    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
+        .getUnparseableEvents()
+        .get(RowIngestionMeters.BUILD_SEGMENTS);
 
-    Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
+    List<String> expectedMessages = Arrays.asList(
+        "Unable to parse value[notanumber] for field[met1]",
+        "could not convert value [notanumber] to float",
+        "could not convert value [notanumber] to long",
+        "Unable to parse [] as the intermediateRow resulted in empty input row",
+        "Unable to parse row [unparseable]",
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
+    );
+    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
+      return ((List<String>) r.get("details")).get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = Arrays.asList(
+        "{timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}",
+        "{timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}",
+        "{timestamp=2049, dim1=f, dim2=y, dimLong=notanumber, dimFloat=20.0, met1=1.0}",
+        "",
+        "unparseable",
+        "{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}"
+    );
+    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
+      return (String) r.get("input");
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
   }
 
   @Test(timeout = 60_000L)
@@ -1645,15 +1663,28 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    Map<String, Object> unparseableEvents = ImmutableMap.of(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        Arrays.asList(
-            "Unable to parse [] as the intermediateRow resulted in empty input row",
-            "Unable to parse row [unparseable]"
-        )
-    );
 
-    Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
+    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
+        .getUnparseableEvents()
+        .get(RowIngestionMeters.BUILD_SEGMENTS);
+
+    List<String> expectedMessages = Arrays.asList(
+        "Unable to parse [] as the intermediateRow resulted in empty input row",
+        "Unable to parse row [unparseable]"
+    );
+    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
+      return ((List<String>) r.get("details")).get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = Arrays.asList(
+        "",
+        "unparseable"
+    );
+    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
+      return (String) r.get("input");
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
   }
 
   @Test(timeout = 60_000L)

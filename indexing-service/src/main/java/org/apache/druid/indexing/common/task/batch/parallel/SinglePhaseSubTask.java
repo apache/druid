@@ -263,8 +263,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           inputSource,
           toolbox.getIndexingTmpDir()
       );
-
-      Thread.sleep(60000);
       
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());

@@ -219,11 +219,15 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           null,
           true
       );
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? Collections.emptyMap()
-             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+      if (response.getContent() == null || response.getContent().isEmpty()) {
+        log.warn("Got empty response when calling getMovingAverages, id[%s]", id);
+        return Collections.emptyMap();
+      }
+
+      return deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (NoTaskLocationException e) {
+      log.warn(e,"Got NoTaskLocationException when calling getMovingAverages, id[%s]", id);
       return Collections.emptyMap();
     }
     catch (IOException e) {
@@ -243,11 +247,16 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
           null,
           true
       );
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? Collections.emptyList()
-             : deserialize(response.getContent(), TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT);
+
+      if (response.getContent() == null || response.getContent().isEmpty()) {
+        log.warn("Got empty response when calling getParseErrors, id[%s]", id);
+        return Collections.emptyList();
+      }
+
+      return deserialize(response.getContent(), TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT);
     }
     catch (NoTaskLocationException e) {
+      log.warn(e,"Got NoTaskLocationException when calling getParseErrors, id[%s]", id);
       return Collections.emptyList();
     }
     catch (IOException e) {

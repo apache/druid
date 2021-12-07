@@ -86,6 +86,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -99,6 +100,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -153,6 +155,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final int MAX_INITIALIZATION_RETRIES = 20;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
+
+  private static final Comparator<ParseExceptionReport> PARSE_EXCEPTION_REPORT_COMPARATOR =
+      new Comparator<ParseExceptionReport>()
+      {
+        @Override
+        public int compare(ParseExceptionReport o1, ParseExceptionReport o2)
+        {
+          int timeCompare = Long.compare(o1.getTimeOfExceptionMillis(), o2.getTimeOfExceptionMillis());
+          if (timeCompare != 0) {
+            return timeCompare;
+          }
+          int errorTypeCompare = StringComparators.LEXICOGRAPHIC.compare(o1.getErrorType(), o2.getErrorType());
+          if (errorTypeCompare != 0) {
+            return errorTypeCompare;
+          }
+
+          return StringComparators.LEXICOGRAPHIC.compare(o1.getInput(), o2.getInput());
+        }
+      };
 
   // Internal data structures
   // --------------------------------------------------------
@@ -1180,7 +1201,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.error(ie, "getErrors() interrupted.");
+      log.error(ie, "getCurrentParseErrors() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {
@@ -1308,7 +1329,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     // We use a tree set to sort the parse errors by time, and eliminate duplicates across calls to this method
-    TreeSet<ParseExceptionReport> parseErrorsTreeSet = new TreeSet<>(lastKnownParseErrors);
+    TreeSet<ParseExceptionReport> parseErrorsTreeSet = new TreeSet<>(PARSE_EXCEPTION_REPORT_COMPARATOR);
+    parseErrorsTreeSet.addAll(lastKnownParseErrors);
 
     List<ErrorsFromTaskResult> results = Futures.successfulAsList(futures)
                                                .get(futureTimeoutInSeconds, TimeUnit.SECONDS);

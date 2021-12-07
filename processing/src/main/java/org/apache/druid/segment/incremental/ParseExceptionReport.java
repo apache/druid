@@ -21,12 +21,11 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.ordering.StringComparators;
 
 import java.util.List;
 import java.util.Objects;
 
-public class ParseExceptionReport implements Comparable<ParseExceptionReport>
+public class ParseExceptionReport
 {
   private final String input;
   private final String errorType;
@@ -69,21 +68,6 @@ public class ParseExceptionReport implements Comparable<ParseExceptionReport>
   public long getTimeOfExceptionMillis()
   {
     return timeOfExceptionMillis;
-  }
-
-  @Override
-  public int compareTo(ParseExceptionReport o)
-  {
-    int timeCompare = Long.compare(this.timeOfExceptionMillis, o.timeOfExceptionMillis);
-    if (timeCompare != 0) {
-      return timeCompare;
-    }
-    int errorTypeCompare = StringComparators.LEXICOGRAPHIC.compare(this.errorType, o.errorType);
-    if (errorTypeCompare != 0) {
-      return errorTypeCompare;
-    }
-
-    return StringComparators.LEXICOGRAPHIC.compare(this.input, o.input);
   }
 
   @Override

@@ -39,8 +39,20 @@ import javax.annotation.Nullable;
  */
 public class ParseException extends RuntimeException
 {
+  /**
+   * If true, the row was partiall parseable, but some columns could not be parsed
+   * (e.g., non-numeric values for a numeric column)
+   */
   private final boolean fromPartiallyValidRow;
+
+  /**
+   * The timestamp in millis when the parse exception occurred.
+   */
   private final long timeOfExceptionMillis;
+
+  /**
+   * A string representation of the input data that had a parse exception.
+   */
   private final String input;
 
   public ParseException(@Nullable String input, String formatText, Object... arguments)
