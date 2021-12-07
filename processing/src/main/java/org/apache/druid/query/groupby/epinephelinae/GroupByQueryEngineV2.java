@@ -42,6 +42,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
@@ -290,6 +291,11 @@ public class GroupByQueryEngineV2
       if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
         return -1;
       }
+      // We cannot support array-based aggregation on array based grouping as we we donot have all the indexes up front
+      // to allocate appropriate values
+      if (dimensions.get(0).getOutputType().equals(ColumnType.STRING_ARRAY)) {
+        return -1;
+      }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
       columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
@@ -340,7 +346,8 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities, which must be present and explicitly not multi-valued
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
+              return dimension.getOutputType().equals(ColumnType.STRING_ARRAY)
+                     || (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse());
             });
   }
 
@@ -386,13 +393,16 @@ public class GroupByQueryEngineV2
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
         ColumnCapabilities capabilities,
-        ColumnValueSelector selector
+        ColumnValueSelector selector,
+        DimensionSpec dimensionSpec
     )
     {
       switch (capabilities.getType()) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimSelector.getValueCardinality() >= 0) {
+          if (dimensionSpec.getOutputType().equals(ColumnType.STRING_ARRAY)) {
+            return new ArrayGroupByColumnSelectorStrategy();
+          } else if (dimSelector.getValueCardinality() >= 0) {
             return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();

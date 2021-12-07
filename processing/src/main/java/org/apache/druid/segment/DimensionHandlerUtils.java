@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ComparableArray;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -290,7 +291,7 @@ public final class DimensionHandlerUtils
   )
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, dimSpec);
   }
 
   @Nullable
@@ -376,9 +377,35 @@ public final class DimensionHandlerUtils
         return convertObjectToDouble(obj, reportParseExceptions);
       case STRING:
         return convertObjectToString(obj);
+      case ARRAY:
+        return convertToArray(obj);
       default:
         throw new IAE("Type[%s] is not supported for dimensions!", type);
     }
+  }
+
+  @Nullable
+  private static ComparableArray convertToArray(Object obj)
+  {
+    if (obj == null) {
+      return null;
+    }
+    if (obj instanceof ComparableArray) {
+      return (ComparableArray) obj;
+    }
+    if (obj instanceof String[]) {
+      return new ComparableArray((String[]) obj);
+    }
+    // Jackson converts the serialized array into a string. Converting it back to a string array
+    if (obj instanceof List) {
+      return new ComparableArray((String[]) ((List) obj).toArray(new String[0]));
+    }
+    Objects[] objects = (Objects[]) obj;
+    String[] delegate = new String[objects.length];
+    for (int i = 0; i < objects.length; i++) {
+      delegate[i] = convertObjectToString(objects[i]);
+    }
+    return new ComparableArray(delegate);
   }
 
   public static int compareObjectsAsType(

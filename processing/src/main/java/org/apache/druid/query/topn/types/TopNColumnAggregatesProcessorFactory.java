@@ -22,6 +22,7 @@ package org.apache.druid.query.topn.types;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -43,7 +44,8 @@ public class TopNColumnAggregatesProcessorFactory
   @Override
   public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      DimensionSpec dimensionSpec
   )
   {
     if (capabilities.is(ValueType.STRING)) {

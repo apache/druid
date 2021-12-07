@@ -382,7 +382,7 @@ public class DruidQuery
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry
   )
-  {
+  {  //TODO: Karan: Check for column hasMultipleValues()
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("d", rowSignature.getColumnNames());
