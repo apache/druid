@@ -70,8 +70,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -83,6 +85,7 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
+import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 
@@ -204,19 +207,37 @@ public class DruidPlanner implements Closeable
     try {
       return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
     }
-    catch (RelOptPlanner.CannotPlanException e) {
-      if (parsed.getInsertNode() == null) {
-        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-        try {
-          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
-        }
-        catch (Exception e2) {
-          e.addSuppressed(e2);
-          throw e;
-        }
-      } else {
+    catch (Exception e) {
+      Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
+      if (null == cannotPlanException) {
+        // Not a CannotPlanningException, rethrow without trying with bindable
+        throw e;
+      }
+      if (parsed.getInsertNode() != null) {
         // Cannot INSERT with BINDABLE.
         throw e;
+      }
+      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
+      try {
+        return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
+      }
+      catch (Exception e2) {
+        e.addSuppressed(e2);
+        Logger logger = log;
+        if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
+          logger = log.noStackTrace();
+        }
+        logger.warn(e, "Failed to plan the query '%s'", plannerContext.getSql());
+        String errorMessage = plannerContext.getPlanningError();
+        if (null == errorMessage && cannotPlanException instanceof UnsupportedSQLQueryException) {
+          errorMessage = cannotPlanException.getMessage();
+        }
+        if (null == errorMessage) {
+          errorMessage = "Please check broker logs for more details";
+        } else {
+          errorMessage = "Possible error: " + errorMessage;
+        }
+        throw new UnsupportedSQLQueryException(errorMessage);
       }
     }
   }

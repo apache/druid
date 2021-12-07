@@ -31,6 +31,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.security.Access;
@@ -43,6 +44,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -89,6 +91,9 @@ public class PlannerContext
   private Set<ResourceAction> resourceActions = null;
   // result of authorizing set of resources against authentication identity
   private Access authorizationResult;
+  // error messages encountered while planning the query
+  @Nullable
+  private String planningError;
   private QueryMaker queryMaker;
 
   private PlannerContext(
@@ -250,6 +255,23 @@ public class PlannerContext
   public void addNativeQueryId(String queryId)
   {
     this.nativeQueryIds.add(queryId);
+  }
+
+  @Nullable
+  public String getPlanningError()
+  {
+    return planningError;
+  }
+
+  /**
+   * Sets the planning error in the context that will be shown to the user if the SQL query cannot be translated
+   * to a native query. This error is often a hint and thus should be phrased as such. Also, the final plan can
+   * be very different from SQL that user has written. So again, the error should be phrased to indicate this gap
+   * clearly.
+   */
+  public void setPlanningError(String formatText, Object... arguments)
+  {
+    planningError = StringUtils.nonStrictFormat(formatText, arguments);
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)

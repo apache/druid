@@ -43,6 +43,8 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -59,12 +61,11 @@ import java.util.stream.Collectors;
 
 public class DruidJoinRule extends RelOptRule
 {
-  private static final DruidJoinRule INSTANCE = new DruidJoinRule(true);
-  private static final DruidJoinRule LEFT_SCAN_AS_QUERY = new DruidJoinRule(false);
 
   private final boolean enableLeftScanDirect;
+  private final PlannerContext plannerContext;
 
-  private DruidJoinRule(final boolean enableLeftScanDirect)
+  private DruidJoinRule(final PlannerContext plannerContext)
   {
     super(
         operand(
@@ -73,12 +74,13 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
-    this.enableLeftScanDirect = enableLeftScanDirect;
+    this.enableLeftScanDirect = QueryContexts.getEnableJoinLeftScanDirect(plannerContext.getQueryContext());
+    this.plannerContext = plannerContext;
   }
 
-  public static DruidJoinRule instance(boolean enableLeftScanDirect)
+  public static DruidJoinRule instance(PlannerContext plannerContext)
   {
-    return enableLeftScanDirect ? INSTANCE : LEFT_SCAN_AS_QUERY;
+    return new DruidJoinRule(plannerContext);
   }
 
   @Override
@@ -220,7 +222,7 @@ public class DruidJoinRule extends RelOptRule
    * Returns whether {@link #analyzeCondition} would return something.
    */
   @VisibleForTesting
-  static boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
+  boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
   {
     return analyzeCondition(condition, leftRowType, right).isPresent();
   }
@@ -229,7 +231,7 @@ public class DruidJoinRule extends RelOptRule
    * If this condition is an AND of some combination of (1) literals; (2) equality conditions of the form
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  private static Optional<ConditionAnalysis> analyzeCondition(
+  private Optional<ConditionAnalysis> analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
       DruidRel<?> right
@@ -265,6 +267,8 @@ public class DruidJoinRule extends RelOptRule
 
       if (!subCondition.isA(SqlKind.EQUALS)) {
         // If it's not EQUALS, it's not supported.
+        plannerContext.setPlanningError("SQL requires a join with '%s' condition that is not supported.",
+            subCondition.getKind());
         return Optional.empty();
       }
 
@@ -280,6 +284,7 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) operands.get(0));
       } else {
         // Cannot handle this condition.
+        plannerContext.setPlanningError("SQL is resulting in a join that have unsupported operand types.");
         return Optional.empty();
       }
     }
@@ -294,6 +299,7 @@ public class DruidJoinRule extends RelOptRule
         if (distinctRightColumns > 1) {
           // it means that the join's right side is lookup and the join condition contains both key and value columns of lookup.
           // currently, the lookup datasource in the native engine doesn't support using value column in the join condition.
+          plannerContext.setPlanningError("SQL is resulting in a join involving lookup where value column is used in the condition.");
           return Optional.empty();
         }
       }
