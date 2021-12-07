@@ -213,7 +213,7 @@ public class SqlResource
       final Throwable exceptionToReport;
 
       if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
+        exceptionToReport = new ISE("Cannot build plan for query: %s. %s", sqlQuery.getQuery(), e.getMessage());
       } else {
         exceptionToReport = e;
       }

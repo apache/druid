@@ -17,29 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.query.context;
+package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.guice.annotations.PublicApi;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * The implementation of {@link ResponseContext} with a HashMap as a delegate
+ * This class is different from {@link RelOptPlanner.CannotPlanException} in that the error
+ * messages are user-friendly unlike its parent class. This exception class should be used instead of
+ * {@link org.apache.druid.java.util.common.ISE} or {@link org.apache.druid.java.util.common.IAE} when processing is
+ * to be halted during planning. Similarly, Druid planner can catch this exception and know that the error
+ * can be directly exposed to end-users.
  */
-@PublicApi
-public class DefaultResponseContext extends ResponseContext
+public class UnsupportedSQLQueryException extends RelOptPlanner.CannotPlanException
 {
-  public static DefaultResponseContext createEmpty()
+  public UnsupportedSQLQueryException(String formatText, Object... arguments)
   {
-    return new DefaultResponseContext();
-  }
-
-  private final HashMap<Key, Object> delegate = new HashMap<>();
-
-  @Override
-  protected Map<Key, Object> getDelegate()
-  {
-    return delegate;
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 }

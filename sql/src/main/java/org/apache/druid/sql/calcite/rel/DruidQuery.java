@@ -87,6 +87,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -405,6 +406,7 @@ public class DruidQuery
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
+        plannerContext.setPlanningError("SQL requires a group-by on a column of type %s that is unsupported.", outputType);
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
 
@@ -515,6 +517,9 @@ public class DruidQuery
       );
 
       if (aggregation == null) {
+        if (null == plannerContext.getPlanningError()) {
+          plannerContext.setPlanningError("Aggregation [%s] is not supported", aggCall);
+        }
         throw new CannotBuildQueryException(aggregate, aggCall);
       }
 
@@ -1149,6 +1154,8 @@ public class DruidQuery
             || orderByColumns.stream()
                              .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME)))) {
       // Cannot handle this ordering.
+      // Scan cannot ORDER BY non-time columns.
+      plannerContext.setPlanningError("SQL query requires order by non-time column %s that is not supported.", orderByColumns);
       return null;
     }
 

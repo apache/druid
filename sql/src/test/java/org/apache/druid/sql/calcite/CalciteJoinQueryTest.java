@@ -3118,7 +3118,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   // This query is expected to fail as we do not support join with constant in the on condition
   // (see issue https://github.com/apache/druid/issues/9942 for more information)
   // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9942 is fixed
-  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinOnConstantShouldFail(Map<String, Object> queryContext) throws Exception
   {
@@ -3126,12 +3126,19 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
     final String query = "SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'";
 
-    testQuery(
-        query,
-        queryContext,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          query,
+          queryContext,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    }
+    catch (RelOptPlanner.CannotPlanException cpe) {
+      Assert.assertEquals(cpe.getMessage(), "Possible error: SQL is resulting in a join that have unsupported operand types.");
+      return;
+    }
+    Assert.fail("Expected an exception of type: " + RelOptPlanner.CannotPlanException.class);
   }
 
   @Test

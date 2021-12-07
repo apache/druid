@@ -50,7 +50,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +139,7 @@ public class DataSourceMetadataQueryTest
                                                             .dataSource("testing")
                                                             .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
+    context.initializeMissingSegments();
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
