@@ -179,7 +179,9 @@ A `timestampSpec` can have the following components:
 |format|Timestamp format. Options are: <ul><li>`iso`: ISO8601 with 'T' separator, like "2000-01-01T01:02:03.456"</li><li>`posix`: seconds since epoch</li><li>`millis`: milliseconds since epoch</li><li>`micro`: microseconds since epoch</li><li>`nano`: nanoseconds since epoch</li><li>`auto`: automatically detects ISO (either 'T' or space separator) or millis format</li><li>any [Joda DateTimeFormat string](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html)</li></ul>|auto|
 |missingValue|Timestamp to use for input records that have a null or missing timestamp `column`. Should be in ISO8601 format, like `"2000-01-01T01:02:03.456"`, even if you have specified something else for `format`. Since Druid requires a primary timestamp, this setting can be useful for ingesting datasets that do not have any per-record timestamps at all. |none|
 
-Since [transforms](#transforms) are applied after the `timestampSpec` is parsed, you can use the timestamp in a expression as `__time`.  You can also replace the timestamp value by setting the expression `name` to `__time`.  In both cases, treat `__time` as a millisecond timestamp (number of milliseconds since Jan 1, 1970 at midnight UTC).
+You can use the timestamp in a expression as `__time` because Druid parses the `timestampSpec` before applying [transforms](#transforms).  You can also set the expression `name` to `__time` to replace the value of the timestamp.
+
+Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 1, 1970 at midnight UTC.
 
 ### `dimensionsSpec`
 
