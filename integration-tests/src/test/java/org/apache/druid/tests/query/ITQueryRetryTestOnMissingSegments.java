@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -114,6 +115,7 @@ public class ITQueryRetryTestOnMissingSegments
     testQueries(buildQuery(0, false), Expectation.QUERY_FAILURE);
   }
 
+  @Ignore
   @Test
   public void testWithRetriesDisabledPartialResultAllowed() throws Exception
   {
