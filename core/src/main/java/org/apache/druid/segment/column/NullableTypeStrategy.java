@@ -23,18 +23,21 @@ import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
- * Wrapper {@link TypeStrategy} for nullable types, which stores {@link NullHandling#IS_NULL_BYTE} or
+ * Wrapper of {@link TypeStrategy} for nullable types, which stores {@link NullHandling#IS_NULL_BYTE} or
  * {@link NullHandling#IS_NOT_NULL_BYTE} in the leading byte of any value, as appropriate. If the value is null, only
  * {@link NullHandling#IS_NULL_BYTE} will be set, otherwise, the value bytes will be written after the null byte.
  *
  * layout: | null (byte) | value (byte[]) |
  *
- * Methods are overridden in this class to annotate arguments and return values as {@link Nullable}, even though they
- * are forbidden on the base {@link TypeStrategy} interface, since this is purpose built for handling nulls.
+ * This is not the most efficient way to track nulls, it is recommended to only use this wrapper if you MUST store null
+ * values.
+ *
+ * @see TypeStrategy
  */
-public final class NullableTypeStrategy<T> implements TypeStrategy<T>
+public final class NullableTypeStrategy<T> implements Comparator<T>
 {
   private final TypeStrategy<T> delegate;
 
@@ -43,7 +46,6 @@ public final class NullableTypeStrategy<T> implements TypeStrategy<T>
     this.delegate = delegate;
   }
 
-  @Override
   public int estimateSizeBytes(@Nullable T value)
   {
     if (value == null) {
@@ -52,9 +54,8 @@ public final class NullableTypeStrategy<T> implements TypeStrategy<T>
     return Byte.BYTES + delegate.estimateSizeBytes(value);
   }
 
-  @SuppressWarnings("NullableProblems")
+
   @Nullable
-  @Override
   public T read(ByteBuffer buffer)
   {
     if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
@@ -63,7 +64,6 @@ public final class NullableTypeStrategy<T> implements TypeStrategy<T>
     return delegate.read(buffer);
   }
 
-  @Override
   public int write(ByteBuffer buffer, @Nullable T value, int maxSizeBytes)
   {
     final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
@@ -86,9 +86,7 @@ public final class NullableTypeStrategy<T> implements TypeStrategy<T>
     }
   }
 
-  @SuppressWarnings("NullableProblems")
   @Nullable
-  @Override
   public T read(ByteBuffer buffer, int offset)
   {
     final int oldPosition = buffer.position();
@@ -98,7 +96,7 @@ public final class NullableTypeStrategy<T> implements TypeStrategy<T>
     return value;
   }
 
-  @Override
+
   public int write(ByteBuffer buffer, int offset, @Nullable T value, int maxSizeBytes)
   {
     final int oldPosition = buffer.position();

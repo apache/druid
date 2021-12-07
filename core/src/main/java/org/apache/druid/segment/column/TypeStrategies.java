@@ -219,7 +219,11 @@ public class TypeStrategies
     return buffer.getFloat(offset + VALUE_OFFSET);
   }
 
-
+  /**
+   * Read and write non-null LONG values. If reading non-null values, consider just using {@link ByteBuffer#getLong}
+   * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
+   * {@link #readNullableLong}, both of which allow dealing in primitive long values instead of objects.
+   */
   public static final class LongTypeStrategy implements TypeStrategy<Long>
   {
     private static final Comparator<Long> COMPARATOR = Comparator.nullsFirst(Longs::compare);
@@ -256,6 +260,11 @@ public class TypeStrategies
     }
   }
 
+  /**
+   * Read and write non-null FLOAT values. If reading non-null values, consider just using {@link ByteBuffer#getFloat}
+   * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
+   * {@link #readNullableFloat}, both of which allow dealing in primitive float values instead of objects.
+   */
   public static final class FloatTypeStrategy implements TypeStrategy<Float>
   {
     private static final Comparator<Float> COMPARATOR = Comparator.nullsFirst(Floats::compare);
@@ -292,6 +301,11 @@ public class TypeStrategies
     }
   }
 
+  /**
+   * Read and write non-null DOUBLE values. If reading non-null values, consider just using {@link ByteBuffer#getDouble}
+   * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
+   * {@link #readNullableDouble}, both of which allow dealing in primitive double values instead of objects.
+   */
   public static final class DoubleTypeStrategy implements TypeStrategy<Double>
   {
     private static final Comparator<Double> COMPARATOR = Comparator.nullsFirst(Double::compare);
@@ -328,6 +342,12 @@ public class TypeStrategies
     }
   }
 
+  /**
+   * Read and write non-null UTF8 encoded String values. Encodes the length in bytes as an integer prefix followed by
+   * the actual encoded value bytes.
+   *
+   * format: | length (int) | bytes |
+   */
   public static final class StringTypeStrategy implements TypeStrategy<String>
   {
     // copy of lexicographical comparator
@@ -336,9 +356,6 @@ public class TypeStrategies
     @Override
     public int estimateSizeBytes(String value)
     {
-      if (value == null) {
-        return 0;
-      }
       return Integer.BYTES + StringUtils.toUtf8(value).length;
     }
 
@@ -382,10 +399,18 @@ public class TypeStrategies
     }
   }
 
+  /**
+   * Read and write a non-null ARRAY which is permitted to have null elements (all elements are always read and written
+   * with a {@link NullableTypeStrategy} wrapper on the {@link TypeStrategy} of the
+   * {@link TypeSignature#getElementType()}.
+   *
+   * Encodes the number of elements in the array as an integer prefix followed by the actual encoded value bytes of
+   * each element serially.
+   */
   public static final class ArrayTypeStrategy implements TypeStrategy<Object[]>
   {
     private final Comparator<Object> elementComparator;
-    private final TypeStrategy elementStrategy;
+    private final NullableTypeStrategy elementStrategy;
 
     public ArrayTypeStrategy(TypeSignature<?> type)
     {
@@ -396,9 +421,6 @@ public class TypeStrategies
     @Override
     public int estimateSizeBytes(Object[] value)
     {
-      if (value == null) {
-        return 0;
-      }
       return Integer.BYTES + Arrays.stream(value).mapToInt(elementStrategy::estimateSizeBytes).sum();
     }
 
