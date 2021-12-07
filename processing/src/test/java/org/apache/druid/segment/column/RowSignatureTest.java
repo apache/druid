@@ -36,6 +36,7 @@ public class RowSignatureTest
     EqualsVerifier.forClass(RowSignature.class)
                   .usingGetClass()
                   .withCachedHashCode("hashCode", "computeHashCode", RowSignature.builder().build())
+                  .withIgnoredFields("columnPositions")
                   .verify();
   }
 
