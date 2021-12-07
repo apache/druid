@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -81,6 +82,7 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
+
   private static final VirtualColumn EXPR_COLUMN =
       new ExpressionVirtualColumn("expr", "index * 2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
 
@@ -138,16 +140,19 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       DefaultGenericQueryMetricsFactory.instance()
   );
 
+  private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
+      TOOL_CHEST,
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
+  );
+
   @Parameterized.Parameters(name = "{0}, legacy = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
+
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeQueryRunners(
-            new ScanQueryRunnerFactory(
-                TOOL_CHEST,
-                new ScanQueryEngine(),
-                new ScanQueryConfig()
-            )
+            FACTORY
         ),
         ImmutableList.of(false, true)
     );
@@ -155,27 +160,13 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
   private final QueryRunner runner;
   private final boolean legacy;
+  private final List<String> columns;
 
   public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
   {
     this.runner = runner;
     this.legacy = legacy;
-  }
-
-  private Druids.ScanQueryBuilder newTestQuery()
-  {
-    return Druids.newScanQueryBuilder()
-                 .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
-                 .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-                 .limit(3)
-                 .legacy(legacy);
-  }
-
-  @Test
-  public void testFullOnSelect()
-  {
-    List<String> columns = Lists.newArrayList(
+    this.columns = Lists.newArrayList(
         getTimestampName(),
         "expr",
         "market",
@@ -199,6 +190,22 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         "indexMaxFloat",
         "indexMinFloat"
     );
+  }
+
+  private Druids.ScanQueryBuilder newTestQuery()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
+                 .columns(Collections.emptyList())
+                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .limit(3)
+                 .legacy(legacy);
+  }
+
+  @Test
+  public void testFullOnSelect()
+  {
+
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
@@ -218,30 +225,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testFullOnSelectAsCompactedList()
   {
-    final List<String> columns = Lists.newArrayList(
-        getTimestampName(),
-        "expr",
-        "market",
-        "quality",
-        "qualityLong",
-        "qualityFloat",
-        "qualityDouble",
-        "qualityNumericString",
-        "longNumericNull",
-        "floatNumericNull",
-        "doubleNumericNull",
-        "placement",
-        "placementish",
-        "partial_null_column",
-        "null_column",
-        "index",
-        "indexMin",
-        "indexMaxPlusTen",
-        "quality_uniques",
-        "indexFloat",
-        "indexMaxFloat",
-        "indexMinFloat"
-    );
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
@@ -916,11 +899,73 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     responseContext.putTimeoutTime(System.currentTimeMillis());
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
+      Assert.fail("didn't timeout");
     }
     catch (RuntimeException e) {
       Assert.assertTrue(e instanceof QueryTimeoutException);
       Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
     }
+  }
+
+  @Test
+  public void testScanQueryTimeoutMerge()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+    try {
+      FACTORY.mergeRunners(
+          DirectQueryProcessingPool.INSTANCE,
+          ImmutableList.of(
+              (queryPlus, responseContext) -> {
+                try {
+                  Thread.sleep(2);
+                }
+                catch (InterruptedException ignored) {
+                }
+                return runner.run(queryPlus, responseContext);
+              })
+      ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+
+      Assert.fail("didn't timeout");
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+    }
+  }
+
+  @Test
+  public void testScanQueryTimeoutZeroDoesntTimeOut()
+  {
+    ScanQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .build();
+
+    Iterable<ScanResultValue> results = FACTORY.mergeRunners(
+        DirectQueryProcessingPool.INSTANCE,
+        ImmutableList.of(
+            (queryPlus, responseContext) -> {
+              try {
+                Thread.sleep(2);
+              }
+              catch (InterruptedException ignored) {
+              }
+              return runner.run(queryPlus, responseContext);
+            })
+    ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
+
+    List<ScanResultValue> expectedResults = toExpected(
+        toFullEvents(V_0112_0114),
+        columns,
+        0,
+        3
+    );
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)

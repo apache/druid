@@ -39,7 +39,7 @@ Unless otherwise noted, the following parameters apply to all query types.
 
 |property         |default                                 | description          |
 |-----------------|----------------------------------------|----------------------|
-|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout`. To set the default timeout, see [Broker configuration](../configuration/index.md#broker) |
+|timeout          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`). To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker) |
 |priority         | `0`                                    | Query Priority. Queries with higher priority get precedence for computational resources.|
 |lane             | `null`                                 | Query lane, used to control usage limits on classes of queries. See [Broker configuration](../configuration/index.md#broker) for more details.|
 |queryId          | auto-generated                         | Unique identifier given to this query. If a query ID is set or known, this can be used to cancel the query |
