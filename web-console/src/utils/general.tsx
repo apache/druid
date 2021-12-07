@@ -167,6 +167,14 @@ export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x:
   };
 }
 
+export function without<T>(xs: readonly T[], x: T | undefined): T[] {
+  return xs.filter(i => i !== x);
+}
+
+export function change<T>(xs: readonly T[], from: T, to: T): T[] {
+  return xs.map(x => (x === from ? to : x));
+}
+
 // ----------------------------
 
 export function countBy<T>(
@@ -246,6 +254,10 @@ export function formatInteger(n: NumberLike): string {
   return numeral(n).format('0,0');
 }
 
+export function formatNumber(n: NumberLike): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
@@ -262,6 +274,10 @@ export function formatPercent(n: NumberLike): string {
   return (Number(n) * 100).toFixed(2) + '%';
 }
 
+export function formatPercentClapped(n: NumberLike): string {
+  return formatPercent(Math.min(Math.max(Number(n), 0), 1));
+}
+
 export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
@@ -272,12 +288,26 @@ function pad2(str: string | number): string {
   return ('00' + str).substr(-2);
 }
 
+function pad3(str: string | number): string {
+  return ('000' + str).substr(-3);
+}
+
 export function formatDuration(ms: NumberLike): string {
   const n = Number(ms);
   const timeInHours = Math.floor(n / 3600000);
   const timeInMin = Math.floor(n / 60000) % 60;
   const timeInSec = Math.floor(n / 1000) % 60;
   return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
+}
+
+export function formatDurationWithMs(ms: NumberLike): string {
+  const n = Number(ms);
+  const timeInHours = Math.floor(n / 3600000);
+  const timeInMin = Math.floor(n / 60000) % 60;
+  const timeInSec = Math.floor(n / 1000) % 60;
+  return (
+    timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec) + '.' + pad3(Math.floor(n) % 1000)
+  );
 }
 
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {

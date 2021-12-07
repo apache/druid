@@ -30,3 +30,4 @@ export * from './query-cursor';
 export * from './query-manager';
 export * from './query-state';
 export * from './sanitizers';
+export * from './table-helpers';

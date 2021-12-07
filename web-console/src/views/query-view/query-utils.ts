@@ -20,12 +20,19 @@ import { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 
 export function dataTypeToIcon(dataType: string): IconName {
-  switch (dataType) {
+  const typeUpper = dataType.toUpperCase();
+  if (typeUpper.startsWith('COMPLEX')) {
+    return IconNames.ASTERISK;
+  }
+
+  switch (typeUpper) {
     case 'TIMESTAMP':
       return IconNames.TIME;
     case 'VARCHAR':
+    case 'STRING':
       return IconNames.FONT;
     case 'BIGINT':
+    case 'LONG':
     case 'FLOAT':
     case 'DOUBLE':
       return IconNames.NUMERICAL;
