@@ -76,7 +76,8 @@ public class LookupUtils
   private static LookupExtractorFactoryContainer tryConvertObjectToLookupConfig(
       String lookupName,
       Object o,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper)
+  {
     try {
       byte[] lookupConfigBytes = objectMapper.writeValueAsBytes(o);
       return objectMapper.readValue(
