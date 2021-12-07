@@ -168,8 +168,15 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
 
   static DimensionSelector multiConstant(@Nullable final List<String> values)
   {
+    // this method treats null, [], and [null] equivalently as null
     if (values == null || values.isEmpty()) {
       return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+    } else if (values.size() == 1) {
+      // the single value constant selector is more optimized than the multi-value constant selector because the latter
+      // does not report value cardinality, but otherwise behaves identically when used for grouping or selecting to a
+      // normal multi-value dimension selector (getObject on a row with a single value returns the object instead of
+      // the list)
+      return constant(values.get(0));
     } else {
       return new ConstantMultiValueDimensionSelector(values);
     }
@@ -181,6 +188,10 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       return multiConstant(values);
     } else {
       if (values == null) {
+        // the single value constant selector is more optimized than the multi-value constant selector because the
+        // latter does not report value cardinality, but otherwise behaves identically when used for grouping or
+        // selecting to a normal multi-value dimension selector (getObject on a row with a single value returns the
+        // object instead of the list)
         return constant(extractionFn.apply(null));
       }
       return multiConstant(values.stream().map(extractionFn::apply).collect(Collectors.toList()));

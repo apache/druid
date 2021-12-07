@@ -35,6 +35,7 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
 {
   private final DimensionSelector NULL_SELECTOR = DimensionSelector.multiConstant(null);
   private final DimensionSelector EMPTY_SELECTOR = DimensionSelector.multiConstant(Collections.emptyList());
+  private final DimensionSelector SINGLE_SELECTOR = DimensionSelector.multiConstant(ImmutableList.of("billy"));
   private final DimensionSelector CONST_SELECTOR = DimensionSelector.multiConstant(ImmutableList.of("billy", "douglas"));
   private final DimensionSelector NULL_EXTRACTION_SELECTOR = DimensionSelector.multiConstant(
       null,
@@ -53,6 +54,10 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
     Assert.assertEquals(0, row.get(0));
 
     row = EMPTY_SELECTOR.getRow();
+    Assert.assertEquals(1, row.size());
+    Assert.assertEquals(0, row.get(0));
+
+    row = SINGLE_SELECTOR.getRow();
     Assert.assertEquals(1, row.size());
     Assert.assertEquals(0, row.get(0));
 
@@ -90,11 +95,27 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
   }
 
   @Test
+  public void testGetObject()
+  {
+    Assert.assertNull(NULL_SELECTOR.lookupName(0));
+
+    Assert.assertNull(EMPTY_SELECTOR.lookupName(0));
+
+    Assert.assertEquals("billy", SINGLE_SELECTOR.getObject());
+    Assert.assertEquals(ImmutableList.of("billy", "douglas"), CONST_SELECTOR.getObject());
+
+    Assert.assertEquals("billy", NULL_EXTRACTION_SELECTOR.getObject());
+
+    Assert.assertEquals(ImmutableList.of("bill", "doug", "bill"), CONST_EXTRACTION_SELECTOR.getObject());
+  }
+
+  @Test
   public void testCoverage()
   {
     Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, CONST_SELECTOR.getValueCardinality());
     Assert.assertNull(CONST_SELECTOR.idLookup());
-    Assert.assertEquals(List.class, CONST_SELECTOR.classOfObject());
+    Assert.assertEquals(Object.class, CONST_SELECTOR.classOfObject());
+    Assert.assertTrue(CONST_SELECTOR.nameLookupPossibleInAdvance());
   }
 
   @Test

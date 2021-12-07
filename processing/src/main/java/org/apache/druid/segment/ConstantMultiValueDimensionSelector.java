@@ -54,13 +54,13 @@ public class ConstantMultiValueDimensionSelector implements HistoricalDimensionS
   @Override
   public Object getObject()
   {
-    return values;
+    return defaultGetObject();
   }
 
   @Override
   public Class<?> classOfObject()
   {
-    return List.class;
+    return Object.class;
   }
 
   @Override
