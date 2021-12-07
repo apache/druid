@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -45,6 +46,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -61,6 +63,7 @@ import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.ShuffleModule;
@@ -80,6 +83,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -106,9 +110,16 @@ public class CliMiddleManager extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.MIDDLE_MANAGER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new MiddleManagerServiceModule(),
         new Module()
         {
           @Override
@@ -158,12 +169,9 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider
-                    .builder(NodeRole.MIDDLE_MANAGER)
-                    .serviceClasses(ImmutableList.of(WorkerNodeService.class))
-                    .build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
@@ -185,6 +193,7 @@ public class CliMiddleManager extends ServerRunnable
                 Key.get(IntermediaryDataManager.class)
             );
             biddy.addBinding("local").to(LocalIntermediaryDataManager.class);
+            biddy.addBinding("deepstore").to(DeepStorageIntermediaryDataManager.class).in(LazySingleton.class);
           }
 
           @Provides

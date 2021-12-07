@@ -23,7 +23,7 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
+This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` in the extensions load list.
 
 The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
 for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
@@ -99,7 +99,7 @@ This feature uses Confluent's Protobuf provider which is not included in the Dru
 - https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
 - https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
 
-Copy or symlink those files to `extensions/protobuf-extensions` under the distribution root directory.
+Copy or symlink those files inside the folder `extensions/protobuf-extensions` under the distribution root directory.
 
 ## Create Kafka Supervisor
 

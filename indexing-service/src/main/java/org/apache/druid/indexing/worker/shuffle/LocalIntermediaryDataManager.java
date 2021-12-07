@@ -19,19 +19,22 @@
 
 package org.apache.druid.indexing.worker.shuffle;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.GenericPartitionStat;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -40,6 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -52,7 +56,6 @@ import org.joda.time.Period;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -124,6 +127,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     this.indexingServiceClient = indexingServiceClient;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -162,12 +166,18 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     );
   }
 
+  @Override
   @LifecycleStop
-  public void stop() throws InterruptedException
+  public void stop()
   {
     if (supervisorTaskChecker != null) {
       supervisorTaskChecker.shutdownNow();
-      supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
+      try {
+        supervisorTaskChecker.awaitTermination(10, TimeUnit.SECONDS);
+      }
+      catch (InterruptedException e) {
+        Throwables.propagate(e);
+      }
     }
     supervisorTaskCheckTimes.clear();
   }
@@ -187,7 +197,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
           supervisorTaskCheckTimes.computeIfAbsent(
               supervisorTaskId,
               k -> {
-                for (File eachFile : FileUtils.listFiles(supervisorTaskDir, null, true)) {
+                for (File eachFile : org.apache.commons.io.FileUtils.listFiles(supervisorTaskDir, null, true)) {
                   final String relativeSegmentPath = locationPath
                       .relativize(eachFile.toPath().toAbsolutePath())
                       .toString();
@@ -268,7 +278,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
    * supervisorTaskId.
    */
   @Override
-  public long addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
+  public DataSegment addSegment(String supervisorTaskId, String subTaskId, DataSegment segment, File segmentDir)
       throws IOException
   {
     // Get or create the location iterator for supervisorTask.
@@ -288,7 +298,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     final Closer closer = Closer.create();
     closer.register(() -> {
       try {
-        FileUtils.forceDelete(taskTempDir);
+        org.apache.commons.io.FileUtils.forceDelete(taskTempDir);
       }
       catch (IOException e) {
         LOG.warn(e, "Failed to delete directory[%s]", taskTempDir.getAbsolutePath());
@@ -306,7 +316,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
 
     //noinspection unused
     try (final Closer resourceCloser = closer) {
-      FileUtils.forceMkdir(taskTempDir);
+      FileUtils.mkdirp(taskTempDir);
 
       // Tempary compressed file. Will be removed when taskTempDir is deleted.
       final File tempZippedFile = new File(taskTempDir, segment.getId().toString());
@@ -330,8 +340,8 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
         final File destFile = location.reserve(partitionFilePath, segment.getId().toString(), tempZippedFile.length());
         if (destFile != null) {
           try {
-            FileUtils.forceMkdirParent(destFile);
-            org.apache.druid.java.util.common.FileUtils.writeAtomically(
+            FileUtils.mkdirp(destFile.getParentFile());
+            FileUtils.writeAtomically(
                 destFile,
                 out -> Files.asByteSource(tempZippedFile).copyTo(out)
             );
@@ -341,11 +351,11 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
                 subTaskId,
                 destFile
             );
-            return unzippedSizeBytes;
+            return segment.withSize(unzippedSizeBytes).withBinaryVersion(SegmentUtils.getVersionFromDir(segmentDir));
           }
           catch (Exception e) {
             location.release(partitionFilePath, tempZippedFile.length());
-            FileUtils.deleteQuietly(destFile);
+            org.apache.commons.io.FileUtils.deleteQuietly(destFile);
             LOG.warn(
                 e,
                 "Failed to write segment[%s] at [%s]. Trying again with the next location",
@@ -363,25 +373,34 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
   public Optional<ByteSource> findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId)
   {
     IdUtils.validateId("supervisorTaskId", supervisorTaskId);
+    IdUtils.validateId("subTaskId", subTaskId);
     for (StorageLocation location : shuffleDataLocations) {
-      final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, bucketId));
+      final File partitionDir = new File(location.getPath(), getPartitionDirPath(supervisorTaskId, interval, bucketId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
-        final File[] segmentFiles = partitionDir.listFiles();
-        if (segmentFiles == null) {
-          return Optional.empty();
+        final File segmentFile = new File(partitionDir, subTaskId);
+        if (segmentFile.exists()) {
+          return Optional.of(Files.asByteSource(segmentFile));
         } else {
-          for (File segmentFile : segmentFiles) {
-            if (segmentFile.getName().equals(subTaskId)) {
-              return Optional.of(Files.asByteSource(segmentFile));
-            }
-          }
           return Optional.empty();
         }
       }
     }
-
     return Optional.empty();
+  }
+
+  @Override
+  public GenericPartitionStat generatePartitionStat(TaskToolbox toolbox, DataSegment segment)
+  {
+    return new GenericPartitionStat(
+        toolbox.getTaskExecutorNode().getHost(),
+        toolbox.getTaskExecutorNode().getPortToUse(),
+        toolbox.getTaskExecutorNode().isEnableTlsPort(),
+        segment.getInterval(),
+        (BucketNumberedShardSpec) segment.getShardSpec(),
+        null, // numRows is not supported yet
+        null  // sizeBytes is not supported yet
+    );
   }
 
   private DateTime getExpiryTimeFromNow()
@@ -397,36 +416,12 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
       final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
       if (supervisorTaskPath.exists()) {
         LOG.info("Cleaning up [%s]", supervisorTaskPath);
-        for (File eachFile : FileUtils.listFiles(supervisorTaskPath, null, true)) {
+        for (File eachFile : org.apache.commons.io.FileUtils.listFiles(supervisorTaskPath, null, true)) {
           location.removeFile(eachFile);
         }
-        FileUtils.forceDelete(supervisorTaskPath);
+        org.apache.commons.io.FileUtils.forceDelete(supervisorTaskPath);
       }
     }
     supervisorTaskCheckTimes.remove(supervisorTaskId);
-  }
-
-  private static String getPartitionFilePath(
-      String supervisorTaskId,
-      String subTaskId,
-      Interval interval,
-      int bucketId
-  )
-  {
-    return Paths.get(getPartitionDir(supervisorTaskId, interval, bucketId), subTaskId).toString();
-  }
-
-  private static String getPartitionDir(
-      String supervisorTaskId,
-      Interval interval,
-      int bucketId
-  )
-  {
-    return Paths.get(
-        supervisorTaskId,
-        interval.getStart().toString(),
-        interval.getEnd().toString(),
-        String.valueOf(bucketId)
-    ).toString();
   }
 }

@@ -88,6 +88,10 @@ public class StringUtils
     }
   }
 
+  /**
+   * Decodes a UTF-8 String from {@code numBytes} bytes starting at the current position of a buffer.
+   * Advances the position of the buffer by {@code numBytes}.
+   */
   public static String fromUtf8(final ByteBuffer buffer, final int numBytes)
   {
     final byte[] bytes = new byte[numBytes];
@@ -95,6 +99,10 @@ public class StringUtils
     return fromUtf8(bytes);
   }
 
+  /**
+   * Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   */
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());

@@ -25,6 +25,7 @@ import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
 import React, { RefObject } from 'react';
 import SplitterLayout from 'react-splitter-layout';
+import { v4 as uuidv4 } from 'uuid';
 
 import { Loader } from '../../components';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
@@ -47,7 +48,7 @@ import {
   RowColumn,
   stringifyValue,
 } from '../../utils';
-import { isEmptyContext, QueryContext } from '../../utils/query-context';
+import { QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
@@ -202,16 +203,29 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         cancelToken,
       ): Promise<QueryResult> => {
         const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
+        const isSql = !QueryView.isJsonLike(queryString);
+        const query = isSql ? queryString : Hjson.parse(queryString);
+        const context = { ...queryContext, ...(mandatoryQueryContext || {}) };
 
-        const query = QueryView.isJsonLike(queryString) ? Hjson.parse(queryString) : queryString;
-
-        let context: Record<string, any> | undefined;
-        if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-          context = { ...queryContext, ...(mandatoryQueryContext || {}) };
-          if (typeof wrapQueryLimit !== 'undefined') {
-            context.sqlOuterLimit = wrapQueryLimit + 1;
-          }
+        if (typeof wrapQueryLimit !== 'undefined') {
+          context.sqlOuterLimit = wrapQueryLimit + 1;
         }
+
+        const queryIdKey = isSql ? 'sqlQueryId' : 'queryId';
+        // Look for the queryId in the JSON itself (if native) or in the context object.
+        let cancelQueryId = (isSql ? undefined : query.context?.queryId) || context[queryIdKey];
+        if (!cancelQueryId) {
+          // If the queryId (sqlQueryId) is not explicitly set on the context generate one so it is possible to cancel the query.
+          cancelQueryId = context[queryIdKey] = uuidv4();
+        }
+
+        void cancelToken.promise
+          .then(() => {
+            return Api.instance.delete(
+              `/druid/v2${isSql ? '/sql' : ''}/${Api.encodePath(cancelQueryId)}`,
+            );
+          })
+          .catch(() => {});
 
         try {
           return await queryRunner.runQuery({

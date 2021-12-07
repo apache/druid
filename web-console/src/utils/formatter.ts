@@ -35,7 +35,7 @@ const JSON_ESCAPES: Record<string, string> = {
 // The stringifier is just JSON minus the double quotes, the parser is much more forgiving
 export const JSON_STRING_FORMATTER: Formatter<string> = {
   stringify: (str: string) => {
-    if (typeof str !== 'string') throw new TypeError(`must be a string`);
+    if (typeof str !== 'string') return '';
 
     const json = JSON.stringify(str);
     return json.substr(1, json.length - 2);

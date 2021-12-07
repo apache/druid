@@ -80,7 +80,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public void setUp() throws IOException
   {
     // Write a segment with two rows in it, with columns: s (string), d (double), cnt (long), met_s (complex).
-    final IncrementalIndex<?> incrementalIndex =
+    final IncrementalIndex incrementalIndex =
         IndexBuilder.create()
                     .schema(
                         new IncrementalIndexSchema.Builder()

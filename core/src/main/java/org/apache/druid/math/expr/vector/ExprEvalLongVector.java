@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -32,9 +32,9 @@ public final class ExprEvalLongVector extends ExprEvalVector<long[]>
   }
 
   @Override
-  public ExprType getType()
+  public ExpressionType getType()
   {
-    return ExprType.LONG;
+    return ExpressionType.LONG;
   }
 
   @Override

@@ -59,7 +59,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
       // performing the auth checks.
       DruidAvaticaJsonHandler.AVATICA_PATH,
-      DruidAvaticaProtobufHandler.AVATICA_PATH
+      DruidAvaticaJsonHandler.AVATICA_PATH_NO_TRAILING_SLASH,
+      DruidAvaticaProtobufHandler.AVATICA_PATH,
+      DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;

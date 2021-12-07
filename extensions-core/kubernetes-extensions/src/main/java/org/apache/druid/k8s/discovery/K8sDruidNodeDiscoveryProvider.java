@@ -32,11 +32,11 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.net.SocketTimeoutException;
@@ -340,7 +340,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
 
       try {
         LOGGER.info("Stopping NodeRoleWatcher for [%s]...", nodeRole);
-        CloseQuietly.close(watchRef.getAndSet(STOP_MARKER));
+        // STOP_MARKER cannot throw exceptions on close(), so this is OK.
+        CloseableUtils.closeAndSuppressExceptions(STOP_MARKER, e -> {});
         watchExecutor.shutdownNow();
 
         if (!watchExecutor.awaitTermination(15, TimeUnit.SECONDS)) {

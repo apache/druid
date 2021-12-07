@@ -29,12 +29,12 @@ import java.util.Objects;
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialSegmentMergeIOConfig}.
  */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
+public class GeneratedPartitionsReport implements SubTaskReport
 {
   private final String taskId;
-  private final List<T> partitionStats;
+  private final List<PartitionStat> partitionStats;
 
-  GeneratedPartitionsReport(String taskId, List<T> partitionStats)
+  GeneratedPartitionsReport(String taskId, List<PartitionStat> partitionStats)
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
@@ -48,7 +48,7 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Sub
   }
 
   @JsonProperty
-  public List<T> getPartitionStats()
+  public List<PartitionStat> getPartitionStats()
   {
     return partitionStats;
   }
@@ -71,5 +71,14 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Sub
   public int hashCode()
   {
     return Objects.hash(taskId, partitionStats);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GeneratedPartitionsReport{" +
+        "taskId='" + taskId + '\'' +
+        ", partitionStats=" + partitionStats +
+        '}';
   }
 }

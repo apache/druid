@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.22.0-SNAPSHOT</version>
+        <version>0.23.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -37,6 +37,11 @@
             <url>https://packages.confluent.io/maven/</url>
         </repository>
     </repositories>
+
+    <properties>
+        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+        <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -155,6 +160,12 @@
             <artifactId>druid-hdfs-storage</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -214,6 +225,12 @@
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-testing-tools</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -313,6 +330,11 @@
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-api</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
             <version>3.2.0</version>
         </dependency>
         <dependency>
@@ -455,10 +477,88 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-        </plugins>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <configuration>
+                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                    <resources>
+                        <resource>
+                            <directory>script</directory>
+                            <includes>copy_resources_template.sh</includes>
+                            <filtering>true</filtering>
+                        </resource>
+                        <resource>
+                            <directory>src/test/resources/hadoop/</directory>
+                            <includes>*template.json</includes>
+                            <filtering>true</filtering>
+                        </resource>
+                        <resource>
+                            <directory>src/test/resources</directory>
+                            <filtering>false</filtering>
+                        </resource>
+                        <resource>
+                            <directory>src/main/resources</directory>
+                            <filtering>false</filtering>
+                        </resource>
+                    </resources>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.coderplus.maven.plugins</groupId>
+                <artifactId>copy-rename-maven-plugin</artifactId>
+                <version>1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-file-azure</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>${project.build.outputDirectory}/wikipedia_hadoop_azure_input_index_task_template.json</sourceFile>
+                            <destinationFile>${project.build.outputDirectory}/wikipedia_hadoop_azure_input_index_task.sh</destinationFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-file-s3</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>
+                                ${project.build.outputDirectory}/wikipedia_hadoop_s3_input_index_task_template.json
+                            </sourceFile>
+                            <destinationFile>
+                                ${project.build.outputDirectory}/wikipedia_hadoop_s3_input_index_task.json
+                            </destinationFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>rename-file</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>rename</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>${project.build.outputDirectory}/copy_resources_template.sh</sourceFile>
+                            <destinationFile>gen-scripts/copy_resources.sh</destinationFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+    </plugins>
     </build>
 
     <profiles>
+        <profile>
+            <id>hadoop3</id>
+            <properties>
+                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+                <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
+            </properties>
+        </profile>
         <profile>
             <id>integration-tests</id>
             <properties>
@@ -501,6 +601,7 @@
                                         <CONFLUENT_VERSION>5.5.1</CONFLUENT_VERSION>
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
+                                        <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>

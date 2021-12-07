@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +40,7 @@ public class TimeFormatOperatorConversionTest extends ExpressionTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
-      .add("t", ValueType.LONG)
+      .add("t", ColumnType.LONG)
       .build();
   private static final Map<String, Object> BINDINGS = ImmutableMap
       .<String, Object>builder()

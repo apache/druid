@@ -1094,7 +1094,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'recordsPerFetch',
           type: 'number',
-          defaultValue: 2000,
+          defaultValue: 4000,
           defined: typeIs('kinesis'),
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
@@ -1114,7 +1114,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'fetchDelayMillis',
           type: 'number',
-          defaultValue: 1000,
+          defaultValue: 0,
           defined: typeIs('kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
@@ -1361,7 +1361,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year'],
+    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
     required: true,
     info: (
       <>
@@ -2106,12 +2106,24 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
     if (sampleDatum.split(',').length > 3) {
       return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
+    // Contains more than 3 semicolons assume semicolon separated
+    if (sampleDatum.split(';').length > 3) {
+      return inputFormatFromType('tsv', !/;\d+;/.test(sampleDatum), ';');
+    }
+    // Contains more than 3 pipes assume pipe separated
+    if (sampleDatum.split('|').length > 3) {
+      return inputFormatFromType('tsv', !/\|\d+\|/.test(sampleDatum), '|');
+    }
   }
 
   return inputFormatFromType('regex');
 }
 
-function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): InputFormat {
+function inputFormatFromType(
+  type: string,
+  findColumnsFromHeader?: boolean,
+  delimiter?: string,
+): InputFormat {
   let inputFormat: InputFormat = { type };
 
   if (type === 'regex') {
@@ -2121,6 +2133,10 @@ function inputFormatFromType(type: string, findColumnsFromHeader?: boolean): Inp
 
   if (typeof findColumnsFromHeader === 'boolean') {
     inputFormat = deepSet(inputFormat, 'findColumnsFromHeader', findColumnsFromHeader);
+  }
+
+  if (delimiter) {
+    inputFormat = deepSet(inputFormat, 'delimiter', delimiter);
   }
 
   return inputFormat;

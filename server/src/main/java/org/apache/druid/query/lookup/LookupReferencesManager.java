@@ -34,6 +34,7 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -48,6 +49,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -82,8 +84,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
-  private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
+  private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
+      new TypeReference<Map<String, Object>>()
       {
       };
 
@@ -147,13 +149,16 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @LifecycleStart
-  public void start()
+  public void start() throws IOException
   {
     if (!lifecycleLock.canStart()) {
       throw new ISE("can't start.");
     }
     try {
       LOG.debug("LookupExtractorFactoryContainerProvider starting.");
+      if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
+        FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
+      }
       loadAllLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
@@ -424,7 +429,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @Nullable
-  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
+  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
+      throws IOException, InterruptedException
   {
     final StringFullResponseHolder response = fetchLookupsForTier(tier);
     if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
@@ -449,7 +455,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       );
       return null;
     } else {
-      return jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_REFERENCE);
+      Map<String, Object> lookupNameToGenericConfig =
+          jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
+      return LookupUtils.tryConvertObjectMapToLookupConfigMap(
+          lookupNameToGenericConfig,
+          jsonMapper
+      );
     }
   }
 

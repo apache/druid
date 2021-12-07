@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Exprs;
 
 public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorProcessor<TOutput>
@@ -31,13 +31,13 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
     this.delegate = delegate;
   }
 
-  public static <T> ExprVectorProcessor<T> cast(ExprVectorProcessor<?> delegate, ExprType type)
+  public static <T> ExprVectorProcessor<T> cast(ExprVectorProcessor<?> delegate, ExpressionType type)
   {
     final ExprVectorProcessor<?> caster;
-    if (delegate.getOutputType() == type) {
+    if (delegate.getOutputType().equals(type)) {
       caster = delegate;
     } else {
-      switch (type) {
+      switch (type.getType()) {
         case STRING:
           caster = new CastToStringVectorProcessor(delegate);
           break;

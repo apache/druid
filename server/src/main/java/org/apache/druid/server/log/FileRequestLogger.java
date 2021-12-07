@@ -21,11 +21,13 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
@@ -43,9 +45,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
+ *
  */
 public class FileRequestLogger implements RequestLogger
 {
+  private static final Logger log = new Logger(FileRequestLogger.class);
+
   private final ObjectMapper objectMapper;
   private final ScheduledExecutorService exec;
   private final File baseDir;
@@ -69,7 +74,7 @@ public class FileRequestLogger implements RequestLogger
   public void start()
   {
     try {
-      baseDir.mkdirs();
+      FileUtils.mkdirp(baseDir);
 
       MutableDateTime mutableDateTime = DateTimes.nowUtc().toMutableDateTime(ISOChronology.getInstanceUTC());
       mutableDateTime.setMillisOfDay(0);
@@ -93,7 +98,12 @@ public class FileRequestLogger implements RequestLogger
               try {
                 synchronized (lock) {
                   currentDay = currentDay.plusDays(1);
-                  CloseQuietly.close(fileWriter);
+
+                  CloseableUtils.closeAndSuppressExceptions(
+                      fileWriter,
+                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentDay)
+                  );
+
                   fileWriter = getFileWriter();
                 }
               }
@@ -124,7 +134,7 @@ public class FileRequestLogger implements RequestLogger
   public void stop()
   {
     synchronized (lock) {
-      CloseQuietly.close(fileWriter);
+      CloseableUtils.closeAndWrapExceptions(fileWriter);
     }
   }
 

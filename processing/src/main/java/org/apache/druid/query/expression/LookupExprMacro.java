@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -100,9 +100,9 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        return ExprType.STRING;
+        return ExpressionType.STRING;
       }
 
       @Override

@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -51,6 +52,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SqlLifecycleTest
 {
@@ -65,7 +67,12 @@ public class SqlLifecycleTest
     this.plannerFactory = EasyMock.createMock(PlannerFactory.class);
     this.serviceEmitter = EasyMock.createMock(ServiceEmitter.class);
     this.requestLogger = EasyMock.createMock(RequestLogger.class);
-    this.sqlLifecycleFactory = new SqlLifecycleFactory(plannerFactory, serviceEmitter, requestLogger);
+    this.sqlLifecycleFactory = new SqlLifecycleFactory(
+        plannerFactory,
+        serviceEmitter,
+        requestLogger,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+    );
   }
 
   @Test
@@ -102,7 +109,7 @@ public class SqlLifecycleTest
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
     ValidationResult validationResult = new ValidationResult(Collections.emptySet());
-    EasyMock.expect(plannerFactory.createPlanner(EasyMock.anyObject())).andReturn(mockPlanner).once();
+    EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();
@@ -111,7 +118,7 @@ public class SqlLifecycleTest
     EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate(sql)).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.validate()).andReturn(validationResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
 
@@ -125,7 +132,7 @@ public class SqlLifecycleTest
     // test prepare
     PrepareResult mockPrepareResult = EasyMock.createMock(PrepareResult.class);
     EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
-    EasyMock.expect(mockPlanner.prepare(sql)).andReturn(mockPrepareResult).once();
+    EasyMock.expect(mockPlanner.prepare()).andReturn(mockPrepareResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult);
@@ -138,12 +145,12 @@ public class SqlLifecycleTest
     // test plan
     PlannerResult mockPlanResult = EasyMock.createMock(PlannerResult.class);
     EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
-    EasyMock.expect(mockPlanner.plan(sql)).andReturn(mockPlanResult).once();
+    EasyMock.expect(mockPlanner.plan()).andReturn(mockPlanResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
-    PlannerContext context = lifecycle.plan();
-    Assert.assertEquals(mockPlannerContext, context);
+    lifecycle.plan();
+    Assert.assertEquals(mockPlannerContext, lifecycle.getPlannerContext());
     Assert.assertEquals(SqlLifecycle.State.PLANNED, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
@@ -158,7 +165,8 @@ public class SqlLifecycleTest
 
     // test emit
     EasyMock.expect(mockPlannerContext.getSqlQueryId()).andReturn("id").once();
-    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(ImmutableList.of("id")).times(2);
+    CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>(ImmutableList.of("id"));
+    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(nativeQueryIds).times(2);
     EasyMock.expect(mockPlannerContext.getAuthenticationResult()).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).once();
 
     serviceEmitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
@@ -169,7 +177,7 @@ public class SqlLifecycleTest
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
 
-    lifecycle.emitLogsAndMetrics(null, null, 10);
+    lifecycle.finalizeStateAndEmitLogsAndMetrics(null, null, 10);
     Assert.assertEquals(SqlLifecycle.State.DONE, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
@@ -198,7 +206,7 @@ public class SqlLifecycleTest
     DruidPlanner mockPlanner = EasyMock.createMock(DruidPlanner.class);
     PlannerContext mockPlannerContext = EasyMock.createMock(PlannerContext.class);
     ValidationResult validationResult = new ValidationResult(Collections.emptySet());
-    EasyMock.expect(plannerFactory.createPlanner(EasyMock.anyObject())).andReturn(mockPlanner).once();
+    EasyMock.expect(plannerFactory.createPlanner(EasyMock.eq(sql), EasyMock.anyObject())).andReturn(mockPlanner).once();
     EasyMock.expect(mockPlanner.getPlannerContext()).andReturn(mockPlannerContext).once();
     mockPlannerContext.setAuthenticationResult(CalciteTests.REGULAR_USER_AUTH_RESULT);
     EasyMock.expectLastCall();
@@ -207,7 +215,7 @@ public class SqlLifecycleTest
     EasyMock.expect(plannerFactory.getAuthorizerMapper()).andReturn(CalciteTests.TEST_AUTHORIZER_MAPPER).once();
     mockPlannerContext.setAuthorizationResult(Access.OK);
     EasyMock.expectLastCall();
-    EasyMock.expect(mockPlanner.validate(sql)).andReturn(validationResult).once();
+    EasyMock.expect(mockPlanner.validate()).andReturn(validationResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
 
@@ -227,7 +235,7 @@ public class SqlLifecycleTest
     // test prepare
     PrepareResult mockPrepareResult = EasyMock.createMock(PrepareResult.class);
     EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
-    EasyMock.expect(mockPlanner.prepare(sql)).andReturn(mockPrepareResult).once();
+    EasyMock.expect(mockPlanner.prepare()).andReturn(mockPrepareResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult);
@@ -240,12 +248,12 @@ public class SqlLifecycleTest
     // test plan
     PlannerResult mockPlanResult = EasyMock.createMock(PlannerResult.class);
     EasyMock.expect(plannerFactory.createPlannerWithContext(EasyMock.eq(mockPlannerContext))).andReturn(mockPlanner).once();
-    EasyMock.expect(mockPlanner.plan(sql)).andReturn(mockPlanResult).once();
+    EasyMock.expect(mockPlanner.plan()).andReturn(mockPlanResult).once();
     mockPlanner.close();
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
-    PlannerContext context = lifecycle.plan();
-    Assert.assertEquals(mockPlannerContext, context);
+    lifecycle.plan();
+    Assert.assertEquals(mockPlannerContext, lifecycle.getPlannerContext());
     Assert.assertEquals(SqlLifecycle.State.PLANNED, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
@@ -260,7 +268,8 @@ public class SqlLifecycleTest
 
     // test emit
     EasyMock.expect(mockPlannerContext.getSqlQueryId()).andReturn("id").once();
-    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(ImmutableList.of("id")).times(2);
+    CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>(ImmutableList.of("id"));
+    EasyMock.expect(mockPlannerContext.getNativeQueryIds()).andReturn(nativeQueryIds).times(2);
     EasyMock.expect(mockPlannerContext.getAuthenticationResult()).andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT).once();
 
     serviceEmitter.emit(EasyMock.anyObject(ServiceEventBuilder.class));
@@ -271,7 +280,7 @@ public class SqlLifecycleTest
     EasyMock.expectLastCall();
     EasyMock.replay(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
 
-    lifecycle.emitLogsAndMetrics(null, null, 10);
+    lifecycle.finalizeStateAndEmitLogsAndMetrics(null, null, 10);
     Assert.assertEquals(SqlLifecycle.State.DONE, lifecycle.getState());
     EasyMock.verify(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);
     EasyMock.reset(plannerFactory, serviceEmitter, requestLogger, mockPlanner, mockPlannerContext, mockPrepareResult, mockPlanResult);

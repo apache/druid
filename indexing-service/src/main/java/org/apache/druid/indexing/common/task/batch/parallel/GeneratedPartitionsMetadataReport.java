@@ -26,16 +26,16 @@ import java.util.List;
 
 /**
  * Report containing the {@link GenericPartitionStat}s created by a {@link PartialSegmentGenerateTask}. This report is
- * collected by {@link ParallelIndexSupervisorTask} and used to generate {@link PartialGenericSegmentMergeIOConfig}.
+ * collected by {@link ParallelIndexSupervisorTask} and used to generate {@link PartialSegmentMergeIOConfig}.
  */
-class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport<GenericPartitionStat>
+class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport
 {
   public static final String TYPE = "generated_partitions_metadata";
 
   @JsonCreator
   GeneratedPartitionsMetadataReport(
       @JsonProperty("taskId") String taskId,
-      @JsonProperty("partitionStats") List<GenericPartitionStat> partitionStats
+      @JsonProperty("partitionStats") List<PartitionStat> partitionStats
   )
   {
     super(taskId, partitionStats);

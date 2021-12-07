@@ -100,6 +100,10 @@ export async function clickLabeledButton(
   await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
 }
 
+export async function clickText(page: playwright.Page, text: string): Promise<void> {
+  await page.click(`//*[text()="${text}"]`);
+}
+
 export async function selectSuggestibleInput(
   page: playwright.Page,
   label: string,

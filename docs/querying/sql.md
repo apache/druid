@@ -328,20 +328,21 @@ Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT k
 |Function|Notes|Default|
 |--------|-----|-------|
 |`COUNT(*)`|Counts the number of rows.|`0`|
-|`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted unless `useGroupingSetForExactDistinct` is set to true in query contexts or broker configurations.|`0`|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for APPROX_COUNT_DISTINCT. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can could strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, expr must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
 |`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
 |`AVG(expr)`|Averages numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
-|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|`0`|
-|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of `expr`, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](../querying/sql.html#connection-context). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.html#aggregators), described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.   See also `COUNT(DISTINCT expr)`.  |`0`|
-|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. This is always approximate, regardless of the value of [`useApproximateCountDistinct`](../querying/sql.html#connection-context).  The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function. See also `COUNT(DISTINCT expr)`. |`0`|
+|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr using an approximate algorithm. The expr can be a regular column or a prebuilt sketch column.<br><br>The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). By default, this is `APPROX_COUNT_DISTINCT_BUILTIN`. If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be set to `APPROX_COUNT_DISTINCT_DS_HLL` or `APPROX_COUNT_DISTINCT_DS_THETA`.<br><br>When run on prebuilt sketch columns, the sketch column type must match the implementation of this function. For example: when `druid.sql.approxCountDistinct.function` is set to `APPROX_COUNT_DISTINCT_BUILTIN`, this function will be able to run on prebuilt hyperUnique columns, but not on prebuilt HLLSketchBuild columns.|
+|`APPROX_COUNT_DISTINCT_BUILTIN(expr)`|_Usage note:_ consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.<br/><br/>Counts distinct values of expr using Druid's built-in "cardinality" or "hyperUnique" aggregators, which implement a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). The expr can be a string, number, or prebuilt hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct".|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.   See also `COUNT(DISTINCT expr)`.  |`0`|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context).  The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function. See also `COUNT(DISTINCT expr)`. |`0`|
 |`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0'` (STRING)|
 |`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.md) on the values of expr, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0.0'` (STRING)|
-|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.md#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|`NaN`|
-|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`NaN`|
+|`APPROX_QUANTILE(expr, probability, [resolution])`|_Deprecated._ Use `APPROX_QUANTILE_DS` instead, which provides a superior distribution-independent algorithm with formal error guarantees.<br/><br/>Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.md#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|`NaN`|
+|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) exprs. Allowable "probability" values are between 0 and 1, exclusive. The `k` parameter is described in the Quantiles sketch documentation. You must load [DataSketches extension](../development/extensions-core/datasketches-extension.md) to use this function.<br/><br/>See the [known issue](#a-known-issue-with-approximate-functions-based-on-data-sketches) with this function.|`NaN`|
 |`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.md) must be loaded to use this function.|`0.0`|
-|`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) on the values of expr, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0'` (STRING)|
+|`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.md) on the values of `expr`, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation. You must load the [DataSketches extension](../development/extensions-core/datasketches-extension.md) to use this function.<br/><br/>See the [known issue](#a-known-issue-with-approximate-functions-based-on-data-sketches) with this function.|`'0'` (STRING)|
 |`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positive rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|Empty base64 encoded bloom filter STRING|
 |`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.md) documentation for additional details.|`Double.NaN`|
 |`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.md) documentation for additional details.|Empty base64 encoded T-Digest sketch STRING|
@@ -352,9 +353,13 @@ Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT k
 |`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.md) documentation for additional details.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`EARLIEST(expr)`|Returns the earliest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
+|`EARLIEST(expr, timeColumn)`|Returns the earliest value of `expr`, which must be numeric. Earliest value is defined as the value first encountered with the minimum overall value of time column of all values being aggregated.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
+|`EARLIEST(expr, maxBytesPerString, timeColumn)`|Like `EARLIEST(expr, timeColumn)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
+|`LATEST(expr, timeColumn)`|Returns the latest value of `expr`, which must be numeric. Latest value is defined as the value last encountered with the maximum overall value of time column of all values being aggregated.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
+|`LATEST(expr, maxBytesPerString, timeColumn)`|Like `LATEST(expr, timeColumn)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `''`|
 |`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|N/A|
@@ -413,6 +418,12 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`BITWISE_SHIFT_LEFT(expr1, expr2)`|Returns the result of `expr1 << expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_SHIFT_RIGHT(expr1, expr2)`|Returns the result of `expr1 >> expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_XOR(expr1, expr2)`|Returns the result of `expr1 ^ expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
+|`DIV(x,y)`|Returns the result of integer division of x by y |
+|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of [0,3] (default: 2). |
+|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
+|`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of [0,3] (default: 2). |
+|`SAFE_DIVIDE(x,y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
+
 
 ### String functions
 
@@ -442,7 +453,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from expr.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from expr.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
-|<code>TRIM([BOTH &#124; LEADING &#124; TRAILING] [<chars> FROM] expr)</code>|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>)`.|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>)`.|
 |`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>)`.|
@@ -472,8 +483,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
 |`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
-|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
-|`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
+|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
+|`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
 |`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
 |`TIME_PARSE(<string_expr>, [<pattern>, [<timezone>]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
@@ -609,6 +620,8 @@ All 'array' references in the multi-value string function documentation can refe
 |Function|Notes|
 |--------|-----|
 | `ARRAY[expr1,expr ...]` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
+| `MV_FILTER_ONLY(expr, arr)` | filters multi-value `expr` to include only values contained in array `arr` |
+| `MV_FILTER_NONE(expr, arr)` | filters multi-value `expr` to include no values contained in array `arr` |
 | `MV_LENGTH(arr)` | returns length of array expression |
 | `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
 | `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
@@ -816,6 +829,16 @@ either through query context or through Broker configuration.
 - Aggregation functions that are labeled as using sketches or approximations, such as APPROX_COUNT_DISTINCT, are always
 approximate, regardless of configuration.
 
+#### A known issue with approximate functions based on data sketches
+
+The `APPROX_QUANTILE_DS` and `DS_QUANTILES_SKETCH` functions can fail with an `IllegalStateException` if one of the sketches for
+the query hits `maxStreamLength`: the maximum number of items to store in each sketch.
+See [GitHub issue 11544](https://github.com/apache/druid/issues/11544) for more details.
+To workaround the issue, increase value of the maximum string length with the `approxQuantileDsMaxStreamLength` parameter
+in the query context. Since it is set to 1,000,000,000 by default, you don't need to override it in most cases.
+See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for how many bytes are required per stream length.
+This query context  parameter is a temporary solution to avoid the known issue. It may be removed in a future release after the bug is fixed.
+
 ### Unsupported features
 
 Druid does not support all SQL features. In particular, the following features are not supported.
@@ -835,7 +858,6 @@ include:
 
 - [Inline datasources](datasource.md#inline).
 - [Spatial filters](../development/geo.md).
-- [Query cancellation](querying.md#query-cancellation).
 - [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
@@ -846,16 +868,25 @@ the SQL planner.
 
 ### HTTP POST
 
-You can make Druid SQL queries using HTTP via POST to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+To use the SQL API to make Druid SQL queries, POST your query to the following endpoint on either the Router or Broker:
+```
+POST https://ROUTER:8888/druid/v2/sql/`. 
+```  
 
-##### Request
+Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```
+
+##### Request body
       
 |Property|Description|Default|
 |--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header. See [Responses] for details.|`false`|
+|`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
+|`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
+|`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
 |`context`|JSON object containing [connection context parameters](#connection-context).|`{}` (empty)|
 |`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](#data-types) for a list of supported SQL types.|`[]` (empty)|
 
@@ -865,7 +896,7 @@ You can use _curl_ to send SQL queries from the command-line:
 $ cat query.json
 {"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
-$ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
+$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
 [{"TheCount":24433}]
 ```
 
@@ -897,39 +928,59 @@ Metadata is available over HTTP POST by querying [metadata tables](#metadata-tab
 
 #### Responses
 
+##### Result formats
+
 Druid SQL's HTTP POST API supports a variety of result formats. You can specify these by adding a "resultFormat"
 parameter, like:
 
 ```json
 {
   "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "object"
+  "resultFormat" : "array"
+}
+```
+
+You can additionally request a header with information about column names by setting `header` to true in your request.
+When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
+you information about [Druid runtime and SQL types](#data-types) respectively. You can request all these headers
+with a request like:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
+  "resultFormat" : "array",
+  "header" : true,
+  "typesHeader" : true,
+  "sqlTypesHeader" : true
 }
 ```
 
 The supported result formats are:
 
-|Format|Description|Content-Type|
-|------|-----------|------------|
-|`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|application/json|
-|`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|application/json|
-|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
-|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
-|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
+|Format|Description|Header description|Content-Type|
+|------|-----------|------------------|------------|
+|`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|If `header` is true, the first row is an object where the fields are column names. Each field's value is either null (if `typesHeader` and `sqlTypesHeader` are false) or an object that contains the Druid type as `type` (if `typesHeader` is true) and the SQL type as `sqlType` (if `sqlTypesHeader` is true).|application/json|
+|`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|If `header` is true, the first row is an array of column names. If `typesHeader` is true, the next row is an array of Druid types. If `sqlTypesHeader` is true, the next row is an array of SQL types.|application/json|
+|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "object".|text/plain|
+|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "array", except the rows are separated by newlines.|text/plain|
+|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "array", except the lists are in CSV format.|text/csv|
 
-You can additionally request a header by setting "header" to true in your request, like:
+If `typesHeader` is set to true, [Druid type](#data-types) information is included in the response. Complex types,
+like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
+or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHeader` is set to true,
+[SQL type](#data-types) information is included in the response. It is possible to set both `typesHeader` and
+`sqlTypesHeader` at once. Both parameters require that `header` is also set.
 
-```json
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "arrayLines",
-  "header" : true
-}
-```
+To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
+`X-Druid-SQL-Header-Included: yes` if `header` was set to true and if the version of Druid the client is connected to
+understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP response header is present irrespective of
+whether `typesHeader` or `sqlTypesHeader` are set or not.
 
-In this case, the first result returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
-will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
-keys are column names, and the values are null.
+Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
+This query id will be assigned the value of `sqlQueryId` from the [connection context parameters](#connection-context)
+if specified, else Druid will generate a SQL query id for you.
+
+##### Errors
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
@@ -941,6 +992,39 @@ formats, since truncated responses will be invalid JSON. For the line-oriented f
 trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
 through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
 delivered due to an error.
+
+### Cancelling queries
+
+You can use the HTTP DELETE method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
+
+Druid SQL's HTTP DELETE method uses the following syntax:
+```
+DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
+```
+
+The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
+
+For example if you issue the following query:
+```bash
+curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
+--header 'Content-Type: application/json' \
+--data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
+"context" : {"sqlQueryId" : "myQuery01"}}'
+```
+You can cancel the query using the query id `myQuery01` as follows:
+```bash
+curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
+```
+
+Cancellation requests require READ permission on all resources used in the sql query. 
+
+Druid returns an HTTP 202 response for successful deletion requests.
+
+Druid returns an HTTP 404 response in the following cases:
+  - `sqlQueryId` is incorrect.
+  - The query completes before your cancellation request is processed.
+  
+Druid returns an HTTP 403 response for authorization failure.
 
 ### JDBC
 
@@ -1050,7 +1134,9 @@ INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for
 datasource "foo", use the query:
 
 ```sql
-SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
 > Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
@@ -1104,6 +1190,14 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
 
+For example, this query returns [data type](#data-types) information for columns in the `foo` table:
+
+```sql
+SELECT "ORDINAL_POSITION", "COLUMN_NAME", "IS_NULLABLE", "DATA_TYPE", "JDBC_TYPE"
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE "TABLE_NAME" = 'foo'
+```
+
 ### SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
@@ -1153,6 +1247,26 @@ SELECT
 FROM sys.segments
 GROUP BY 1
 ORDER BY 2 DESC
+```
+
+This query goes a step further and shows the overall profile of available, non-realtime segments across buckets of 1 million rows each for the `foo` datasource:
+
+```sql
+SELECT ABS("num_rows" /  1000000) as "bucket",
+  COUNT(*) as segments,
+  SUM("size") / 1048576 as totalSizeMiB,
+  MIN("size") / 1048576 as minSizeMiB,
+  AVG("size") / 1048576 as averageSizeMiB,
+  MAX("size") / 1048576 as maxSizeMiB,
+  SUM("num_rows") as totalRows,
+  MIN("num_rows") as minRows,
+  AVG("num_rows") as averageRows,
+  MAX("num_rows") as maxRows,
+  (AVG("size") / AVG("num_rows"))  as avgRowSizeB
+FROM sys.segments
+WHERE is_available = 1 AND is_realtime = 0 AND "datasource" = `foo`
+GROUP BY 1
+ORDER BY 1
 ```
 
 If you want to retrieve segment that was compacted (ANY compaction):
@@ -1248,7 +1362,7 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|STRING|Supervisor task identifier|
-|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|state|STRING|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |detailed_state|STRING|Supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |healthy|LONG|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
 |type|STRING|Type of supervisor, e.g. `kafka`, `kinesis` or `materialized_view`|

@@ -167,6 +167,9 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 #### Metadata store information
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`sys.segments`](../querying/sql.md#segments-table) table.
+
 ##### GET
 
 * `/druid/coordinator/v1/metadata/segments`
@@ -656,7 +659,7 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
@@ -668,7 +671,7 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
@@ -867,6 +870,11 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 ##### GET
 
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
+
 * `/druid/v2/datasources`
 
 Returns a list of queryable datasources.
@@ -926,6 +934,11 @@ Returns segment information lists including server locations for the given query
 ### Router
 
 #### GET
+
+> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
+> [`sys.segments`](../querying/sql.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 
