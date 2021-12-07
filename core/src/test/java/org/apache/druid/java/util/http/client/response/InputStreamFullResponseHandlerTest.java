@@ -56,7 +56,7 @@ public class InputStreamFullResponseHandlerTest
   }
 
   @Test
-  public void testException() throws Exception
+  public void testException()
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
@@ -76,7 +75,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     discoveryDruidNode = new DiscoveryDruidNode(node, NodeRole.PEON, ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               JsonConfigProvider.bindInstance(
                   binder,
@@ -121,7 +120,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testNoLeaderFound() throws Exception
+  public void testNoLeaderFound()
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of());

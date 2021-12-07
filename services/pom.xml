@@ -176,7 +176,7 @@
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
+            <artifactId>netty-codec-http</artifactId>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
