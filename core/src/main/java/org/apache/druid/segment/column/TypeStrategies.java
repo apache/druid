@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -219,6 +220,18 @@ public class TypeStrategies
     return buffer.getFloat(offset + VALUE_OFFSET);
   }
 
+  public static void checkMaxSize(ByteBuffer buffer, int maxSizeBytes, TypeSignature<?> signature)
+  {
+    if (maxSizeBytes > buffer.limit()) {
+      throw new IAE(
+          "Unable to write [%s], maxSizeBytes [%s] is greater than buffer limit [%s]",
+          signature.asTypeString(),
+          maxSizeBytes,
+          buffer.limit()
+      );
+    }
+  }
+
   /**
    * Read and write non-null LONG values. If reading non-null values, consider just using {@link ByteBuffer#getLong}
    * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
@@ -243,9 +256,9 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Long value, int maxSizeBytes)
     {
-      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      checkMaxSize(buffer, maxSizeBytes, ColumnType.LONG);
       final int sizeBytes = Long.BYTES;
-      final int remaining = max - sizeBytes;
+      final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
         buffer.putLong(value);
         return sizeBytes;
@@ -284,9 +297,9 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Float value, int maxSizeBytes)
     {
-      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      checkMaxSize(buffer, maxSizeBytes, ColumnType.FLOAT);
       final int sizeBytes = Float.BYTES;
-      final int remaining = max - sizeBytes;
+      final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
         buffer.putFloat(value);
         return sizeBytes;
@@ -325,9 +338,9 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Double value, int maxSizeBytes)
     {
-      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      checkMaxSize(buffer, maxSizeBytes, ColumnType.DOUBLE);
       final int sizeBytes = Double.BYTES;
-      final int remaining = max - sizeBytes;
+      final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
         buffer.putDouble(value);
         return sizeBytes;
@@ -372,10 +385,10 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, String value, int maxSizeBytes)
     {
+      checkMaxSize(buffer, maxSizeBytes, ColumnType.STRING);
       final byte[] bytes = StringUtils.toUtf8(value);
-      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
       final int sizeBytes = Integer.BYTES + bytes.length;
-      final int remaining = max - sizeBytes;
+      final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
         buffer.putInt(bytes.length);
         buffer.put(bytes, 0, bytes.length);
@@ -410,10 +423,12 @@ public class TypeStrategies
   public static final class ArrayTypeStrategy implements TypeStrategy<Object[]>
   {
     private final Comparator<Object> elementComparator;
+    private final TypeSignature<?> arrayType;
     private final NullableTypeStrategy elementStrategy;
 
     public ArrayTypeStrategy(TypeSignature<?> type)
     {
+      this.arrayType = type;
       this.elementStrategy = type.getElementType().getNullableStrategy();
       this.elementComparator = Comparator.nullsFirst(elementStrategy);
     }
@@ -438,9 +453,9 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Object[] value, int maxSizeBytes)
     {
-      final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
+      checkMaxSize(buffer, maxSizeBytes, arrayType);
       int sizeBytes = Integer.BYTES;
-      int remaining = max - sizeBytes;
+      int remaining = maxSizeBytes - sizeBytes;
       if (remaining < 0) {
         return remaining;
       }

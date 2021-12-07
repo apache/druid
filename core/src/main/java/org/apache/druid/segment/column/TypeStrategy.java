@@ -84,14 +84,16 @@ public interface TypeStrategy<T> extends Comparator<T>
    * Write a non-null value to the {@link ByteBuffer} at position {@link ByteBuffer#position()}. This will move the
    * underlying position by the size of the value written.
    *
-   * This method returns the number of bytes written. If writing the value would take more than 'maxSizeBytes' (or the
-   * buffer limit, whichever is smaller), this method will return a negative value indicating the number of additional
-   * bytes that would be required to fully write the value. Partial results may be written to the buffer when in this
-   * state, and the position may be left at whatever point the implementation ran out of space while writing the value.
-   * Callers should save the starting position if it is necessary to 'rewind' after a partial write.
+   * This method returns the number of bytes written. If writing the value would take more than 'maxSizeBytes', this
+   * method will return a negative value indicating the number of additional bytes that would be required to fully
+   * write the value. Partial results may be written to the buffer when in this state, and the position may be left
+   * at whatever point the implementation ran out of space while writing the value. Callers should save the starting
+   * position if it is necessary to 'rewind' after a partial write.
    *
    * Callers MUST check that the return value is positive which indicates a successful write, while a negative response
    * a partial write.
+   *
+   * @return number of bytes written
    */
   int write(ByteBuffer buffer, T value, int maxSizeBytes);
 
@@ -122,11 +124,10 @@ public interface TypeStrategy<T> extends Comparator<T>
    * underlying {@link ByteBuffer#position()}, but may temporarily modify the buffer position during reading so cannot
    * be considered thread safe usage of the buffer.
    *
-   * This method returns the number of bytes written. If writing the value would take more than 'maxSizeBytes' (or the
-   * buffer limit, whichever is smaller), this method will return a negative value indicating the number of additional
-   * bytes that would be required to fully write the value. Partial results may be written to the buffer when in this
-   * state, but the underlying buffer position will be unaffected regardless of whether a write operation was
-   * successful or not.
+   * This method returns the number of bytes written. If writing the value would take more than 'maxSizeBytes', this
+   * method will return a negative value indicating the number of additional bytes that would be required to fully
+   * write the value. Partial results may be written to the buffer when in this state, but the underlying buffer
+   * position will be unaffected regardless of whether a write operation was successful or not.
    *
    * Callers MUST check that the return value is positive which indicates a successful write, while a negative response
    * a partial write.
