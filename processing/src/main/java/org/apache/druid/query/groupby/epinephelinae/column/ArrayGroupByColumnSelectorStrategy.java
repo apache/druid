@@ -8,6 +8,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -25,7 +26,7 @@ public class ArrayGroupByColumnSelectorStrategy
 
   // contains string <-> id for each element of the multi value grouping column
   // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
-  private final BiMap<String,Integer> dictionaryToInt = HashBiMap.create();
+  private final BiMap<String, Integer> dictionaryToInt = HashBiMap.create();
 
   // stores each row as a integer array where the int represents the value in dictionaryToInt
   // for eg : [a,b,c] would be converted to [1,2,3]
@@ -55,9 +56,9 @@ public class ArrayGroupByColumnSelectorStrategy
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows
     if (id != GROUP_BY_MISSING_VALUE) {
       final int[] value = indexedIntArrays.get(id);
-      String[] rowValues=new String[value.length];
-      for(int i=0;i< value.length;i++){
-        rowValues[i]= dictionaryToInt.inverse().get(value[i]);
+      String[] rowValues = new String[value.length];
+      for (int i = 0; i < value.length; i++) {
+        rowValues[i] = dictionaryToInt.inverse().get(value[i]);
 
       }
       resultRow.set(selectorPlus.getResultRowPosition(), rowValues);
@@ -117,7 +118,7 @@ public class ArrayGroupByColumnSelectorStrategy
     if (firstValue == null && rowSize == 1) {
       return GROUP_BY_MISSING_VALUE;
     }
-    intRepresentation[0]=addToIndexedDictionary(firstValue);
+    intRepresentation[0] = addToIndexedDictionary(firstValue);
     for (int i = 1; i < rowSize; i++) {
       intRepresentation[i] = addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i)));
     }
@@ -157,27 +158,32 @@ public class ArrayGroupByColumnSelectorStrategy
       int keyBufferPosition, @Nullable StringComparator stringComparator
   )
   {
-
+    final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
       int[] lhs = indexedIntArrays.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
       int[] rhs = indexedIntArrays.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
 
+      int minLength = Math.min(lhs.length, rhs.length);
       //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
-      } else if (lhs.length > rhs.length) {
-        return 1;
-      } else if (lhs.length < rhs.length) {
-        return -1;
       } else {
-        for (int i = 0; i < lhs.length; i++) {
-          final int cmp = dictionaryToInt.inverse().get(lhs[i]).compareTo(dictionaryToInt.inverse().get(rhs[i]));
+        for (int i = 0; i < minLength; i++) {
+          final int cmp = comparator.compare(
+              dictionaryToInt.inverse().get(lhs[i]),
+              dictionaryToInt.inverse().get(rhs[i])
+          );
           if (cmp == 0) {
             continue;
           }
           return cmp;
         }
-        return 0;
+        if (lhs.length == rhs.length) {
+          return 0;
+        } else if (lhs.length < rhs.length) {
+          return -1;
+        }
+        return 1;
       }
     };
   }

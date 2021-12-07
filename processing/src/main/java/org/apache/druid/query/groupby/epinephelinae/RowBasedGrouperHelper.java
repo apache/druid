@@ -1454,28 +1454,34 @@ public class RowBasedGrouperHelper
               StringComparator stringComparator
       )
       {
+        //TODO: karan : add pushLimitDown ?
+        final StringComparator comparator = stringComparator == null
+                                            ? StringComparators.LEXICOGRAPHIC
+                                            : stringComparator;
         this.keyBufferPosition = keyBufferPosition;
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
           String[] lhs = arrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)).getDelegate();
           String[] rhs = arrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition)).getDelegate();
 
+          int minLength = Math.min(lhs.length, rhs.length);
+
           //noinspection ArrayEquality
           if (lhs == rhs) {
             return 0;
-          } else if (lhs.length > rhs.length) {
-            return 1;
+          }
+          for (int i = 0; i < minLength; i++) {
+            final int cmp = comparator.compare(lhs[i], rhs[i]);
+            if (cmp == 0) {
+              continue;
+            }
+            return cmp;
+          }
+          if (lhs.length == rhs.length) {
+            return 0;
           } else if (lhs.length < rhs.length) {
             return -1;
-          } else {
-            for (int i = 0; i < lhs.length; i++) {
-              final int cmp = lhs[i].compareTo(rhs[i]);
-              if (cmp == 0) {
-                continue;
-              }
-              return cmp;
-            }
-            return 0;
           }
+          return 1;
         };
       }
 
