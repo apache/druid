@@ -49,7 +49,6 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -66,16 +65,11 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 3)
-@Measurement(iterations = 15)
+@Measurement(iterations = 10)
 public class DruidSchemaInternRowSignatureBenchmark
 {
 
-  @Param({"10000"})
-  private int iterations;
-
   private DruidSchemaForBenchmark druidSchema;
-  private DruidServerMetadata serverMetadata;
-  private DataSegment dataSegment;
 
   private static class DruidSchemaForBenchmark extends DruidSchema
   {
@@ -100,6 +94,7 @@ public class DruidSchemaInternRowSignatureBenchmark
       );
     }
 
+    // Overriding here so that it can be called explicitly to benchmark
     @Override
     public Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
     {
@@ -156,18 +151,22 @@ public class DruidSchemaInternRowSignatureBenchmark
   @State(Scope.Thread)
   public static class MyState
   {
-    SegmentId segmentId;
+    Set<SegmentId> segmentIds;
 
     @Setup(Level.Iteration)
     public void setup()
     {
-      segmentId = SegmentId.of("dummy", Intervals.ETERNITY, "1", new LinearShardSpec(0));
+      ImmutableSet.Builder<SegmentId> segmentIdsBuilder = ImmutableSet.builder();
+      for (int i = 0; i < 10000; ++i) {
+        segmentIdsBuilder.add(SegmentId.of("dummy", Intervals.of(i + "/" + (i + 1)), "1", new LinearShardSpec(0)));
+      }
+      segmentIds = segmentIdsBuilder.build();
     }
 
     @TearDown(Level.Iteration)
     public void teardown()
     {
-      segmentId = null;
+      segmentIds = null;
     }
   }
 
@@ -184,7 +183,7 @@ public class DruidSchemaInternRowSignatureBenchmark
         null,
         null
     );
-    serverMetadata = new DruidServerMetadata(
+    DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "dummy",
         "dummy",
         "dummy",
@@ -194,14 +193,17 @@ public class DruidSchemaInternRowSignatureBenchmark
         0
     );
 
-    dataSegment = DataSegment.builder()
-                             .dataSource("dummy")
-                             .shardSpec(new LinearShardSpec(0))
-                             .dimensions(ImmutableList.of("col1", "col2", "col3", "col4"))
-                             .version("1")
-                             .interval(Intervals.ETERNITY)
-                             .size(0)
-                             .build();
+    DataSegment.Builder builder = DataSegment.builder()
+                                             .dataSource("dummy")
+                                             .shardSpec(new LinearShardSpec(0))
+                                             .dimensions(ImmutableList.of("col1", "col2", "col3", "col4"))
+                                             .version("1")
+                                             .size(0);
+    for (int i = 0; i < 10000; ++i) {
+      DataSegment dataSegment = builder.interval(Intervals.of(i + "/" + (i + 1)))
+                                       .build();
+      druidSchema.addSegment(serverMetadata, dataSegment);
+    }
   }
 
   @Benchmark
@@ -209,11 +211,6 @@ public class DruidSchemaInternRowSignatureBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void addSegments(MyState state, Blackhole blackhole) throws IOException
   {
-    druidSchema.addSegment(serverMetadata, dataSegment);
-    for (int i = 0; i < iterations; ++i) {
-      blackhole.consume(
-          druidSchema.refreshSegments(ImmutableSet.of(state.segmentId))
-      );
-    }
+    blackhole.consume(druidSchema.refreshSegments(state.segmentIds));
   }
 }
