@@ -17,33 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.math.expr.vector;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.math.expr.ExpressionType;
 
-import javax.validation.constraints.NotNull;
-
-public class FilteredSingleServerInventoryViewProvider implements FilteredServerInventoryViewProvider
+public abstract class SymmetricalBivariateFunctionVectorProcessor<T> extends BivariateFunctionVectorProcessor<T, T, T>
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public SingleServerInventoryView get()
+  public SymmetricalBivariateFunctionVectorProcessor(
+      ExpressionType outputType,
+      ExprVectorProcessor<T> left,
+      ExprVectorProcessor<T> right
+  )
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.alwaysFalse());
+    super(outputType, left, right);
   }
 }

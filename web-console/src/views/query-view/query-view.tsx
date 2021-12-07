@@ -19,7 +19,7 @@
 import { Code, Intent, Switch } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import { QueryResult, QueryRunner, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import memoizeOne from 'memoize-one';
@@ -66,6 +66,8 @@ import { QueryTimer } from './query-timer/query-timer';
 import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
+
+const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 
 const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
@@ -193,9 +195,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       },
     });
 
-    const queryRunner = new QueryRunner((payload, isSql, cancelToken) => {
-      return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
-    });
+    const queryRunner = new QueryRunner();
 
     this.queryManager = new QueryManager({
       processQuery: async (
@@ -627,6 +627,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
             getParsedQuery={this.getParsedQuery}
             columnMetadataLoading={columnMetadataState.loading}
             columnMetadata={columnMetadataState.data}
+            defaultWhere={LAST_DAY}
             onQueryChange={this.handleQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTable={defaultTable}

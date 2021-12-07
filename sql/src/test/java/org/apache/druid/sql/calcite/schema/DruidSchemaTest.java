@@ -40,11 +40,15 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
+import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -1085,6 +1089,102 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
 
     EasyMock.verify(factoryMock, lifecycleMock);
 
+  }
+
+  @Test
+  public void testSegmentMetadataColumnType()
+  {
+    RowSignature signature = DruidSchema.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            ImmutableMap.of(
+                "a",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ColumnType.STRING.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                ),
+                "count",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ColumnType.LONG.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                )
+            ),
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    Assert.assertEquals(
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        signature
+    );
+  }
+
+
+  @Test
+  public void testSegmentMetadataFallbackType()
+  {
+    RowSignature signature = DruidSchema.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            ImmutableMap.of(
+                "a",
+                new ColumnAnalysis(
+                    null,
+                    ColumnType.STRING.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                null
+                ),
+                "count",
+                new ColumnAnalysis(
+                    null,
+                    ColumnType.LONG.asTypeString(),
+                    false,
+                    true,
+                    1234,
+                    26,
+                    "a",
+                    "z",
+                    null
+                )
+            ),
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    Assert.assertEquals(
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        signature
+    );
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

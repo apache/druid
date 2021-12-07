@@ -27,6 +27,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Properties;
+
+/**
+ * This test verifies injection for {@link ServerRunnable}s which are discoverable Druid servers.
+ */
 @RunWith(Parameterized.class)
 public class MainTest
 {
@@ -36,29 +41,17 @@ public class MainTest
     return ImmutableList.of(
         new Object[]{new CliOverlord()},
         new Object[]{new CliBroker()},
-
-        // Takes arguments. Cannot be used in this test
-        //new Object[]{new CliPeon()},
-
         new Object[]{new CliHistorical()},
         new Object[]{new CliCoordinator()},
-
-        // Implements Runnable, not GuiceRunnable
-        //new Object[]{new CliHadoopIndexer()},
-
-        // Takes arguments. Cannot be used in this test
-        //new Object[]{new CliInternalHadoopIndexer()},
-
         new Object[]{new CliMiddleManager()},
         new Object[]{new CliRouter()},
-
         new Object[]{new CliIndexer()}
     );
   }
 
-  private final GuiceRunnable runnable;
+  private final ServerRunnable runnable;
 
-  public MainTest(GuiceRunnable runnable)
+  public MainTest(ServerRunnable runnable)
   {
     this.runnable = runnable;
   }
@@ -68,6 +61,6 @@ public class MainTest
   {
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    Assert.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
   }
 }

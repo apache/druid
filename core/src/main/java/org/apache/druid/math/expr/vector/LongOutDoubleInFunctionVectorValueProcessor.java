@@ -22,22 +22,21 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link UnivariateFunctionVectorProcessor} for processing (double[]) -> double[]
+ * specialized {@link UnivariateFunctionVectorValueProcessor} for processing (long[]) -> long[]
  */
-public abstract class DoubleOutDoubleInFunctionVectorProcessor
-    extends UnivariateFunctionVectorProcessor<double[], double[]>
+public abstract class LongOutDoubleInFunctionVectorValueProcessor extends UnivariateFunctionVectorValueProcessor<double[], long[]>
 {
-  public DoubleOutDoubleInFunctionVectorProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
+  public LongOutDoubleInFunctionVectorValueProcessor(ExprVectorProcessor<double[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new double[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.DOUBLE), maxVectorSize, new long[maxVectorSize]);
   }
 
-  public abstract double apply(double input);
+  public abstract long apply(double input);
 
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.DOUBLE;
+    return ExpressionType.LONG;
   }
 
   @Override
@@ -47,8 +46,8 @@ public abstract class DoubleOutDoubleInFunctionVectorProcessor
   }
 
   @Override
-  final ExprEvalVector<double[]> asEval()
+  final ExprEvalVector<long[]> asEval()
   {
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    return new ExprEvalLongVector(outValues, outNulls);
   }
 }

@@ -21,9 +21,18 @@
     padding-bottom: 10px;
   }
 
+  &.normal.bp3-dialog {
+    height: 600px;
+  }
+
+  &.large.bp3-dialog {
+    width: 90vw;
+    height: 90vh;
+  }
+
   .bp3-input {
     margin: 10px;
-    height: 400px;
+    flex: 1;
   }
 
   .bp3-dialog-footer-actions {

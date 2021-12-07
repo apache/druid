@@ -31,6 +31,7 @@ import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -164,8 +165,8 @@ public class DruidLogicalValuesRuleTest
           new TimestampString("2021-04-01 16:54:31"),
           0
       );
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIMESTAMP_WITH_LOCAL_TIME_ZONE]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIMESTAMP_WITH_LOCAL_TIME_ZONE type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
     }
 
@@ -173,8 +174,8 @@ public class DruidLogicalValuesRuleTest
     public void testGetValueFromTimeLiteral()
     {
       RexLiteral literal = REX_BUILDER.makeTimeLiteral(new TimeString("16:54:31"), 0);
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIME]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIME type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
     }
 
@@ -182,8 +183,8 @@ public class DruidLogicalValuesRuleTest
     public void testGetValueFromTimeWithLocalTimeZoneLiteral()
     {
       RexLiteral literal = REX_BUILDER.makeTimeWithLocalTimeZoneLiteral(new TimeString("16:54:31"), 0);
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIME_WITH_LOCAL_TIME_ZONE]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIME_WITH_LOCAL_TIME_ZONE type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
     }
   }

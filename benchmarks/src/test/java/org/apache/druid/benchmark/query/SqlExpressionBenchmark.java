@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -80,6 +81,7 @@ public class SqlExpressionBenchmark
   static {
     NullHandling.initializeForTests();
     Calcites.setSystemProperties();
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -181,8 +183,12 @@ public class SqlExpressionBenchmark
       "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2",
       // 28: group by single input string low cardinality expr with expr agg
       "SELECT CONCAT(string2, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
-      // 28: group by single input string high cardinality expr with expr agg
-      "SELECT CONCAT(string3, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+      // 29: group by single input string high cardinality expr with expr agg
+      "SELECT CONCAT(string3, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 30: logical and operator
+      "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      // 31: isnull, notnull
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
   );
 
   @Param({"5000000"})
@@ -226,7 +232,9 @@ public class SqlExpressionBenchmark
       "26",
       "27",
       "28",
-      "29"
+      "29",
+      "30",
+      "31"
   })
   private String query;
 

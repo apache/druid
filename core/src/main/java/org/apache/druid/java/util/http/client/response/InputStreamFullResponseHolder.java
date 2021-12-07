@@ -21,7 +21,6 @@ package org.apache.druid.java.util.http.client.response;
 
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.InputStream;
 
@@ -29,12 +28,9 @@ public class InputStreamFullResponseHolder extends FullResponseHolder<InputStrea
 {
   private final AppendableByteArrayInputStream is;
 
-  public InputStreamFullResponseHolder(
-      HttpResponseStatus status,
-      HttpResponse response
-  )
+  public InputStreamFullResponseHolder(HttpResponse response)
   {
-    super(status, response);
+    super(response);
     is = new AppendableByteArrayInputStream();
   }
 

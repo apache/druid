@@ -16,7 +16,7 @@ exports[`clipboard dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog show-value-dialog"
+        class="bp3-dialog show-value-dialog normal"
       >
         <div
           class="bp3-dialog-header"
@@ -54,6 +54,7 @@ exports[`clipboard dialog matches snapshot 1`] = `
         </div>
         <textarea
           class="bp3-input"
+          spellcheck="false"
         >
           Bot: Automatska zamjena teksta  (-[[Administrativna podjela Meksika|Admin]] +[[Administrativna podjela Meksika|Admi]])
         </textarea>

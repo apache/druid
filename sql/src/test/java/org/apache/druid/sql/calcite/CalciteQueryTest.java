@@ -27,7 +27,6 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -112,6 +111,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -132,6 +132,7 @@ import java.util.stream.Collectors;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+
 
   @Test
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries() throws Exception
@@ -2605,8 +2606,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "dim3, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
-        + "GROUP BY 1, 2"
-    );
+        + "GROUP BY 1, 2",
+        "Possible error: SQL requires union between inputs that are not simple table scans and involve a " +
+            "filter or aliasing. Or column types of tables being unioned are not of same type.");
   }
 
   @Test
@@ -2619,7 +2621,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1"
+        + "GROUP BY 1",
+        "Possible error: SQL requires union between two tables " +
+            "and column names queried for each table are different Left: [dim1], Right: [dim2]."
+    );
+  }
+
+  @Test
+  public void testUnionIsUnplannable()
+  {
+    // Cannot plan this UNION operation
+
+    assertQueryIsUnplannable(
+        "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
+        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
   }
 
@@ -2633,7 +2648,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1"
+        + "GROUP BY 1",
+        "Possible error: SQL requires union between inputs that are not simple table scans and involve " +
+            "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 
@@ -2731,7 +2748,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "dim1, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2"
+        + "GROUP BY 1, 2",
+        "Possible error: SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
     );
   }
 
@@ -3629,31 +3647,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableQueries()
-  {
-    // All of these queries are unplannable because they rely on features Druid doesn't support.
-    // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
-    // It's also here so when we do support these features, we can have "real" tests for these queries.
-
-    final List<String> queries = ImmutableList.of(
-        // SELECT query with order by non-__time.
-        "SELECT dim1 FROM druid.foo ORDER BY dim1",
-
-        // JOIN condition with not-equals (<>).
-        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
-        + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
-
-        // JOIN condition with a function of both sides.
-        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
-        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n"
-    );
-
-    for (final String query : queries) {
-      assertQueryIsUnplannable(query);
-    }
-  }
-
-  @Test
   public void testGroupingWithNullInFilter() throws Exception
   {
     // HashJoinSegmentStorageAdapter is not vectorizable
@@ -3762,30 +3755,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
-  @Test
-  public void testUnplannableTwoExactCountDistincts()
-  {
-    // Requires GROUPING SETS + GROUPING to be translated by AggregateExpandDistinctAggregatesRule.
-
-    assertQueryIsUnplannable(
-        PLANNER_CONFIG_NO_HLL,
-        "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2"
-    );
-  }
-
-  @Test
-  public void testUnplannableExactCountDistinctOnSketch()
-  {
-    // COUNT DISTINCT on a sketch cannot be exact.
-
-    assertQueryIsUnplannable(
-        PLANNER_CONFIG_NO_HLL,
-        "SELECT COUNT(distinct unique_dim1) FROM druid.foo"
-    );
-  }
-
-
 
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter() throws Exception
@@ -5186,6 +5155,35 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnplannableQueries()
+  {
+    // All of these queries are unplannable because they rely on features Druid doesn't support.
+    // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
+    // It's also here so when we do support these features, we can have "real" tests for these queries.
+
+    final Map<String, String> queries = ImmutableMap.of(
+        // SELECT query with order by non-__time.
+        "SELECT dim1 FROM druid.foo ORDER BY dim1",
+        "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.",
+
+        // JOIN condition with not-equals (<>).
+        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
+        "Possible error: SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
+
+        // JOIN condition with a function of both sides.
+        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
+        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported."
+
+    );
+
+    for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
+      assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
+    }
+  }
+
+  @Test
   public void testCountStarWithBoundFilterSimplifyOnMetric() throws Exception
   {
     testQuery(
@@ -5224,6 +5222,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{1L}
         )
+    );
+  }
+
+  @Test
+  public void testUnplannableTwoExactCountDistincts()
+  {
+    // Requires GROUPING SETS + GROUPING to be translated by AggregateExpandDistinctAggregatesRule.
+
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT dim2, COUNT(distinct dim1), COUNT(distinct dim2) FROM druid.foo GROUP BY dim2",
+        "Possible error: SQL requires a join with 'IS_NOT_DISTINCT_FROM' condition that is not supported."
+    );
+  }
+
+  @Test
+  public void testUnplannableExactCountDistinctOnSketch()
+  {
+    // COUNT DISTINCT on a sketch cannot be exact.
+
+    assertQueryIsUnplannable(
+        PLANNER_CONFIG_NO_HLL,
+        "SELECT COUNT(distinct unique_dim1) FROM druid.foo",
+        "Possible error: SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported."
     );
   }
 
@@ -5391,9 +5413,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     }
     catch (Throwable t) {
       Throwable rootException = CalciteTests.getRootCauseFromInvocationTargetExceptionChain(t);
-      Assert.assertEquals(IAE.class, rootException.getClass());
+      Assert.assertEquals(UnsupportedSQLQueryException.class, rootException.getClass());
       Assert.assertEquals(
-          "Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
+          "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
           rootException.getMessage()
       );
     }
@@ -6873,6 +6895,53 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(new Object[]{legacyExplanationWithContext, resources})
+    );
+  }
+
+  @Test
+  public void testExplainMultipleTopLevelUnionAllQueries() throws Exception
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query = "EXPLAIN PLAN FOR SELECT dim1 FROM druid.foo\n"
+                         + "UNION ALL (SELECT dim1 FROM druid.foo WHERE dim1 = '42'\n"
+                         + "UNION ALL SELECT dim1 FROM druid.foo WHERE dim1 = '44')";
+    final String legacyExplanation = "DruidUnionRel(limit=[-1])\n"
+                                     + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n"
+                                     + "  DruidUnionRel(limit=[-1])\n"
+                                     + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"42\",\"extractionFn\":null},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n"
+                                     + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"44\",\"extractionFn\":null},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING}])\n";
+    final String explanation = "["
+                               + "{"
+                               + "\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":null,\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},"
+                               + "\"signature\":[{\"name\":\"dim1\",\"type\":\"STRING\"}]"
+                               + "},"
+                               + "{"
+                               + "\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"42\",\"extractionFn\":null},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},"
+                               + "\"signature\":[{\"name\":\"dim1\",\"type\":\"STRING\"}]"
+                               + "},"
+                               + "{"
+                               + "\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"44\",\"extractionFn\":null},\"columns\":[\"dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}},"
+                               + "\"signature\":[{\"name\":\"dim1\",\"type\":\"STRING\"}]"
+                               + "}]";
+    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+
+    testQuery(
+        query,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{legacyExplanation, resources}
+        )
+    );
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        query,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{explanation, resources}
+        )
     );
   }
 
@@ -11871,8 +11940,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         results2
     );
   }
-
-
 
   @Test
   public void testRepeatedIdenticalVirtualExpressionGrouping() throws Exception
