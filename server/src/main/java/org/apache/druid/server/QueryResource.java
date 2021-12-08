@@ -375,6 +375,45 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
+  @POST
+  @Path("parse")
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE, APPLICATION_SMILE})
+  public Response parse(
+          final InputStream in,
+          @QueryParam("pretty") final String pretty,
+
+          // used to get request content-type,Accept header, remote address and auth-related headers
+          @Context final HttpServletRequest req
+  ) throws Exception
+  {
+    List<String> tables = new ArrayList<String>();
+
+    final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
+    Query<?> query = null;
+
+    String acceptHeader = req.getHeader("Accept");
+    if (Strings.isNullOrEmpty(acceptHeader)) {
+      //default to content-type
+      acceptHeader = req.getContentType();
+    }
+
+    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, Boolean.TRUE);
+
+    final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(acceptHeader, pretty != null);
+    
+    try {
+      queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
+      query = queryLifecycle.getQuery();
+      tables.addAll(query.getDataSource().getTableNames());
+      return Response.ok(tables).build();
+    }
+    catch (Exception e) {
+      log.error("parse query error", e);
+      return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+    }
+  }
+
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
