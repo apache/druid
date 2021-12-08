@@ -1202,7 +1202,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.error(ie, "getStats() interrupted.");
+      log.warn(ie, "getStats() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {
@@ -1222,7 +1222,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.error(ie, "getCurrentParseErrors() interrupted.");
+      log.warn(ie, "getCurrentParseErrors() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {

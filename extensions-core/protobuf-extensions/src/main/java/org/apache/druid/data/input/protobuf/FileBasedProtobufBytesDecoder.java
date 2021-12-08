@@ -116,22 +116,22 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
       dynamicSchema = DynamicSchema.parseFrom(fin);
     }
     catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(descriptorFilePath, e, "Invalid descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Invalid descriptor file: " + descriptorFilePath);
     }
     catch (IOException e) {
-      throw new ParseException(descriptorFilePath, e, "Cannot read descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Cannot read descriptor file: " + descriptorFilePath);
     }
 
     Set<String> messageTypes = dynamicSchema.getMessageTypes();
     if (messageTypes.size() == 0) {
-      throw new ParseException(descriptorFilePath, "No message types found in the descriptor: " + descriptorFilePath);
+      throw new ParseException(null, "No message types found in the descriptor: " + descriptorFilePath);
     }
 
     String messageType = protoMessageType == null ? (String) messageTypes.toArray()[0] : protoMessageType;
     Descriptors.Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
-          messageType,
+          null,
           StringUtils.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
@@ -151,5 +152,14 @@ public class ParseExceptionHandlerTest
           parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
       );
     }
+  }
+
+  @Test
+  public void testParseExceptionReportEquals()
+  {
+    EqualsVerifier.forClass(ParseExceptionReport.class)
+                  .withNonnullFields("errorType", "details", "timeOfExceptionMillis")
+                  .usingGetClass()
+                  .verify();
   }
 }

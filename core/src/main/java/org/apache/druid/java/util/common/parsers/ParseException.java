@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 public class ParseException extends RuntimeException
 {
   /**
-   * If true, the row was partiall parseable, but some columns could not be parsed
+   * If true, the row was partially parseable, but some columns could not be parsed
    * (e.g., non-numeric values for a numeric column)
    */
   private final boolean fromPartiallyValidRow;

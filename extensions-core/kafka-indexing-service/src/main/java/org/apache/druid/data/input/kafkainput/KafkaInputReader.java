@@ -106,7 +106,7 @@ public class KafkaInputReader implements InputEntityReader
           catch (ClassCastException e) {
             throw new ParseException(
                 null,
-                "Unsupported input format in valueFormat. KafkaInputformat only supports input format that return MapBasedInputRow rows"
+                "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
             );
           }
           Map<String, Object> event = new HashMap<>(headerKeyList);
