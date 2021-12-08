@@ -192,7 +192,6 @@ public class QueryContextsTest
     Assert.assertTrue(QueryContexts.isDebug(query));
     Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
   }
-}
 
   @Test
   public void testDefaultLongQueryTime() {
