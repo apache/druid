@@ -16,20 +16,6 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
-export * from './column-metadata';
-export * from './date';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-cursor';
-export * from './query-manager';
-export * from './query-state';
-export * from './sanitizers';
-export * from './table-helpers';
+import { SqlQuery } from 'druid-query-toolkit';
+
+export type QueryAction = (query: SqlQuery) => SqlQuery;

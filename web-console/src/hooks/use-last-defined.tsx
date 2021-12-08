@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
-export * from './column-metadata';
-export * from './date';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-cursor';
-export * from './query-manager';
-export * from './query-state';
-export * from './sanitizers';
-export * from './table-helpers';
+import { useEffect, useRef } from 'react';
+
+export function useLastDefined<T>(cur: T | undefined): T | undefined {
+  const last = useRef<T>();
+
+  useEffect(() => {
+    if (typeof cur === 'undefined') return;
+    last.current = cur;
+  }, [cur]);
+
+  return typeof cur === 'undefined' ? last.current : cur;
+}
