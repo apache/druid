@@ -40,7 +40,7 @@ If you have conflicting needs for different use cases, you can create multiple t
 
 ## Maximizing rollup ratio
 
-To measure the rollup ratio of a datasource compare the number of rows in Druid (`COUNT`) with the number of ingested events. For example, run a [Druid SQL](../querying/sql.md) query where "count" refers to a `count`-type metric generated at ingestion time as follows:
+To measure the rollup ratio of a datasource compare the number of rows in Druid (`COUNT`) with the number of ingested events. For example, run a [Druid SQL](../querying/sql.md) query where "cnt" refers to a `count`-type metric generated at ingestion time as follows:
 
 ```sql
 SELECT SUM("cnt") / (COUNT(*) * 1.0) FROM datasource
