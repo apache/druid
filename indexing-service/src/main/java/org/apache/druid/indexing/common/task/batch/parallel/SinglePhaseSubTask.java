@@ -193,7 +193,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     return determineLockGranularityAndTryLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
