@@ -109,6 +109,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -590,7 +591,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       log.error(e, "Expected CannotPlanException for query: %s", sql);
       Assert.fail(sql);
     }
-    Assert.assertEquals(sql, expectedError, e.getMessage());
+    Assert.assertEquals(sql,
+        StringUtils.format("Cannot build plan for query: %s. %s", sql, expectedError),
+        e.getMessage());
   }
 
   /**
