@@ -166,6 +166,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     return lockGranularity;
   }
 
+  @JsonProperty
+  public TaskLockType getTaskLockType()
+  {
+    return taskLockType;
+  }
+
   @Override
   public TypeReference<SegmentIdWithShardSpec> getReturnTypeReference()
   {
