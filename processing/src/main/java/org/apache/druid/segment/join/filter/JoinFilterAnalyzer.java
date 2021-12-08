@@ -26,7 +26,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
@@ -302,7 +302,7 @@ public class JoinFilterAnalyzer
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
-                    ValueType.STRING
+                    ColumnType.STRING
                 );
               }
           );
@@ -466,7 +466,7 @@ public class JoinFilterAnalyzer
                 return new ExpressionVirtualColumn(
                     vcName,
                     correlatedBaseExpr,
-                    ValueType.STRING
+                    ColumnType.STRING
                 );
               }
           );

@@ -68,7 +68,7 @@ There are other types of `inputSpec` to enable reindexing and delta ingestion.
 
 ### Reindexing with Native Batch Ingestion
 
-This section assumes you understand how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md). Native batch indexing uses an `inputSource` to know where and how to read the input data. You can use the [`DruidInputSource`](native-batch.md#druid-input-source) to read data from segments inside Druid. You can use Parallel task (`index_parallel`) for all native batch reindexing tasks. Increase the `maxNumConcurrentSubTasks` to accommodate the amount of data your are reindexing. See [Capacity planning](native-batch.md#capacity-planning).
+This section assumes you understand how to do batch ingestion without Hadoop using [native batch indexing](../ingestion/native-batch.md). Native batch indexing uses an `inputSource` to know where and how to read the input data. You can use the [`DruidInputSource`](./native-batch-input-source.md) to read data from segments inside Druid. You can use Parallel task (`index_parallel`) for all native batch reindexing tasks. Increase the `maxNumConcurrentSubTasks` to accommodate the amount of data your are reindexing. See [Capacity planning](native-batch.md#capacity-planning).
 
 <a name="delete"></a>
 
@@ -95,7 +95,9 @@ A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/
 
 ## Kill Task
 
-Kill tasks delete all information about a segment and removes it from deep storage. Segments to kill must be unused (used==0) in the Druid segment table. The available grammar is:
+The kill task deletes all information about segments and removes them from deep storage. Segments to kill must be unused (used==0) in the Druid segment table.
+
+The available grammar is:
 
 ```json
 {
@@ -103,9 +105,14 @@ Kill tasks delete all information about a segment and removes it from deep stora
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "interval" : <all_segments_in_this_interval_will_die!>,
+    "markAsUnused": <true|false>,
     "context": <task context>
 }
 ```
+
+If `markAsUnused` is true (default is false), the kill task will first mark any segments within the specified interval as unused, before deleting the unused segments within the interval.
+
+**WARNING!** The kill task permanently removes all information about the affected segments from the metadata store and deep storage. These segments cannot be recovered after the kill task runs, this operation cannot be undone. 
 
 ## Retention
 

@@ -38,11 +38,9 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -53,10 +51,13 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +73,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   private final Filter leftFilter;
   private final PartialDruidQuery partialQuery;
   private final Join joinRel;
+  private final PlannerConfig plannerConfig;
   private RelNode left;
   private RelNode right;
 
@@ -81,15 +83,16 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       Join joinRel,
       Filter leftFilter,
       PartialDruidQuery partialQuery,
-      QueryMaker queryMaker
+      PlannerContext plannerContext
   )
   {
-    super(cluster, traitSet, queryMaker);
+    super(cluster, traitSet, plannerContext);
     this.joinRel = joinRel;
     this.left = joinRel.getLeft();
     this.right = joinRel.getRight();
     this.leftFilter = leftFilter;
     this.partialQuery = partialQuery;
+    this.plannerConfig = plannerContext.getPlannerConfig();
   }
 
   /**
@@ -98,7 +101,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public static DruidJoinQueryRel create(
       final Join joinRel,
       final Filter leftFilter,
-      final QueryMaker queryMaker
+      final PlannerContext plannerContext
   )
   {
     return new DruidJoinQueryRel(
@@ -107,7 +110,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel,
         leftFilter,
         PartialDruidQuery.create(joinRel),
-        queryMaker
+        plannerContext
     );
   }
 
@@ -115,17 +118,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public PartialDruidQuery getPartialDruidQuery()
   {
     return partialQuery;
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
-    // is the outermost query and it will actually get run as a native query. Druid's native query layer will
-    // finalize aggregations for the outermost query even if we don't explicitly ask it to.
-
-    final DruidQuery query = toDruidQuery(false);
-    return getQueryMaker().runQuery(query);
   }
 
   @Override
@@ -137,7 +129,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel,
         leftFilter,
         newQueryBuilder,
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -231,7 +223,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         ),
         leftFilter,
         partialQuery,
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -270,7 +262,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         joinRel.copy(joinRel.getTraitSet(), inputs),
         leftFilter,
         getPartialDruidQuery(),
-        getQueryMaker()
+        getPlannerContext()
     );
   }
 
@@ -290,7 +282,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final DruidQuery druidQuery = toDruidQueryForExplaining();
 
     try {
-      queryString = getQueryMaker().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -313,13 +305,16 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     double cost;
 
     if (computeLeftRequiresSubquery(getSomeDruidChild(left))) {
-      cost = CostEstimates.COST_JOIN_SUBQUERY;
+      cost = CostEstimates.COST_SUBQUERY;
     } else {
       cost = partialQuery.estimateCost();
+      if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
+        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+      }
     }
 
     if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
-      cost += CostEstimates.COST_JOIN_SUBQUERY;
+      cost += CostEstimates.COST_SUBQUERY;
     }
 
     if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
@@ -341,7 +336,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       case INNER:
         return JoinType.INNER;
       default:
-        throw new IAE("Cannot handle joinType[%s]", calciteJoinType);
+        throw new UnsupportedSQLQueryException("Cannot handle joinType '%s'", calciteJoinType);
     }
   }
 
@@ -351,7 +346,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return !DruidRels.isScanOrMapping(left, true);
   }
 
-  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  public static boolean computeRightRequiresSubquery(final DruidRel<?> right)
   {
     // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
     // ideally this would involve JoinableFactory.isDirectlyJoinable to check that the global datasources
@@ -385,7 +380,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return Pair.of(rightPrefix, signatureBuilder.build());
   }
 
-  private static DruidRel<?> getSomeDruidChild(final RelNode child)
+  public static DruidRel<?> getSomeDruidChild(final RelNode child)
   {
     if (child instanceof DruidRel) {
       return (DruidRel<?>) child;

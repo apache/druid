@@ -39,8 +39,20 @@ import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-m
 
 import './column-tree.scss';
 
-const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
 const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
+
+function caseInsensitiveCompare(a: any, b: any): number {
+  return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+}
+
+function getCountExpression(columnNames: string[]): SqlExpression {
+  for (const columnName of columnNames) {
+    if (columnName === 'count' || columnName === '__count') {
+      return SqlFunction.simple('SUM', [SqlRef.column(columnName)]).as('Count');
+    }
+  }
+  return COUNT_STAR;
+}
 
 const STRING_QUERY = SqlQuery.parse(`SELECT
   ?
@@ -60,11 +72,20 @@ interface HandleColumnClickOptions {
   columnName: string;
   columnType: string;
   parsedQuery: SqlQuery | undefined;
+  defaultWhere: SqlExpression | undefined;
   onQueryChange: (query: SqlQuery, run: boolean) => void;
 }
 
 function handleColumnShow(options: HandleColumnClickOptions): void {
-  const { columnSchema, columnTable, columnName, columnType, parsedQuery, onQueryChange } = options;
+  const {
+    columnSchema,
+    columnTable,
+    columnName,
+    columnType,
+    parsedQuery,
+    defaultWhere,
+    onQueryChange,
+  } = options;
 
   let from: SqlExpression;
   let where: SqlExpression | undefined;
@@ -75,7 +96,7 @@ function handleColumnShow(options: HandleColumnClickOptions): void {
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
     from = SqlTableRef.create(columnTable);
-    where = LAST_DAY;
+    where = defaultWhere;
   } else {
     from = SqlTableRef.create(columnTable, columnSchema);
   }
@@ -109,9 +130,11 @@ export interface ColumnTreeProps {
   columnMetadataLoading: boolean;
   columnMetadata?: readonly ColumnMetadata[];
   getParsedQuery: () => SqlQuery | undefined;
+  defaultWhere?: SqlExpression;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
   defaultTable?: string;
+  highlightTable?: string;
 }
 
 export interface ColumnTreeState {
@@ -145,7 +168,14 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const { columnMetadata, defaultSchema, defaultTable, onQueryChange } = props;
+    const {
+      columnMetadata,
+      defaultSchema,
+      defaultTable,
+      defaultWhere,
+      onQueryChange,
+      highlightTable,
+    } = props;
 
     if (columnMetadata && columnMetadata !== state.prevColumnMetadata) {
       const columnTree = groupBy(
@@ -160,6 +190,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             (metadata, tableName): TreeNodeInfo => ({
               id: tableName,
               icon: IconNames.TH,
+              className: tableName === highlightTable ? 'highlight' : undefined,
               label: (
                 <Popover2
                   position={Position.RIGHT}
@@ -169,30 +200,67 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         const parsedQuery = props.getParsedQuery();
                         const tableRef = SqlTableRef.create(tableName);
                         const prettyTableRef = prettyPrintSql(tableRef);
+                        const countExpression = getCountExpression(
+                          metadata.map(child => child.COLUMN_NAME),
+                        );
+
+                        const getQueryOnTable = () => {
+                          return SqlQuery.create(
+                            SqlTableRef.create(
+                              tableName,
+                              schemaName === 'druid' ? undefined : schemaName,
+                            ),
+                          );
+                        };
+
+                        const getWhere = (defaultToAllTime = false) => {
+                          if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
+                            return parsedQuery.getWhereExpression();
+                          } else if (schemaName === 'druid') {
+                            return defaultToAllTime ? undefined : defaultWhere;
+                          } else {
+                            return;
+                          }
+                        };
+
                         return (
                           <Menu>
                             <MenuItem
                               icon={IconNames.FULLSCREEN}
-                              text={`SELECT ... FROM ${tableName}`}
+                              text={`SELECT ...columns... FROM ${tableName}`}
                               onClick={() => {
-                                const tableRef = SqlTableRef.create(
-                                  tableName,
-                                  schemaName === 'druid' ? undefined : schemaName,
-                                );
-
-                                let where: SqlExpression | undefined;
-                                if (parsedQuery && parsedQuery.getFirstTableName() === tableName) {
-                                  where = parsedQuery.getWhereExpression();
-                                } else if (schemaName === 'druid') {
-                                  where = LAST_DAY;
-                                }
-
                                 onQueryChange(
-                                  SqlQuery.create(tableRef)
+                                  getQueryOnTable()
                                     .changeSelectExpressions(
-                                      metadata.map(child => SqlRef.column(child.COLUMN_NAME)),
+                                      metadata
+                                        .map(child => child.COLUMN_NAME)
+                                        .sort(caseInsensitiveCompare)
+                                        .map(columnName => SqlRef.column(columnName)),
                                     )
-                                    .changeWhereExpression(where),
+                                    .changeWhereExpression(getWhere()),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT * FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable().changeWhereExpression(getWhere()),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT ${countExpression} FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelect(0, countExpression)
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
                                   true,
                                 );
                               }}
@@ -333,6 +401,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                         columnName: columnData.COLUMN_NAME,
                                         columnType: columnData.DATA_TYPE,
                                         parsedQuery,
+                                        defaultWhere,
                                         onQueryChange: onQueryChange,
                                       });
                                     }}
@@ -386,9 +455,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     ),
                   }),
                 )
-                .sort((a, b) =>
-                  String(a.id).toLowerCase().localeCompare(String(b.id).toLowerCase()),
-                ),
+                .sort((a, b) => caseInsensitiveCompare(a.id, b.id)),
             }),
           ),
         }),

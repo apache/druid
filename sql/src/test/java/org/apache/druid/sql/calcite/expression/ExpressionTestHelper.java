@@ -26,6 +26,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -45,8 +46,14 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
+import org.apache.druid.sql.calcite.schema.NamedViewSchema;
+import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -64,9 +71,18 @@ import java.util.stream.Collectors;
 class ExpressionTestHelper
 {
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
+      CalciteTests.getJsonMapper(),
       new PlannerConfig(),
+      new DruidSchemaCatalog(
+          EasyMock.createMock(SchemaPlus.class),
+          ImmutableMap.of(
+              "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
+              NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+          )
+      ),
       ImmutableMap.of()
   );
 
@@ -287,7 +303,7 @@ class ExpressionTestHelper
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
-                rowSignature,
+                () -> rowSignature,
                 false
             ),
             VirtualColumns.create(virtualColumns)

@@ -20,9 +20,11 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
+import { QueryRunner } from 'druid-query-toolkit';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
+import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 import { Links, setLinkOverrides } from './links';
@@ -31,6 +33,7 @@ import { Api, UrlBaser } from './singletons';
 import './entry.scss';
 
 bootstrapReactTable();
+bootstrapJsonParse();
 
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
@@ -85,6 +88,10 @@ Api.initialize(apiConfig);
 if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);
 }
+
+QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
+  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+};
 
 ReactDOM.render(
   React.createElement(ConsoleApplication, {

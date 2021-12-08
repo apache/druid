@@ -35,7 +35,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -189,9 +189,9 @@ public class ColumnComparisonFilter implements Filter
     private static final String[] NULL_VALUE = new String[]{null};
 
     @Override
-    public ValueType defaultType()
+    public ColumnType defaultType()
     {
-      return ValueType.STRING;
+      return ColumnType.STRING;
     }
 
     @Override

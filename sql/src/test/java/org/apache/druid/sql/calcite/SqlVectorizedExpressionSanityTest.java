@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -85,8 +86,11 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT (long1 * long2), SUM(double1) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT string2, SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT string1 + string2, COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT CONCAT(string1, '-', 'foo'), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
       "SELECT CONCAT(string1, '-', string2), string3, COUNT(*) FROM foo GROUP BY 1,2 ORDER BY 3",
-      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1"
+      "SELECT CONCAT(string1, '-', string2, '-', long1, '-', double1, '-', float1) FROM foo GROUP BY 1",
+      "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
   );
 
   private static final int ROWS_PER_SEGMENT = 100_000;
@@ -102,6 +106,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void setupClass()
   {
     Calcites.setSystemProperties();
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -127,11 +132,11 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     CLOSER.register(WALKER);
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final SchemaPlus rootSchema =
+    final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(WALKER, CONGLOMERATE),
+        CalciteTests.createMockQueryMakerFactory(WALKER, CONGLOMERATE),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -145,6 +150,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
+    ExpressionProcessing.initializeForTests(null);
   }
 
   @Parameterized.Parameters(name = "query = {0}")
@@ -182,8 +188,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
         final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
     ) {
-      final PlannerResult vectorPlan = vectorPlanner.plan(query);
-      final PlannerResult nonVectorPlan = nonVectorPlanner.plan(query);
+      final PlannerResult vectorPlan = vectorPlanner.plan();
+      final PlannerResult nonVectorPlan = nonVectorPlanner.plan();
       final Sequence<Object[]> vectorSequence = vectorPlan.run();
       final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
       Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);

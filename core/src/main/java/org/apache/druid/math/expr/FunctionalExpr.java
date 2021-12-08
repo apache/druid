@@ -68,6 +68,11 @@ class LambdaExpr implements Expr
     return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
   }
 
+  public List<String> stringifyIdentifiers()
+  {
+    return args.stream().map(IdentifierExpr::stringify).collect(Collectors.toList());
+  }
+
   ImmutableList<IdentifierExpr> getIdentifierExprs()
   {
     return args;
@@ -99,7 +104,7 @@ class LambdaExpr implements Expr
   @Override
   public String stringify()
   {
-    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
+    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(stringifyIdentifiers()), expr.stringify());
   }
 
   @Override
@@ -120,7 +125,7 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return expr.getOutputType(inspector);
   }
@@ -218,7 +223,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return function.getOutputType(inspector, args);
   }
@@ -341,7 +346,7 @@ class ApplyFunctionExpr implements Expr
 
   @Nullable
   @Override
-  public ExprType getOutputType(InputBindingInspector inspector)
+  public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return function.getOutputType(inspector, lambdaExpr, argsExpr);
   }

@@ -63,7 +63,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -103,8 +102,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -149,24 +146,12 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment)
+          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
-            return false;
-          }
-
-          @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
-          {
-            return new SegmentForTesting(
+            return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
-            );
-          }
-
-          @Override
-          public File getSegmentFiles(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
+            ), segment.getShardSpec());
           }
 
           @Override
@@ -470,8 +455,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -489,8 +474,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -509,8 +494,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -540,8 +525,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(closedSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(closedSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -921,13 +906,6 @@ public class ServerManagerTest
         @Nullable
         @Override
         public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public String getColumnTypeName(String column)
         {
           return null;
         }

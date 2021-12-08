@@ -55,7 +55,7 @@ public class StringLastBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
@@ -93,7 +93,7 @@ public class StringLastBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
@@ -131,7 +131,7 @@ public class StringLastBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
@@ -170,7 +170,7 @@ public class StringLastBufferAggregatorTest
     TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
 
     StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringLastBufferAggregator agg = new StringLastBufferAggregator(

@@ -77,10 +77,10 @@ class ParallelIndexTestingFactory
   static final ShuffleClient SHUFFLE_CLIENT = new ShuffleClient()
   {
     @Override
-    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+    public File fetchSegmentFile(
         File partitionDir,
         String supervisorTaskId,
-        P location
+        PartitionLocation location
     )
     {
       return null;

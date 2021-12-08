@@ -20,6 +20,8 @@
 @import '../../../blueprint-overrides/common/colors';
 
 .query-input {
+  position: relative;
+
   .ace-container {
     position: absolute;
     width: 100%;

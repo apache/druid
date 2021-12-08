@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
@@ -77,6 +78,9 @@ public class ProtobufInputFormatTest
     for (Module jacksonModule : new ProtobufExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
+    );
   }
 
   @Test
@@ -99,7 +103,7 @@ public class ProtobufInputFormatTest
   {
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(
         flattenSpec,
-        new SchemaRegistryBasedProtobufBytesDecoder("http://test:8081", 100, null, null, null)
+        new SchemaRegistryBasedProtobufBytesDecoder("http://test:8081", 100, null, null, null, null)
     );
     NestedInputFormat inputFormat2 = jsonMapper.readValue(
         jsonMapper.writeValueAsString(inputFormat),

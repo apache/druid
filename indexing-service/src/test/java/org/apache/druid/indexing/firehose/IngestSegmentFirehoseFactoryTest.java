@@ -44,7 +44,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -54,7 +54,6 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -206,9 +205,7 @@ public class IngestSegmentFirehoseFactoryTest
       index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
-    if (!PERSIST_DIR.mkdirs() && !PERSIST_DIR.exists()) {
-      throw new IOE("Could not create directory at [%s]", PERSIST_DIR.getAbsolutePath());
-    }
+    FileUtils.mkdirp(PERSIST_DIR);
     INDEX_MERGER_V9.persist(index, PERSIST_DIR, indexSpec, null);
 
     final CoordinatorClient cc = new CoordinatorClient(null, null)
@@ -226,7 +223,7 @@ public class IngestSegmentFirehoseFactoryTest
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
 
-    final SegmentLoaderFactory slf = new SegmentLoaderFactory(null, MAPPER);
+    final SegmentCacheManagerFactory slf = new SegmentCacheManagerFactory(MAPPER);
     final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
 
     Collection<Object[]> values = new ArrayList<>();

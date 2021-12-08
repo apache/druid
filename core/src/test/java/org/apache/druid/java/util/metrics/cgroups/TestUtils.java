@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 
@@ -43,14 +44,26 @@ public class TestUtils
         StringUtils.toUtf8(StringUtils.replace(procMountsString, "/sys/fs/cgroup", cgroupDir.getAbsolutePath()))
     );
 
-    Assert.assertTrue(new File(
+    FileUtils.mkdirp(new File(
         cgroupDir,
         "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
-    ).mkdirs());
+    ));
+
+    FileUtils.mkdirp(new File(
+        cgroupDir,
+        "cpuset/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
+    ));
     copyResource("/proc.pid.cgroup", new File(procDir, "cgroup"));
   }
 
   public static void copyResource(String resource, File out) throws IOException
+  {
+    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
+    Assert.assertTrue(out.exists());
+    Assert.assertNotEquals(0, out.length());
+  }
+
+  public static void copyOrReplaceResource(String resource, File out) throws IOException
   {
     Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
     Assert.assertTrue(out.exists());

@@ -51,7 +51,7 @@ export const CONSTANT_TIMESTAMP_SPEC: TimestampSpec = {
 
 export type TimestampSchema = 'none' | 'column' | 'expression';
 
-export function getTimestampSchema(spec: IngestionSpec): TimestampSchema {
+export function getTimestampSchema(spec: Partial<IngestionSpec>): TimestampSchema {
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
@@ -63,21 +63,23 @@ export function getTimestampSchema(spec: IngestionSpec): TimestampSchema {
 }
 
 export interface TimestampSpec {
-  column?: string;
-  format?: string;
-  missingValue?: string;
+  readonly column?: string;
+  readonly format?: string;
+  readonly missingValue?: string;
 }
 
-export function getTimestampSpecColumnFromSpec(spec: IngestionSpec): string {
+export function getTimestampSpecColumnFromSpec(spec: Partial<IngestionSpec>): string {
   // For the default https://github.com/apache/druid/blob/master/core/src/main/java/org/apache/druid/data/input/impl/TimestampSpec.java#L44
   return deepGet(spec, 'spec.dataSchema.timestampSpec.column') || 'timestamp';
 }
 
-export function getTimestampSpecConstantFromSpec(spec: IngestionSpec): string | undefined {
+export function getTimestampSpecConstantFromSpec(spec: Partial<IngestionSpec>): string | undefined {
   return deepGet(spec, 'spec.dataSchema.timestampSpec.missingValue');
 }
 
-export function getTimestampSpecExpressionFromSpec(spec: IngestionSpec): string | undefined {
+export function getTimestampSpecExpressionFromSpec(
+  spec: Partial<IngestionSpec>,
+): string | undefined {
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
@@ -86,7 +88,7 @@ export function getTimestampSpecExpressionFromSpec(spec: IngestionSpec): string 
   return timeTransform.expression;
 }
 
-export function getTimestampDetailFromSpec(spec: IngestionSpec): string {
+export function getTimestampDetailFromSpec(spec: Partial<IngestionSpec>): string {
   const timestampSchema = getTimestampSchema(spec);
   switch (timestampSchema) {
     case 'none':

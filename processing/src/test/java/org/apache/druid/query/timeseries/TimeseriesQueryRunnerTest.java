@@ -70,8 +70,8 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -178,7 +178,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          new DoubleFirstAggregatorFactory("first", "index")
+                                          new DoubleFirstAggregatorFactory("first", "index", null)
 
                                       )
                                   )
@@ -695,7 +695,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       new ExpressionVirtualColumn(
                                           "expr",
                                           "index",
-                                          ValueType.FLOAT,
+                                          ColumnType.FLOAT,
                                           TestExprMacroTable.INSTANCE
                                       )
                                   )
@@ -1957,8 +1957,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new DoubleFirstAggregatorFactory("first", "index"),
-                                          new DoubleLastAggregatorFactory("last", "index")
+                                          new DoubleFirstAggregatorFactory("first", "index", null),
+                                          new DoubleLastAggregatorFactory("last", "index", null)
                                       )
                                   )
                                   .descending(descending)
@@ -3122,7 +3122,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     cannotVectorize();
     if (!vectorize) {
       // size bytes when it overshoots varies slightly between algorithms
-      expectedException.expectMessage("Unable to serialize [STRING_ARRAY]");
+      expectedException.expectMessage("Unable to serialize [ARRAY<STRING>]");
     }
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3160,7 +3160,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .virtualColumns(
-            new ExpressionVirtualColumn("v0", "concat(quality,market)", ValueType.STRING, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
         )
         .aggregators(
             QueryRunnerTestHelper.ROWS_COUNT,

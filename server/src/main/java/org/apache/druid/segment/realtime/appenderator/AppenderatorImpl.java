@@ -55,6 +55,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -104,6 +105,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+/**
+ * This class is to support OPEN_SEGMENTS and CLOSED_SEGMENTS appenderators. It is mostly taken
+ * from 0.21 and it is meant to keep for backward compatibility. For now though this class
+ * with <code>isLegacy</code> constructor argument set to false is the default. When {@link BatchAppenderator}
+ * proves stable then the plan is to remove this class
+ */
 public class AppenderatorImpl implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
@@ -166,7 +173,7 @@ public class AppenderatorImpl implements Appenderator
 
   private volatile Throwable persistError;
 
-  private final boolean isRealTime;
+  private final boolean isOpenSegments;
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -202,7 +209,7 @@ public class AppenderatorImpl implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean isRealTime
+      boolean isOpenSegments
   )
   {
     this.myId = id;
@@ -218,7 +225,7 @@ public class AppenderatorImpl implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-    this.isRealTime = isRealTime;
+    this.isOpenSegments = isOpenSegments;
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -230,6 +237,13 @@ public class AppenderatorImpl implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+
+    if (isOpenSegments) {
+      log.info("Running open segments appenderator");
+    } else {
+      log.info("Running closed segments appenderator");
+    }
+
   }
 
   @Override
@@ -247,7 +261,6 @@ public class AppenderatorImpl implements Appenderator
   @Override
   public Object startJob()
   {
-    tuningConfig.getBasePersistDirectory().mkdirs();
     lockBasePersistDirectory();
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
@@ -368,7 +381,8 @@ public class AppenderatorImpl implements Appenderator
           }
         }
 
-        if (!skipBytesInMemoryOverheadCheck && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
+        if (!skipBytesInMemoryOverheadCheck
+            && bytesCurrentlyInMemory.get() - bytesToBePersisted > maxBytesTuningConfig) {
           // We are still over maxBytesTuningConfig even after persisting.
           // This means that we ran out of all available memory to ingest (due to overheads created as part of ingestion)
           final String alertMessage = StringUtils.format(
@@ -869,7 +883,7 @@ public class AppenderatorImpl implements Appenderator
         for (FireHydrant fireHydrant : sink) {
 
           // if batch, swap/persist did not memory map the incremental index, we need it mapped now:
-          if (!isRealTime()) {
+          if (!isOpenSegments()) {
 
             // sanity
             Pair<File, SegmentId> persistedMetadata = persistedHydrantMetadata.get(fireHydrant);
@@ -909,6 +923,8 @@ public class AppenderatorImpl implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );
@@ -942,7 +958,7 @@ public class AppenderatorImpl implements Appenderator
           5
       );
 
-      if (!isRealTime()) {
+      if (!isOpenSegments()) {
         // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
         // mapped file references
         // can generate OOMs during merge if enough of them are held back...
@@ -1077,17 +1093,17 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  @Override
-  public boolean isRealTime()
+  public boolean isOpenSegments()
   {
-    return isRealTime;
+    return isOpenSegments;
   }
-
 
   private void lockBasePersistDirectory()
   {
     if (basePersistDirLock == null) {
       try {
+        FileUtils.mkdirp(tuningConfig.getBasePersistDirectory());
+
         basePersistDirLockChannel = FileChannel.open(
             computeLockFile().toPath(),
             StandardOpenOption.CREATE,
@@ -1465,7 +1481,7 @@ public class AppenderatorImpl implements Appenderator
   private File createPersistDirIfNeeded(SegmentIdWithShardSpec identifier) throws IOException
   {
     final File persistDir = computePersistDir(identifier);
-    org.apache.commons.io.FileUtils.forceMkdir(persistDir);
+    FileUtils.mkdirp(persistDir);
 
     objectMapper.writeValue(computeIdentifierFile(identifier), identifier);
 
@@ -1519,7 +1535,7 @@ public class AppenderatorImpl implements Appenderator
 
         // Map only when this appenderator is being driven by a real time task:
         Segment segmentToSwap = null;
-        if (isRealTime()) {
+        if (isOpenSegments()) {
           segmentToSwap = new QueryableIndexSegment(indexIO.loadIndex(persistedFile), indexToPersist.getSegmentId());
         } else {
           // remember file path & segment id to rebuild the queryable index for merge:
@@ -1565,7 +1581,7 @@ public class AppenderatorImpl implements Appenderator
     // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
     int total;
     total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT;
-    if (isRealTime()) {
+    if (isOpenSegments()) {
       // for real time add references to byte memory mapped references..
       total += (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
                (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +

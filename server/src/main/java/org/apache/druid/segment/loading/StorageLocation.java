@@ -26,6 +26,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -115,6 +116,16 @@ public class StorageLocation
   public synchronized File reserve(String segmentDir, DataSegment segment)
   {
     return reserve(segmentDir, segment.getId().toString(), segment.getSize());
+  }
+
+  public synchronized boolean isReserved(String segmentDir)
+  {
+    return files.contains(segmentDirectoryAsFile(segmentDir));
+  }
+
+  public File segmentDirectoryAsFile(String segmentDir)
+  {
+    return new File(path, segmentDir);  //lgtm [java/path-injection]
   }
 
   /**

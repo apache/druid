@@ -74,10 +74,13 @@ EMR
 EMRFS
 ETL
 Elasticsearch
+Enums
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
+Float.NEGATIVE_INFINITY.
 Float.POSITIVE_INFINITY
+Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
 GPG
@@ -124,6 +127,7 @@ JVM
 JVMs
 Joda
 JsonProperty
+Jupyter
 KMS
 Kerberized
 Kerberos
@@ -135,14 +139,18 @@ LZ4
 LZO
 LimitSpec
 Long.MAX_VALUE
+Long.MAX_VALUE.
 Long.MIN_VALUE
+Long.MIN_VALUE.
 Lucene
 MapBD
 MapDB
+MariaDB
 MiddleManager
 MiddleManagers
 Montréal
 Murmur3
+MVCC
 NFS
 OCF
 OLAP
@@ -155,6 +163,7 @@ ParAccel
 ParseSpec
 ParseSpecs
 Protobuf
+pull-deps
 RDBMS
 RDDs
 RDS
@@ -175,6 +184,7 @@ SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
+SYSTEM_TABLE
 TCP
 TGT
 TLS
@@ -237,6 +247,7 @@ datasketches
 datasource
 datasources
 dbcp
+deepstore
 denormalization
 denormalize
 denormalized
@@ -412,6 +423,7 @@ timeseries
 timestamp
 timestamps
 tradeoffs
+transformSpec
 tsv
 ulimit
 unannounce
@@ -424,6 +436,7 @@ unintuitive
 unioned
 unmergeable
 unmerged
+UNNEST
 unparseable
 unparsed
 unsetting
@@ -461,7 +474,7 @@ druid-s3-extensions
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
@@ -476,7 +489,9 @@ defaultUser
 inputSegmentSizeBytes
 skipOffsetFromLatest
  - ../docs/design/router.md
+brokerService
 c3.2xlarge
+defaultManualBrokerService
 maxPriority
 minPriority
 runtime.properties
@@ -500,6 +515,12 @@ Papache-release
 Pdist
 Ddruid.console.skip
 yaml
+Phadoop3
+dist-hadoop3
+hadoop3
+hadoop2
+2.x.x
+3.x.x
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -627,12 +648,16 @@ thriftJar
 timeMax
 timeMin
  - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Alibaba
 Aliyun
-aliyun
-OSS
+aliyun-oss-extensions
 AccessKey
+accessKey
 aliyun-oss
+json
+OSS
 oss
+secretKey
 url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
@@ -669,6 +694,7 @@ tgtHllType
  - ../docs/development/extensions-core/datasketches-quantiles.md
 CDF
 DoublesSketch
+maxStreamLength
 PMF
 quantilesDoublesSketch
 toString
@@ -766,6 +792,7 @@ PT30M
 PT30S
 PT5S
 PT80S
+SASL
 SegmentWriteOutMediumFactory
 UNABLE_TO_CONNECT_TO_STREAM
 UNHEALTHY_SUPERVISOR
@@ -827,8 +854,6 @@ customJson
 lookupParseSpec
 namespaceParseSpec
 simpleJson
- - ../docs/development/extensions-core/mysql.md
-x.xx.jar
  - ../docs/development/extensions-core/orc.md
 dimensionSpec
 flattenSpec
@@ -960,10 +985,21 @@ column_1
 column_n
 com.opencsv
 ctrl
+headerFormat
+headerLabelPrefix
 jsonLowercase
+kafka
+KafkaStringHeaderFormat
+kafka.header.
+kafka.key
+kafka.timestamp
+keyColumnName
+keyFormat
 listDelimiter
+timestampColumnName
 timestampSpec
 urls
+valueFormat
  - ../docs/ingestion/data-management.md
 1GB
 IOConfig
@@ -1053,6 +1089,7 @@ appendToExisting
 baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
+cityName
 connectorConfig
 countryName
 dataSchema's
@@ -1082,6 +1119,39 @@ totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
+ - ../docs/ingestion/native-batch-firehose.md
+LocalFirehose 
+baseDir
+HttpFirehose 
+httpAuthenticationUsername
+DefaultPassword
+PasswordProviders
+EnvironmentVariablePasswordProvider
+ingestSegment 
+maxInputSegmentBytesPerTask
+150MB
+foldCase
+sqls
+connectorConfig
+InlineFirehose 
+CombiningFirehose
+httpAuthenticationPassword 
+ - ../docs/ingestion/native-batch-input-source.md
+accessKeyId
+secretAccessKey
+accessKeyId
+httpAuthenticationPassword
+countryName
+ - ../docs/ingestion/native-batch-simple-task.md
+dataSchema's
+appendToExisting
+dropExisting
+timeChunk 
+PartitionsSpec
+forceGuaranteedRollup
+reportParseExceptions
+pushTimeout
+segmentWriteOutMediumFactory
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1148,6 +1218,7 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
+isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
@@ -1157,6 +1228,7 @@ lpad
 ltrim
 nextUp
 nextafter
+notnull
 nvl
 parse_long
 regexp_extract
@@ -1168,6 +1240,7 @@ result2
 rint
 rpad
 rtrim
+safe_divide
 scalb
 signum
 str1
@@ -1189,6 +1262,10 @@ unix_timestamp
 value1
 value2
 valueOf
+IEC
+human_readable_binary_byte_format
+human_readable_decimal_byte_format
+human_readable_decimal_format
  - ../docs/misc/papers-and-talks.md
 RADStack
  - ../docs/operations/api-reference.md
@@ -1258,6 +1335,8 @@ bufferpoolName
 cms
 cpuName
 cpuTime
+druid.server.http.numThreads
+druid.server.http.queueSize
 fsDevName
 fsDirName
 fsOptions
@@ -1273,6 +1352,7 @@ nativeQueryIds
 netAddress
 netHwaddr
 netName
+noticeType
 numComplexMetrics
 numDimensions
 numMetrics
@@ -1282,6 +1362,9 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+threadPoolNumBusyThreads.
+threadPoolNumIdleThreads
+threadPoolNumTotalThreads.
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
@@ -1425,6 +1508,7 @@ fieldAccess
 finalizingFieldAccess
 hyperUniqueCardinality
  - ../docs/querying/query-context.md
+brokerService
 bySegment
 doubleSum
 druid.broker.cache.populateCache
@@ -1536,6 +1620,7 @@ SCHEMA_OWNER
 SERVER_SEGMENTS
 SMALLINT
 SQL_PATH
+STRING_AGG
 SYSTEM_TABLE
 TABLE_CATALOG
 TABLE_NAME
@@ -1591,6 +1676,7 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+IEC
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2
@@ -1660,6 +1746,7 @@ GiB
 5MiB
 8u60
 Autoscaler
+APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
 EventReceiverFirehose
 File.getFreeSpace
@@ -1681,6 +1768,7 @@ LoggingEmitter
 Los_Angeles
 MDC
 NoopServiceEmitter
+NUMA
 ONLY_EVENTS
 P1D
 P1W
@@ -1729,6 +1817,7 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
+dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1892,3 +1981,4 @@ PiB
 protobuf
 Golang
 multiValueHandling
+_n_

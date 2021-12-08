@@ -41,6 +41,8 @@ public interface IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   );
@@ -65,6 +67,9 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskPayloadResponse getTaskPayload(String taskId);
+
+  @Nullable
+  Map<String, Object> getTaskReport(String taskId);
 
   /**
    * Gets a List of Intervals locked by higher priority tasks for each datasource.

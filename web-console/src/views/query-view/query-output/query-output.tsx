@@ -31,9 +31,19 @@ import {
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
-import { BracedText, TableCell } from '../../../components';
+import { BracedText, Deferred, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { copyAndAlert, deepSet, filterMap, prettyPrintSql, stringifyValue } from '../../../utils';
+import {
+  changePage,
+  copyAndAlert,
+  formatNumber,
+  getNumericColumnBraces,
+  Pagination,
+  prettyPrintSql,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  stringifyValue,
+} from '../../../utils';
 import { BasicAction, basicActionsToMenu } from '../../../utils/basic-action';
 
 import { ColumnRenameInput } from './column-rename-input/column-rename-input';
@@ -42,38 +52,6 @@ import './query-output.scss';
 
 function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
-}
-
-interface Pagination {
-  page: number;
-  pageSize: number;
-}
-
-function changePage(pagination: Pagination, page: number): Pagination {
-  return deepSet(pagination, 'page', page);
-}
-
-function getNumericColumnBraces(
-  queryResult: QueryResult,
-  pagination: Pagination,
-): Record<number, string[]> {
-  const numericColumnBraces: Record<number, string[]> = {};
-
-  const index = pagination.page * pagination.pageSize;
-  const rows = queryResult.rows.slice(index, index + pagination.pageSize);
-  if (rows.length) {
-    const numColumns = queryResult.header.length;
-    for (let c = 0; c < numColumns; c++) {
-      const brace = filterMap(rows, row =>
-        typeof row[c] === 'number' ? String(row[c]) : undefined,
-      );
-      if (rows.length === brace.length) {
-        numericColumnBraces[c] = brace;
-      }
-    }
-  }
-
-  return numericColumnBraces;
 }
 
 export interface QueryOutputProps {
@@ -92,9 +70,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (pagination.page) {
-      setPagination(changePage(pagination, 0));
-    }
+    setPagination(pagination => {
+      return pagination.page ? changePage(pagination, 0) : pagination;
+    });
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -114,8 +92,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       const orderByExpression = parsedQuery.isValidSelectIndex(headerIndex)
         ? SqlLiteral.index(headerIndex)
         : SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const orderBy = parsedQuery.getOrderByForSelectIndex(headerIndex);
 
       const basicActions: BasicAction[] = [];
@@ -196,11 +174,11 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         },
       });
 
-      return basicActionsToMenu(basicActions);
+      return basicActionsToMenu(basicActions)!;
     } else {
       const orderByExpression = SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const descOrderByPretty = prettyPrintSql(descOrderBy);
       const ascOrderByPretty = prettyPrintSql(descOrderBy);
       return (
@@ -389,6 +367,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         onPageSizeChange={(pageSize, page) => changePagination({ page, pageSize })}
         sortable={false}
         ofText={hasMoreResults ? '' : 'of'}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={queryResult.rows.length > SMALL_TABLE_PAGE_SIZE}
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
           return {
@@ -397,7 +378,10 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover2 className="clickable-cell" content={getHeaderMenu(h, i)}>
+                      <Popover2
+                        className="clickable-cell"
+                        content={<Deferred content={() => getHeaderMenu(h, i)} />}
+                      >
                         <div>
                           {h}
                           {hasFilterOnHeader(h, i) && (
@@ -409,16 +393,17 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                   },
             headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
-            Cell: function QueryOutputTableCell(row) {
+            Cell(row) {
               const value = row.value;
               return (
                 <div>
-                  <Popover2 content={getCellMenu(h, i, value)}>
+                  <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
                     {numericColumnBraces[i] ? (
                       <BracedText
-                        text={String(value)}
+                        text={formatNumber(value)}
                         braces={numericColumnBraces[i]}
                         padFractionalPart
+                        unselectableThousandsSeparator
                       />
                     ) : (
                       <TableCell value={value} unlimited />

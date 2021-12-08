@@ -19,15 +19,18 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableSet;
 import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Months;
 import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
@@ -36,12 +39,16 @@ public final class DateTimes
   public static final DateTime EPOCH = utc(0);
   public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
   public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
+  public static final DateTime CAN_COMPARE_AS_YEAR_MIN = of("0000-01-01");
+  public static final DateTime CAN_COMPARE_AS_YEAR_MAX = of("10000-01-01").minus(1);
 
   public static final UtcFormatter ISO_DATE_TIME = wrapFormatter(ISODateTimeFormat.dateTime());
   public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapFormatter(ISODateTimeFormat.dateOptionalTimeParser());
   public static final UtcFormatter ISO_DATE_OR_TIME_WITH_OFFSET = wrapFormatter(
       ISODateTimeFormat.dateTimeParser().withOffsetParsed()
   );
+
+  private static final Set<String> AVAILABLE_TIMEZONE_IDS = ImmutableSet.copyOf(TimeZone.getAvailableIDs());
 
   /**
    * This pattern aims to match strings, produced by {@link DateTime#toString()}. It's not rigorous: it could accept
@@ -53,14 +60,29 @@ public final class DateTimes
       "[0-9]{4}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}(Z|[+\\-][0-9]{2}(:[0-9]{2}))"
   );
 
-  @SuppressForbidden(reason = "DateTimeZone#forID")
   public static DateTimeZone inferTzFromString(String tzId)
+  {
+    return inferTzFromString(tzId, true);
+  }
+
+  /**
+   * @return The dateTimezone for the provided {@param tzId}. If {@param fallback} is true, the default timezone
+   * will be returned if the tzId does not match a supported timezone.
+   *
+   * @throws IllegalArgumentException if {@param fallback} is false and the provided tzId doesn't match a supported
+   *                                  timezone.
+   */
+  @SuppressForbidden(reason = "DateTimeZone#forID")
+  public static DateTimeZone inferTzFromString(String tzId, boolean fallback) throws IllegalArgumentException
   {
     try {
       return DateTimeZone.forID(tzId);
     }
     catch (IllegalArgumentException e) {
       // also support Java timezone strings
+      if (!fallback && !AVAILABLE_TIMEZONE_IDS.contains(tzId)) {
+        throw e;
+      }
       return DateTimeZone.forTimeZone(TimeZone.getTimeZone(tzId));
     }
   }
@@ -153,6 +175,22 @@ public final class DateTimes
     DateTime time2 = new DateTime(timestamp2, timeZone);
 
     return Months.monthsBetween(time1, time2).getMonths();
+  }
+
+  /**
+   * Returns true if the provided DateTime can be compared against other DateTimes using its string representation.
+   * Useful when generating SQL queries to the metadata store, or any other situation where time comparisons on
+   * string representations might be useful.
+   *
+   * Conditions: the datetime must be between years 0 and 9999 (inclusive) and must be in the ISO UTC chronology.
+   *
+   * See also {@link Intervals#canCompareEndpointsAsStrings(Interval)}.
+   */
+  public static boolean canCompareAsString(final DateTime dateTime)
+  {
+    return dateTime.getMillis() >= CAN_COMPARE_AS_YEAR_MIN.getMillis()
+           && dateTime.getMillis() <= CAN_COMPARE_AS_YEAR_MAX.getMillis()
+           && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
   }
 
   private DateTimes()

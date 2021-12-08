@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
@@ -85,6 +86,11 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   }
 
   public abstract String getQueryURL(String schemeAndHost);
+
+  public String getCancelUrl(String schemaAndHost, String idToCancel)
+  {
+    return StringUtils.format("%s/%s", getQueryURL(schemaAndHost), idToCancel);
+  }
 
   public void testQueriesFromFile(String filePath) throws Exception
   {

@@ -44,6 +44,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
@@ -195,11 +196,11 @@ public class DefaultLimitSpec implements LimitSpec
           break;
         }
 
-        final ValueType columnType = getOrderByType(columnSpec, dimensions);
+        final ColumnType columnType = getOrderByType(columnSpec, dimensions);
         final StringComparator naturalComparator;
-        if (columnType == ValueType.STRING) {
+        if (columnType.is(ValueType.STRING)) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (ValueType.isNumeric(columnType)) {
+        } else if (columnType.isNumeric()) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;
@@ -218,6 +219,16 @@ public class DefaultLimitSpec implements LimitSpec
     if (!sortingNeeded) {
       // If granularity is ALL, sortByDimsFirst doesn't change the sorting order.
       sortingNeeded = !query.getGranularity().equals(Granularities.ALL) && query.getContextSortByDimsFirst();
+    }
+
+    if (!sortingNeeded) {
+      String timestampField = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+      if (timestampField != null && !timestampField.isEmpty()) {
+        int timestampResultFieldIndex = query.getContextValue(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+        sortingNeeded = query.getContextSortByDimsFirst()
+                        ? timestampResultFieldIndex != query.getDimensions().size() - 1
+                        : timestampResultFieldIndex != 0;
+      }
     }
 
     final Function<Sequence<ResultRow>, Sequence<ResultRow>> sortAndLimitFn;
@@ -262,7 +273,7 @@ public class DefaultLimitSpec implements LimitSpec
     return this;
   }
 
-  private ValueType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
+  private ColumnType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
   {
     for (DimensionSpec dimSpec : dimensions) {
       if (columnSpec.getDimension().equals(dimSpec.getOutputName())) {

@@ -19,15 +19,19 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.google.common.collect.ImmutableMap;
 import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericEnumSymbol;
+import org.apache.avro.generic.GenericFixed;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
 import javax.annotation.Nullable;
 
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +45,13 @@ import java.util.stream.Collectors;
  */
 public class GenericAvroJsonProvider implements JsonProvider
 {
+  private final boolean extractUnionsByType;
+
+  GenericAvroJsonProvider(final boolean extractUnionsByType)
+  {
+    this.extractUnionsByType = extractUnionsByType;
+  }
+
   @Override
   public Object parse(final String s) throws InvalidJsonException
   {
@@ -148,7 +159,11 @@ public class GenericAvroJsonProvider implements JsonProvider
     if (o == null) {
       return null;
     } else if (o instanceof GenericRecord) {
-      return ((GenericRecord) o).get(s);
+      final GenericRecord record = (GenericRecord) o;
+      if (extractUnionsByType && isExtractableUnion(record.getSchema().getField(s))) {
+        return extractUnionTypes(record.get(s));
+      }
+      return record.get(s);
     } else if (o instanceof Map) {
       final Map theMap = (Map) o;
       if (theMap.containsKey(s)) {
@@ -194,5 +209,47 @@ public class GenericAvroJsonProvider implements JsonProvider
   public Object unwrap(final Object o)
   {
     return o;
+  }
+
+  private boolean isExtractableUnion(final Schema.Field field)
+  {
+    return field.schema().isUnion() &&
+           field.schema().getTypes().stream().filter(type -> type.getType() != Schema.Type.NULL).count() > 1;
+  }
+
+  private Map<String, Object> extractUnionTypes(final Object o)
+  {
+    // Primitive types and unnamped complex types are keyed their type name.
+    // Complex named types are keyed by their names.
+    // This is safe because an Avro union can only contain a single member of each unnamed type and duplicates
+    // of the same named type are not allowed. i.e only a single array is allowed, multiple records are allowed as
+    // long as each has a unique name.
+    // The Avro null type is elided as it's value can only ever be null
+    if (o instanceof Integer) {
+      return ImmutableMap.of("int", o);
+    } else if (o instanceof Long) {
+      return ImmutableMap.of("long", o);
+    } else if (o instanceof Float) {
+      return ImmutableMap.of("float", o);
+    } else if (o instanceof Double) {
+      return ImmutableMap.of("double", o);
+    } else if (o instanceof Boolean) {
+      return ImmutableMap.of("boolean", o);
+    } else if (o instanceof Utf8) {
+      return ImmutableMap.of("string", o);
+    } else if (o instanceof ByteBuffer) {
+      return ImmutableMap.of("bytes", o);
+    } else if (o instanceof Map) {
+      return ImmutableMap.of("map", o);
+    } else if (o instanceof List) {
+      return ImmutableMap.of("array", o);
+    } else if (o instanceof GenericRecord) {
+      return ImmutableMap.of(((GenericRecord) o).getSchema().getName(), o);
+    } else if (o instanceof GenericFixed) {
+      return ImmutableMap.of(((GenericFixed) o).getSchema().getName(), o);
+    } else if (o instanceof GenericEnumSymbol) {
+      return ImmutableMap.of(((GenericEnumSymbol<?>) o).getSchema().getName(), o);
+    }
+    return ImmutableMap.of();
   }
 }

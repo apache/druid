@@ -90,6 +90,6 @@ background batch jobs.
 taking a long time to complete.
 
 ## Learn more
-- Try the Druid [Quickstart](../design/index.md).
+- Try the Druid [Quickstart](../tutorials/index.md).
 - Learn more about Druid components in [Design](../design/architecture.md).
 - Read about new features and other details of [Druid Releases](https://github.com/apache/druid/releases).

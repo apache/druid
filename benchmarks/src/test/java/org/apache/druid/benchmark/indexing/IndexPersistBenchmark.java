@@ -97,7 +97,7 @@ public class IndexPersistBenchmark
   private String indexType;
 
   private AppendableIndexSpec appendableIndexSpec;
-  private IncrementalIndex<?> incIndex;
+  private IncrementalIndex incIndex;
   private List<InputRow> rows;
   private GeneratorSchemaInfo schemaInfo;
   private File tmpDir;
@@ -168,7 +168,7 @@ public class IndexPersistBenchmark
     FileUtils.deleteDirectory(tmpDir);
   }
 
-  private IncrementalIndex<?> makeIncIndex()
+  private IncrementalIndex makeIncIndex()
   {
     return appendableIndexSpec.builder()
         .setIndexSchema(

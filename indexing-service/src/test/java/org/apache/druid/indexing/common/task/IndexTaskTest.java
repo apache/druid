@@ -80,9 +80,9 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -172,7 +172,7 @@ public class IndexTaskTest extends IngestionTestBase
   private final boolean useInputFormatApi;
 
   private AppenderatorsManager appenderatorsManager;
-  private SegmentLoader segmentLoader;
+  private SegmentCacheManager segmentCacheManager;
   private TestTaskRunner taskRunner;
 
   public IndexTaskTest(LockGranularity lockGranularity, boolean useInputFormatApi)
@@ -190,8 +190,7 @@ public class IndexTaskTest extends IngestionTestBase
     appenderatorsManager = new TestAppenderatorsManager();
 
     final File cacheDir = temporaryFolder.newFolder();
-    segmentLoader = new SegmentLoaderLocalCacheManager(
-        indexIO,
+    segmentCacheManager = new SegmentLocalCacheManager(
         new SegmentLoaderConfig()
         {
           @Override
@@ -345,7 +344,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
-    final File segmentFile = segmentLoader.getSegmentFiles(segment);
+    final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
     final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
         new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
@@ -595,7 +594,7 @@ public class IndexTaskTest extends IngestionTestBase
       final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
       Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
-      final File segmentFile = segmentLoader.getSegmentFiles(segment);
+      final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
           new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
