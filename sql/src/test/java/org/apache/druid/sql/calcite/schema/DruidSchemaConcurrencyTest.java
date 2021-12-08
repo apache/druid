@@ -137,7 +137,8 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -241,7 +242,8 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override

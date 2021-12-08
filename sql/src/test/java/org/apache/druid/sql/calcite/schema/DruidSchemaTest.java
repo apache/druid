@@ -181,7 +181,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         ),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -207,7 +208,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(globalTableJoinable), ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
 
@@ -485,7 +487,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -527,7 +530,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -573,7 +577,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -616,7 +621,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -656,7 +662,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -713,7 +720,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -773,7 +781,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -807,7 +816,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -854,7 +864,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -1076,7 +1087,8 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
         ),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        brokerInternalQueryConfig
+        brokerInternalQueryConfig,
+        null
     );
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
