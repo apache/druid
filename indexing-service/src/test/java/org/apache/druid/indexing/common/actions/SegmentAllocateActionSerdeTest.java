@@ -52,7 +52,8 @@ public class SegmentAllocateActionSerdeTest
         "prev",
         false,
         NumberedPartialShardSpec.instance(),
-        LockGranularity.SEGMENT
+        LockGranularity.SEGMENT,
+        null
     );
   }
 

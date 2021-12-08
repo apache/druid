@@ -275,7 +275,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
+    TaskLockType lockType = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
@@ -798,7 +799,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       final DataSchema dataSchema,
       final Appenderator appenderator,
       final TaskToolbox toolbox,
-      final FireDepartmentMetrics metrics
+      final FireDepartmentMetrics metrics,
+      final TaskLockType lockType
   )
   {
     return new StreamAppenderatorDriver(
@@ -815,7 +817,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 previousSegmentId,
                 skipSegmentLineageCheck,
                 NumberedPartialShardSpec.instance(),
-                LockGranularity.TIME_CHUNK
+                LockGranularity.TIME_CHUNK,
+                lockType
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
