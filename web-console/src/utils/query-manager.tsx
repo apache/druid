@@ -122,19 +122,19 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
       this.currentRunCancelFn = undefined;
       this.setState(
         new QueryState<R, E>({
-          error: axios.isCancel(e) ? new Error(`canceled.`) : e, // ToDo: why does the cancel error get remapped?
+          error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
           lastData: this.state.getSomeData(),
         }),
       );
       return;
     }
 
-    let bacgroundChecks = 0;
+    let backgroundChecks = 0;
     while (data instanceof IntermediateQueryState) {
       try {
         if (!this.backgroundStatusCheck) {
           throw new Error(
-            'backgroundStatusCheck must be set in intermediate query state is returned',
+            'backgroundStatusCheck must be set if intermediate query state is returned',
           );
         }
         cancelToken.throwIfRequested();
@@ -149,7 +149,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
 
         const delay =
           data.delay ??
-          (bacgroundChecks > 0
+          (backgroundChecks > 0
             ? this.backgroundStatusCheckDelay
             : this.backgroundStatusCheckInitDelay);
 
@@ -164,14 +164,14 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
         this.currentRunCancelFn = undefined;
         this.setState(
           new QueryState<R, E>({
-            error: axios.isCancel(e) ? new Error(`canceled.`) : e, // ToDo: why does the cancel error get remapped?
+            error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
             lastData: this.state.getSomeData(),
           }),
         );
         return;
       }
 
-      bacgroundChecks++;
+      backgroundChecks++;
     }
 
     if (this.currentQueryId !== myQueryId) return;
