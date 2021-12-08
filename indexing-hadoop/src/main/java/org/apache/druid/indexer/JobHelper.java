@@ -94,7 +94,7 @@ public class JobHelper
   public static final String INDEX_ZIP = "index.zip";
 
   /**
-   * Dose authenticate against a secured hadoop cluster
+   * Does authenticate against a secured hadoop cluster
    * In case of any bug fix make sure to fix the code at HdfsStorageAuthentication#authenticate as well.
    *
    */
@@ -111,8 +111,6 @@ public class JobHelper
               || !UserGroupInformation.getCurrentUser().getUserName().equals(principal)) {
             log.info("trying to authenticate user [%s] with keytab [%s]", principal, keytab);
             UserGroupInformation.loginUserFromKeytab(principal, keytab);
-          } else {
-            log.debug("JobHelper#authenticate() was called, but I am already authenticated!");
           }
         }
         catch (IOException e) {
