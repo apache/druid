@@ -92,6 +92,7 @@ import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -1088,6 +1089,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockDataSegment2.getShardSpec()).andReturn(EasyMock.createMock(ShardSpec.class)).once();
 
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
+    EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
     EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
     mockNotifier.start();
@@ -1152,6 +1154,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory())
             .andReturn(new NoopSegmentHandoffNotifierFactory())
             .once();
+    EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
 
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
 
