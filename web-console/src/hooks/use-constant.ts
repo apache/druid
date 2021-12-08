@@ -16,20 +16,18 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
-export * from './column-metadata';
-export * from './date';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-cursor';
-export * from './query-manager';
-export * from './query-state';
-export * from './sanitizers';
-export * from './table-helpers';
+import { useRef } from 'react';
+
+interface ValueBox<T> {
+  value: T;
+}
+
+export function useConstant<T>(fn: () => T): T {
+  const box = useRef<ValueBox<T>>();
+
+  if (!box.current) {
+    box.current = { value: fn() };
+  }
+
+  return box.current.value;
+}

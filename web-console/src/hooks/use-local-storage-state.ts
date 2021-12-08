@@ -16,20 +16,28 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
-export * from './column-metadata';
-export * from './date';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-cursor';
-export * from './query-manager';
-export * from './query-state';
-export * from './sanitizers';
-export * from './table-helpers';
+import * as JSONBig from 'json-bigint-native';
+import { Dispatch, SetStateAction, useState } from 'react';
+
+export function useLocalStorageState<T>(
+  key: string,
+  initialValue?: T,
+): [T, Dispatch<SetStateAction<T>>] {
+  const [state, setState] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSONBig.parse(item) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  const setValue: Dispatch<SetStateAction<T>> = (value: T | ((prevState: T) => T)) => {
+    const valueToStore = value instanceof Function ? value(state) : value;
+    setState(valueToStore);
+    try {
+      window.localStorage.setItem(key, JSONBig.stringify(valueToStore));
+    } catch {}
+  };
+  return [state, setValue];
+}
