@@ -25,6 +25,8 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -111,6 +113,8 @@ public class DruidSchema extends AbstractSchema
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   private final ConcurrentMap<String, DruidTable> tables = new ConcurrentHashMap<>();
+
+  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -414,7 +418,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -440,7 +444,7 @@ public class DruidSchema extends AbstractSchema
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS)
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
@@ -620,7 +624,7 @@ public class DruidSchema extends AbstractSchema
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+  protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
     final Set<SegmentId> retVal = new HashSet<>();
 
@@ -844,7 +848,7 @@ public class DruidSchema extends AbstractSchema
    * @return {@link Sequence} of {@link SegmentAnalysis} objects
    */
   @VisibleForTesting
-  Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final Iterable<SegmentId> segments
   )
   {
@@ -903,7 +907,7 @@ public class DruidSchema extends AbstractSchema
 
       rowSignatureBuilder.add(entry.getKey(), valueType);
     }
-    return rowSignatureBuilder.build();
+    return ROW_SIGNATURE_INTERNER.intern(rowSignatureBuilder.build());
   }
 
   /**
