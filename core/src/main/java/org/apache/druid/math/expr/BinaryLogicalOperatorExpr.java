@@ -19,9 +19,11 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
@@ -29,7 +31,7 @@ import java.util.Objects;
 
 // logical operators live here
 @SuppressWarnings("ClassName")
-class BinLtExpr extends BinaryEvalOpExprBase
+class BinLtExpr extends BinaryBooleanOpExprBase
 {
   BinLtExpr(String op, Expr left, Expr right)
   {
@@ -43,33 +45,22 @@ class BinLtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) < 0);
+    return Comparators.<String>naturalNullsFirst().compare(left, right) < 0;
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left < right);
+    return left < right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
     // Use Double.compare for more consistent NaN handling.
-    return Evals.asDouble(Double.compare(left, right) < 0);
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return Double.compare(left, right) < 0;
   }
 
   @Override
@@ -86,7 +77,7 @@ class BinLtExpr extends BinaryEvalOpExprBase
 }
 
 @SuppressWarnings("ClassName")
-class BinLeqExpr extends BinaryEvalOpExprBase
+class BinLeqExpr extends BinaryBooleanOpExprBase
 {
   BinLeqExpr(String op, Expr left, Expr right)
   {
@@ -100,33 +91,22 @@ class BinLeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) <= 0);
+    return Comparators.<String>naturalNullsFirst().compare(left, right) <= 0;
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left <= right);
+    return left <= right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
     // Use Double.compare for more consistent NaN handling.
-    return Evals.asDouble(Double.compare(left, right) <= 0);
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return Double.compare(left, right) <= 0;
   }
 
   @Override
@@ -143,7 +123,7 @@ class BinLeqExpr extends BinaryEvalOpExprBase
 }
 
 @SuppressWarnings("ClassName")
-class BinGtExpr extends BinaryEvalOpExprBase
+class BinGtExpr extends BinaryBooleanOpExprBase
 {
   BinGtExpr(String op, Expr left, Expr right)
   {
@@ -157,34 +137,24 @@ class BinGtExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) > 0);
+    return Comparators.<String>naturalNullsFirst().compare(left, right) > 0;
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left > right);
+    return left > right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
     // Use Double.compare for more consistent NaN handling.
-    return Evals.asDouble(Double.compare(left, right) > 0);
+    return Double.compare(left, right) > 0;
   }
 
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
-  }
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
@@ -199,7 +169,7 @@ class BinGtExpr extends BinaryEvalOpExprBase
 }
 
 @SuppressWarnings("ClassName")
-class BinGeqExpr extends BinaryEvalOpExprBase
+class BinGeqExpr extends BinaryBooleanOpExprBase
 {
   BinGeqExpr(String op, Expr left, Expr right)
   {
@@ -213,33 +183,22 @@ class BinGeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(Comparators.<String>naturalNullsFirst().compare(left, right) >= 0);
+    return Comparators.<String>naturalNullsFirst().compare(left, right) >= 0;
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left >= right);
+    return left >= right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
     // Use Double.compare for more consistent NaN handling.
-    return Evals.asDouble(Double.compare(left, right) >= 0);
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return Double.compare(left, right) >= 0;
   }
 
   @Override
@@ -256,7 +215,7 @@ class BinGeqExpr extends BinaryEvalOpExprBase
 }
 
 @SuppressWarnings("ClassName")
-class BinEqExpr extends BinaryEvalOpExprBase
+class BinEqExpr extends BinaryBooleanOpExprBase
 {
   BinEqExpr(String op, Expr left, Expr right)
   {
@@ -270,32 +229,21 @@ class BinEqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(Objects.equals(left, right));
+    return Objects.equals(left, right);
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left == right);
+    return left == right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
-    return Evals.asDouble(left == right);
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return left == right;
   }
 
   @Override
@@ -312,7 +260,7 @@ class BinEqExpr extends BinaryEvalOpExprBase
 }
 
 @SuppressWarnings("ClassName")
-class BinNeqExpr extends BinaryEvalOpExprBase
+class BinNeqExpr extends BinaryBooleanOpExprBase
 {
   BinNeqExpr(String op, Expr left, Expr right)
   {
@@ -326,32 +274,21 @@ class BinNeqExpr extends BinaryEvalOpExprBase
   }
 
   @Override
-  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  protected boolean evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.ofLongBoolean(!Objects.equals(left, right));
+    return !Objects.equals(left, right);
   }
 
   @Override
-  protected final long evalLong(long left, long right)
+  protected final boolean evalLong(long left, long right)
   {
-    return Evals.asLong(left != right);
+    return left != right;
   }
 
   @Override
-  protected final double evalDouble(double left, double right)
+  protected final boolean evalDouble(double left, double right)
   {
-    return Evals.asDouble(left != right);
-  }
-
-  @Nullable
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return left != right;
   }
 
   @Override
@@ -385,7 +322,59 @@ class BinAndExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
+    }
+
+    // if left is false, always false
+    if (leftVal.value() != null && !leftVal.asBoolean()) {
+      return ExprEval.ofLongBoolean(false);
+    }
+    ExprEval rightVal;
+    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+      // true/null, null/true, null/null -> null
+      // false/null, null/false -> false
+      if (leftVal.value() == null) {
+        rightVal = right.eval(bindings);
+        if (rightVal.value() == null || rightVal.asBoolean()) {
+          return ExprEval.ofLong(null);
+        }
+        return ExprEval.ofLongBoolean(false);
+      } else {
+        // left value must be true
+        rightVal = right.eval(bindings);
+        if (rightVal.value() == null) {
+          return ExprEval.ofLong(null);
+        }
+      }
+    } else {
+      rightVal = right.eval(bindings);
+    }
+    return ExprEval.ofLongBoolean(leftVal.asBoolean() && rightVal.asBoolean());
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return ExpressionProcessing.useStrictBooleans() &&
+           inspector.areSameTypes(left, right) &&
+           inspector.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.and(inspector, left, right);
+  }
+
+  @Nullable
+  @Override
+  public ExpressionType getOutputType(InputBindingInspector inspector)
+  {
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      return super.getOutputType(inspector);
+    }
+    return ExpressionType.LONG;
   }
 }
 
@@ -406,6 +395,61 @@ class BinOrExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    return leftVal.asBoolean() ? leftVal : right.eval(bindings);
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      return leftVal.asBoolean() ? leftVal : right.eval(bindings);
+    }
+
+    // if left is true, always true
+    if (leftVal.value() != null && leftVal.asBoolean()) {
+      return ExprEval.ofLongBoolean(true);
+    }
+
+    final ExprEval rightVal;
+    if (NullHandling.sqlCompatible() || Types.is(leftVal.type(), ExprType.STRING)) {
+      // true/null, null/true -> true
+      // false/null, null/false, null/null -> null
+      if (leftVal.value() == null) {
+        rightVal = right.eval(bindings);
+        if (rightVal.value() == null || !rightVal.asBoolean()) {
+          return ExprEval.ofLong(null);
+        }
+        return ExprEval.ofLongBoolean(true);
+      } else {
+        // leftval is false
+        rightVal = right.eval(bindings);
+        if (rightVal.value() == null) {
+          return ExprEval.ofLong(null);
+        }
+      }
+    } else {
+      rightVal = right.eval(bindings);
+    }
+    return ExprEval.ofLongBoolean(leftVal.asBoolean() || rightVal.asBoolean());
+  }
+
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+
+    return ExpressionProcessing.useStrictBooleans() &&
+           inspector.areSameTypes(left, right) &&
+           inspector.canVectorize(left, right);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.or(inspector, left, right);
+  }
+
+  @Nullable
+  @Override
+  public ExpressionType getOutputType(InputBindingInspector inspector)
+  {
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      return super.getOutputType(inspector);
+    }
+    return ExpressionType.LONG;
   }
 }

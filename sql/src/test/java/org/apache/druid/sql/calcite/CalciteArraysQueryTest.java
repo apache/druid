@@ -194,8 +194,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSomeArrayFunctionsWithScanQuery() throws Exception
   {
-    // array constructor turns decimals into ints for some reason, this needs fixed in the future
-    // also, yes these outputs are strange sometimes, arrays are in a partial state of existence so end up a bit
+    // Yes these outputs are strange sometimes, arrays are in a partial state of existence so end up a bit
     // stringy for now this is because virtual column selectors are coercing values back to stringish so that
     // multi-valued string dimensions can be grouped on.
     List<Object[]> expectedResults;
@@ -211,13 +210,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               0.0,
               "[\"a\",\"b\",\"c\"]",
               "[1,2,3]",
-              "[1,2,4]",
+              "[1.9,2.2,4.3]",
               "[\"a\",\"b\",\"foo\"]",
               "[\"foo\",\"a\"]",
               "[1,2,7]",
               "[0,1,2]",
-              "[1,2,1]",
-              "[0,1,2]",
+              "[1.2,2.2,1.0]",
+              "[0.0,1.1,2.2]",
               "[\"a\",\"a\",\"b\"]",
               "[7,0]",
               "[1.0,0.0]",
@@ -239,13 +238,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               null,
               "[\"a\",\"b\",\"c\"]",
               "[1,2,3]",
-              "[1,2,4]",
+              "[1.9,2.2,4.3]",
               "[\"a\",\"b\",\"foo\"]",
               "[\"foo\",\"a\"]",
               "[1,2,7]",
               "[null,1,2]",
-              "[1,2,1]",
-              "[null,1,2]",
+              "[1.2,2.2,1.0]",
+              "[null,1.1,2.2]",
               "[\"a\",\"a\",\"b\"]",
               "[7,null]",
               "[1.0,null]",
@@ -297,13 +296,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.STRING),
                     expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.STRING),
                     expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.STRING),
-                    expressionVirtualColumn("v2", "array(1,2,4)", ColumnType.STRING),
+                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.STRING),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING),
                     expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING),
                     expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.STRING),
                     expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.STRING),
-                    expressionVirtualColumn("v7", "array_append(array(1,2),\"d1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1,2))", ColumnType.STRING),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.STRING),
+                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.STRING),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING)
                 )
                 .columns(
@@ -357,13 +356,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"b\"]",
               Arrays.asList("a", "b", "c"),
               Arrays.asList(1L, 2L, 3L),
-              Arrays.asList(1L, 2L, 4L),
+              Arrays.asList(1.9, 2.2, 4.3),
               "[\"a\",\"b\",\"foo\"]",
               Arrays.asList("foo", "a"),
               Arrays.asList(1L, 2L, 7L),
               Arrays.asList(0L, 1L, 2L),
-              Arrays.asList(1L, 2L, 1L),
-              Arrays.asList(0L, 1L, 2L),
+              Arrays.asList(1.2, 2.2, 1.0),
+              Arrays.asList(0.0, 1.1, 2.2),
               "[\"a\",\"a\",\"b\"]",
               Arrays.asList(7L, 0L),
               Arrays.asList(1.0, 0.0)
@@ -377,13 +376,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               "[\"a\",\"b\"]",
               Arrays.asList("a", "b", "c"),
               Arrays.asList(1L, 2L, 3L),
-              Arrays.asList(1L, 2L, 4L),
+              Arrays.asList(1.9, 2.2, 4.3),
               "[\"a\",\"b\",\"foo\"]",
               Arrays.asList("foo", "a"),
               Arrays.asList(1L, 2L, 7L),
               Arrays.asList(null, 1L, 2L),
-              Arrays.asList(1L, 2L, 1L),
-              Arrays.asList(null, 1L, 2L),
+              Arrays.asList(1.2, 2.2, 1.0),
+              Arrays.asList(null, 1.1, 2.2),
               "[\"a\",\"a\",\"b\"]",
               Arrays.asList(7L, null),
               Arrays.asList(1.0, null)
@@ -420,13 +419,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v1", "array(1,2,3)", ColumnType.STRING),
                     expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.STRING),
                     expressionVirtualColumn("v11", "array_concat(array(\"d1\"),array(\"d2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v2", "array(1,2,4)", ColumnType.STRING),
+                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.STRING),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING),
                     expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING),
                     expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.STRING),
                     expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.STRING),
-                    expressionVirtualColumn("v7", "array_append(array(1,2),\"d1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1,2))", ColumnType.STRING),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.STRING),
+                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.STRING),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING)
                 )
                 .columns(

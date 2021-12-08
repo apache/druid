@@ -227,7 +227,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       return deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (NoTaskLocationException e) {
-      log.warn(e,"Got NoTaskLocationException when calling getMovingAverages, id[%s]", id);
+      log.warn(e, "Got NoTaskLocationException when calling getMovingAverages, id[%s]", id);
       return Collections.emptyMap();
     }
     catch (IOException e) {
@@ -256,7 +256,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       return deserialize(response.getContent(), TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT);
     }
     catch (NoTaskLocationException e) {
-      log.warn(e,"Got NoTaskLocationException when calling getParseErrors, id[%s]", id);
+      log.warn(e, "Got NoTaskLocationException when calling getParseErrors, id[%s]", id);
       return Collections.emptyList();
     }
     catch (IOException e) {

@@ -290,7 +290,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index"),
-                        new DoubleFirstAggregatorFactory("first", "index")
+                        new DoubleFirstAggregatorFactory("first", "index", null)
                     )
                 )
             )
@@ -826,8 +826,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new LongFirstAggregatorFactory("first", "index"),
-            new LongLastAggregatorFactory("last", "index")
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
         )
         .build();
 
@@ -935,8 +935,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new FloatFirstAggregatorFactory("first", "index"),
-            new FloatLastAggregatorFactory("last", "index")
+            new FloatFirstAggregatorFactory("first", "index", null),
+            new FloatLastAggregatorFactory("last", "index", null)
         )
         .build();
 
@@ -1044,8 +1044,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
-            new FloatFirstAggregatorFactory("first", "indexFloat"),
-            new FloatLastAggregatorFactory("last", "indexFloat")
+            new FloatFirstAggregatorFactory("first", "indexFloat", null),
+            new FloatLastAggregatorFactory("last", "indexFloat", null)
         )
         .build();
 

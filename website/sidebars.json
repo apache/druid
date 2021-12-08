@@ -55,6 +55,9 @@
         "label": "Batch ingestion",
         "ids": [
           "ingestion/native-batch",
+          "ingestion/native-batch-simple-task",
+          "ingestion/native-batch-input-sources",
+          "ingestion/native-batch-firehose",
           "ingestion/hadoop"
         ]
       },

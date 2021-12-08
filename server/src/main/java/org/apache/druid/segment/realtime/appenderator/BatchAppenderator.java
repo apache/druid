@@ -50,6 +50,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -794,6 +795,8 @@ public class BatchAppenderator implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );
@@ -1148,9 +1151,9 @@ public class BatchAppenderator implements Appenderator
       sm.setPersistedFileDir(persistDir);
 
       log.info(
-          "About to persist in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
+          "Persisted in-memory data for segment[%s] spill[%s] to disk in [%,d] ms (%,d rows).",
           indexToPersist.getSegmentId(),
-          indexToPersist.getCount(),
+          sm.getNumHydrants(),
           (System.nanoTime() - startTime) / 1000000,
           numRows
       );

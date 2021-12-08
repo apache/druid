@@ -111,7 +111,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -305,6 +305,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     String getType();
 
     void handle() throws ExecutionException, InterruptedException, TimeoutException;
+
+    /**
+     * Whether this notice can also handle the work of another notice. Used to coalesce notices and avoid
+     * redundant work.
+     */
+    default boolean canAlsoHandle(Notice otherNotice)
+    {
+      return false;
+    }
   }
 
   private static class StatsFromTaskResult
@@ -393,6 +402,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     public String getType()
     {
       return TYPE;
+    }
+
+    @Override
+    public boolean canAlsoHandle(Notice otherNotice)
+    {
+      return otherNotice.getType().equals(TYPE);
     }
   }
 
@@ -709,7 +724,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
-  private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
+  private final BlockingDeque<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final ReentrantLock recordSupplierLock = new ReentrantLock();
@@ -1002,6 +1017,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
                   if (notice == null) {
                     continue;
+                  }
+
+                  // Coalesce notices.
+                  Notice nextNotice;
+                  while ((nextNotice = notices.peek()) != null && notice.canAlsoHandle(nextNotice)) {
+                    notices.removeFirst();
                   }
 
                   try {

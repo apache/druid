@@ -42,17 +42,12 @@ const BETWEEN: SqlExpression = SqlExpression.parse(`(? <= ? AND ? < ?)`);
 // ------------------------------------
 
 function fillWithColumn(b: SqlExpression, columnName: string): SqlExpression {
-  return b.fillPlaceholders([SqlRef.column(columnName)]) as SqlExpression;
+  return b.fillPlaceholders([SqlRef.column(columnName)]);
 }
 
 function fillWithColumnStartEnd(columnName: string, start: Date, end: Date): SqlExpression {
   const ref = SqlRef.column(columnName);
-  return BETWEEN.fillPlaceholders([
-    SqlLiteral.create(start),
-    ref,
-    ref,
-    SqlLiteral.create(end),
-  ]) as SqlExpression;
+  return BETWEEN.fillPlaceholders([SqlLiteral.create(start), ref, ref, SqlLiteral.create(end)])!;
 }
 
 // ------------------------------------

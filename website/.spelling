@@ -423,6 +423,7 @@ timeseries
 timestamp
 timestamps
 tradeoffs
+transformSpec
 tsv
 ulimit
 unannounce
@@ -473,7 +474,7 @@ druid-s3-extensions
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
-LeadershipLatch
+LeaderLatch
 3.5.x
 3.4.x
  - ../docs/design/auth.md
@@ -1088,6 +1089,7 @@ appendToExisting
 baseDir
 chatHandlerNumRetries
 chatHandlerTimeout
+cityName
 connectorConfig
 countryName
 dataSchema's
@@ -1117,6 +1119,39 @@ totalNumMergeTasks
 StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
+ - ../docs/ingestion/native-batch-firehose.md
+LocalFirehose 
+baseDir
+HttpFirehose 
+httpAuthenticationUsername
+DefaultPassword
+PasswordProviders
+EnvironmentVariablePasswordProvider
+ingestSegment 
+maxInputSegmentBytesPerTask
+150MB
+foldCase
+sqls
+connectorConfig
+InlineFirehose 
+CombiningFirehose
+httpAuthenticationPassword 
+ - ../docs/ingestion/native-batch-input-source.md
+accessKeyId
+secretAccessKey
+accessKeyId
+httpAuthenticationPassword
+countryName
+ - ../docs/ingestion/native-batch-simple-task.md
+dataSchema's
+appendToExisting
+dropExisting
+timeChunk 
+PartitionsSpec
+forceGuaranteedRollup
+reportParseExceptions
+pushTimeout
+segmentWriteOutMediumFactory
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1183,6 +1218,7 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
+isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
@@ -1192,6 +1228,7 @@ lpad
 ltrim
 nextUp
 nextafter
+notnull
 nvl
 parse_long
 regexp_extract
