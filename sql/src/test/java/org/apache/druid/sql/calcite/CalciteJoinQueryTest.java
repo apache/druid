@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -3122,23 +3121,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinOnConstantShouldFail(Map<String, Object> queryContext) throws Exception
   {
-    cannotVectorize();
-
-    final String query = "SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'";
-
-    try {
-      testQuery(
-          query,
-          queryContext,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-    }
-    catch (RelOptPlanner.CannotPlanException cpe) {
-      Assert.assertEquals(cpe.getMessage(), "Possible error: SQL is resulting in a join that have unsupported operand types.");
-      return;
-    }
-    Assert.fail("Expected an exception of type: " + RelOptPlanner.CannotPlanException.class);
+    assertQueryIsUnplannable("SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'",
+        "Possible error: SQL is resulting in a join that have unsupported operand types.");
   }
 
   @Test
