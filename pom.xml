@@ -1290,7 +1290,7 @@
                 <artifactId>forbiddenapis</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
+                    <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
