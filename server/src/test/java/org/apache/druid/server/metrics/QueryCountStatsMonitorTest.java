@@ -40,6 +40,7 @@ public class QueryCountStatsMonitorTest
       private long failedEmitCount = 0;
       private long interruptedEmitCount = 0;
       private long timedOutEmitCount = 0;
+      private long longQueryEmitCount = 0;
 
       @Override
       public long getSuccessfulQueryCount()
@@ -68,6 +69,13 @@ public class QueryCountStatsMonitorTest
         timedOutEmitCount += 4;
         return timedOutEmitCount;
       }
+
+      @Override
+      public long getLongQueryCount() {
+        longQueryEmitCount += 5;
+        return longQueryEmitCount;
+      }
+
     };
   }
 
@@ -85,12 +93,13 @@ public class QueryCountStatsMonitorTest
                                              event -> (String) event.toMap().get("metric"),
                                              event -> (Long) event.toMap().get("value")
                                          ));
-    Assert.assertEquals(5, resultMap.size());
+    Assert.assertEquals(6, resultMap.size());
     Assert.assertEquals(1L, (long) resultMap.get("query/success/count"));
     Assert.assertEquals(2L, (long) resultMap.get("query/failed/count"));
     Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
-    Assert.assertEquals(10L, (long) resultMap.get("query/count"));
+    Assert.assertEquals(5L, (long) resultMap.get("query/long/count"));
+    Assert.assertEquals(15L, (long) resultMap.get("query/count"));
 
   }
 }

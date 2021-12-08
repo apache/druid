@@ -145,4 +145,39 @@ public class QueryContextsTest
         false
     )));
   }
+
+  @Test
+  public void testDefaultLongQueryTime() {
+    final Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        new HashMap()
+    );
+    Assert.assertEquals(10_000, QueryContexts.getDefaultLongQueryTime(query));
+  }
+
+  @Test
+  public void testLongQueryTime() {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.LONG_QUERY_KEY, 5000)
+    );
+    Assert.assertEquals(5000, QueryContexts.getLongQueryTime(query));
+  }
+
+  @Test
+  public void testHasLongQueryTime() {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.LONG_QUERY_KEY, 0)
+    );
+    Assert.assertEquals(false, QueryContexts.hasLongQueryTime(query));
+  }
+
 }
+
