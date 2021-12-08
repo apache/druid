@@ -3122,7 +3122,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinOnConstantShouldFail(Map<String, Object> queryContext) throws Exception
   {
     assertQueryIsUnplannable("SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'",
-        "Possible error: SQL is resulting in a join that have unsupported operand types.");
+        "Possible error: SQL is resulting in a join that has unsupported operand types.");
   }
 
   @Test
