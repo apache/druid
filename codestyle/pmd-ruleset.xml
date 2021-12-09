@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+
+<ruleset name="Apache Druid PMD ruleset"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+This ruleset defines the PMD rules for the Apache Druid project.
+  </description>
+
+  <rule ref="category/java/codestyle.xml/UnnecessaryImport" />
+  <rule ref="category/java/codestyle.xml/TooManyStaticImports" />
+  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+</ruleset>
