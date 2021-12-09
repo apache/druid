@@ -437,7 +437,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     ImmutableMap.Builder<String, ColumnCapabilities> builder =
         ImmutableMap.<String, ColumnCapabilities>builder().putAll(timeAndMetricsColumnCapabilities);
 
-    dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+    synchronized (dimensionDescs) {
+      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+    }
     return builder.build();
   }
 
@@ -448,8 +450,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
       return timeAndMetricsColumnCapabilities.get(columnName);
     }
-    if (dimensionDescs.containsKey(columnName)) {
-      return dimensionDescs.get(columnName).getCapabilities();
+    synchronized (dimensionDescs) {
+      if (dimensionDescs.containsKey(columnName)) {
+        return dimensionDescs.get(columnName).getCapabilities();
+      }
     }
     return null;
   }
@@ -858,15 +862,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   public StorageAdapter toStorageAdapter()
   {
     return new IncrementalIndexStorageAdapter(this);
-  }
-
-  @Nullable
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    if (dimensionDescs.containsKey(column)) {
-      return dimensionDescs.get(column).getCapabilities();
-    }
-    return timeAndMetricsColumnCapabilities.get(column);
   }
 
   public Metadata getMetadata()
