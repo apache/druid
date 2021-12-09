@@ -284,7 +284,7 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) operands.get(0));
       } else {
         // Cannot handle this condition.
-        plannerContext.setPlanningError("SQL is resulting in a join that have unsupported operand types.");
+        plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
         return Optional.empty();
       }
     }

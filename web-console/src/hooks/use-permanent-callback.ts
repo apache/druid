@@ -16,20 +16,16 @@
  * limitations under the License.
  */
 
-export * from './capabilities';
-export * from './column-metadata';
-export * from './date';
-export * from './druid-lookup';
-export * from './druid-query';
-export * from './formatter';
-export * from './general';
-export * from './intermediate-query-state';
-export * from './local-storage-backed-visibility';
-export * from './local-storage-keys';
-export * from './object-change';
-export * from './query-action';
-export * from './query-cursor';
-export * from './query-manager';
-export * from './query-state';
-export * from './sanitizers';
-export * from './table-helpers';
+import { useEffect, useRef } from 'react';
+
+import { useConstant } from './use-constant';
+
+export function usePermanentCallback<T extends (...args: never[]) => unknown>(callback: T): T {
+  const lastCallback = useRef<T>(callback);
+
+  useEffect(() => {
+    lastCallback.current = callback;
+  }, [callback]);
+
+  return useConstant<T>(() => ((...args) => lastCallback.current(...args)) as T);
+}

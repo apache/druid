@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -64,6 +63,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -205,22 +205,20 @@ public class SqlResource
       throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
                                              .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
+    catch (RelOptPlanner.CannotPlanException e) {
+      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      SqlPlanningException spe = new SqlPlanningException(SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
+          e.getMessage());
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
+    }
     // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
     catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Throwable exceptionToReport;
-
-      if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s. %s", sqlQuery.getQuery(), e.getMessage());
-      } else {
-        exceptionToReport = e;
-      }
-
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport),
+          QueryInterruptedException.wrapIfNeeded(e),
           sqlQueryId
       );
     }

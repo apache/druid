@@ -66,7 +66,7 @@ public class ProtobufInputRowSchema extends InputRowSchema
           return parseDateTime(timestampStr);
         }
         catch (InvalidProtocolBufferException e) {
-          throw new ParseException(e, "Protobuf message could not be parsed");
+          throw new ParseException(null, e, "Protobuf message could not be parsed");
         }
       } else {
         return parseDateTime(rawTimestamp);

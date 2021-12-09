@@ -74,6 +74,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -1110,11 +1111,37 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
-    Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. " +
+                     "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+    );
+    checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  /**
+   * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
+   * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
+   * for such planning errors.
+   */
+  @Test
+  public void testCannotConvert_UnsupportedSQLQueryException() throws Exception
+  {
+    // max(string) unsupported
+    final QueryException exception = doPost(
+        createSimpleQueryWithId("id", "SELECT max(dim1) FROM druid.foo")
+    ).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
+    Assert.assertTrue(
+        exception.getMessage()
+            .contains("Cannot build plan for query: SELECT max(dim1) FROM druid.foo. " +
+                "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());

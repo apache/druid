@@ -30,7 +30,7 @@ public class IncrementalIndexAddResultTest
   {
     Assert.assertTrue(new IncrementalIndexAddResult(0, 0L).isRowAdded());
     Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").isRowAdded());
-    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, new ParseException("test")).isRowAdded());
+    Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, new ParseException(null, "test")).isRowAdded());
   }
 
   @Test
@@ -38,6 +38,6 @@ public class IncrementalIndexAddResultTest
   {
     Assert.assertFalse(new IncrementalIndexAddResult(0, 0L).hasParseException());
     Assert.assertFalse(new IncrementalIndexAddResult(0, 0L, "test").hasParseException());
-    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L, new ParseException("test")).hasParseException());
+    Assert.assertTrue(new IncrementalIndexAddResult(0, 0L, new ParseException(null, "test")).hasParseException());
   }
 }

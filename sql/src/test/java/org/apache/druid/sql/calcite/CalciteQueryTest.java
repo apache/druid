@@ -111,7 +111,6 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -5399,26 +5398,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid()
+  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid_isUnplannable()
   {
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
-    try {
-      testQuery(
-          "SELECT COUNT(*) FROM druid.foo\n"
-          + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-    }
-    catch (Throwable t) {
-      Throwable rootException = CalciteTests.getRootCauseFromInvocationTargetExceptionChain(t);
-      Assert.assertEquals(UnsupportedSQLQueryException.class, rootException.getClass());
-      Assert.assertEquals(
-          "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL",
-          rootException.getMessage()
-      );
-    }
+    assertQueryIsUnplannable(
+        "SELECT COUNT(*) FROM druid.foo\n"
+            + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
+        "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL"
+    );
   }
 
   @Test
