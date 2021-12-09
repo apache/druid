@@ -79,6 +79,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -13339,6 +13340,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                              .threshold(1)
                              .build()),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testRemovalOfRedundantLiteralsInGroupBy() throws Exception
+  {
+    // This query should return an empty list since there's no row which passes through the filter
+    testQuery(
+        "select 'A', dim1 from foo where m1 = 424242 and dim1 = 'NOT_AVAILABLE' group by dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource("foo")
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "'NOT_AVAILABLE'",
+                            ColumnType.STRING
+                        ))
+                        .setDimFilter(new AndDimFilter(
+                            new SelectorDimFilter("m1", "424242", null),
+                            new SelectorDimFilter("dim1", "NOT_AVAILABLE", null)
+                        ))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ExpressionPostAggregator(
+                                    "p0",
+                                    "'A'",
+                                    null,
+                                    ExprMacroTable.nil()
+                                ),
+                                new ExpressionPostAggregator(
+                                    "p1",
+                                    "'NOT_AVAILABLE'",
+                                    null,
+                                    ExprMacroTable.nil()
+                                )
+                            )
+                        ).build()),
         ImmutableList.of()
     );
   }

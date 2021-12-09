@@ -23,9 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.rex.RexVisitorImpl;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,6 +36,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -182,16 +185,31 @@ public class Grouping
         postAggregator -> newAggregations.add(Aggregation.create(postAggregator))
     );
 
+    final int[] newDimIndexes = new int[dimensions.size()];
+
     // Remove literal dimensions that did not appear in the projection. This is useful for queries
     // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
     // actually want to include a dimension 'dummy'.
-    final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(project.getChildExps(), null);
-    final int[] newDimIndexes = new int[dimensions.size()];
+    Set<DruidExpression> literalsInInput = new HashSet<>();
+    RexUtil.apply(
+        new RexVisitorImpl<Void>(false) // Only mess with top level literals
+        {
+          @Override
+          public Void visitLiteral(RexLiteral literal)
+          {
+            literalsInInput.add(Expressions.toDruidExpression(plannerContext, outputRowSignature, literal));
+            return super.visitLiteral(literal);
+          }
+        },
+        project.getChildExps(),
+        null
+    );
+
 
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionExpression dimension = dimensions.get(i);
       if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
-                .isLiteral() && !aggregateProjectBits.get(i)) {
+                .isLiteral() && !literalsInInput.contains(dimension.getDruidExpression())) {
         newDimIndexes[i] = -1;
       } else {
         newDimIndexes[i] = newDimensions.size();
