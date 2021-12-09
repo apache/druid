@@ -77,6 +77,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -100,6 +101,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -316,8 +318,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsDeterminePartitions) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              determinePartitionsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -325,8 +327,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              buildSegmentsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -544,16 +546,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
-    );
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
-    );
+    CircularBuffer<ParseExceptionReport> determinePartitionsParseExceptionReports =
+        determinePartitionsParseExceptionHandler.getSavedParseExceptionReports();
+    CircularBuffer<ParseExceptionReport> buildSegmentsParseExceptionReports =
+        buildSegmentsParseExceptionHandler.getSavedParseExceptionReports();
 
-    if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
+    if (determinePartitionsParseExceptionReports != null || buildSegmentsParseExceptionReports != null) {
+      unparseableEventsMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(determinePartitionsParseExceptionReports)
+      );
+      unparseableEventsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(buildSegmentsParseExceptionReports)
+      );
     }
 
     return unparseableEventsMap;

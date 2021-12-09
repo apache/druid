@@ -966,6 +966,13 @@
                 <groupId>com.google.caliper</groupId>
                 <artifactId>caliper</artifactId>
                 <version>0.5-rc1</version>
+                <exclusions>
+                    <!-- caliper ships a very old asm version which can cause issues during testing  -->
+                    <exclusion>
+                        <groupId>asm</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1265,11 +1272,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.14.0</version>
+                <version>3.15.0</version>
                 <configuration>
+                    <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
-                        <ruleset>/rulesets/java/imports.xml</ruleset>
+                        <ruleset>${project.parent.basedir}/codestyle/pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
@@ -1290,7 +1298,7 @@
                 <artifactId>forbiddenapis</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
+                    <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right

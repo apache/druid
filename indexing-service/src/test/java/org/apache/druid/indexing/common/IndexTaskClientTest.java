@@ -25,8 +25,10 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.easymock.EasyMock;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -82,10 +84,11 @@ public class IndexTaskClientTest
     EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(
                 Futures.immediateFuture(
-                    new StringFullResponseHolder(
-                        HttpResponseStatus.OK,
-                        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
-                        StandardCharsets.UTF_8
+                    Either.value(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+                            StandardCharsets.UTF_8
+                        )
                     )
                 )
             )
@@ -101,9 +104,201 @@ public class IndexTaskClientTest
       );
       Assert.assertEquals(HttpResponseStatus.OK, response.getStatus());
     }
-  } 
+  }
 
-  private IndexTaskClient buildIndexTaskClient(HttpClient httpClient, Function<String, TaskLocation> taskLocationProvider)
+  @Test
+  public void retryOnServerError() throws IOException
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.error(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                            StandardCharsets.UTF_8
+                        ).addChunk("Error")
+                    )
+                )
+            )
+            .times(2);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.value(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK),
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                )
+            )
+            .once();
+    EasyMock.replay(httpClient);
+    try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
+      final StringFullResponseHolder response = indexTaskClient.submitRequestWithEmptyContent(
+          "taskId",
+          HttpMethod.GET,
+          "test",
+          null,
+          true
+      );
+      Assert.assertEquals(HttpResponseStatus.OK, response.getStatus());
+    }
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void retryIfNotFoundWithIncorrectTaskId() throws IOException
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    final String taskId = "taskId";
+    final String incorrectTaskId = "incorrectTaskId";
+    final DefaultHttpResponse incorrectResponse =
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+    incorrectResponse.headers().add(ChatHandlerResource.TASK_ID_HEADER, incorrectTaskId);
+    final DefaultHttpResponse correctResponse =
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    correctResponse.headers().add(ChatHandlerResource.TASK_ID_HEADER, taskId);
+
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.error(
+                        new StringFullResponseHolder(
+                            incorrectResponse,
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                )
+            )
+            .times(2);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.value(
+                        new StringFullResponseHolder(
+                            correctResponse,
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                )
+            )
+            .once();
+    EasyMock.replay(httpClient);
+    try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
+      final StringFullResponseHolder response = indexTaskClient.submitRequestWithEmptyContent(
+          taskId,
+          HttpMethod.GET,
+          "test",
+          null,
+          true
+      );
+      Assert.assertEquals(HttpResponseStatus.OK, response.getStatus());
+    }
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void dontRetryOnBadRequest()
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.error(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST),
+                            StandardCharsets.UTF_8
+                        ).addChunk("Error")
+                    )
+                )
+            )
+            .times(1);
+    EasyMock.replay(httpClient);
+    try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
+      final IllegalArgumentException e = Assert.assertThrows(
+          IllegalArgumentException.class,
+          () -> indexTaskClient.submitRequestWithEmptyContent("taskId", HttpMethod.GET, "test", null, true)
+      );
+
+      Assert.assertEquals(
+          "Received server error with status [400 Bad Request]; first 1KB of body: Error",
+          e.getMessage()
+      );
+    }
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void dontRetryIfRetryFalse()
+  {
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.error(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                            StandardCharsets.UTF_8
+                        ).addChunk("Error")
+                    )
+                )
+            )
+            .times(1);
+    EasyMock.replay(httpClient);
+    try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
+      final IOException e = Assert.assertThrows(
+          IOException.class,
+          () -> indexTaskClient.submitRequestWithEmptyContent("taskId", HttpMethod.GET, "test", null, false)
+      );
+
+      Assert.assertEquals(
+          "Received server error with status [500 Internal Server Error]; first 1KB of body: Error",
+          e.getMessage()
+      );
+    }
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void dontRetryIfNotFoundWithCorrectTaskId()
+  {
+    final String taskId = "taskId";
+    final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+    response.headers().add(ChatHandlerResource.TASK_ID_HEADER, taskId);
+    EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(
+                Futures.immediateFuture(
+                    Either.error(
+                        new StringFullResponseHolder(response, StandardCharsets.UTF_8).addChunk("Error")
+                    )
+                )
+            )
+            .times(1);
+    EasyMock.replay(httpClient);
+    try (IndexTaskClient indexTaskClient = buildIndexTaskClient(httpClient, id -> TaskLocation.create(id, 8000, -1))) {
+      final IOException e = Assert.assertThrows(
+          IOException.class,
+          () -> indexTaskClient.submitRequestWithEmptyContent(taskId, HttpMethod.GET, "test", null, false)
+      );
+
+      Assert.assertEquals(
+          "Received server error with status [404 Not Found]; first 1KB of body: Error",
+          e.getMessage()
+      );
+    }
+
+    EasyMock.verify(httpClient);
+  }
+
+  private IndexTaskClient buildIndexTaskClient(
+      HttpClient httpClient,
+      Function<String, TaskLocation> taskLocationProvider
+  )
   {
     final TaskInfoProvider taskInfoProvider = new TaskInfoProvider()
     {

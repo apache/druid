@@ -16,7 +16,17 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
 @import '../../../blueprint-overrides/common/colors';
+
+@keyframes druid-glow {
+  0% {
+    text-shadow: 0 0 0 $druid-brand2;
+  }
+  100% {
+    text-shadow: 0 0 2px $druid-brand2;
+  }
+}
 
 .column-tree {
   .bp3-dark & {
@@ -42,6 +52,10 @@
 
     .bp3-tree-node-content-1 {
       padding-left: 0;
+    }
+
+    .highlight {
+      animation: druid-glow 1s infinite alternate;
     }
   }
 

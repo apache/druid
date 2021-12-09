@@ -67,6 +67,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -1459,7 +1460,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     long thrownAway = 0L;
     long unparseable = 0L;
 
-    List<String> unparseableEvents = new ArrayList<>();
+    List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
     // Get stats from completed tasks
     Map<String, PushedSegmentsReport> completedSubtaskReports = parallelSinglePhaseRunner.getReports();
@@ -1478,8 +1479,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
 
       if (includeUnparseable) {
-        List<String> taskUnparsebleEvents = (List<String>) reportData.getUnparseableEvents()
-                                                                     .get(RowIngestionMeters.BUILD_SEGMENTS);
+        List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
+                                                                                   .get(RowIngestionMeters.BUILD_SEGMENTS);
         unparseableEvents.addAll(taskUnparsebleEvents);
       }
 
@@ -1506,7 +1507,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         if (includeUnparseable) {
           Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-          List<String> buildSegmentsUnparseableEvents = (List<String>) taskUnparseableEvents.get(
+          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
               RowIngestionMeters.BUILD_SEGMENTS
           );
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);

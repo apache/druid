@@ -21,6 +21,8 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -49,14 +51,23 @@ import java.util.stream.Collectors;
  */
 public class NodeRole
 {
-  public static final NodeRole COORDINATOR = new NodeRole("COORDINATOR", "coordinator");
-  public static final NodeRole HISTORICAL = new NodeRole("HISTORICAL", "historical");
-  public static final NodeRole BROKER = new NodeRole("BROKER", "broker");
-  public static final NodeRole OVERLORD = new NodeRole("OVERLORD", "overlord");
-  public static final NodeRole PEON = new NodeRole("PEON", "peon");
-  public static final NodeRole ROUTER = new NodeRole("ROUTER", "router");
-  public static final NodeRole MIDDLE_MANAGER = new NodeRole("MIDDLE_MANAGER", "middleManager");
-  public static final NodeRole INDEXER = new NodeRole("INDEXER", "indexer");
+  public static final String COORDINATOR_JSON_NAME = "coordinator";
+  public static final String HISTORICAL_JSON_NAME = "historical";
+  public static final String BROKER_JSON_NAME = "broker";
+  public static final String OVERLORD_JSON_NAME = "overlord";
+  public static final String PEON_JSON_NAME = "peon";
+  public static final String ROUTER_JSON_NAME = "router";
+  public static final String MIDDLE_MANAGER_JSON_NAME = "middleManager";
+  public static final String INDEXER_JSON_NAME = "indexer";
+
+  public static final NodeRole COORDINATOR = new NodeRole("COORDINATOR", COORDINATOR_JSON_NAME);
+  public static final NodeRole HISTORICAL = new NodeRole("HISTORICAL", HISTORICAL_JSON_NAME);
+  public static final NodeRole BROKER = new NodeRole("BROKER", BROKER_JSON_NAME);
+  public static final NodeRole OVERLORD = new NodeRole("OVERLORD", OVERLORD_JSON_NAME);
+  public static final NodeRole PEON = new NodeRole("PEON", PEON_JSON_NAME);
+  public static final NodeRole ROUTER = new NodeRole("ROUTER", ROUTER_JSON_NAME);
+  public static final NodeRole MIDDLE_MANAGER = new NodeRole("MIDDLE_MANAGER", MIDDLE_MANAGER_JSON_NAME);
+  public static final NodeRole INDEXER = new NodeRole("INDEXER", INDEXER_JSON_NAME);
 
   private static final NodeRole[] BUILT_IN = new NodeRole[]{
       COORDINATOR,
@@ -104,6 +115,11 @@ public class NodeRole
   {
     this.name = name;
     this.jsonName = jsonName;
+  }
+
+  public Named getDruidServiceInjectName()
+  {
+    return Names.named(jsonName);
   }
 
   @JsonValue

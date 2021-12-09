@@ -21,3 +21,7 @@ NOTICE.BINARY
 README.BINARY
 README
 *.lock
+**/.pmd
+**/.pmdruleset.xml
+.java-version
+integration-tests/gen-scripts/

@@ -21,6 +21,9 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import org.apache.druid.java.util.common.StringUtils;
 
+/**
+ * This exception will be mapped to a JSON object that will be returned to the client by {@link SamplerExceptionMapper}
+ */
 public class SamplerException extends RuntimeException
 {
   public SamplerException(Throwable cause, String formatText, Object... arguments)

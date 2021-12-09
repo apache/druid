@@ -116,14 +116,14 @@ public final class Rows
       }
       catch (Exception e) {
         if (throwParseExceptions) {
-          throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+          throw new ParseException(String.valueOf(inputValue), e, "Unable to parse value[%s] for field[%s]", inputValue, name);
         } else {
           return NullHandling.defaultLongValue();
         }
       }
     } else {
       if (throwParseExceptions) {
-        throw new ParseException("Unknown type[%s] for field[%s]", inputValue.getClass(), name);
+        throw new ParseException(String.valueOf(inputValue), "Unknown type[%s] for field[%s]", inputValue.getClass(), name);
       } else {
         return NullHandling.defaultLongValue();
       }

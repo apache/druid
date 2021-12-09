@@ -33,6 +33,7 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -73,6 +75,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.transform.Transformer;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -606,8 +609,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   {
     int numAdded = 0;
     StringBuilder stringBuilder = new StringBuilder();
-
+    final List<String> details = new ArrayList<>();
     if (dimParseExceptionMessages != null) {
+      details.addAll(dimParseExceptionMessages);
       for (String parseExceptionMessage : dimParseExceptionMessages) {
         stringBuilder.append(parseExceptionMessage);
         stringBuilder.append(",");
@@ -615,6 +619,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       }
     }
     if (aggParseExceptionMessages != null) {
+      details.addAll(aggParseExceptionMessages);
       for (String parseExceptionMessage : aggParseExceptionMessages) {
         stringBuilder.append(parseExceptionMessage);
         stringBuilder.append(",");
@@ -631,12 +636,31 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     if (messageLen > 0) {
       stringBuilder.delete(messageLen - 1, messageLen);
     }
-    return new ParseException(
+    final String eventString = getSimplifiedEventStringFromRow(row);
+    return new UnparseableColumnsParseException(
+        eventString,
+        details,
         true,
         "Found unparseable columns in row: [%s], exceptions: [%s]",
-        row,
+        getSimplifiedEventStringFromRow(row),
         stringBuilder.toString()
     );
+  }
+
+  private static String getSimplifiedEventStringFromRow(InputRow inputRow)
+  {
+    if (inputRow instanceof MapBasedInputRow) {
+      return ((MapBasedInputRow) inputRow).getEvent().toString();
+    }
+
+    if (inputRow instanceof Transformer.TransformedInputRow) {
+      InputRow innerRow = ((Transformer.TransformedInputRow) inputRow).getRow();
+      if (innerRow instanceof MapBasedInputRow) {
+        return ((MapBasedInputRow) innerRow).getEvent().toString();
+      }
+    }
+
+    return inputRow.toString();
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)

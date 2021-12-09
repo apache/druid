@@ -55,6 +55,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
@@ -858,6 +859,8 @@ public class StreamAppenderator implements Appenderator
             schema.getDimensionsSpec(),
             mergedTarget,
             tuningConfig.getIndexSpec(),
+            tuningConfig.getIndexSpecForIntermediatePersists(),
+            new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
             tuningConfig.getMaxColumnsToMerge()
         );

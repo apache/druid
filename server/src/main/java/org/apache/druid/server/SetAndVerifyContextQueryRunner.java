@@ -66,11 +66,16 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
         ),
         serverConfig.getMaxQueryTimeout()
     );
+    // DirectDruidClient.QUERY_FAIL_TIME is used by DirectDruidClient and JsonParserIterator to determine when to
+    // fail with a timeout exception
+    final long failTime;
+    if (QueryContexts.hasTimeout(newQuery)) {
+      failTime = this.startTimeMillis + QueryContexts.getTimeout(newQuery);
+    } else {
+      failTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
+    }
     return newQuery.withOverriddenContext(
-        ImmutableMap.of(
-            DirectDruidClient.QUERY_FAIL_TIME,
-            this.startTimeMillis + QueryContexts.getTimeout(newQuery)
-        )
+        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime > 0 ? failTime : Long.MAX_VALUE)
     );
   }
 }

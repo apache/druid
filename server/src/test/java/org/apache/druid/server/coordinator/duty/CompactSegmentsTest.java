@@ -1726,7 +1726,6 @@ public class CompactSegmentsTest
     {
       final HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       final StringFullResponseHolder holder = new StringFullResponseHolder(
-          HttpResponseStatus.OK,
           httpResponse,
           StandardCharsets.UTF_8
       );
