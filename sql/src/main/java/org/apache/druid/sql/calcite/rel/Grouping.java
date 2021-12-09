@@ -192,7 +192,7 @@ public class Grouping
     // actually want to include a dimension 'dummy'.
     Set<DruidExpression> literalsInInput = new HashSet<>();
     RexUtil.apply(
-        new RexVisitorImpl<Void>(false) // Only mess with top level literals
+        new RexVisitorImpl<Void>(true)
         {
           @Override
           public Void visitLiteral(RexLiteral literal)
