@@ -322,11 +322,11 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
-        throw new ParseException("could not convert value [%s] to long", valObj);
+        throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
       }
       return ret;
     } else {
-      throw new ParseException("Unknown type[%s]", valObj.getClass());
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 
@@ -350,11 +350,11 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Float ret = Floats.tryParse((String) valObj);
       if (reportParseExceptions && ret == null) {
-        throw new ParseException("could not convert value [%s] to float", valObj);
+        throw new ParseException((String) valObj, "could not convert value [%s] to float", valObj);
       }
       return ret;
     } else {
-      throw new ParseException("Unknown type[%s]", valObj.getClass());
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 
@@ -433,11 +433,11 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof String) {
       Double ret = Doubles.tryParse((String) valObj);
       if (reportParseExceptions && ret == null) {
-        throw new ParseException("could not convert value [%s] to double", valObj);
+        throw new ParseException((String) valObj, "could not convert value [%s] to double", valObj);
       }
       return ret;
     } else {
-      throw new ParseException("Unknown type[%s]", valObj.getClass());
+      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
     }
   }
 

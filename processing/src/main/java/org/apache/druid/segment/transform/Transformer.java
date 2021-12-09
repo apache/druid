@@ -214,6 +214,11 @@ public class Transformer
       }
     }
 
+    public InputRow getRow()
+    {
+      return row;
+    }
+
     @Override
     public boolean equals(final Object o)
     {
