@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
@@ -48,9 +49,6 @@ public class DimensionRangeShardSpec implements ShardSpec
   private final StringTuple end;
   private final int partitionNum;
   private final int numCorePartitions;
-
-  private final String firstDimStart;
-  private final String firstDimEnd;
 
   /**
    * @param dimensions   partition dimensions
@@ -78,8 +76,6 @@ public class DimensionRangeShardSpec implements ShardSpec
     this.end = end;
     this.partitionNum = partitionNum;
     this.numCorePartitions = numCorePartitions == null ? UNKNOWN_NUM_CORE_PARTITIONS : numCorePartitions;
-    this.firstDimStart = getFirstValueOrNull(start);
-    this.firstDimEnd = getFirstValueOrNull(end);
   }
 
   @JsonProperty("dimensions")
@@ -145,29 +141,58 @@ public class DimensionRangeShardSpec implements ShardSpec
     return Collections.unmodifiableList(dimensions);
   }
 
-  private Range<String> getFirstDimRange()
+  /**
+   * Check if a given domain of Strings is a singleton set containing the given value
+   * @param rangeSet Domain of Strings
+   * @param val Value of String
+   * @return rangeSet == {val}
+   */
+  private boolean isRangeSetSingletonWithVal(RangeSet<String> rangeSet, String val)
   {
-    Range<String> range;
-    if (firstDimStart == null && firstDimEnd == null) {
-      range = Range.all();
-    } else if (firstDimStart == null) {
-      range = Range.atMost(firstDimEnd);
-    } else if (firstDimEnd == null) {
-      range = Range.atLeast(firstDimStart);
-    } else {
-      range = Range.closed(firstDimStart, firstDimEnd);
-    }
-    return range;
+    Range<String> singletonRange = Range.closed(val, val);
+    RangeSet<String> singletonRangeSet = TreeRangeSet.create();
+    singletonRangeSet.add(singletonRange);
+    return rangeSet.equals(singletonRangeSet);
   }
 
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    RangeSet<String> rangeSet = domain.get(dimensions.get(0));
-    if (rangeSet == null) {
-      return true;
+    // Indicate if start[0:dim), end[0:dim) are the greatest, least members of domain[0:dim) respectively
+    boolean startIsGreatestInDomain = true, endIsLeastInDomain = true;
+    for (int dim = 0; dim < dimensions.size(); dim++) {
+      // Query domain for given dimension
+      RangeSet<String> queryDomainForDimension = TreeRangeSet.create();
+      if (domain.get(dimensions.get(dim)) == null) {
+        // Universal set if there is no constraint in the query
+        queryDomainForDimension.add(Range.all());
+      } else {
+        // Copy to avoid changes to the query itself
+        queryDomainForDimension.addAll(domain.get(dimensions.get(dim)));
+      }
+      // Range for given dimension as per segment metadata
+      Range<String> segmentRangeForDimension = Range.all();
+      if (startIsGreatestInDomain && start != null && start.get(dim) != null) {
+        segmentRangeForDimension.intersection(Range.atLeast(start.get(dim)));
+      }
+      if (endIsLeastInDomain && end != null && end.get(dim) != null) {
+        segmentRangeForDimension.intersection(Range.atMost(end.get(dim)));
+      }
+      RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(segmentRangeForDimension);
+      // Prune immediately since query domain for this dimension lies completely out of the segment metadata's range
+      if (effectiveDomainForDimension.isEmpty()) {
+        return false;
+      }
+      startIsGreatestInDomain = startIsGreatestInDomain
+                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, start.get(dim));
+      endIsLeastInDomain = endIsLeastInDomain
+                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, end.get(dim));
+      // If neither of the above booleans is true, we cannot prune with certainty
+      if (!startIsGreatestInDomain && !endIsLeastInDomain) {
+        return true;
+      }
     }
-    return !rangeSet.subRangeSet(getFirstDimRange()).isEmpty();
+    return true;
   }
 
   @Override
@@ -205,11 +230,6 @@ public class DimensionRangeShardSpec implements ShardSpec
 
     return (inputVsStart >= 0 || start == null)
            && (inputVsEnd < 0 || end == null);
-  }
-
-  private static String getFirstValueOrNull(StringTuple values)
-  {
-    return values != null && values.size() > 0 ? values.get(0) : null;
   }
 
   @Override

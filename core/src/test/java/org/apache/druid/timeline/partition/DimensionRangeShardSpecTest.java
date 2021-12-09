@@ -19,10 +19,16 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -295,6 +301,25 @@ public class DimensionRangeShardSpecTest
         shardSpec,
         createRow("United Kingdom", "London")
     ));
+  }
+
+  @Test
+  public void testPossibleInDomain()
+  {
+    // multi-dim index on <d1, d2, d3>
+    setDimensions("d1", "d2", "d3");
+
+    // start: <s1, s2, s3>, end: <e1, e2, e3>
+    StringTuple start = StringTuple.create("Earth", "France", "Paris");
+    StringTuple end = StringTuple.create("Earth", "USA", "New York");
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+
+    // domain -> empty
+    Map<String, RangeSet<String>> domain = new HashMap<>();
+    domain.put("d1", TreeRangeSet.create());
+    domain.put("d2", TreeRangeSet.create());
+    domain.put("d3", TreeRangeSet.create());
+    assertFalse(shard.possibleInDomain(domain));
   }
 
   /**
