@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -72,6 +73,7 @@ public class SegmentAllocateActionSerdeTest
     Assert.assertEquals(target.getSequenceName(), fromJson.getSequenceName());
     Assert.assertEquals(target.getPreviousSegmentId(), fromJson.getPreviousSegmentId());
     Assert.assertEquals(target.isSkipSegmentLineageCheck(), fromJson.isSkipSegmentLineageCheck());
+    Assert.assertEquals(TaskLockType.EXCLUSIVE, target.getTaskLockType());
   }
 
   @Test
@@ -82,7 +84,7 @@ public class SegmentAllocateActionSerdeTest
         Map.class
     );
 
-    Assert.assertEquals(10, fromJson.size());
+    Assert.assertEquals(11, fromJson.size());
     Assert.assertEquals(SegmentAllocateAction.TYPE, fromJson.get("type"));
     Assert.assertEquals(target.getDataSource(), fromJson.get("dataSource"));
     Assert.assertEquals(target.getTimestamp(), DateTimes.of((String) fromJson.get("timestamp")));
@@ -99,5 +101,6 @@ public class SegmentAllocateActionSerdeTest
     Assert.assertEquals(target.isSkipSegmentLineageCheck(), fromJson.get("skipSegmentLineageCheck"));
     Assert.assertEquals(ImmutableMap.of("type", "numbered"), fromJson.get("shardSpecFactory"));
     Assert.assertEquals(target.getLockGranularity(), LockGranularity.valueOf((String) fromJson.get("lockGranularity")));
+    Assert.assertEquals(target.getTaskLockType(), TaskLockType.valueOf((String) fromJson.get("taskLockType")));
   }
 }
