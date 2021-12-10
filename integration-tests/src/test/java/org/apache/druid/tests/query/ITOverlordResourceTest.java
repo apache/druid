@@ -20,10 +20,11 @@
 package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
+import org.apache.druid.testing.clients.ResponseException;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -127,13 +128,10 @@ public class ITOverlordResourceTest
     try {
       runnable.accept(supervisorId);
     }
-    catch (ISE e) {
-      // OverlordResourceTestClient turns all non-200 response into ISE exception
-      // So we catch ISE and check if the message in this exception matches expected message
-      Assert.assertTrue(
-          e.getMessage().contains("[404 Not Found") && e.getMessage().contains(supervisorId),
-          "Unexpected exception. Message does not match expected. " + e.getMessage()
-      );
+    catch (ResponseException e) {
+      Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), e.getResponse().getStatus().getCode());
+      ResponseException.ErrorContent content = e.responseBodyToObject(ResponseException.ErrorContent.class);
+      Assert.assertTrue(content.getError().contains(supervisorId));
       return;
     }
     Assert.fail("Should not go to here");

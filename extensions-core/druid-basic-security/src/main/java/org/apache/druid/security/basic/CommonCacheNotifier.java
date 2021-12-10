@@ -220,6 +220,7 @@ public class CommonCacheNotifier
       return ClientResponse.unfinished(
           new StatusResponseHolder(
               response.getStatus(),
+              response.headers(),
               null
           )
       );

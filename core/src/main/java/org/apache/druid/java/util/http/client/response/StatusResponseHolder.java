@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
@@ -26,15 +27,23 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 public class StatusResponseHolder
 {
   private final HttpResponseStatus status;
+  private final HttpHeaders headers;
   private final StringBuilder builder;
 
   public StatusResponseHolder(
       HttpResponseStatus status,
+      HttpHeaders headers,
       StringBuilder builder
   )
   {
     this.status = status;
+    this.headers = headers;
     this.builder = builder;
+  }
+
+  public HttpHeaders getHeaders()
+  {
+    return headers;
   }
 
   public HttpResponseStatus getStatus()

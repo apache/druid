@@ -181,7 +181,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
   {
     SettableFuture<StatusResponseHolder> futureResult = SettableFuture.create();
     futureResult.set(
-        new StatusResponseHolder(httpStatus, new StringBuilder(responseContent))
+        new StatusResponseHolder(httpStatus, null, new StringBuilder(responseContent))
     );
     Capture<Request> capturedRequest = EasyMock.newCapture();
     EasyMock.expect(

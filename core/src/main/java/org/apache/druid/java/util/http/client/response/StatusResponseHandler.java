@@ -44,6 +44,7 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
     return ClientResponse.unfinished(
         new StatusResponseHolder(
             response.getStatus(),
+            response.headers(),
             new StringBuilder(response.getContent().toString(StandardCharsets.UTF_8))
         )
     );

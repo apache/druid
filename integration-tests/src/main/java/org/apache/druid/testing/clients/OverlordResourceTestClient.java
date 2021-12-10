@@ -403,7 +403,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while shutting down supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -434,7 +435,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while terminating supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -465,7 +467,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while shutdown task, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -496,7 +499,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while getting supervisor status, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -537,7 +541,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while suspending supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -568,7 +573,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while stats supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -599,7 +605,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while get supervisor health, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -630,7 +637,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while resuming supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -661,7 +669,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while resetting supervisor, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -692,7 +701,8 @@ public class OverlordResourceTestClient
           StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
+        throw new ResponseException(
+            response,
             "Error while getting supervisor status, response [%s %s]",
             response.getStatus(),
             response.getContent()
@@ -719,7 +729,10 @@ public class OverlordResourceTestClient
       StatusResponseHolder response = this.httpClient
           .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
+        throw new ResponseException(response,
+                                    "Error while making request to indexer [%s %s]",
+                                    response.getStatus(),
+                                    response.getContent());
       }
       return response;
     }

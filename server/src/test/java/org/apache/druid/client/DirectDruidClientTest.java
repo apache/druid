@@ -260,7 +260,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
-    cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
+    cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, null, new StringBuilder("cancelled")));
     Sequence results = client.run(QueryPlus.wrap(query));
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(0, client.getNumOpenConnections());
