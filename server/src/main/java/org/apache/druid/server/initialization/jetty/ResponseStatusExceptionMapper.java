@@ -20,6 +20,7 @@
 package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -29,11 +30,31 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class ResponseStatusExceptionMapper implements ExceptionMapper<ResponseStatusException>
 {
+  /**
+   * For Response.Status.BAD_REQUEST or Response.Status.NOT_FOUND,
+   * it's suggested to throw exception {@link BadRequestException} or {@link NotFoundException} respectively
+   * instead of returning a response object
+   */
   public static Response toResponse(Response.Status statusCode, Exception e)
   {
     return toResponse(statusCode, e == null ? "null" : (e.getMessage() == null ? e.toString() : e.getMessage()));
   }
 
+  /**
+   * For Response.Status.BAD_REQUEST or Response.Status.NOT_FOUND,
+   * it's suggested to throw exception {@link BadRequestException} or {@link NotFoundException} respectively
+   * instead of returning a response object
+   */
+  public static Response toResponse(Response.Status status, String messageFormat, Object... formatArgs)
+  {
+    return toResponse(status, StringUtils.format(messageFormat, formatArgs));
+  }
+
+  /**
+   * For Response.Status.BAD_REQUEST or Response.Status.NOT_FOUND,
+   * it's suggested to throw exception {@link BadRequestException} or {@link NotFoundException} respectively
+   * instead of returning a response object
+   */
   public static Response toResponse(Response.Status status, String message)
   {
     return Response.status(status.getStatusCode())

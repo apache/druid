@@ -72,6 +72,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.util.Arrays;
@@ -1445,6 +1446,28 @@ public class OverlordResourceTest
 
     Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
     Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+  }
+
+  @Test
+  public void testGetMultipleTaskStatusesWithBadRequest()
+  {
+    // even though in this case methods on following object won't be trigger
+    // the tearDown of this test file verifies these objects.
+    // So, we need this function call
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    Response response = this.overlordResource.getMultipleTaskStatuses(Collections.emptySet());
+
+    Assert.assertEquals(response.getStatus(), HttpResponseStatus.BAD_REQUEST.getCode());
+    Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
+    Assert.assertTrue(((Map) response.getEntity()).containsKey("error"));
   }
 
   private void expectAuthorizationTokenCheck()
