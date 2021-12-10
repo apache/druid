@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -110,9 +111,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   private TaskLockHelper taskLockHelper;
 
+  private final int maxAllowedLockCount;
+
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
     super(id, dataSource, context);
+    maxAllowedLockCount = -1;
   }
 
   protected AbstractBatchIndexTask(
@@ -120,10 +124,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable String groupId,
       @Nullable TaskResource taskResource,
       String dataSource,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      int maxAllowedLockCount
   )
   {
     super(id, groupId, taskResource, dataSource, context);
+    this.maxAllowedLockCount = maxAllowedLockCount;
   }
 
   /**
@@ -400,6 +406,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     // Intervals are already condensed to avoid creating too many locks.
     // Intervals are also sorted and thus it's safe to compare only the previous interval and current one for dedup.
     Interval prev = null;
+    int locksAcquired = 0;
     while (intervalIterator.hasNext()) {
       final Interval cur = intervalIterator.next();
       if (prev != null && cur.equals(prev)) {
@@ -412,6 +419,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
       if (lock.isRevoked()) {
         throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
+      }
+      locksAcquired++;
+      if (maxAllowedLockCount >= 0 && locksAcquired > maxAllowedLockCount) {
+        throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
       }
     }
     return true;
