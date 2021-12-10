@@ -354,6 +354,7 @@ public class CompactSegments implements CoordinatorDuty
           );
         } else {
           granularitySpec = null;
+          xxx
         }
         // Create dimensionsSpec to send to compaction task
         ClientCompactionTaskDimensionsSpec dimensionsSpec;
