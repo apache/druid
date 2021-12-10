@@ -71,6 +71,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -616,6 +617,23 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
+  }
+
+  @Test
+  public void testMultipleAppends()
+  {
+    final Interval interval = null;
+    final ParallelIndexSupervisorTask task = newTask(interval, Granularities.DAY, true, true);
+    final ParallelIndexSupervisorTask task2 = newTask(interval, Granularities.DAY, true, true);
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    task.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task2.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    task2.addToContext(Tasks.USE_SHARED_LOCK, true);
+    getIndexingServiceClient().runTask(task.getId(), task);
+    getIndexingServiceClient().runTask(task2.getId(), task2);
+
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().waitToFinish(task, 1, TimeUnit.DAYS).getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().waitToFinish(task2, 1, TimeUnit.DAYS).getStatusCode());
   }
 
   @Test

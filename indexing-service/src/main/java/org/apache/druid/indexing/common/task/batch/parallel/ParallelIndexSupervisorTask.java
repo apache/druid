@@ -384,7 +384,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 

@@ -238,7 +238,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
@@ -489,7 +490,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final List<Interval> allocateIntervals = new ArrayList<>(partitionAnalysis.getAllIntervalsToIndex());
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        final boolean gotLocks = determineLockGranularityAndTryLock(
+            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+        );
+        if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
