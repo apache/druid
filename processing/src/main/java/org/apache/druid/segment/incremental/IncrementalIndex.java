@@ -49,6 +49,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractIndex;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandler;
@@ -70,7 +71,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -100,7 +100,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable
+public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable, ColumnInspector
 {
   /**
    * Column selector used at ingestion time for inputs to aggregators.
@@ -112,7 +112,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @return column selector factory
    */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
-      final Supplier<RowSignature> rowSignatureSupplier,
+      final ColumnInspector columnInspector,
       final VirtualColumns virtualColumns,
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
@@ -122,7 +122,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         in::get,
-        rowSignatureSupplier::get,
+        columnInspector,
         true
     );
 
@@ -440,8 +440,25 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     ImmutableMap.Builder<String, ColumnCapabilities> builder =
         ImmutableMap.<String, ColumnCapabilities>builder().putAll(timeAndMetricsColumnCapabilities);
 
-    dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+    synchronized (dimensionDescs) {
+      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+    }
     return builder.build();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String columnName)
+  {
+    if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
+      return timeAndMetricsColumnCapabilities.get(columnName);
+    }
+    synchronized (dimensionDescs) {
+      if (dimensionDescs.containsKey(columnName)) {
+        return dimensionDescs.get(columnName).getCapabilities();
+      }
+    }
+    return null;
   }
 
   /**
@@ -871,15 +888,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return new IncrementalIndexStorageAdapter(this);
   }
 
-  @Nullable
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    if (dimensionDescs.containsKey(column)) {
-      return dimensionDescs.get(column).getCapabilities();
-    }
-    return timeAndMetricsColumnCapabilities.get(column);
-  }
-
   public Metadata getMetadata()
   {
     return metadata;
@@ -1011,15 +1019,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       final boolean deserializeComplexMetrics
   )
   {
-    Supplier<RowSignature> signatureSupplier = () -> {
-      Map<String, ColumnCapabilities> capabilitiesMap = getColumnCapabilities();
-      RowSignature.Builder bob = RowSignature.builder();
-      for (Map.Entry<String, ColumnCapabilities> capabilitiesEntry : capabilitiesMap.entrySet()) {
-        bob.add(capabilitiesEntry.getKey(), capabilitiesEntry.getValue().toColumnType());
-      }
-      return bob.build();
-    };
-    return makeColumnSelectorFactory(signatureSupplier, virtualColumns, agg, in, deserializeComplexMetrics);
+    return makeColumnSelectorFactory(this, virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()
