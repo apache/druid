@@ -51,7 +51,7 @@ public class ClientCompactionIntervalSpec
         JodaUtils.umbrellaInterval(
             segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
         ),
-        SegmentUtils.hashIds(segments)
+        null
     );
   }
 
