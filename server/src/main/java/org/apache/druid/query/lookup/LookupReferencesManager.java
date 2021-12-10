@@ -84,8 +84,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
-  private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
+  private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
+      new TypeReference<Map<String, Object>>()
       {
       };
 
@@ -429,7 +429,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   @Nullable
-  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier) throws Exception
+  private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
+      throws IOException, InterruptedException
   {
     final StringFullResponseHolder response = fetchLookupsForTier(tier);
     if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
@@ -454,7 +455,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       );
       return null;
     } else {
-      return jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_REFERENCE);
+      Map<String, Object> lookupNameToGenericConfig =
+          jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
+      return LookupUtils.tryConvertObjectMapToLookupConfigMap(
+          lookupNameToGenericConfig,
+          jsonMapper
+      );
     }
   }
 

@@ -444,7 +444,7 @@ ORDER BY "rank" DESC, "service" DESC`;
             Header: 'Usage',
             show: visibleColumns.shown('Usage'),
             id: 'usage',
-            width: 100,
+            width: 140,
             filterable: false,
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
@@ -496,9 +496,9 @@ ORDER BY "rank" DESC, "service" DESC`;
                   const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
                   const capacity = deepGet(row, 'original.worker.capacity');
                   if (typeof capacity === 'number') {
-                    return `${currCapacityUsed} / ${capacity} (slots)`;
+                    return `Slots used: ${currCapacityUsed} of ${capacity}`;
                   } else {
-                    return '- / -';
+                    return 'Slots used: -';
                   }
                 }
 

@@ -20,25 +20,20 @@ import { Icon, Menu, MenuItem } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import {
-  QueryResult,
-  SqlExpression,
-  SqlLiteral,
-  SqlQuery,
-  SqlRef,
-  trimString,
-} from 'druid-query-toolkit';
+import { QueryResult, SqlExpression, SqlLiteral, SqlRef, trimString } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 import ReactTable from 'react-table';
 
-import { BracedText, TableCell } from '../../../components';
+import { BracedText, Deferred, TableCell } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import {
+  changePage,
   copyAndAlert,
-  deepSet,
-  filterMap,
-  oneOf,
+  formatNumber,
+  getNumericColumnBraces,
+  Pagination,
   prettyPrintSql,
+  QueryAction,
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
   stringifyValue,
@@ -53,47 +48,15 @@ function isComparable(x: unknown): boolean {
   return x !== null && x !== '' && !isNaN(Number(x));
 }
 
-interface Pagination {
-  page: number;
-  pageSize: number;
-}
-
-function changePage(pagination: Pagination, page: number): Pagination {
-  return deepSet(pagination, 'page', page);
-}
-
-function getNumericColumnBraces(
-  queryResult: QueryResult,
-  pagination: Pagination,
-): Record<number, string[]> {
-  const numericColumnBraces: Record<number, string[]> = {};
-
-  const index = pagination.page * pagination.pageSize;
-  const rows = queryResult.rows.slice(index, index + pagination.pageSize);
-  if (rows.length) {
-    const numColumns = queryResult.header.length;
-    for (let c = 0; c < numColumns; c++) {
-      const brace = filterMap(rows, row =>
-        oneOf(typeof row[c], 'number', 'bigint') ? String(row[c]) : undefined,
-      );
-      if (rows.length === brace.length) {
-        numericColumnBraces[c] = brace;
-      }
-    }
-  }
-
-  return numericColumnBraces;
-}
-
 export interface QueryOutputProps {
   queryResult: QueryResult;
-  onQueryChange: (query: SqlQuery, run?: boolean) => void;
+  onQueryAction(action: QueryAction): void;
   onLoadMore: () => void;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, onQueryChange, onLoadMore, runeMode } = props;
+  const { queryResult, onQueryAction, onLoadMore, runeMode } = props;
   const parsedQuery = queryResult.sqlQuery;
   const [pagination, setPagination] = useState<Pagination>({ page: 0, pageSize: 20 });
   const [showValue, setShowValue] = useState<string>();
@@ -123,8 +86,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       const orderByExpression = parsedQuery.isValidSelectIndex(headerIndex)
         ? SqlLiteral.index(headerIndex)
         : SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const orderBy = parsedQuery.getOrderByForSelectIndex(headerIndex);
 
       const basicActions: BasicAction[] = [];
@@ -135,7 +98,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
           icon: reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC,
           title: `Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`,
           onAction: () => {
-            onQueryChange(parsedQuery.changeOrderByExpressions([reverseOrderBy]), true);
+            onQueryAction(q => q.changeOrderByExpressions([reverseOrderBy]));
           },
         });
       } else {
@@ -144,14 +107,14 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.SORT_DESC,
             title: `Order descending`,
             onAction: () => {
-              onQueryChange(parsedQuery.changeOrderByExpressions([descOrderBy]), true);
+              onQueryAction(q => q.changeOrderByExpressions([descOrderBy]));
             },
           },
           {
             icon: IconNames.SORT_ASC,
             title: `Order ascending`,
             onAction: () => {
-              onQueryChange(parsedQuery.changeOrderByExpressions([ascOrderBy]), true);
+              onQueryAction(q => q.changeOrderByExpressions([ascOrderBy]));
             },
           },
         );
@@ -164,9 +127,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.FILTER_REMOVE,
             title: `Remove from WHERE clause`,
             onAction: () => {
-              onQueryChange(
-                parsedQuery.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
-                true,
+              onQueryAction(q =>
+                q.changeWhereExpression(whereExpression.removeColumnFromAnd(header)),
               );
             },
           });
@@ -178,9 +140,8 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
             icon: IconNames.FILTER_REMOVE,
             title: `Remove from HAVING clause`,
             onAction: () => {
-              onQueryChange(
-                parsedQuery.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
-                true,
+              onQueryAction(q =>
+                q.changeHavingExpression(havingExpression.removeColumnFromAnd(header)),
               );
             },
           });
@@ -201,15 +162,15 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon: IconNames.CROSS,
         title: `Remove column`,
         onAction: () => {
-          onQueryChange(parsedQuery.removeOutputColumn(header), true);
+          onQueryAction(q => q.removeOutputColumn(header));
         },
       });
 
-      return basicActionsToMenu(basicActions);
+      return basicActionsToMenu(basicActions)!;
     } else {
       const orderByExpression = SqlRef.column(header);
-      const descOrderBy = orderByExpression.toOrderByPart('DESC');
-      const ascOrderBy = orderByExpression.toOrderByPart('ASC');
+      const descOrderBy = orderByExpression.toOrderByExpression('DESC');
+      const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const descOrderByPretty = prettyPrintSql(descOrderBy);
       const ascOrderByPretty = prettyPrintSql(descOrderBy);
       return (
@@ -245,7 +206,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
   }
 
   function filterOnMenuItem(icon: IconName, clause: SqlExpression, having: boolean) {
-    const { onQueryChange } = props;
+    const { onQueryAction } = props;
     if (!parsedQuery) return;
 
     return (
@@ -253,10 +214,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         icon={icon}
         text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
         onClick={() => {
-          onQueryChange(
-            having ? parsedQuery.addHaving(clause) : parsedQuery.addWhere(clause),
-            true,
-          );
+          onQueryAction(having ? q => q.addHaving(clause) : q => q.addWhere(clause));
         }}
       />
     );
@@ -369,7 +327,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
       if (parsedQuery.hasStarInSelect()) return;
       const selectExpression = parsedQuery.getSelectExpressionForIndex(renamingColumn);
       if (!selectExpression) return;
-      onQueryChange(parsedQuery.changeSelect(renamingColumn, selectExpression.as(renameTo)), true);
+      onQueryAction(q => q.changeSelect(renamingColumn, selectExpression.as(renameTo)));
     }
   }
 
@@ -409,7 +367,10 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                 ? () => <ColumnRenameInput initialName={h} onDone={renameColumnTo} />
                 : () => {
                     return (
-                      <Popover2 className="clickable-cell" content={getHeaderMenu(h, i)}>
+                      <Popover2
+                        className="clickable-cell"
+                        content={<Deferred content={() => getHeaderMenu(h, i)} />}
+                      >
                         <div>
                           {h}
                           {hasFilterOnHeader(h, i) && (
@@ -421,16 +382,17 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
                   },
             headerClassName: getHeaderClassName(h, i),
             accessor: String(i),
-            Cell: function QueryOutputTableCell(row) {
+            Cell(row) {
               const value = row.value;
               return (
                 <div>
-                  <Popover2 content={getCellMenu(h, i, value)}>
+                  <Popover2 content={<Deferred content={() => getCellMenu(h, i, value)} />}>
                     {numericColumnBraces[i] ? (
                       <BracedText
-                        text={String(value)}
+                        text={formatNumber(value)}
                         braces={numericColumnBraces[i]}
                         padFractionalPart
+                        unselectableThousandsSeparator
                       />
                     ) : (
                       <TableCell value={value} unlimited />

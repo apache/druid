@@ -65,7 +65,12 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             rows = parseInputRows(row).iterator();
           }
           catch (IOException e) {
-            rows = new ExceptionThrowingIterator(new ParseException(e, "Unable to parse row [%s]", row));
+            rows = new ExceptionThrowingIterator(new ParseException(
+                String.valueOf(row),
+                e,
+                "Unable to parse row [%s]",
+                row
+            ));
           }
           catch (ParseException e) {
             rows = new ExceptionThrowingIterator(e);
@@ -104,12 +109,12 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       }
       catch (Exception e) {
         return InputRowListPlusRawValues.of(null,
-                                            new ParseException(e, "Unable to parse row [%s] into JSON", row));
+                                            new ParseException(String.valueOf(row), e, "Unable to parse row [%s] into JSON", row));
       }
 
       if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
         return InputRowListPlusRawValues.of(null,
-                                            new ParseException("No map object parsed for row [%s]", row));
+                                            new ParseException(String.valueOf(row), "No map object parsed for row [%s]", row));
       }
 
       List<InputRow> rows;
@@ -120,7 +125,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
         return InputRowListPlusRawValues.ofList(rawColumnsList, e);
       }
       catch (IOException e) {
-        ParseException exception = new ParseException(e, "Unable to parse row [%s] into inputRow", row);
+        ParseException exception = new ParseException(String.valueOf(row), e, "Unable to parse row [%s] into inputRow", row);
         return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
       }
 

@@ -17,40 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.server.initialization.ZkPathsConfig;
-
-import javax.validation.constraints.NotNull;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
+ * This class is different from {@link RelOptPlanner.CannotPlanException} in that the error
+ * messages are user-friendly unlike its parent class. This exception class should be used instead of
+ * {@link org.apache.druid.java.util.common.ISE} or {@link org.apache.druid.java.util.common.IAE} when processing is
+ * to be halted during planning. Similarly, Druid planner can catch this exception and know that the error
+ * can be directly exposed to end-users.
  */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class UnsupportedSQLQueryException extends RelOptPlanner.CannotPlanException
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public ServerInventoryView get()
+  public UnsupportedSQLQueryException(String formatText, Object... arguments)
   {
-    return new SingleServerInventoryView(
-        zkPaths,
-        curator,
-        jsonMapper,
-        Predicates.alwaysTrue()
-    );
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 }

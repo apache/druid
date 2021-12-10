@@ -29,7 +29,7 @@ java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence) @ Use on
 java.lang.String#replaceAll(java.lang.String,java.lang.String) @ Use one of the appropriate methods in StringUtils instead, or compile and cache a Pattern explicitly
 java.lang.String#replaceFirst(java.lang.String,java.lang.String) @ Use String.indexOf() and substring methods, or compile and cache a Pattern explicitly
 java.nio.file.Files#createTempDirectory(java.lang.String,java.nio.file.attribute.FileAttribute[]) @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
-java.nio.file.Files#createTempDirectory(java.lang.String,java.nio.file.Path,java.nio.file.attribute.FileAttribute[]) @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
+java.nio.file.Files#createTempDirectory(java.nio.file.Path,java.lang.String,java.nio.file.attribute.FileAttribute[]) @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
 java.util.HashMap#<init>(int) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
 java.util.HashMap#<init>(int, float) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
 java.util.LinkedHashMap#<init>(int) @ Use org.apache.druid.utils.CollectionUtils#newLinkedHashMapWithExpectedSize(int) instead

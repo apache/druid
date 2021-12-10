@@ -104,14 +104,18 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        throw new ParseException(intermediateRow, e, "Unable to parse row [%s]", intermediateRow);
       }
 
       //throw unknown exception
       throw e;
     }
     if (CollectionUtils.isNullOrEmpty(inputRows)) {
-      throw new ParseException("Unable to parse [%s] as the intermediateRow resulted in empty input row", intermediateRow);
+      throw new ParseException(
+          intermediateRow,
+          "Unable to parse [%s] as the intermediateRow resulted in empty input row",
+          intermediateRow
+      );
     }
     return inputRows;
   }
@@ -129,7 +133,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        throw new ParseException(intermediateRow, e, "Unable to parse row [%s]", intermediateRow);
       }
 
       //throw unknown exception

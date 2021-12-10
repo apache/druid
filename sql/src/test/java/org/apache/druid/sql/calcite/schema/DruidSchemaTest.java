@@ -222,7 +222,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
       }
 
       @Override
-      Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+      protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
       {
         if (throwException) {
           throwException = false;
@@ -489,7 +489,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -531,7 +531,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -577,7 +577,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -620,7 +620,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -660,7 +660,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -717,7 +717,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -811,7 +811,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {
@@ -858,7 +858,7 @@ public class DruidSchemaTest extends DruidSchemaTestCommon
     )
     {
       @Override
-      void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
       {
         super.addSegment(server, segment);
         if (datasource.equals(segment.getDataSource())) {

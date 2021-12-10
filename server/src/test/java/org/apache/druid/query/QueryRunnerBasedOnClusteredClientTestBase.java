@@ -44,7 +44,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.QueryableIndex;
@@ -65,7 +64,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -247,7 +245,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   protected static ResponseContext responseContext()
   {
     final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
-    responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    responseContext.initializeRemainingResponses();
     return responseContext;
   }
 

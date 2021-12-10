@@ -236,7 +236,7 @@ export class DruidError extends Error {
   public host?: string;
   public suggestion?: QuerySuggestion;
 
-  constructor(e: any) {
+  constructor(e: any, removeLines?: number) {
     super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
     if (axios.isCancel(e)) {
       this.canceled = true;
@@ -262,6 +262,13 @@ export class DruidError extends Error {
       Object.assign(this, druidErrorResponse);
 
       if (this.errorMessage) {
+        if (removeLines) {
+          this.errorMessage = this.errorMessage.replace(
+            /line (\d+),/g,
+            (_, c) => `line ${Number(c) - removeLines},`,
+          );
+        }
+
         this.position = DruidError.parsePosition(this.errorMessage);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
 

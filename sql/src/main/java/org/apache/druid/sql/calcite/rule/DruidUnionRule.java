@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Union;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 
@@ -33,9 +34,9 @@ import java.util.List;
  */
 public class DruidUnionRule extends RelOptRule
 {
-  private static final DruidUnionRule INSTANCE = new DruidUnionRule();
+  private final PlannerContext plannerContext;
 
-  private DruidUnionRule()
+  public DruidUnionRule(PlannerContext plannerContext)
   {
     super(
         operand(
@@ -44,11 +45,7 @@ public class DruidUnionRule extends RelOptRule
             operand(DruidRel.class, none())
         )
     );
-  }
-
-  public static DruidUnionRule instance()
-  {
-    return INSTANCE;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -58,7 +55,7 @@ public class DruidUnionRule extends RelOptRule
     final Union unionRel = call.rel(0);
     final DruidRel<?> firstDruidRel = call.rel(1);
     final DruidRel<?> secondDruidRel = call.rel(2);
-    return !DruidUnionDataSourceRule.isCompatible(unionRel, firstDruidRel, secondDruidRel);
+    return !DruidUnionDataSourceRule.isCompatible(unionRel, firstDruidRel, secondDruidRel, null);
   }
 
   @Override
@@ -78,6 +75,8 @@ public class DruidUnionRule extends RelOptRule
               -1
           )
       );
+    } else {
+      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
   }
 }

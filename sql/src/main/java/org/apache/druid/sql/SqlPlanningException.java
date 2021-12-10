@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.BadQueryException;
@@ -33,7 +34,8 @@ public class SqlPlanningException extends BadQueryException
   public enum PlanningError
   {
     SQL_PARSE_ERROR("SQL parse failed", SqlParseException.class.getName()),
-    VALIDATION_ERROR("Plan validation failed", ValidationException.class.getName());
+    VALIDATION_ERROR("Plan validation failed", ValidationException.class.getName()),
+    UNSUPPORTED_SQL_ERROR("SQL query is unsupported", RelOptPlanner.CannotPlanException.class.getName());
 
     private final String errorCode;
     private final String errorClass;

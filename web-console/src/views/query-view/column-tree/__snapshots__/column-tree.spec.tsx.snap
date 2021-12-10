@@ -127,6 +127,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 </Blueprint3.Popover2>,
               },
             ],
+            "className": undefined,
             "icon": "th",
             "id": "wikipedia",
             "isExpanded": true,
