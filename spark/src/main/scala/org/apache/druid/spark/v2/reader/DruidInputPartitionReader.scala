@@ -34,7 +34,6 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 import org.apache.spark.sql.types.StructType
-import org.joda.time.Interval
 
 import java.io.File
 import scala.collection.JavaConverters.setAsJavaSetConverter
@@ -124,13 +123,7 @@ private[v2] object DruidInputPartitionReader {
       ColumnsFilter.inclusionBased(columns.toSet.asJava)
     )
 
-    // The constructor for DruidSegmentInputEntity is package-private and so inaccesible here. Testing whether using
-    // reflection here resolves an apparently unrelated but consistent failure in KafkaLookupExtractorFactoryTest.
-    val druidSegmentInputEntityConstructor = classOf[DruidSegmentInputEntity].getDeclaredConstructor(
-      classOf[SegmentLoader], classOf[DataSegment], classOf[Interval]
-    )
-    druidSegmentInputEntityConstructor.setAccessible(true)
-    val inputSource = druidSegmentInputEntityConstructor.newInstance(
+    val inputSource = new DruidSegmentInputEntity(
       segmentLoader,
       segment,
       segment.getInterval
