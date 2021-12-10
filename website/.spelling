@@ -38,6 +38,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+concat
 CIDR
 CORS
 CNF
