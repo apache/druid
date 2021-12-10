@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -73,6 +74,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -230,7 +232,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -1109,11 +1111,37 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
-    Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
-                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1. " +
+                     "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
+    );
+    checkSqlRequestLog(false);
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  /**
+   * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
+   * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
+   * for such planning errors.
+   */
+  @Test
+  public void testCannotConvert_UnsupportedSQLQueryException() throws Exception
+  {
+    // max(string) unsupported
+    final QueryException exception = doPost(
+        createSimpleQueryWithId("id", "SELECT max(dim1) FROM druid.foo")
+    ).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
+    Assert.assertTrue(
+        exception.getMessage()
+            .contains("Cannot build plan for query: SELECT max(dim1) FROM druid.foo. " +
+                "Possible error: Max aggregation is not supported for 'STRING' type")
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1129,7 +1157,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of("maxMergingDictionarySize", 1, "sqlQueryId", "id"),
+            ImmutableMap.of("maxMergingDictionarySize", 1, BaseQuery.SQL_QUERY_ID, "id"),
             null
         )
     ).lhs;
@@ -1147,7 +1175,7 @@ public class SqlResourceTest extends CalciteTestBase
     String errorMessage = "This will be support in Druid 9999";
     SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
     EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
-    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of("sqlQueryId", "id"));
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"));
     EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
     EasyMock.replay(badQuery);
     final QueryException exception = doPost(badQuery).lhs;
@@ -1291,7 +1319,7 @@ public class SqlResourceTest extends CalciteTestBase
                   false,
                   false,
                   false,
-                  ImmutableMap.of("priority", -5, "sqlQueryId", sqlQueryId),
+                  ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
                   null
               ),
               makeRegularUserReq()
@@ -1332,7 +1360,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testQueryTimeoutException() throws Exception
   {
     final String sqlQueryId = "timeoutTest";
-    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, "sqlQueryId", sqlQueryId);
+    Map<String, Object> queryContext = ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1, BaseQuery.SQL_QUERY_ID, sqlQueryId);
     final QueryException timeoutException = doPost(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
@@ -1483,7 +1511,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of("sqlQueryId", sqlQueryId), null);
+    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
   }
 
   private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception

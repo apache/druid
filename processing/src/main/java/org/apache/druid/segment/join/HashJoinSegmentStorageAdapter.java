@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -34,7 +33,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.Filters;
@@ -370,10 +368,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable List<VirtualColumn> postJoinVirtualColumns
   )
   {
-    final Set<String> baseColumns = new HashSet<>();
-    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
+    final Set<String> baseColumns = new HashSet<>(baseAdapter.getRowSignature().getColumnNames());
 
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
       // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.

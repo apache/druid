@@ -245,7 +245,7 @@ public class MultiValueStringOperatorConversions
 
   public static class StringToMultiString extends StringToArrayOperatorConversion
   {
-    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+    public static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder("STRING_TO_MV")
         .operandTypeChecker(
             OperandTypes.sequence(

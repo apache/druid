@@ -22,13 +22,11 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -45,7 +43,7 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -65,6 +63,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -206,22 +205,20 @@ public class SqlResource
       throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
                                              .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
+    catch (RelOptPlanner.CannotPlanException e) {
+      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      SqlPlanningException spe = new SqlPlanningException(SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
+          e.getMessage());
+      return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
+    }
     // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
     catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
       endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
 
-      final Throwable exceptionToReport;
-
-      if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
-      } else {
-        exceptionToReport = e;
-      }
-
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport),
+          QueryInterruptedException.wrapIfNeeded(e),
           sqlQueryId
       );
     }
@@ -278,13 +275,13 @@ public class SqlResource
     if (lifecycles.isEmpty()) {
       return Response.status(Status.NOT_FOUND).build();
     }
-    Set<Resource> resources = lifecycles
+    Set<ResourceAction> resources = lifecycles
         .stream()
-        .flatMap(lifecycle -> lifecycle.getAuthorizedResources().stream())
+        .flatMap(lifecycle -> lifecycle.getRequiredResourceActions().stream())
         .collect(Collectors.toSet());
     Access access = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        Iterables.transform(resources, AuthorizationUtils.RESOURCE_READ_RA_GENERATOR),
+        resources,
         authorizerMapper
     );
 

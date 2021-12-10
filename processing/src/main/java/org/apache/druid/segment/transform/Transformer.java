@@ -59,7 +59,7 @@ public class Transformer
                                       RowBasedColumnSelectorFactory.create(
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
-                                          RowSignature::empty, // sad
+                                          RowSignature.empty(), // sad
                                           false
                                       )
                                   );
@@ -212,6 +212,11 @@ public class Transformer
       } else {
         return row.getMetric(metric);
       }
+    }
+
+    public InputRow getRow()
+    {
+      return row;
     }
 
     @Override

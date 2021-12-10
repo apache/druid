@@ -83,6 +83,12 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
+  public RowSignature getRowSignature()
+  {
+    return rowSignature;
+  }
+
+  @Override
   public int getDimensionCardinality(String column)
   {
     return Integer.MAX_VALUE;

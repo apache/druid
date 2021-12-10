@@ -78,7 +78,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
     Optional<SupervisorSpec> supervisorSpecOptional = supervisorManager.getSupervisorSpec(supervisorId);
     if (!supervisorSpecOptional.isPresent()) {
       throw new WebApplicationException(
-          Response.status(Response.Status.BAD_REQUEST)
+          Response.status(Response.Status.NOT_FOUND)
                   .entity(StringUtils.format("Cannot find any supervisor with id: [%s]", supervisorId))
                   .build()
       );

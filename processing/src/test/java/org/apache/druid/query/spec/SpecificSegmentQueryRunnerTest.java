@@ -197,17 +197,11 @@ public class SpecificSegmentQueryRunnerTest
   private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, ResponseContext responseContext)
       throws IOException
   {
-    Object missingSegments = responseContext.get(ResponseContext.Key.MISSING_SEGMENTS);
-
+    List<SegmentDescriptor> missingSegments = responseContext.getMissingSegments();
     Assert.assertTrue(missingSegments != null);
-    Assert.assertTrue(missingSegments instanceof List);
 
-    Object segmentDesc = ((List) missingSegments).get(0);
-
-    Assert.assertTrue(segmentDesc instanceof SegmentDescriptor);
-
+    SegmentDescriptor segmentDesc = missingSegments.get(0);
     SegmentDescriptor newDesc = mapper.readValue(mapper.writeValueAsString(segmentDesc), SegmentDescriptor.class);
-
     Assert.assertEquals(descriptor, newDesc);
   }
 }

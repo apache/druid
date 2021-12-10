@@ -59,7 +59,7 @@ import java.util.stream.Stream;
 /**
  * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}. All {@link Function} implementations
  * are immutable.
- *
+ * <p>
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
@@ -769,7 +769,7 @@ public interface Function
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorProcessors.constantDouble(PI, inspector.getMaxVectorSize());
+      return VectorProcessors.constant(PI, inspector.getMaxVectorSize());
     }
   }
 
@@ -1162,6 +1162,51 @@ public interface Function
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorMathProcessors.cot(inspector, args.get(0));
+    }
+  }
+
+  class SafeDivide extends BivariateMathFunction
+  {
+    public static final String NAME = "safe_divide";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.function(
+          args.get(0).getOutputType(inspector),
+          args.get(1).getOutputType(inspector)
+      );
+    }
+
+    @Override
+    protected ExprEval eval(final long x, final long y)
+    {
+      if (y == 0) {
+        if (x != 0) {
+          return ExprEval.ofLong(NullHandling.defaultLongValue());
+        }
+        return ExprEval.ofLong(0);
+      }
+      return ExprEval.ofLong(x / y);
+    }
+
+    @Override
+    protected ExprEval eval(final double x, final double y)
+    {
+      if (y == 0 || Double.isNaN(y)) {
+        if (x != 0) {
+          return ExprEval.ofDouble(NullHandling.defaultDoubleValue());
+        }
+        return ExprEval.ofDouble(0);
+      }
+      return ExprEval.ofDouble(x / y);
     }
   }
 
@@ -1932,7 +1977,9 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
+                                                                                      .getLiteralValue()
+                                                                                      .toString()));
         switch (castTo.getType()) {
           case ARRAY:
             return Collections.emptySet();
@@ -1948,7 +1995,9 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
+                                                                                      .getLiteralValue()
+                                                                                      .toString()));
         switch (castTo.getType()) {
           case LONG:
           case DOUBLE:
@@ -2187,6 +2236,18 @@ public interface Function
     {
       return ExpressionTypeConversion.conditional(inspector, args);
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+    }
   }
 
   class IsNullFunc implements Function
@@ -2218,6 +2279,18 @@ public interface Function
     {
       return ExpressionType.LONG;
     }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNull(inspector, args.get(0));
+    }
   }
 
   class IsNotNullFunc implements Function
@@ -2248,6 +2321,19 @@ public interface Function
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExpressionType.LONG;
+    }
+
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.isNotNull(inspector, args.get(0));
     }
   }
 
@@ -3237,7 +3323,9 @@ public interface Function
               break;
             }
           }
-          return index < 0 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null) : ExprEval.ofLong(index + 1);
+          return index < 0
+                 ? ExprEval.ofLong(NullHandling.replaceWithDefault() ? -1 : null)
+                 : ExprEval.ofLong(index + 1);
         default:
           throw new IAE("Function[%s] 2nd argument must be a a scalar type", name());
       }
@@ -3591,7 +3679,8 @@ public interface Function
             name()
         );
       }
-      ExpressionType complexType = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
+      ExpressionType complexType = ExpressionTypeFactory.getInstance()
+                                                        .ofComplex((String) args.get(0).getLiteralValue());
       ObjectByteStrategy strategy = Types.getStrategy(complexType.getComplexTypeName());
       if (strategy == null) {
         throw new IAE(

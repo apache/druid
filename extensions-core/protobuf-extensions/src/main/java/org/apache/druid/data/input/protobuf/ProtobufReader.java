@@ -93,7 +93,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
         record = CollectionUtils.mapKeys(intermediateRow.getAllFields(), k -> k.getJsonName());
       }
       catch (Exception ex) {
-        throw new ParseException(ex, "Protobuf message could not be parsed");
+        throw new ParseException(null, ex, "Protobuf message could not be parsed");
       }
     } else {
       try {
@@ -102,7 +102,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
         record = recordFlattener.flatten(document);
       }
       catch (InvalidProtocolBufferException e) {
-        throw new ParseException(e, "Protobuf message could not be parsed");
+        throw new ParseException(null, e, "Protobuf message could not be parsed");
       }
     }
 

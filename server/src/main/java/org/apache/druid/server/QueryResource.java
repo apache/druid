@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +56,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -78,6 +80,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -215,7 +218,7 @@ public class QueryResource implements QueryCountStatsProvider
       final ResponseContext responseContext = queryResponse.getResponseContext();
       final String prevEtag = getPreviousEtag(req);
 
-      if (prevEtag != null && prevEtag.equals(responseContext.get(ResponseContext.Key.ETAG))) {
+      if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
@@ -274,16 +277,13 @@ public class QueryResource implements QueryCountStatsProvider
             )
             .header("X-Druid-Query-Id", queryId);
 
-        Object entityTag = responseContext.remove(ResponseContext.Key.ETAG);
-        if (entityTag != null) {
-          responseBuilder.header(HEADER_ETAG, entityTag);
-        }
+        transferEntityTag(responseContext, responseBuilder);
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        //Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        //and encodes the string using ASCII, so 1 char is = 1 byte
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
             jsonMapper,
             responseContextConfig.getMaxResponseContextHeaderSize()
@@ -556,5 +556,14 @@ public class QueryResource implements QueryCountStatsProvider
   public long getTimedOutQueryCount()
   {
     return timedOutQueryCount.get();
+  }
+
+  @VisibleForTesting
+  public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
+  {
+    Object entityTag = context.remove(Keys.ETAG);
+    if (entityTag != null) {
+      builder.header(HEADER_ETAG, entityTag);
+    }
   }
 }

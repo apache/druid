@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import org.apache.datasketches.Family;
 import org.apache.datasketches.Util;
 import org.apache.datasketches.theta.SetOperation;
@@ -47,6 +48,13 @@ import java.util.List;
 public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
+
+  // Smallest number of entries in an Aggregator. Each entry is a long. Based on the constructor of
+  // HeapQuickSelectSketch and used by guessAggregatorHeapFootprint.
+  private static final int MIN_ENTRIES_PER_AGGREGATOR = 1 << Util.MIN_LG_ARR_LONGS;
+
+  // Largest preamble size for the sketch stored in an Aggregator, in bytes. Based on Util.getMaxUnionBytes.
+  private static final int LONGEST_POSSIBLE_PREAMBLE_BYTES = Family.UNION.getMaxPreLongs() << 3;
 
   protected final String name;
   protected final String fieldName;
@@ -168,6 +176,23 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public int getSize()
   {
     return size;
+  }
+
+  @Override
+  public int guessAggregatorHeapFootprint(long rows)
+  {
+    final int maxEntries = size * 2;
+    final int expectedEntries;
+
+    if (rows > maxEntries) {
+      expectedEntries = maxEntries;
+    } else {
+      // rows is within int range since it's <= maxEntries, so casting is OK.
+      expectedEntries = Math.max(MIN_ENTRIES_PER_AGGREGATOR, Util.ceilingPowerOf2(Ints.checkedCast(rows)));
+    }
+
+    // 8 bytes per entry + largest possible preamble.
+    return Long.BYTES * expectedEntries + LONGEST_POSSIBLE_PREAMBLE_BYTES;
   }
 
   @Override

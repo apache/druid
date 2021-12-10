@@ -31,6 +31,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
@@ -49,6 +50,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -120,6 +122,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         ImmutableMap.of("key", "value")
     );
 
@@ -218,6 +221,10 @@ public class ClientCompactionTaskQuerySerdeTest
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
     );
+    Assert.assertEquals(
+        query.getTransformSpec().getFilter(),
+        task.getTransformSpec().getFilter()
+    );
   }
 
   @Test
@@ -277,6 +284,7 @@ public class ClientCompactionTaskQuerySerdeTest
         )
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
         .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null))
+        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
@@ -321,6 +329,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
         new HashMap<>()
     );
 

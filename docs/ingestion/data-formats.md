@@ -598,11 +598,9 @@ For example:
   ]
 }
 ```
-After Druid reads the input data records, it applies the flattenSpec before applying any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec),
-> [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec). Keep this in mind when writing your ingestion spec.
+After Druid reads the input data records, it applies the flattenSpec before applying any other specs such as [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), or [`metricsSpec`](./ingestion-spec.md#metricsspec).  This makes it possible to extract timestamps from flattened data, for example, and to refer to flattened data in transformations, in your dimension list, and when generating metrics.
 
-Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`,
-and `parquet`.
+Flattening is only supported for [data formats](data-formats.md) that support nesting, including `avro`, `json`, `orc`, and `parquet`.
 
 #### Field flattening specifications
 
@@ -622,6 +620,20 @@ Each entry in the `fields` list can have the following components:
 * If `useFieldDiscovery` is enabled, any discovered field with the same name as one already defined in the `fields` list will be skipped, rather than added twice.
 * [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing `path`-type expressions.
 * jackson-jq supports a subset of the full [jq](https://stedolan.github.io/jq/) syntax.  Please refer to the [jackson-jq documentation](https://github.com/eiiches/jackson-jq) for details.
+* [JsonPath](https://github.com/jayway/JsonPath) supports a bunch of functions, but not all of these functions are supported by Druid now. Following matrix shows the current supported JsonPath functions and corresponding data formats. Please also note the output data type of these functions.
+  
+  | Function   | Description                                                         | Output type | json | orc | avro | parquet |
+  | :----------| :------------------------------------------------------------------ |:----------- |:-----|:----|:-----|:-----|
+  | min()      | Provides the min value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | max()      | Provides the max value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | avg()      | Provides the average value of an array of numbers                   | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | stddev()   | Provides the standard deviation value of an array of numbers        | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | length()   | Provides the length of an array                                     | Integer     | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | sum()      | Provides the sum value of an array of numbers                       | Double      | &#10003;  |  &#10003;   |   &#10003;   |  &#10003;   |
+  | concat(X)  | Provides a concatenated version of the path output with a new item  | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
+  | append(X)  | add an item to the json path output array                           | like input  | &#10003;  |  &#10007;   |   &#10007;   | &#10007;   |
+  | keys()     | Provides the property keys (An alternative for terminal tilde ~)    | Set<E>      | &#10007;  |  &#10007;   |   &#10007;   | &#10007;   |
+
 
 ## Parser
 

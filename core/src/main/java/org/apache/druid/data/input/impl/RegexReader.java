@@ -82,7 +82,7 @@ public class RegexReader extends TextReader
       final Matcher matcher = compiledPattern.matcher(line);
 
       if (!matcher.matches()) {
-        throw new ParseException("Incorrect Regex: %s . No match found.", pattern);
+        throw new ParseException(line, "Incorrect Regex: %s . No match found.", pattern);
       }
 
       final List<String> values = new ArrayList<>();
@@ -97,7 +97,7 @@ public class RegexReader extends TextReader
       return Utils.zipMapPartial(columns, Iterables.transform(values, multiValueFunction));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", line);
+      throw new ParseException(line, e, "Unable to parse row [%s]", line);
     }
   }
 

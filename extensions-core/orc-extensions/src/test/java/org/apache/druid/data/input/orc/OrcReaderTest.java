@@ -112,6 +112,11 @@ public class OrcReaderTest
             ImmutableList.of(
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_int", "$.middle.list[1].int1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_intlist", "$.middle.list[*].int1"),
+                new JSONPathFieldSpec(
+                    JSONPathFieldType.PATH,
+                    "struct_list_struct_middleListLength",
+                    "$.middle.list.length()"
+                ),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "list_struct_string", "$.list[0].string1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "map_struct_int", "$.map.chani.int1")
             )
@@ -145,6 +150,8 @@ public class OrcReaderTest
       Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
       Assert.assertEquals(ImmutableList.of("1", "2"), row.getDimension("struct_list_struct_intlist"));
       Assert.assertEquals("good", Iterables.getOnlyElement(row.getDimension("list_struct_string")));
+
+      Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_middleListLength")));
       Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
 
       while (iterator.hasNext()) {
@@ -250,6 +257,58 @@ public class OrcReaderTest
         iterator.next();
       }
       Assert.assertEquals(212000, actualRowCount);
+    }
+  }
+
+  /**
+   * schema: struct<string1:string, list:array<int>, ts:timestamp>
+   * data:   {"dim1","[7,8,9]","2000-03-12 15:00:00"}
+   */
+  @Test
+  public void testJsonPathFunctions() throws IOException
+  {
+    final OrcInputFormat inputFormat = new OrcInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "min", "$.list.min()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "max", "$.list.max()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "avg", "$.list.avg()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "len", "$.list.length()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "sum", "$.list.sum()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "stddev", "$.list.stddev()"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "append", "$.list.append(10)")
+            )
+        ),
+        null,
+        new Configuration()
+    );
+    final InputEntityReader reader = createReader(
+        new TimestampSpec("ts", "millis", null),
+        new DimensionsSpec(null),
+        inputFormat,
+        "example/test_json_path_functions.orc"
+    );
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int actualRowCount = 0;
+
+      while (iterator.hasNext()) {
+        final InputRow row = iterator.next();
+        actualRowCount++;
+
+        Assert.assertEquals("7.0", Iterables.getOnlyElement(row.getDimension("min")));
+        Assert.assertEquals("8.0", Iterables.getOnlyElement(row.getDimension("avg")));
+        Assert.assertEquals("9.0", Iterables.getOnlyElement(row.getDimension("max")));
+        Assert.assertEquals("24.0", Iterables.getOnlyElement(row.getDimension("sum")));
+        Assert.assertEquals("3", Iterables.getOnlyElement(row.getDimension("len")));
+
+        //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
+        Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
+
+        //append is not supported
+        Assert.assertEquals(Collections.emptyList(), row.getDimension("append"));
+      }
+      Assert.assertEquals(1, actualRowCount);
     }
   }
 
