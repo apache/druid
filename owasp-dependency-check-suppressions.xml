@@ -388,9 +388,9 @@
   <suppress>
     <!-- hive-storage-api has the thrift vulnerability too -->
     <notes><![CDATA[
-     file name: hive-storage-api-2.8.1.jar
+     file name: hive-storage-api-2.7.1.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.7.1$</packageUrl>
     <cve>CVE-2020-13949</cve>
   </suppress>
   <suppress>
