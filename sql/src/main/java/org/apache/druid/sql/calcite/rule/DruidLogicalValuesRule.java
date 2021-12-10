@@ -35,7 +35,6 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -100,25 +99,18 @@ public class DruidLogicalValuesRule extends RelOptRule
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
-        return literal.getValueAs(String.class);
+        return String.valueOf(RexLiteral.value(literal));
       case FLOAT:
-        return literal.getValueAs(Float.class);
+        return ((Number) RexLiteral.value(literal)).floatValue();
       case DOUBLE:
       case REAL:
       case DECIMAL:
-        return literal.getValueAs(Double.class);
+        return ((Number) RexLiteral.value(literal)).doubleValue();
       case TINYINT:
       case SMALLINT:
       case INTEGER:
       case BIGINT:
-        // Safegaurd in case the internal implementaion of the RexLiteral for numbers change
-        Object maybeBigDecimalImpl = literal.getValue();
-        if (maybeBigDecimalImpl instanceof BigDecimal) {
-          return ((BigDecimal) maybeBigDecimalImpl).longValue();
-        }
-        // This might return incorrect value if the literal was created from float.
-        // For example, representation of the form 123.0 can return 1230
-        return literal.getValueAs(Long.class);
+        return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:

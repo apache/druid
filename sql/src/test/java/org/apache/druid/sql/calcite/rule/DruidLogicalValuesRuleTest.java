@@ -29,6 +29,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -72,11 +73,11 @@ public class DruidLogicalValuesRuleTest
       );
     }
 
-    private final Object val;
+    private final Comparable<?> val;
     private final SqlTypeName sqlTypeName;
     private final Class<?> javaType;
 
-    public GetValueFromLiteralSimpleTypesTest(Object val, SqlTypeName sqlTypeName, Class<?> javaType)
+    public GetValueFromLiteralSimpleTypesTest(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
     {
       this.val = val;
       this.sqlTypeName = sqlTypeName;
@@ -91,14 +92,19 @@ public class DruidLogicalValuesRuleTest
       Assert.assertSame(javaType, fromLiteral.getClass());
       Assert.assertEquals(val, fromLiteral);
       Mockito.verify(literal, Mockito.times(1)).getType();
-      Mockito.verify(literal, Mockito.times(1)).getValueAs(ArgumentMatchers.any());
     }
 
-    private static RexLiteral makeLiteral(Object val, SqlTypeName typeName, Class<?> javaType)
+    private static RexLiteral makeLiteral(Comparable<?> val, SqlTypeName typeName, Class<?> javaType)
     {
       RelDataType dataType = Mockito.mock(RelDataType.class);
       Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
       RexLiteral literal = Mockito.mock(RexLiteral.class);
+      try {
+        FieldUtils.writeField(literal, "value", val, true);
+      }
+      catch (Exception e) {
+        Assert.fail("Unable to mock the literal for test.");
+      }
       Mockito.when(literal.getType()).thenReturn(dataType);
       Mockito.when(literal.getValueAs(ArgumentMatchers.any())).thenReturn(javaType.cast(val));
       return literal;
