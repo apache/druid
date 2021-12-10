@@ -99,7 +99,7 @@ public class DruidLogicalValuesRule extends RelOptRule
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
-        return String.valueOf(RexLiteral.value(literal));
+        return RexLiteral.stringValue(literal);
       case FLOAT:
         return ((Number) RexLiteral.value(literal)).floatValue();
       case DOUBLE:
