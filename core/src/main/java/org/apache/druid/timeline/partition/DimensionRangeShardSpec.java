@@ -149,45 +149,56 @@ public class DimensionRangeShardSpec implements ShardSpec
    */
   private boolean isRangeSetSingletonWithVal(RangeSet<String> rangeSet, String val)
   {
-    Range<String> singletonRange = Range.closed(val, val);
-    RangeSet<String> singletonRangeSet = TreeRangeSet.create();
-    singletonRangeSet.add(singletonRange);
-    return rangeSet.equals(singletonRangeSet);
+    if (val == null) {
+      return false;
+    }
+    return rangeSet.asRanges().equals(
+        Collections.singleton(Range.closed(val, val))
+    );
   }
 
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    // Indicate if start[0:dim), end[0:dim) are the greatest, least members of domain[0:dim) respectively
-    boolean startIsGreatestInDomain = true, endIsLeastInDomain = true;
-    for (int dim = 0; dim < dimensions.size(); dim++) {
-      // Query domain for given dimension
-      RangeSet<String> queryDomainForDimension = TreeRangeSet.create();
-      if (domain.get(dimensions.get(dim)) == null) {
-        // Universal set if there is no constraint in the query
+    // Trivial check for empty cartesian product
+    for (RangeSet<String> domainForDimension: domain.values()) {
+      if (domainForDimension.isEmpty()) {
+        return false;
+      }
+    }
+
+    final StringTuple segmentStart = start == null ? new StringTuple(new String[dimensions.size()]) : start;
+    final StringTuple segmentEnd = end == null ? new StringTuple(new String[dimensions.size()]) : end;
+    //Indicates if the start values of the previous dimensions marks the upper boundary of the query domain
+    boolean startIsGreatestInDomain = true;
+    //Indicates if the end values of the previous dimensions marks the lower boundary of the query domain
+    boolean endIsLeastInDomain = true;
+    for (int i = 0; i < dimensions.size(); i++) {
+      String dimension = dimensions.get(i);
+      RangeSet<String> queryDomainForDimension = domain.get(dimension);
+      if (queryDomainForDimension == null) {
+        queryDomainForDimension = TreeRangeSet.create();
         queryDomainForDimension.add(Range.all());
-      } else {
-        // Copy to avoid changes to the query itself
-        queryDomainForDimension.addAll(domain.get(dimensions.get(dim)));
       }
-      // Range for given dimension as per segment metadata
-      Range<String> segmentRangeForDimension = Range.all();
-      if (startIsGreatestInDomain && start != null && start.get(dim) != null) {
-        segmentRangeForDimension.intersection(Range.atLeast(start.get(dim)));
+      // Range to compare the domain against
+      Range<String> rangeTillSegmentBoundary = Range.all();
+      if (startIsGreatestInDomain && segmentStart.get(i) != null) {
+        rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atLeast(segmentStart.get(i)));
       }
-      if (endIsLeastInDomain && end != null && end.get(dim) != null) {
-        segmentRangeForDimension.intersection(Range.atMost(end.get(dim)));
+      if (endIsLeastInDomain && segmentEnd.get(i) != null) {
+        rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atMost(segmentEnd.get(i)));
       }
-      RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(segmentRangeForDimension);
-      // Prune immediately since query domain for this dimension lies completely out of the segment metadata's range
+      RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
+      // Prune segment because domain is out of range
       if (effectiveDomainForDimension.isEmpty()) {
         return false;
       }
+      // Update flags based on whether the effective domain lies on the boundary of this dimension
       startIsGreatestInDomain = startIsGreatestInDomain
-                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, start.get(dim));
+                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
       endIsLeastInDomain = endIsLeastInDomain
-                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, end.get(dim));
-      // If neither of the above booleans is true, we cannot prune with certainty
+                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
+      // If the query domain overflows either boundary of the segment, we cannot prune any further
       if (!startIsGreatestInDomain && !endIsLeastInDomain) {
         return true;
       }

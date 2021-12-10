@@ -19,8 +19,6 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -28,8 +26,8 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ScopedMock;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -306,20 +304,93 @@ public class DimensionRangeShardSpecTest
   @Test
   public void testPossibleInDomain()
   {
-    // multi-dim index on <d1, d2, d3>
-    setDimensions("d1", "d2", "d3");
+    setDimensions("planet", "country", "city");
 
-    // start: <s1, s2, s3>, end: <e1, e2, e3>
-    StringTuple start = StringTuple.create("Earth", "France", "Paris");
-    StringTuple end = StringTuple.create("Earth", "USA", "New York");
+    final StringTuple start = StringTuple.create("Earth", "France", "Paris");
+    final StringTuple end = StringTuple.create("Earth", "USA", "New York");
+
+    final RangeSet<String> emptySet = TreeRangeSet.create();
+    final RangeSet<String> universalSet = TreeRangeSet.create();
+    universalSet.add(Range.all());
+
     ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
-
-    // domain -> empty
     Map<String, RangeSet<String>> domain = new HashMap<>();
-    domain.put("d1", TreeRangeSet.create());
-    domain.put("d2", TreeRangeSet.create());
-    domain.put("d3", TreeRangeSet.create());
+    RangeSet<String> planetSet;
+    RangeSet<String> countrySet;
+    RangeSet<String> citySet;
+
+    // null * null * null === (-INF, INF) * (-INF, INF) * (-INF, INF)
+    assertTrue(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, INF) * (-INF, INF)
+    populateDomain(domain, universalSet, universalSet, universalSet);
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {} * {} * {}
+    populateDomain(domain, emptySet, emptySet, emptySet);
     assertFalse(shard.possibleInDomain(domain));
+
+    // {Earth} * (-INF, INF) * (-INF, INF)
+    planetSet = getUnion(Range.singleton("Earth"));
+    populateDomain(domain, planetSet, universalSet, universalSet);
+    assertTrue(shard.possibleInDomain(domain));
+
+    // (-INF, Earth) * (-INF, INF) * (-INF, INF)
+    planetSet = getUnion(Range.lessThan("Earth"));
+    populateDomain(domain, planetSet, universalSet, universalSet);
+    assertFalse(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, "France") * (-INF, INF)
+    countrySet = getUnion(Range.lessThan("France"));
+    populateDomain(domain, universalSet, countrySet, universalSet);
+    assertFalse(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, "New York"] * Any non-empty set
+    countrySet = getUnion(Range.atMost("USA"));
+    populateDomain(domain, universalSet, countrySet, universalSet);
+    assertTrue(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, "New York"] * empty set
+    countrySet = getUnion(Range.open("France", "USA"));
+    populateDomain(domain, universalSet, countrySet, emptySet);
+    assertFalse(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, "France] * (-INF, Paris)
+    countrySet = getUnion(Range.atMost("France"));
+    citySet = getUnion(Range.lessThan("Paris"));
+    populateDomain(domain, universalSet, countrySet, citySet);
+    assertFalse(shard.possibleInDomain(domain));
+
+    // {Earth} * {USA} * {New York}
+    planetSet = getUnion(Range.singleton("Earth"));
+    countrySet = getUnion(Range.singleton("USA"));
+    citySet = getUnion(Range.singleton("New York"));
+    populateDomain(domain, planetSet, countrySet, citySet);
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Earth} * {USA} * (New York, INF)
+    planetSet = getUnion(Range.singleton("Earth"));
+    countrySet = getUnion(Range.singleton("USA"));
+    citySet = getUnion(Range.greaterThan("New York"));
+    populateDomain(domain, planetSet, countrySet, citySet);
+    assertFalse(shard.possibleInDomain(domain));
+  }
+
+  private RangeSet<String> getUnion(Range<String>... ranges) {
+    RangeSet<String> unionSet = TreeRangeSet.create();
+    for (Range<String> range: ranges) {
+      unionSet.add(range);
+    }
+    return unionSet;
+  }
+
+  private void populateDomain(Map<String, RangeSet<String>> domain,
+                              RangeSet<String> planetSet, RangeSet<String> countrySet, RangeSet<String> citySet)
+  {
+    domain.clear();
+    domain.put("planet", planetSet);
+    domain.put("country", countrySet);
+    domain.put("city", citySet);
   }
 
   /**
