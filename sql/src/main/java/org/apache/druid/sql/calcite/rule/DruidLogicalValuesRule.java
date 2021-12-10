@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -93,9 +94,13 @@ public class DruidLogicalValuesRule extends RelOptRule
    *
    * @throws IllegalArgumentException for unsupported types
    */
+  @Nullable
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
+    if (RexLiteral.value(literal) == null) {
+      return null;
+    }
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
