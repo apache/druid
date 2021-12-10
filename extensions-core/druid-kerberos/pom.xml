@@ -278,6 +278,22 @@
       <artifactId>jetty-client</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- we require not shaded version of hadoop deps in case of hadoop3 as we are extending
     org.apache.hadoop.security.authentication.server.AuthenticationHandler -->
     <dependency>
