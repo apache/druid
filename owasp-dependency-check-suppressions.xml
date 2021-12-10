@@ -402,4 +402,12 @@
      -->
     <cve>CVE-2021-40531</cve>
   </suppress>
+  <suppress>
+    <!-- Suppressed for 0.22.1 only -->
+    <notes><![CDATA[
+   file name: jedis
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/redis\.clients/jedis@2\.9\.0$</packageUrl>
+    <cve>CVE-2021-32626</cve>
+  </suppress>
 </suppressions>
