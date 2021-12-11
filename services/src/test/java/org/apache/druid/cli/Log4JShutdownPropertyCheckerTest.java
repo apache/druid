@@ -19,31 +19,25 @@
 
 package org.apache.druid.cli;
 
-import org.apache.druid.common.config.Log4jShutdown;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.impl.Log4jContextFactory;
-import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
-import org.apache.logging.log4j.spi.LoggerContextFactory;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Properties;
 
 public class Log4JShutdownPropertyCheckerTest
 {
   @Test
-  public void test_log4jShtutdown_isStarted()
+  public void test_sets_the_stuff()
   {
     Log4JShutdownPropertyChecker checker = new Log4JShutdownPropertyChecker();
-    checker.checkProperties(System.getProperties());
-    final LoggerContextFactory contextFactory = LogManager.getFactory();
+    Properties properties = new Properties();
+    checker.checkProperties(properties);
 
-    if (!(contextFactory instanceof Log4jContextFactory)) {
-      Assert.fail();
-    }
-    final ShutdownCallbackRegistry registry = ((Log4jContextFactory) contextFactory).getShutdownCallbackRegistry();
-    if (!(registry instanceof Log4jShutdown)) {
-      Assert.fail();
-    }
-
-    Assert.assertTrue(((Log4jShutdown) registry).isStarted());
+    Assert.assertEquals(
+        "org.apache.druid.common.config.Log4jShutdown",
+        properties.get("log4j.shutdownCallbackRegistry")
+    );
+    Assert.assertEquals("true", properties.get("log4j.shutdownHookEnabled"));
+    Assert.assertEquals("false", properties.get("log4j2.is.webapp"));
   }
 }
