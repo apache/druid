@@ -286,6 +286,7 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
     <cve>CVE-2019-17571</cve>
+    <cve>CVE-2021-44228</cve>
   </suppress>
   <suppress>
     <!--
