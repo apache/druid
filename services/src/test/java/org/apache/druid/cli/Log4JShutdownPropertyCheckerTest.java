@@ -19,21 +19,25 @@
 
 package org.apache.druid.cli;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.util.Properties;
 
-public class Log4JShutdownPropertyChecker implements PropertyChecker
+public class Log4JShutdownPropertyCheckerTest
 {
-  @Override
-  public void checkProperties(Properties properties)
+  @Test
+  public void test_sets_the_stuff()
   {
-    if (!properties.containsKey("log4j.shutdownCallbackRegistry")) {
-      properties.setProperty("log4j.shutdownCallbackRegistry", "org.apache.druid.common.config.Log4jShutdown");
-    }
-    if (!properties.containsKey("log4j.shutdownHookEnabled")) {
-      properties.setProperty("log4j.shutdownHookEnabled", "true");
-    }
-    if (!properties.containsKey("log4j2.is.webapp")) {
-      properties.setProperty("log4j2.is.webapp", "false");
-    }
+    Log4JShutdownPropertyChecker checker = new Log4JShutdownPropertyChecker();
+    Properties properties = new Properties();
+    checker.checkProperties(properties);
+
+    Assert.assertEquals(
+        "org.apache.druid.common.config.Log4jShutdown",
+        properties.get("log4j.shutdownCallbackRegistry")
+    );
+    Assert.assertEquals("true", properties.get("log4j.shutdownHookEnabled"));
+    Assert.assertEquals("false", properties.get("log4j2.is.webapp"));
   }
 }
