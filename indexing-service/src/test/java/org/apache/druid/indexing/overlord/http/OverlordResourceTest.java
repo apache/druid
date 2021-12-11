@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -71,7 +72,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -949,7 +949,7 @@ public class OverlordResourceTest
     );
 
     // Verify that only the tasks of read access datasource are returned
-    expectedException.expect(WebApplicationException.class);
+    expectedException.expect(ForbiddenException.class);
     overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req);
   }
 
@@ -1011,13 +1011,17 @@ public class OverlordResourceTest
         req,
         workerTaskRunnerQueryAdapter
     );
-    Object responseObject = overlordResource
-        .getTasks("blah", "ds_test", null, null, null, req)
-        .getEntity();
-    Assert.assertEquals(
-        "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
-        responseObject.toString()
-    );
+    try {
+      overlordResource.getTasks("blah", "ds_test", null, null, null, req)
+                      .getEntity();
+      Assert.fail("Should throw BadRequestExceptoin");
+    }
+    catch (BadRequestException e) {
+      Assert.assertEquals(
+          "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
+          e.getMessage()
+      );
+    }
   }
 
   @Test
