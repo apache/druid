@@ -1189,7 +1189,7 @@ public class DataSourcesResourceTest
     Assert.assertNotNull(response.getEntity());
     Assert.assertEquals(
         "Invalid request payload, either interval or segmentIds array must be specified",
-        response.getEntity()
+        ((Map<String, String>) response.getEntity()).get("error")
     );
   }
 
