@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.http.client;
 
 import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
@@ -38,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.BufferedReader;
@@ -50,7 +52,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -183,32 +184,7 @@ public class FriendlyServersTest
   {
     final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
-    final AtomicBoolean foundAcceptEncoding = new AtomicBoolean();
-    exec.submit(
-        () -> {
-          while (!Thread.currentThread().isInterrupted()) {
-            try (
-                Socket clientSocket = serverSocket.accept();
-                BufferedReader in = new BufferedReader(
-                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-                );
-                OutputStream out = clientSocket.getOutputStream()
-            ) {
-              // Read headers
-              String header;
-              while (!(header = in.readLine()).equals("")) {
-                if ("accept-encoding: identity".equals(header)) {
-                  foundAcceptEncoding.set(true);
-                }
-              }
-              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
-            }
-            catch (Exception ignored) {
-              // Suppress
-            }
-          }
-        }
-    );
+    final AtomicReference<String> foundAcceptEncoding = acceptEncodingServer(exec, serverSocket);
 
     final Lifecycle lifecycle = new Lifecycle();
     try {
@@ -227,13 +203,79 @@ public class FriendlyServersTest
 
       Assert.assertEquals(200, response.getStatus().code());
       Assert.assertEquals("hello!", response.getContent());
-      Assert.assertTrue(foundAcceptEncoding.get());
+      Assert.assertEquals("accept-encoding: identity", foundAcceptEncoding.get());
     }
     finally {
       exec.shutdownNow();
       serverSocket.close();
       lifecycle.stop();
     }
+  }
+
+  @Test
+  public void testCompressionCodecHeader() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    final AtomicReference<String> foundAcceptEncoding = acceptEncodingServer(exec, serverSocket);
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig.builder()
+                                                      .withCompressionCodec(HttpClientConfig.CompressionCodec.IDENTITY)
+                                                      .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final StatusResponseHolder response = client
+          .go(
+              new Request(
+                  HttpMethod.GET,
+                  new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+              ).addHeader(HttpHeaderNames.ACCEPT_ENCODING.toString(), "gzip"),
+              StatusResponseHandler.getInstance()
+          ).get();
+
+      Assert.assertEquals(200, response.getStatus().code());
+      Assert.assertEquals("hello!", response.getContent());
+      Assert.assertEquals("accept-encoding: gzip", foundAcceptEncoding.get());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  @Nonnull
+  private AtomicReference<String> acceptEncodingServer(ExecutorService exec, ServerSocket serverSocket)
+  {
+    final AtomicReference<String> foundAcceptEncoding = new AtomicReference<>(null);
+
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              // Read headers
+              String header;
+              while (!(header = in.readLine()).equals("")) {
+                if (header.startsWith("accept-encoding:")) {
+                  foundAcceptEncoding.set(header);
+                }
+              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+            }
+            catch (Exception ignored) {
+              // Suppress
+            }
+          }
+        }
+    );
+    return foundAcceptEncoding;
   }
 
   @Test
