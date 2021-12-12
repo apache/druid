@@ -185,7 +185,8 @@ public class OverlordResource
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (EntryExistsException e) {
-            throw new BadRequestException(StringUtils.format("Task[%s] already exists!", task.getId()));
+            return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
+                                                            "Task[%s] already exists!", task.getId());
           }
         }
     );
