@@ -28,6 +28,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -62,6 +63,7 @@ public class DataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -86,6 +88,7 @@ public class DataSourceCompactionConfigTest
         500L,
         30,
         new Period(3600),
+        null,
         null,
         null,
         null,
@@ -135,6 +138,7 @@ public class DataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -177,6 +181,7 @@ public class DataSourceCompactionConfigTest
             null,
             null
         ),
+        null,
         null,
         null,
         null,
@@ -247,6 +252,7 @@ public class DataSourceCompactionConfigTest
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -273,6 +279,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, Granularities.YEAR, null),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -306,6 +313,7 @@ public class DataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -334,6 +342,7 @@ public class DataSourceCompactionConfigTest
         new UserCompactionTaskGranularityConfig(null, null, null),
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -360,6 +369,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(null, null, true),
+        null,
         null,
         null,
         ImmutableMap.of("key", "val")
@@ -392,6 +402,7 @@ public class DataSourceCompactionConfigTest
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
         null,
+        null,
         new UserCompactionTaskIOConfig(true),
         ImmutableMap.of("key", "val")
     );
@@ -420,6 +431,7 @@ public class DataSourceCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         new UserCompactionTaskIOConfig(null),
         ImmutableMap.of("key", "val")
@@ -451,6 +463,7 @@ public class DataSourceCompactionConfigTest
         null,
         new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -464,5 +477,34 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
     Assert.assertEquals(config.getDimensionsSpec(), fromJson.getDimensionsSpec());
+  }
+
+  @Test
+  public void testSerdeTransformSpec() throws IOException
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "dataSource",
+        null,
+        500L,
+        null,
+        new Period(3600),
+        null,
+        null,
+        null,
+        new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
+        null,
+        ImmutableMap.of("key", "val")
+    );
+    final String json = OBJECT_MAPPER.writeValueAsString(config);
+    final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
+
+    Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
+    Assert.assertEquals(25, fromJson.getTaskPriority());
+    Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
+    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
+    Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
+    Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
+    Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
+    Assert.assertEquals(config.getTransformSpec(), fromJson.getTransformSpec());
   }
 }

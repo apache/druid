@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -53,6 +54,7 @@ import java.util.Set;
 
 public class HttpIndexingServiceClient implements IndexingServiceClient
 {
+  private static final Logger log = new Logger(HttpIndexingServiceClient.class);
   private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper jsonMapper;
 
@@ -82,6 +84,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -105,6 +108,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        transformSpec,
         context
     );
     return runTask(taskId, taskQuery);
@@ -350,7 +354,18 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           )
       );
 
-      if (responseHolder.getContent().length() == 0) {
+      if (responseHolder.getContent().length() == 0 || !HttpResponseStatus.OK.equals(responseHolder.getStatus())) {
+        if (responseHolder.getStatus() == HttpResponseStatus.NOT_FOUND) {
+          log.info("Report not found for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+        } else {
+          // also log other non-ok statuses:
+          log.info(
+              "Non OK response status [%s] for taskId [%s] because [%s]",
+              responseHolder.getStatus(),
+              taskId,
+              responseHolder.getContent()
+          );
+        }
         return null;
       }
 

@@ -893,9 +893,9 @@ public class QueryResourceTest
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
                                + "\"context\":{\"queryId\":\"id_1\"}}";
     ObjectMapper mapper = new DefaultObjectMapper();
-    Query query = mapper.readValue(queryString, Query.class);
+    Query<?> query = mapper.readValue(queryString, Query.class);
 
-    ListenableFuture future = MoreExecutors.listeningDecorator(
+    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_resource_%s")
     ).submit(
         new Runnable()
@@ -1017,9 +1017,9 @@ public class QueryResourceTest
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
                                + "\"context\":{\"queryId\":\"id_1\"}}";
     ObjectMapper mapper = new DefaultObjectMapper();
-    Query query = mapper.readValue(queryString, Query.class);
+    Query<?> query = mapper.readValue(queryString, Query.class);
 
-    ListenableFuture future = MoreExecutors.listeningDecorator(
+    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_resource_%s")
     ).submit(
         new Runnable()

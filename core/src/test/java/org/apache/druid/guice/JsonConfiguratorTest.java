@@ -107,7 +107,7 @@ public class JsonConfiguratorTest
   }
 
   @Test
-  public void testsimpleConfigurate()
+  public void testSimpleConfigurate()
   {
     final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");

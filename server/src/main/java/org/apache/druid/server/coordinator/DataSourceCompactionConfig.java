@@ -48,6 +48,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final UserCompactionTaskGranularityConfig granularitySpec;
   private final UserCompactionTaskDimensionsConfig dimensionsSpec;
+  private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
 
@@ -61,6 +62,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
+      @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
@@ -78,6 +80,7 @@ public class DataSourceCompactionConfig
     this.ioConfig = ioConfig;
     this.granularitySpec = granularitySpec;
     this.dimensionsSpec = dimensionsSpec;
+    this.transformSpec = transformSpec;
     this.taskContext = taskContext;
   }
 
@@ -143,6 +146,13 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
+  public UserCompactionTaskTransformConfig getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @Nullable
   public Map<String, Object> getTaskContext()
   {
     return taskContext;
@@ -166,6 +176,7 @@ public class DataSourceCompactionConfig
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
@@ -182,6 +193,7 @@ public class DataSourceCompactionConfig
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        transformSpec,
         ioConfig,
         taskContext
     );

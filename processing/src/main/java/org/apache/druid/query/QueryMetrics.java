@@ -262,31 +262,51 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Registers "query time" metric.
+   *
+   * Measures the time between a Jetty thread starting to handle a query, and the response being fully written to
+   * the response output stream. Does not include time spent waiting in a queue before the query runs.
    */
   QueryMetrics<QueryType> reportQueryTime(long timeNs);
 
   /**
    * Registers "query bytes" metric.
+   *
+   * Measures the total number of bytes written by the query server thread to the response output stream.
+   *
+   * Emitted once per query.
    */
   QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
-   * Registeres "segments queried count" metric.
+   * Registers "segments queried count" metric.
    */
   QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount);
 
   /**
    * Registers "wait time" metric.
+   *
+   * Measures the total time segment-processing runnables spent waiting for execution in the processing thread pool.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportWaitTime(long timeNs);
 
   /**
    * Registers "segment time" metric.
+   *
+   * Measures the total wall-clock time spent operating on segments in processing threads.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentTime(long timeNs);
 
   /**
    * Registers "segmentAndCache time" metric.
+   *
+   * Measures the total wall-clock time spent in processing threads, either operating on segments or retrieving items
+   * from cache.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 

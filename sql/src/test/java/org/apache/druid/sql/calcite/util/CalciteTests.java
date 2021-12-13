@@ -115,9 +115,12 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
@@ -131,7 +134,6 @@ import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
-import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.timeline.DataSegment;
@@ -143,7 +145,6 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -191,8 +192,10 @@ public class CalciteTests
           return new Access(false);
         } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
           return new Access(false);
-        } else {
+        } else if (ResourceType.DATASOURCE.equals(resource.getType()) || ResourceType.VIEW.equals(resource.getType())) {
           return Access.OK;
+        } else {
+          return new Access(false);
         }
       };
     }
@@ -259,10 +262,11 @@ public class CalciteTests
             new LookupSerdeModule().getJacksonModules()
         );
         mapper.setInjectableValues(
-            new InjectableValues.Std().addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
-                                      .addValue(ObjectMapper.class.getName(), mapper)
-                                      .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
-                                      .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
+            new InjectableValues.Std()
+                .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+                .addValue(ObjectMapper.class.getName(), mapper)
+                .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+                .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
         );
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(
             mapper
@@ -271,6 +275,9 @@ public class CalciteTests
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
         SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
+
+        // Add "EXTERN" table macro, for CalciteInsertDmlTest.
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
       },
       new SqlAggregationModule()
   );
@@ -775,6 +782,14 @@ public class CalciteTests
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
+  public static QueryMakerFactory createMockQueryMakerFactory(
+      final QuerySegmentWalker walker,
+      final QueryRunnerFactoryConglomerate conglomerate
+  )
+  {
+    return new NativeQueryMakerFactory(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+  }
+
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
       final QueryRunnerFactoryConglomerate conglomerate
@@ -1149,56 +1164,34 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
-    SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
-
-    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = ImmutableSet.of(
-        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(plannerConfig, systemSchema),
-        new NamedLookupSchema(lookupSchema)
-    );
-    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
-        rootSchema,
-        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
-    );
-    InformationSchema informationSchema =
-        new InformationSchema(
-            catalog,
-            authorizerMapper
-        );
-    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
-    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
-    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-
-    return catalog;
+    return createMockRootSchema(conglomerate, walker, plannerConfig, null, authorizerMapper);
   }
 
   public static DruidSchemaCatalog createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
-      final ViewManager viewManager,
+      @Nullable final ViewManager viewManager,
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    ViewSchema viewSchema = new ViewSchema(viewManager);
+    ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = ImmutableSet.of(
-        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(plannerConfig, systemSchema),
-        new NamedLookupSchema(lookupSchema),
-        new NamedViewSchema(viewSchema)
-    );
+    Set<NamedSchema> namedSchemas = new HashSet<>();
+    namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
+    namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
+    namedSchemas.add(new NamedLookupSchema(lookupSchema));
+
+    if (viewSchema != null) {
+      namedSchemas.add(new NamedViewSchema(viewSchema));
+    }
+
     DruidSchemaCatalog catalog = new DruidSchemaCatalog(
         rootSchema,
         namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
@@ -1212,39 +1205,18 @@ public class CalciteTests
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
     rootSchema.add(NamedSystemSchema.NAME, systemSchema);
     rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-    rootSchema.add(NamedViewSchema.NAME, viewSchema);
-    return catalog;
-  }
 
-  /**
-   * Some Calcite exceptions (such as that thrown by
-   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
-   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
-   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
-   */
-  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
-  {
-    Throwable curThrowable = t;
-    while (curThrowable.getCause() instanceof InvocationTargetException) {
-      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    if (viewSchema != null) {
+      rootSchema.add(NamedViewSchema.NAME, viewSchema);
     }
-    return curThrowable;
+
+    return catalog;
   }
 
   private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig
-  )
-  {
-    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
-  }
-
-  private static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
-      final ViewManager viewManager
   )
   {
     final DruidSchema schema = new DruidSchema(

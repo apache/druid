@@ -276,6 +276,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
       null,
+      null,
       Collections.singletonMap("test", "map"),
       Collections.singletonMap("test2", "map2")
   );
@@ -1107,7 +1108,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
 
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
     EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
     EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
@@ -1281,7 +1282,7 @@ public class SystemSchemaTest extends CalciteTestBase
             .anyTimes();
 
     HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
 
     EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
 
@@ -1396,8 +1397,7 @@ public class SystemSchemaTest extends CalciteTestBase
       String json
   )
   {
-    InputStreamFullResponseHolder responseHolder =
-        new InputStreamFullResponseHolder(httpResponse.getStatus(), httpResponse);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResponse);
 
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
     responseHolder.addChunk(bytesToWrite);

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.view;
 
-import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 
 /**
@@ -30,5 +29,5 @@ public interface DruidViewMacroFactory
   /**
    * Creates an instance of {@link DruidViewMacro}
    */
-  DruidViewMacro create(PlannerFactory plannerFactory, Escalator escalator, String viewSql);
+  DruidViewMacro create(PlannerFactory plannerFactory, String viewSql);
 }

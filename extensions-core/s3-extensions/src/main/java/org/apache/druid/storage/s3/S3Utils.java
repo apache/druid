@@ -83,6 +83,15 @@ public class S3Utils
     return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
+  /**
+   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
+   * found, etc) are not retried. Also provide a way to set maxRetries that can be useful, i.e. for testing.
+   */
+  static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
+  {
+    return RetryUtils.retry(f, S3RETRY, maxRetries);
+  }
+
   static boolean isObjectInBucketIgnoringPermission(
       ServerSideEncryptingAmazonS3 s3Client,
       String bucketName,
@@ -118,6 +127,25 @@ public class S3Utils
   )
   {
     return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength);
+  }
+
+  /**
+   * Create an iterator over a set of S3 objects specified by a set of prefixes.
+   *
+   * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
+   * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
+   * ignored). The iterator is computed incrementally by calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for
+   * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
+   * constructed.
+   */
+  public static Iterator<S3ObjectSummary> objectSummaryIterator(
+      final ServerSideEncryptingAmazonS3 s3Client,
+      final Iterable<URI> prefixes,
+      final int maxListingLength,
+      final int maxRetries
+  )
+  {
+    return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength, maxRetries);
   }
 
   /**

@@ -160,7 +160,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
     info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
   },
-  // partitionsSpec type: single_dim
+  // partitionsSpec type: single_dim, range
   {
     name: 'tuningConfig.partitionsSpec.partitionDimension',
     type: 'string',
@@ -169,11 +169,18 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     info: <p>The dimension to partition on.</p>,
   },
   {
+    name: 'tuningConfig.partitionsSpec.partitionDimensions',
+    type: 'string-array',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'range',
+    required: true,
+    info: <p>The dimensions to partition on.</p>,
+  },
+  {
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -196,7 +203,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -215,7 +222,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.assumeGrouped',
     type: 'boolean',
     defaultValue: false,
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    defined: t => oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
     info: (
       <p>
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
