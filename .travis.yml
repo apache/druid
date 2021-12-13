@@ -324,7 +324,7 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) other modules test"
       env:
-        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!spark'
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests'
       after_failure:
         - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/
         - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/
@@ -352,24 +352,6 @@ jobs:
 
     - <<: *test_other_modules_sqlcompat
       name: "(openjdk15) other modules test (SQL Compatibility)"
-      stage: Tests - phase 2
-      jdk: openjdk15
-
-    # There's no need for separate sql compatibility tests since null handling isn't controlled by a command-line flag
-    # Instead, the spark module unit tests test both variations of null handling themselves.
-    - &test_spark_module
-      <<: *test_processing_module # Using the processing module settings for now
-      name: "(openjdk8) spark module test"
-      env:
-        - MAVEN_PROJECTS='spark'
-
-    - <<: *test_spark_module
-      name: "(openjdk11) spark module test"
-      stage: Tests - phase 2
-      jdk: openjdk11
-
-    - <<: *test_spark_module
-      name: "(openjdk15) spark module test"
       stage: Tests - phase 2
       jdk: openjdk15
 
