@@ -215,10 +215,21 @@ public class JettyServerModule extends JerseyServletModule
     // that concurrently handle the requests".
     int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
 
+    // Minimum thread pool size. Defaults to the number of threads for backward
+    // compatibility. Else, it is the provided number up to the total number.
+    // A smaller minimum means faster startup which benefits debugging and testing,
+    // at the cost of slower initial responses when threads are created on demand.
+    int minThreads = config.getMinThreads();
+    if (minThreads < 0) {
+      minThreads = numServerThreads;
+    } else {
+      minThreads = Math.min(numServerThreads, minThreads);
+    }
+    
     final QueuedThreadPool threadPool;
     if (config.getQueueSize() == Integer.MAX_VALUE) {
       threadPool = new QueuedThreadPool();
-      threadPool.setMinThreads(numServerThreads);
+      threadPool.setMinThreads(minThreads);
       threadPool.setMaxThreads(numServerThreads);
     } else {
       threadPool = new QueuedThreadPool(

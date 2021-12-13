@@ -57,7 +57,9 @@ public class QueryException extends RuntimeException implements SanitizableExcep
       @JsonProperty("host") @Nullable String host
   )
   {
-    super(errorMessage);
+    // The JsonParserIterator accepts a minimum of just the error field.
+    // If that's all that's provided, use the error as the message.
+    super(errorMessage == null ? errorCode : errorMessage);
     this.errorCode = errorCode;
     this.errorClass = errorClass;
     this.host = host;

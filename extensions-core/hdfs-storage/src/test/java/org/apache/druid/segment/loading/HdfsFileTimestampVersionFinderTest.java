@@ -45,7 +45,6 @@ import java.util.regex.Pattern;
 
 public class HdfsFileTimestampVersionFinderTest
 {
-
   private static FileSystem fileSystem;
   private static File hdfsTmpDir;
   private static Path filePath = new Path("tmp1/foo");
@@ -86,7 +85,6 @@ public class HdfsFileTimestampVersionFinderTest
     fileSystem.close();
   }
 
-
   private HdfsFileTimestampVersionFinder finder;
 
   @Before
@@ -101,25 +99,36 @@ public class HdfsFileTimestampVersionFinderTest
     fileSystem.delete(perTestPath, true);
   }
 
+  private void waitForFile(final Path newPath) throws InterruptedException, IOException
+  {
+    boolean found = false;
+    for (int i = 0; i < 5; i++) {
+      if (fileSystem.exists(newPath)) {
+        found = true;
+      }
+      Thread.sleep(10);
+    }
+    Assert.assertTrue(found);
+  }
+
+  private void writeFile(final Path path) throws IOException, InterruptedException
+  {
+    Assert.assertFalse(fileSystem.exists(path));
+    try (final OutputStream outputStream = fileSystem.create(path);
+        final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
+      ByteStreams.copy(inputStream, outputStream);
+    }
+    waitForFile(path);
+  }
 
   @Test
   public void testSimpleLatestVersion() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
-    try (final OutputStream outputStream = fileSystem.create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
-
-    Thread.sleep(10);
+    writeFile(oldPath);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
-    try (final OutputStream outputStream = fileSystem.create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
+    writeFile(newPath);
 
     Assert.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
@@ -130,20 +139,10 @@ public class HdfsFileTimestampVersionFinderTest
   public void testAlreadyLatestVersion() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
-    try (final OutputStream outputStream = fileSystem.create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
-
-    Thread.sleep(10);
+    writeFile(oldPath);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
-    try (final OutputStream outputStream = fileSystem.create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
+    writeFile(newPath);
 
     Assert.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
@@ -162,20 +161,10 @@ public class HdfsFileTimestampVersionFinderTest
   public void testSimpleLatestVersionInDir() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
-    try (final OutputStream outputStream = fileSystem.create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
-
-    Thread.sleep(10);
+    writeFile(oldPath);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
-    try (final OutputStream outputStream = fileSystem.create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
+    writeFile(newPath);
 
     Assert.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
@@ -186,20 +175,10 @@ public class HdfsFileTimestampVersionFinderTest
   public void testSkipMismatch() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
-    try (final OutputStream outputStream = fileSystem.create(oldPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
-
-    Thread.sleep(10);
+    writeFile(oldPath);
 
     final Path newPath = new Path(perTestPath, "666test.txt2");
-    Assert.assertFalse(fileSystem.exists(newPath));
-    try (final OutputStream outputStream = fileSystem.create(newPath);
-         final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
-      ByteStreams.copy(inputStream, outputStream);
-    }
+    writeFile(newPath);
 
     Assert.assertEquals(
         fileSystem.makeQualified(oldPath).toUri(),

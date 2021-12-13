@@ -79,6 +79,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * This class does async query processing and should be merged with QueryResource at some point
  */
+@SuppressWarnings("serial")
 public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements QueryCountStatsProvider
 {
   private static final EmittingLogger LOG = new EmittingLogger(AsyncQueryForwardingServlet.class);

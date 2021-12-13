@@ -57,8 +57,8 @@ public class KafkaEmitterTest
     };
   }
 
-  // there is 10 seconds wait in kafka emitter before it starts sending events to broker, so set a timeout for 15 seconds
-  @Test(timeout = 15_000)
+  // there is 10 seconds wait in kafka emitter before it starts sending events to broker, so set a timeout for 20 seconds
+  @Test(timeout = 20_000)
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(

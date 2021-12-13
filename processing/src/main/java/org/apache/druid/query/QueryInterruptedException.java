@@ -41,6 +41,7 @@ import java.util.concurrent.CancellationException;
  * The QueryResource is expected to emit the JSON form of this object when errors happen, and the DirectDruidClient
  * deserializes and wraps them.
  */
+@SuppressWarnings("serial")
 public class QueryInterruptedException extends QueryException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
@@ -49,6 +50,7 @@ public class QueryInterruptedException extends QueryException
   public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String TRUNCATED_RESPONSE_CONTEXT = "Truncated response context";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
+  public static final int STATUS_CODE = 409; // CONFLICT
 
   @JsonCreator
   public QueryInterruptedException(

@@ -163,7 +163,7 @@ public class SqlVsNativeBenchmark
   {
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(null, sqlQuery)) {
       final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
     }

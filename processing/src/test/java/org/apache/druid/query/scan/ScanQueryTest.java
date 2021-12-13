@@ -380,4 +380,43 @@ public class ScanQueryTest
 
     Assert.assertEquals(ImmutableSet.of("__time", "foo", "bar"), query.getRequiredColumns());
   }
+
+  @Test
+  public void testListFormatRowCount()
+  {
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .order(ScanQuery.Order.DESCENDING)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .columns(Collections.emptyList())
+              .build();
+    doRowCountTest(query);
+  }
+
+  @Test
+  public void testCompactListFormatRowCount()
+  {
+    final ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .order(ScanQuery.Order.DESCENDING)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .dataSource("some src")
+              .intervals(intervalSpec)
+              .columns(Collections.emptyList())
+              .build();
+    doRowCountTest(query);
+  }
+
+  private void doRowCountTest(ScanQuery query)
+  {
+    Assert.assertEquals(0, query.getRowCount(null));
+    ScanResultValue result = new ScanResultValue(null, null, null);
+    Assert.assertEquals(0, query.getRowCount(result));
+    result = new ScanResultValue(null, null, Collections.emptyList());
+    Assert.assertEquals(0, query.getRowCount(result));
+    result = new ScanResultValue(null, null, Arrays.asList("foo", "bar"));
+    Assert.assertEquals(2, query.getRowCount(result));
+  }
 }

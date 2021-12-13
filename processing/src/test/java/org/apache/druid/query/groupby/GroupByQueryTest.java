@@ -57,7 +57,7 @@ public class GroupByQueryTest
   @Test
   public void testQuerySerialization() throws IOException
   {
-    Query query = GroupByQuery
+    Query<?> query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -78,7 +78,7 @@ public class GroupByQueryTest
         .build();
 
     String json = JSON_MAPPER.writeValueAsString(query);
-    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
+    Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }
@@ -171,5 +171,19 @@ public class GroupByQueryTest
                       "universalTimestamp"
                   )
                   .verify();
+  }
+
+  @Test
+  public void testRowCount()
+  {
+    final GroupByQuery query = GroupByQuery.builder()
+        .setDataSource("dummy")
+        .setGranularity(Granularities.ALL)
+        .setInterval("2000/2001")
+        .addDimension(new DefaultDimensionSpec("foo", "foo", ColumnType.LONG))
+        .build();
+    Assert.assertEquals(0, query.getRowCount(null));
+    ResultRow row = ResultRow.of(10);
+    Assert.assertEquals(1, query.getRowCount(row));
   }
 }

@@ -53,34 +53,34 @@ import java.util.concurrent.TimeUnit;
  * by this class provides three key functionalities.
  * <p/>
  * <p>
- * - Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
+ * <ul>
+ * <li>Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
  * up to maxCacheCapacityBytes.  These caches are NOT deleted until the process terminates, and thus can be used for
- * future reads.
- * <br/>
- * - Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
+ * future reads.</li>
+ * <li>Fetching: when it reads all cached data, it fetches remaining objects into a local disk and reads data from
  * them.  For the performance reason, prefetch technique is used, that is, when the size of remaining fetched data is
  * smaller than {@link FetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
- * objects.
- * <br/>
- * - Retry: if an exception occurs while downloading an object, it retries again up to {@link FetchConfig#maxFetchRetry}.
+ * objects.</li>
+ * <li>Retry: if an exception occurs while downloading an object, it retries again up to {@link FetchConfig#maxFetchRetry}.
+ * </li></ul>
  * <p/>
  * <p>
  * This implementation can be useful when the cost for reading input objects is large as reading from AWS S3 because
  * batch tasks like IndexTask or HadoopIndexTask can read the whole data twice for determining partition specs and
  * generating segments if the intervals of GranularitySpec is not specified.
- * <br/>
+ * <p>
  * Prefetching can be turned on/off by setting maxFetchCapacityBytes.  Depending on prefetching is enabled or
- * disabled, the behavior of the firehose is different like below.
+ * disabled, the behavior of the firehose changes:
  * <p/>
  * <p>
  * 1. If prefetch is enabled, this firehose can fetch input objects in background.
  * <br/>
- * 2. When next() is called, it first checks that there are already fetched files in local storage.
+ * 2. When {@code next()} is called, it first checks that there are already fetched files in local storage.
  * <br/>
  * 2.1 If exists, it simply chooses a fetched file and returns a {@link LineIterator} reading that file.
  * <br/>
- * 2.2 If there is no fetched files in local storage but some objects are still remained to be read, the firehose
- * fetches one of input objects in background immediately. If an IOException occurs while downloading the object,
+ * 2.2 If there is no fetched files in local storage but some objects still remain to be read, the firehose
+ * fetches one of input objects in background immediately. If an {@code IOException} occurs while downloading the object,
  * it retries up to the maximum retry count. Finally, the firehose returns a {@link LineIterator} only when the
  * download operation is successfully finished.
  * <br/>
@@ -92,7 +92,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 {
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
 
-  private static final CacheManager DISABLED_CACHE_MANAGER = new CacheManager(0);
+  private static final CacheManager<?> DISABLED_CACHE_MANAGER = new CacheManager<>(0);
   private static final FetchConfig DISABLED_PREFETCH_CONFIG = new FetchConfig(0L, 0L, 0L, 0L, 0);
 
   private final CacheManager<T> cacheManager;
@@ -162,17 +162,22 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     return connectInternal(firehoseParser, temporaryDirectory, this.fetchConfig, this.cacheManager);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Firehose connectForSampler(StringInputRowParser parser, @Nullable File temporaryDirectory) throws IOException
   {
-    return connectInternal(parser, temporaryDirectory, DISABLED_PREFETCH_CONFIG, DISABLED_CACHE_MANAGER);
+    return connectInternal(
+        parser,
+        temporaryDirectory,
+        DISABLED_PREFETCH_CONFIG,
+        (CacheManager<T>) DISABLED_CACHE_MANAGER);
   }
 
   private Firehose connectInternal(
       StringInputRowParser firehoseParser,
       @Nullable File temporaryDirectory,
       FetchConfig fetchConfig,
-      CacheManager cacheManager
+      CacheManager<T> cacheManager
   ) throws IOException
   {
     if (objects == null) {

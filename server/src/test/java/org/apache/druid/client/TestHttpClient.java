@@ -127,7 +127,7 @@ public class TestHttpClient implements HttpClient
         objectMapper.writeValue(baos, sequence);
         serializedContent = baos.toByteArray();
       }
-      final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
+      final ResponseContext.SerializationResult serializationResult = responseContext.toHeader(
           objectMapper,
           RESPONSE_CTX_HEADER_LEN_LIMIT
       );

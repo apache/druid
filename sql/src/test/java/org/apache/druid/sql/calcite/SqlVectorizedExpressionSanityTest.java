@@ -190,8 +190,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan();
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan();
-      final Sequence<Object[]> vectorSequence = vectorPlan.run();
-      final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
+      final Sequence<Object[]> vectorSequence = vectorPlan.run().getResults();
+      final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run().getResults();
       Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);
       Yielder<Object[]> nonVectorizedYielder = Yielders.each(nonVectorSequence);
       int row = 0;

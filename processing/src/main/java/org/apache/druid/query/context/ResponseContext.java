@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.query.MultiQueryMetricsCollector;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
@@ -62,14 +63,19 @@ import java.util.stream.Collectors;
  * to deserialize JSON values for that key.
  *
  * <h4>Structure</h4>
- * The context has evolved to perform multiple tasks. First, it holds two kinds
+ * The context has evolved to perform multiple tasks. First, it holds three kinds
  * of information:
  * <ul>
  * <li>Information to be returned in the query response header.
  * These are values tagged as being in the header.</li>
  * <li>Values passed within a single server. These are tagged with
  * not being in the header.</li>
+ * <li>Values returned in the trailer. These are
+ * marked with as being in the trailer.</li>
+
  * </ul>
+ * A single value can be in the header, trailer, both or neither.
+ * <p>
  * Second, it performs multiple tasks:
  * <ul>
  * <li>Registers the keys to be used in the header. But, since it also holds
@@ -108,9 +114,12 @@ public abstract class ResponseContext
 
     /**
      * Whether to return the key, value pair in the response header.
-     * If false, the value is for internal use only.
      */
     boolean includeInHeader();
+    /**
+     * Whether to return the key, value pair in the response trailer.
+     */
+    boolean includeInTrailer();
 
     /**
      * Reads a value of this key from a JSON stream. Used by {@link ResponseContextDeserializer}.
@@ -127,6 +136,8 @@ public abstract class ResponseContext
     /**
      * Returns true if this key can be removed to reduce header size when the
      * header would otherwise be too large.
+     * <p>
+     * Does not apply to trailer fields: trailer size is not limited.
      */
     @JsonIgnore
     boolean canDrop();
@@ -141,13 +152,15 @@ public abstract class ResponseContext
   {
     private final String name;
     private final boolean inHeader;
+    private final boolean inTrailer;
     private final boolean canDrop;
     private final Function<JsonParser, Object> parseFunction;
 
-    AbstractKey(String name, boolean inHeader, boolean canDrop, Class<?> serializedClass)
+    public AbstractKey(String name, boolean inHeader, boolean canDrop, boolean inTrailer, Class<?> serializedClass)
     {
       this.name = name;
       this.inHeader = inHeader;
+      this.inTrailer = inTrailer;
       this.canDrop = canDrop;
       this.parseFunction = jp -> {
         try {
@@ -159,10 +172,11 @@ public abstract class ResponseContext
       };
     }
 
-    AbstractKey(String name, boolean inHeader, boolean canDrop, TypeReference<?> serializedTypeReference)
+    public AbstractKey(String name, boolean inHeader, boolean canDrop, boolean inTrailer, TypeReference<?> serializedTypeReference)
     {
       this.name = name;
       this.inHeader = inHeader;
+      this.inTrailer = inTrailer;
       this.canDrop = canDrop;
       this.parseFunction = jp -> {
         try {
@@ -184,6 +198,12 @@ public abstract class ResponseContext
     public boolean includeInHeader()
     {
       return inHeader;
+    }
+
+    @Override
+    public boolean includeInTrailer()
+    {
+      return inTrailer;
     }
 
     @Override
@@ -210,9 +230,9 @@ public abstract class ResponseContext
    */
   public static class StringKey extends AbstractKey
   {
-    StringKey(String name, boolean inHeader, boolean canDrop)
+    StringKey(String name, boolean inHeader, boolean canDrop, boolean inTrailer)
     {
-      super(name, inHeader, canDrop, String.class);
+      super(name, inHeader, canDrop, inTrailer, String.class);
     }
 
     @Override
@@ -228,9 +248,9 @@ public abstract class ResponseContext
    */
   public static class BooleanKey extends AbstractKey
   {
-    BooleanKey(String name, boolean inHeader)
+    BooleanKey(String name, boolean inHeader, boolean inTrailer)
     {
-      super(name, inHeader, false, Boolean.class);
+      super(name, inHeader, false, inTrailer, Boolean.class);
     }
 
     @Override
@@ -245,9 +265,9 @@ public abstract class ResponseContext
    */
   public static class LongKey extends AbstractKey
   {
-    LongKey(String name, boolean inHeader)
+    LongKey(String name, boolean inHeader, boolean inTrailer)
     {
-      super(name, inHeader, false, Long.class);
+      super(name, inHeader, false, inTrailer, Long.class);
     }
 
     @Override
@@ -262,9 +282,9 @@ public abstract class ResponseContext
    */
   public static class CounterKey extends AbstractKey
   {
-    CounterKey(String name, boolean inHeader)
+    CounterKey(String name, boolean inHeader, boolean inTrailer)
     {
-      super(name, inHeader, false, Long.class);
+      super(name, inHeader, false, inTrailer, Long.class);
     }
 
     @Override
@@ -315,7 +335,9 @@ public abstract class ResponseContext
      */
     public static final Key UNCOVERED_INTERVALS = new AbstractKey(
         "uncoveredIntervals",
-        true, true,
+        true, // in header
+        true, // can be dropped from header
+        true, // in trailer
         new TypeReference<List<Interval>>()
         {
         })
@@ -335,7 +357,8 @@ public abstract class ResponseContext
      */
     public static final Key UNCOVERED_INTERVALS_OVERFLOWED = new BooleanKey(
         "uncoveredIntervalsOverflowed",
-        true);
+        true,  // In header
+        true); // In trailer
 
     /**
      * Map of most relevant query ID to remaining number of responses from query nodes.
@@ -351,7 +374,9 @@ public abstract class ResponseContext
      */
     public static final Key REMAINING_RESPONSES_FROM_QUERY_SERVERS = new AbstractKey(
         "remainingResponsesFromQueryServers",
-        false, true,
+        false, // Internal, not in header or trailer
+        false,
+        false,
         Object.class)
     {
       @Override
@@ -372,7 +397,9 @@ public abstract class ResponseContext
      */
     public static final Key MISSING_SEGMENTS = new AbstractKey(
         "missingSegments",
-        true, true,
+        true, // in header
+        true, // can be dropped from header
+        true, // in trailer
         new TypeReference<List<SegmentDescriptor>>() {})
     {
       @Override
@@ -389,14 +416,20 @@ public abstract class ResponseContext
      * Entity tag. A part of HTTP cache validation mechanism.
      * Is being removed from the context before sending and used as a separate HTTP header.
      */
-    public static final Key ETAG = new StringKey("ETag", false, true);
+    public static final Key ETAG = new StringKey(
+        "ETag",
+        false, // Internal: not in header or trailer
+        false,
+        false);
 
     /**
      * Query total bytes gathered.
      */
     public static final Key QUERY_TOTAL_BYTES_GATHERED = new AbstractKey(
         "queryTotalBytesGathered",
-        false, false,
+        false, // Internal: not in header or trailer
+        false,
+        false,
         new TypeReference<AtomicLong>() {})
     {
       @Override
@@ -412,6 +445,7 @@ public abstract class ResponseContext
      */
     public static final Key QUERY_FAIL_DEADLINE_MILLIS = new LongKey(
         "queryFailTime",
+        false, // Internal: not in header or trailer
         false);
 
     /**
@@ -422,6 +456,7 @@ public abstract class ResponseContext
      */
     public static final Key TIMEOUT_AT = new LongKey(
         "timeoutAt",
+        false, // Internal: not in header or trailer
         false);
 
     /**
@@ -432,7 +467,8 @@ public abstract class ResponseContext
      */
     public static final Key NUM_SCANNED_ROWS = new CounterKey(
         "count",
-        false);
+        false, // not in header: not available then
+        true); // in trailer
 
     /**
      * The total CPU time for threads related to Sequence processing of the query.
@@ -441,14 +477,36 @@ public abstract class ResponseContext
      */
     public static final Key CPU_CONSUMED_NANOS = new CounterKey(
         "cpuConsumed",
-        false);
+        false, // not in header: not available then
+        true); // in trailer
 
     /**
-     * Indicates if a {@link ResponseContext} was truncated during serialization.
+     * Indicates if a {@link ResponseContext} was truncated within the header during serialization.
+     * The value in the footer echos that from the header: the footer is never truncated.
      */
     public static final Key TRUNCATED = new BooleanKey(
         "truncated",
-        false);
+        true,  // in header
+        true); // in trailer
+
+    /**
+     * Metrics provided in the response trailer in addition to those
+     * keys listed here.
+     */
+    public static final Key METRICS = new AbstractKey(
+        "metrics",
+        false, // Not in header
+        false,
+        true,  // Only in trailer
+        new TypeReference<MultiQueryMetricsCollector>() {}
+    ) {
+      @Override
+      public Object mergeValues(Object oldValue, Object newValue)
+      {
+        final MultiQueryMetricsCollector currentCollector = (MultiQueryMetricsCollector) oldValue;
+        return currentCollector.addAll((MultiQueryMetricsCollector) newValue);
+      }
+    };
 
     /**
      * One and only global list of keys. This is a semi-constant: it is mutable
@@ -478,6 +536,7 @@ public abstract class ResponseContext
           NUM_SCANNED_ROWS,
           CPU_CONSUMED_NANOS,
           TRUNCATED,
+          METRICS,
       });
     }
 
@@ -588,16 +647,6 @@ public abstract class ResponseContext
   }
 
   /**
-   * Deserializes a string into {@link ResponseContext} using given {@link ObjectMapper}.
-   *
-   * @throws IllegalStateException if one of the deserialized map keys has not been registered.
-   */
-  public static ResponseContext deserialize(String responseContext, ObjectMapper objectMapper) throws IOException
-  {
-    return objectMapper.readValue(responseContext, ResponseContext.class);
-  }
-
-  /**
    * Associates the specified object with the specified extension key.
    *
    * @throws IllegalStateException if the key has not been registered.
@@ -659,6 +708,12 @@ public abstract class ResponseContext
   public List<SegmentDescriptor> getMissingSegments()
   {
     return (List<SegmentDescriptor>) get(Keys.MISSING_SEGMENTS);
+  }
+
+  public boolean getTruncated()
+  {
+    Boolean value = (Boolean) get(Keys.TRUNCATED);
+    return value == null ? false : value;
   }
 
   public String getEntityTag()
@@ -753,7 +808,7 @@ public abstract class ResponseContext
    * the array which serialized value length is the biggest.
    * The resulting string will be correctly deserialized to {@link ResponseContext}.
    */
-  public SerializationResult serializeWith(ObjectMapper objectMapper, int maxCharsNumber)
+  public SerializationResult toHeader(ObjectMapper objectMapper, int maxCharsNumber)
       throws JsonProcessingException
   {
     final Map<Key, Object> headerMap =
@@ -811,6 +866,25 @@ public abstract class ResponseContext
       }
     }
     return new SerializationResult(contextJsonNode.toString(), fullSerializedString);
+  }
+
+  /**
+   * Return a context containing the key/value pairs to be returned in the
+   * response trailer. Note that, unlike the header, the trailer is optional
+   * and does not have a size limit.
+   */
+  public ResponseContext trailerCopy()
+  {
+    Map<Key, Object> copy = getDelegate().entrySet()
+                        .stream()
+                        .filter(entry -> entry.getKey().includeInTrailer())
+                        .collect(
+                            Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue
+                            )
+                        );
+    return new DefaultResponseContext(copy);
   }
 
   /**

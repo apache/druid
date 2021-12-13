@@ -172,6 +172,20 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
+  @Override
+  public int getRowCountOf(Result<TopNResultValue> result)
+  {
+    if (result == null) {
+      return 0;
+    }
+    TopNResultValue value = result.getValue();
+    if (value == null) {
+      return 0;
+    }
+    // Constructor ensures there is always a list.
+    return value.getValue().size();
+  }
+
   public void initTopNAlgorithmSelector(TopNAlgorithmSelector selector)
   {
     if (dimensionSpec.getExtractionFn() != null) {

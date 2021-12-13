@@ -44,7 +44,7 @@ public class ErrorHandlerTest
     QueryException input = new QueryException("error", "error message", "error class", "host");
 
     RuntimeException output = errorHandler.sanitize(input);
-    Assert.assertNull(output.getMessage());
+    Assert.assertEquals("error", output.getMessage());
   }
 
   @Test
@@ -92,6 +92,6 @@ public class ErrorHandlerTest
 
     Exception input = new Exception("message");
     RuntimeException output = errorHandler.sanitize(input);
-    Assert.assertEquals(null, output.getMessage());
+    Assert.assertEquals("Unknown exception", output.getMessage());
   }
 }

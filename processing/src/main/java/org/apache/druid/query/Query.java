@@ -210,4 +210,21 @@ public interface Query<T>
   {
     return null;
   }
+
+  /**
+   * Get the row count of a result object of type {@code T}.
+   */
+  default int getRowCountOf(T result)
+  {
+    return result == null ? 0 : 1;
+  }
+
+  /**
+   * Get the row count of a result object, provided as a generic object.
+   */
+  @SuppressWarnings("unchecked")
+  default int getRowCount(Object result)
+  {
+    return getRowCountOf((T) result);
+  }
 }

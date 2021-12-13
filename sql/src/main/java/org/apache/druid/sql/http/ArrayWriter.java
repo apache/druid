@@ -31,8 +31,8 @@ import java.io.OutputStream;
 
 public class ArrayWriter implements ResultFormat.Writer
 {
-  private final JsonGenerator jsonGenerator;
-  private final OutputStream outputStream;
+  protected final JsonGenerator jsonGenerator;
+  protected final OutputStream outputStream;
 
   public ArrayWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
   {

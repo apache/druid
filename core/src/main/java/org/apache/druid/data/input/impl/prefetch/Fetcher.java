@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -131,6 +132,8 @@ public abstract class Fetcher<T> implements Iterator<OpenObject<T>>
       final T object = objects.get(nextFetchIndex);
       LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", nextFetchIndex, object, fetchedBytes.get());
       final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
+      // Note: Potential race condition: the fetchedBytes and fetchedFiles are updated independently,
+      // another thread can see the fetchedBytes before the corresponding file is available.
       fetchedBytes.addAndGet(download(object, outFile));
       fetchedFiles.put(new FetchedFile<>(object, outFile, getFileCloser(outFile, fetchedBytes)));
     }
@@ -220,10 +223,13 @@ public abstract class Fetcher<T> implements Iterator<OpenObject<T>>
         fetchIfNeeded(fetchedBytes.get());
         fetchedFile = fetchedFiles.poll(fetchConfig.getFetchTimeout(), TimeUnit.MILLISECONDS);
         if (fetchedFile == null) {
-          // Check the latest fetch is failed
+          // Check if the latest fetch failed
           checkFetchException(true);
           // Or throw a timeout exception
-          throw new RuntimeException(new TimeoutException());
+          throw new RuntimeException(new TimeoutException(
+              StringUtils.format("Poll timeout after %d %s(s)",
+                  fetchConfig.getFetchTimeout(),
+                  StringUtils.toLowerCase(TimeUnit.MILLISECONDS.toString()))));
         }
       }
       catch (InterruptedException e) {

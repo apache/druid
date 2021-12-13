@@ -29,15 +29,17 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.MultiQueryMetricsCollector;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.query.SingleQueryMetricsCollector;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -60,6 +62,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +81,7 @@ import java.util.stream.Collectors;
  * <li>Validation and Authorization ({@link #validateAndAuthorize(HttpServletRequest)} or {@link #validateAndAuthorize(AuthenticationResult)})</li>
  * <li>Planning ({@link #plan()})</li>
  * <li>Execution ({@link #execute()})</li>
- * <li>Logging ({@link #finalizeStateAndEmitLogsAndMetrics(Throwable, String, long)})</li>
+ * <li>Logging ({@link #finalizeStateAndEmitLogsAndMetrics(Throwable)})</li>
  * </ol>
  *
  * Every method in this class must be called by the same thread except for {@link #cancel()}.
@@ -87,12 +90,184 @@ public class SqlLifecycle
 {
   private static final Logger log = new Logger(SqlLifecycle.class);
 
+  /**
+   * Gathers query-level statistics then distributes them to the metrics system,
+   * logs, response trailer and query profile.
+   */
+  public class LifecycleStats
+  {
+    private String remoteAddress;
+    private long endTimeNs;
+    private long bytesWritten = -1;
+    private long rowCount;
+    private ResponseContext responseContext;
+    private Throwable e;
+
+    /**
+     * Called by the query resource to provide the host on which this query is
+     * running, and the remote address that sent the request.
+     */
+    public void onStart(String remoteAddress, String sqlQueryId, SqlQuery query)
+    {
+      this.remoteAddress = remoteAddress;
+    }
+
+    /**
+     * Provides the response context when it becomes available. The actual values
+     * will continue to change as the query runs until a call to
+     * {#link onResultsSent()}.
+     */
+    public void setResponseContext(ResponseContext responseContext)
+    {
+      this.responseContext = responseContext;
+    }
+
+    /**
+     * Partial completion: results written, about to emit the trailer.
+     * Accumulate run time and bytes written up to now. Final result will
+     * differ a bit.
+     */
+    public void onResultsSent(long rowCount, long bytesWritten)
+    {
+      this.rowCount = rowCount;
+      this.bytesWritten = bytesWritten;
+      this.endTimeNs = System.nanoTime();
+    }
+
+    /**
+     * Final completion: all results sent, including the possible
+     * trailer.
+     */
+    public void onCompletion(Throwable e)
+    {
+      this.e = e;
+      this.endTimeNs = System.nanoTime();
+    }
+
+    public long runTimeNs()
+    {
+      return endTimeNs - startNs;
+    }
+
+    public long runTimeMs()
+    {
+      return TimeUnit.NANOSECONDS.toMillis(runTimeNs());
+    }
+
+    public boolean succeeded()
+    {
+      return e == null;
+    }
+
+    public boolean wasInterrupted()
+    {
+      if (e == null) {
+        return false;
+      }
+      return (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException);
+    }
+
+    /**
+     * Create the response trailer, if requested. Includes the query profile as well
+     * as various other trailer fields.
+     */
+    public ResponseContext trailer()
+    {
+      Set<String> options = QueryContexts.getTrailerContents(sqlQuery.getContext());
+      if (options == null) {
+
+        // If the client asks for array-with-trailer, but does not specify what
+        // they want in the trailer, assume they want metrics.
+        options = new HashSet<>();
+        options.add(QueryContexts.TRAILER_METRICS);
+      }
+
+      // Include details?
+      final ResponseContext trailerContext;
+      if (options.contains(QueryContexts.TRAILER_CONTEXT)) {
+        trailerContext = responseContext.trailerCopy();
+      } else {
+        trailerContext = ResponseContext.createEmpty();
+      }
+
+      // Include metrics?
+      if (options.contains(QueryContexts.TRAILER_METRICS)) {
+        trailerContext.add(
+            ResponseContext.Keys.METRICS,
+            MultiQueryMetricsCollector.newCollector().add(
+                SingleQueryMetricsCollector
+                    .newCollector()
+                    .setQueryStart(getStartMs())
+                    // This is not the same as query/time, its a bit shorter
+                    .setQueryMs(runTimeMs())
+                    .setResultRows(rowCount)
+            )
+        );
+      }
+      return trailerContext;
+    }
+
+    /**
+     * Emit final metrics for the query.
+     */
+    public void emitMetrics()
+    {
+      ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+      if (plannerContext != null) {
+        metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
+        metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+      }
+      if (validationResult != null) {
+        metricBuilder.setDimension(
+            "dataSource",
+            validationResult.getResourceActions()
+                .stream()
+                .map(action -> action.getResource().getName())
+                .collect(Collectors.toList())
+                .toString()
+        );
+      }
+      metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
+      metricBuilder.setDimension("success", String.valueOf(succeeded()));
+      emitter.emit(metricBuilder.build("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(runTimeNs())));
+      if (bytesWritten >= 0) {
+        emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
+      }
+    }
+
+    /**
+     * Gather the query statistics for metrics.
+     */
+    public QueryStats queryStats()
+    {
+      final Map<String, Object> statsMap = new LinkedHashMap<>();
+      statsMap.put("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(runTimeNs()));
+      statsMap.put("sqlQuery/bytes", bytesWritten);
+      statsMap.put("success", succeeded());
+      statsMap.put("context", queryContext);
+      if (plannerContext != null) {
+        statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
+        queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+      }
+      if (e != null) {
+        statsMap.put("exception", e.toString());
+
+        if (wasInterrupted()) {
+          statsMap.put("interrupted", true);
+          statsMap.put("reason", e.toString());
+        }
+      }
+      return new QueryStats(statsMap);
+    }
+  }
+
   private final PlannerFactory plannerFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final QueryScheduler queryScheduler;
   private final long startMs;
   private final long startNs;
+  private final LifecycleStats stats;
 
   /**
    * This lock coordinates the access to {@link #state} as there is a happens-before relationship
@@ -102,7 +277,8 @@ public class SqlLifecycle
   @GuardedBy("stateLock")
   private State state = State.NEW;
 
-  // init during intialize
+  // init during initialize
+  private SqlQuery sqlQuery;
   private String sql;
   private Map<String, Object> queryContext;
   private List<TypedValue> parameters;
@@ -128,6 +304,15 @@ public class SqlLifecycle
     this.startMs = startMs;
     this.startNs = startNs;
     this.parameters = Collections.emptyList();
+    this.stats = new LifecycleStats();
+  }
+
+  /**
+   * Returns the statistics gatherer and reporter for this lifecycle.
+   */
+  public LifecycleStats stats()
+  {
+    return stats;
   }
 
   /**
@@ -135,11 +320,31 @@ public class SqlLifecycle
    *
    * If successful (it will be), it will transition the lifecycle to {@link State#INITIALIZED}.
    */
+  @VisibleForTesting
   public String initialize(String sql, Map<String, Object> queryContext)
   {
+    final SqlQuery sqlQuery = new SqlQuery(
+        sql,
+        null,
+        false,
+        false,
+        false,
+        queryContext,
+        null);
+    return initialize(sqlQuery);
+  }
+
+  /**
+   * Initialize the query lifecycle, setting the raw string SQL, initial query context, and assign a sql query id.
+   *
+   * If successful (it will be), it will transition the lifecycle to {@link State#INITIALIZED}.
+   */
+  public String initialize(final SqlQuery sqlQuery)
+  {
     transition(State.NEW, State.INITIALIZED);
-    this.sql = sql;
-    this.queryContext = contextWithSqlId(queryContext);
+    this.sqlQuery = sqlQuery;
+    this.sql = sqlQuery.getQuery();
+    this.queryContext = contextWithSqlId(sqlQuery.getContext());
     return sqlQueryId();
   }
 
@@ -158,13 +363,23 @@ public class SqlLifecycle
     return newContext;
   }
 
-  private String sqlQueryId()
+  public SqlQuery sqlQuery()
+  {
+    return sqlQuery;
+  }
+
+  public String sqlQueryId()
   {
     return (String) this.queryContext.get(PlannerContext.CTX_SQL_QUERY_ID);
   }
 
+  public long getStartMs()
+  {
+    return startMs;
+  }
+
   /**
-   * Assign dynamic parameters to be used to substitute values during query exection. This can be performed at any
+   * Assign dynamic parameters to be used to substitute values during query execution. This can be performed at any
    * part of the lifecycle.
    */
   public void setParameters(List<TypedValue> parameters)
@@ -263,7 +478,7 @@ public class SqlLifecycle
 
   /**
    * Prepare the query lifecycle for execution, without completely planning into something that is executable, but
-   * including some initial parsing and validation and any dyanmic parameter type resolution, to support prepared
+   * including some initial parsing and validation and any dynamic parameter type resolution, to support prepared
    * statements via JDBC.
    */
   public PrepareResult prepare() throws RelConversionException
@@ -330,46 +545,46 @@ public class SqlLifecycle
    *
    * If successful, the lifecycle will first transition from {@link State#PLANNED} to {@link State#EXECUTING}.
    */
-  public Sequence<Object[]> execute()
+  public QueryResponse<Object[]> execute()
   {
     transition(State.PLANNED, State.EXECUTING);
     return plannerResult.run();
   }
 
   @VisibleForTesting
-  public Sequence<Object[]> runSimple(
+  public QueryResponse<Object[]> runSimple(
       String sql,
       Map<String, Object> queryContext,
       List<SqlParameter> parameters,
       AuthenticationResult authenticationResult
   ) throws RelConversionException
   {
-    Sequence<Object[]> result;
-
     initialize(sql, queryContext);
+    final QueryResponse<Object[]> response;
     try {
       setParameters(SqlQuery.getParameterList(parameters));
       validateAndAuthorize(authenticationResult);
       plan();
-      result = execute();
+      response = execute();
     }
     catch (Throwable e) {
       if (!(e instanceof ForbiddenException)) {
-        finalizeStateAndEmitLogsAndMetrics(e, null, -1);
+        finalizeStateAndEmitLogsAndMetrics(e);
       }
       throw e;
     }
 
-    return Sequences.wrap(result, new SequenceWrapper()
-    {
-      @Override
-      public void after(boolean isDone, Throwable thrown)
-      {
-        finalizeStateAndEmitLogsAndMetrics(thrown, null, -1);
-      }
-    });
+    return response.wrap(
+        new SequenceWrapper()
+        {
+          @Override
+          public void after(boolean isDone, Throwable thrown)
+          {
+            finalizeStateAndEmitLogsAndMetrics(thrown);
+          }
+        }
+    );
   }
-
 
   @VisibleForTesting
   public ValidationResult runAnalyzeResources(AuthenticationResult authenticationResult)
@@ -407,14 +622,10 @@ public class SqlLifecycle
   /**
    * Emit logs and metrics for this query.
    *
-   * @param e             exception that occurred while processing this query
-   * @param remoteAddress remote address, for logging; or null if unknown
-   * @param bytesWritten  number of bytes written; will become a query/bytes metric if >= 0
+   * @param e exception that occurred while processing this query
    */
   public void finalizeStateAndEmitLogsAndMetrics(
-      @Nullable final Throwable e,
-      @Nullable final String remoteAddress,
-      final long bytesWritten
+      @Nullable final Throwable e
   )
   {
     if (sql == null) {
@@ -434,57 +645,17 @@ public class SqlLifecycle
       }
     }
 
-    final boolean success = e == null;
-    final long queryTimeNs = System.nanoTime() - startNs;
-
+    stats.onCompletion(e);
     try {
-      ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-      if (plannerContext != null) {
-        metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
-        metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
-      }
-      if (validationResult != null) {
-        metricBuilder.setDimension(
-            "dataSource",
-            validationResult.getResourceActions()
-                            .stream()
-                            .map(action -> action.getResource().getName())
-                            .collect(Collectors.toList())
-                            .toString()
-        );
-      }
-      metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
-      metricBuilder.setDimension("success", String.valueOf(success));
-      emitter.emit(metricBuilder.build("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
-      if (bytesWritten >= 0) {
-        emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
-      }
-
-      final Map<String, Object> statsMap = new LinkedHashMap<>();
-      statsMap.put("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
-      statsMap.put("sqlQuery/bytes", bytesWritten);
-      statsMap.put("success", success);
-      statsMap.put("context", queryContext);
-      if (plannerContext != null) {
-        statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
-        queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
-      }
-      if (e != null) {
-        statsMap.put("exception", e.toString());
-
-        if (e instanceof QueryInterruptedException || e instanceof QueryTimeoutException) {
-          statsMap.put("interrupted", true);
-          statsMap.put("reason", e.toString());
-        }
-      }
+      stats.emitMetrics();
 
       requestLogger.logSqlQuery(
           RequestLogLine.forSql(
               sql,
               queryContext,
               DateTimes.utc(startMs),
-              remoteAddress,
-              new QueryStats(statsMap)
+              StringUtils.nullToEmptyNonDruidDataString(stats.remoteAddress),
+              stats.queryStats()
           )
       );
     }
@@ -494,7 +665,7 @@ public class SqlLifecycle
   }
 
   @VisibleForTesting
-  public State getState()
+  State getState()
   {
     synchronized (stateLock) {
       return state;

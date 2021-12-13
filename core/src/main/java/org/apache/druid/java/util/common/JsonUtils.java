@@ -17,30 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.java.util.common;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
-@SuppressWarnings("serial")
-public class BadJsonQueryException extends BadQueryException
+import java.io.IOException;
+
+public class JsonUtils
 {
-  public static final String ERROR_CODE = "Json parse failed";
-  public static final String ERROR_CLASS = JsonParseException.class.getName();
-
-  public BadJsonQueryException(JsonParseException e)
+  private JsonUtils()
   {
-    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
-  @JsonCreator
-  private BadJsonQueryException(
-      @JsonProperty("error") String errorCode,
-      @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass
-  )
+  /**
+   * Skip over a single JSON value: scalar or composite.
+   */
+  public static void skipValue(final JsonParser jp, String key) throws IOException
   {
-    super(errorCode, errorMessage, errorClass);
+    final JsonToken token = jp.currentToken();
+    switch (token) {
+      case START_OBJECT:
+      case START_ARRAY:
+        jp.skipChildren();
+        jp.nextToken();
+        break;
+      default:
+        if (token.isScalarValue()) {
+          jp.nextToken();
+          return;
+        }
+        throw new JsonMappingException(jp, "Invalid JSON inside unknown key: " + key);
+    }
   }
 }

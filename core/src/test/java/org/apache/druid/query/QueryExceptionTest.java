@@ -49,7 +49,7 @@ public class QueryExceptionTest
     QueryException actual = queryException.sanitize(trasformFunction);
     Assert.assertNotNull(actual);
     Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
-    Assert.assertNull(actual.getMessage());
+    Assert.assertEquals(ERROR_CODE, actual.getMessage());
     Assert.assertNull(actual.getHost());
     Assert.assertNull(actual.getErrorClass());
     Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));

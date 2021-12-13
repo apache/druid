@@ -35,7 +35,17 @@ public class DefaultResponseContext extends ResponseContext
     return new DefaultResponseContext();
   }
 
-  private final HashMap<Key, Object> delegate = new HashMap<>();
+  private final Map<Key, Object> delegate;
+
+  public DefaultResponseContext()
+  {
+    this(new HashMap<>());
+  }
+
+  public DefaultResponseContext(final Map<Key, Object> map)
+  {
+    this.delegate = map;
+  }
 
   @Override
   protected Map<Key, Object> getDelegate()

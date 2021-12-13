@@ -21,7 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Supplier;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.server.QueryResponse;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -31,12 +31,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class PlannerResult
 {
-  private final Supplier<Sequence<Object[]>> resultsSupplier;
+  private final Supplier<QueryResponse<Object[]>> resultsSupplier;
   private final RelDataType rowType;
   private final AtomicBoolean didRun = new AtomicBoolean();
 
   public PlannerResult(
-      final Supplier<Sequence<Object[]>> resultsSupplier,
+      final Supplier<QueryResponse<Object[]>> resultsSupplier,
       final RelDataType rowType
   )
   {
@@ -47,7 +47,7 @@ public class PlannerResult
   /**
    * Run the query
    */
-  public Sequence<Object[]> run()
+  public QueryResponse<Object[]> run()
   {
     if (!didRun.compareAndSet(false, true)) {
       // Safety check.

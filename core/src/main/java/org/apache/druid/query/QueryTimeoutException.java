@@ -33,12 +33,13 @@ import javax.annotation.Nullable;
  * {@link #STATUS_CODE} instead of the default HTTP 500 status.
  */
 
+@SuppressWarnings("serial")
 public class QueryTimeoutException extends QueryException
 {
   private static final String ERROR_CLASS = QueryTimeoutException.class.getName();
   public static final String ERROR_CODE = "Query timeout";
   public static final String ERROR_MESSAGE = "Query Timed Out!";
-  public static final int STATUS_CODE = 504;
+  public static final int STATUS_CODE = 504; // Gateway Timeout
 
   @JsonCreator
   public QueryTimeoutException(

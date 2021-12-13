@@ -30,7 +30,10 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @PublicApi
@@ -56,6 +59,7 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
+  public static final String TRAILER_KEY = "trailer";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -68,6 +72,19 @@ public class QueryContexts
   public static final String ENABLE_DEBUG = "debug";
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
+
+  // Choices for the TRAILER_KEY key.
+  /**
+   * Include in the trailer any key marked at "include in trailer" (except those listed below.)
+   */
+  public static final String TRAILER_CONTEXT = "context";
+  /**
+   * Include in the trailer summary query metrics.
+   */
+  public static final String TRAILER_METRICS = "metrics";
+  // All valid trailer values
+  public static final String[] TRAILER_VALUES =
+      new String[] {TRAILER_CONTEXT, TRAILER_METRICS};
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -426,6 +443,64 @@ public class QueryContexts
   public static String getBrokerServiceName(Map<String, Object> queryContext)
   {
     return queryContext == null ? null : (String) queryContext.get(BROKER_SERVICE_NAME);
+  }
+
+  public static Set<String> getTrailerContents(Query<?> query)
+  {
+    return getTrailerContents(query.getContext());
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Set<String> getTrailerContents(Map<String, Object> context)
+  {
+    if (context == null) {
+      return null;
+    }
+    Object value = context.get(TRAILER_KEY);
+    if (value == null) {
+      return null;
+    }
+    Set<String> options = new HashSet<>();
+    if (value instanceof String) {
+      String str = validateTrailerOption((String) value);
+      if (str == null) {
+        return null;
+      }
+      options.add(str);
+      return options;
+    }
+    // The "natural type" for the array is, well, an array
+    if (value instanceof String[]) {
+      for (String option : (String[]) value) {
+        String str = validateTrailerOption(option);
+        if (str != null) {
+          options.add(str);
+        }
+      }
+    // But Jackson seems to deserialize an array as a List
+    // We're easy, we'll go either way.
+    } else if (value instanceof List) {
+      for (String option : (List<String>) value) {
+        String str = validateTrailerOption(option);
+        if (str != null) {
+          options.add(str);
+        }
+      }
+    }
+    if (options.isEmpty()) {
+      return null;
+    }
+    return options;
+  }
+
+  private static String validateTrailerOption(String value)
+  {
+    for (String option : TRAILER_VALUES) {
+      if (option.equalsIgnoreCase(value)) {
+        return option;
+      }
+    }
+    return null;
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)

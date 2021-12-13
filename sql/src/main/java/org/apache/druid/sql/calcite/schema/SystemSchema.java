@@ -1079,6 +1079,7 @@ public class SystemSchema extends AbstractSchema
 
     final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
     return new JsonParserIterator<>(
+        JsonParserIterator.ResultStructure.ARRAY,
         javaType,
         Futures.immediateFuture(responseHolder.getContent()),
         request.getUrl().toString(),

@@ -827,7 +827,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         objectMapper
     );
 
-    return sqlLifecycleFactory.factorize().runSimple(sql, queryContext, parameters, authenticationResult).toList();
+    return sqlLifecycleFactory.factorize()
+                              .runSimple(sql, queryContext, parameters, authenticationResult)
+                              .getResults()
+                              .toList();
   }
 
   public void verifyResults(

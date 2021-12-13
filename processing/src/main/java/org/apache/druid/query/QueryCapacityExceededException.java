@@ -44,7 +44,7 @@ public class QueryCapacityExceededException extends QueryException
       "Too many concurrent queries for lane '%s', query capacity of %s exceeded. Please try your query again later.";
   private static final String ERROR_CLASS = QueryCapacityExceededException.class.getName();
   public static final String ERROR_CODE = "Query capacity exceeded";
-  public static final int STATUS_CODE = 429;
+  public static final int STATUS_CODE = 429; // Non-standard code
 
   public QueryCapacityExceededException(int capacity)
   {

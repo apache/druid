@@ -48,6 +48,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -110,7 +111,7 @@ public class NativeQueryMaker implements QueryMaker
   }
 
   @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     final Query<?> query = druidQuery.getQuery();
 
@@ -159,7 +160,7 @@ public class NativeQueryMaker implements QueryMaker
                              .orElseGet(query::getIntervals);
   }
 
-  private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
+  private <T> QueryResponse<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
   {
     Hook.QUERY_PLAN.run(query);
 
@@ -179,14 +180,17 @@ public class NativeQueryMaker implements QueryMaker
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final Sequence<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple(query, authenticationResult, authorizationResult);
 
     //noinspection unchecked
+    @SuppressWarnings("unchecked")
     final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
     final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
-    final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
+    final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results.getResults());
 
-    return mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes);
+    return QueryResponse.create(
+        mapResultSequence(resultArrays, resultArrayFields, newFields, newTypes),
+        results.getResponseContextEarly());
   }
 
   private Sequence<Object[]> mapResultSequence(

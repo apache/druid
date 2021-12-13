@@ -22,8 +22,9 @@ package org.apache.druid.query.context;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import org.apache.druid.java.util.common.JsonUtils;
+
 import java.io.IOException;
 
 /**
@@ -50,25 +51,25 @@ public class ResponseContextDeserializer extends StdDeserializer<ResponseContext
     }
 
     final ResponseContext retVal = ResponseContext.createEmpty();
-
     jp.nextToken();
-
     ResponseContext.Keys keys = ResponseContext.Keys.instance();
     while (jp.currentToken() == JsonToken.FIELD_NAME) {
       // Get the key. Since this is a deserialization, the sender may
       // be a different version of Druid with a different set of keys.
       // Ignore any keys which the sender knows about but this node
       // does not know about.
-      final ResponseContext.Key key = keys.find(jp.getText());
-
+      final String keyName = jp.getText();
+      final ResponseContext.Key key = keys.find(keyName);
       jp.nextToken();
+
       if (key == null) {
-        skipValue(jp, jp.getText());
+        // Consumes the value
+        JsonUtils.skipValue(jp, keyName);
       } else {
+        // Leaves the parser at the last value token
         retVal.add(key, key.readValue(jp));
+        jp.nextToken();
       }
-
-      jp.nextToken();
     }
 
     if (jp.currentToken() != JsonToken.END_OBJECT) {
@@ -76,53 +77,5 @@ public class ResponseContextDeserializer extends StdDeserializer<ResponseContext
     }
 
     return retVal;
-  }
-
-  /**
-   * Skip over a single JSON value: scalar or composite.
-   */
-  private void skipValue(final JsonParser jp, String key) throws IOException
-  {
-    final JsonToken token = jp.currentToken();
-    switch (token) {
-      case START_OBJECT:
-        skipTo(jp, JsonToken.END_OBJECT);
-        break;
-      case START_ARRAY:
-        skipTo(jp, JsonToken.END_ARRAY);
-        break;
-      default:
-        if (token.isScalarValue()) {
-          return;
-        }
-        throw new JsonMappingException(jp, "Invalid JSON inside unknown key: " + key);
-    }
-  }
-
-  /**
-   * Freewheel over the contents of a structured object, including any
-   * nested structured objects, until the given end token.
-   */
-  private void skipTo(final JsonParser jp, JsonToken end) throws IOException
-  {
-    while (true) {
-      jp.nextToken();
-      final JsonToken token = jp.currentToken();
-      if (token == null) {
-        throw new JsonMappingException(jp, "Premature EOF");
-      }
-      switch (token) {
-        case START_OBJECT:
-          skipTo(jp, JsonToken.END_OBJECT);
-          break;
-        case START_ARRAY:
-          skipTo(jp, JsonToken.END_ARRAY);
-          break;
-        default:
-          if (token == end) {
-            return;
-          }
-      }
-    }
   }
 }

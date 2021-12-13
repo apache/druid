@@ -24,9 +24,10 @@ package org.apache.druid.query;
  *
  * See {@code BadRequestException} for non-query requests.
  */
+@SuppressWarnings("serial")
 public abstract class BadQueryException extends QueryException
 {
-  public static final int STATUS_CODE = 400;
+  public static final int STATUS_CODE = 400; // Bad Request
 
   protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {

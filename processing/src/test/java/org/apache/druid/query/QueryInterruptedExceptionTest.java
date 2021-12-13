@@ -129,7 +129,7 @@ public class QueryInterruptedExceptionTest
         roundTrip(new QueryInterruptedException(new QueryInterruptedException(new CancellationException()))).getErrorClass()
     );
     Assert.assertEquals(
-        null,
+        "Query cancelled",
         roundTrip(new QueryInterruptedException(new QueryInterruptedException(new CancellationException()))).getMessage()
     );
     Assert.assertEquals(

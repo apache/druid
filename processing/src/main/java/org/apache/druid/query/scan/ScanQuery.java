@@ -455,6 +455,25 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  @Override
+  public int getRowCountOf(ScanResultValue result)
+  {
+    if (result == null) {
+      return 0;
+    }
+    if (result.getEvents() == null) {
+      return 0;
+    }
+    switch (resultFormat) {
+      case RESULT_FORMAT_LIST:
+      case RESULT_FORMAT_COMPACTED_LIST:
+        return ((List<?>) result.getEvents()).size();
+
+      default:
+        return 1;
+    }
+  }
+
   public ScanQuery withOffset(final long newOffset)
   {
     return Druids.ScanQueryBuilder.copy(this).offset(newOffset).build();

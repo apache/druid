@@ -26,7 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.MultiQueryMetricsCollector;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.SingleQueryMetricsCollector;
 import org.apache.druid.query.context.ResponseContext.CounterKey;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.context.ResponseContext.Keys;
@@ -43,22 +45,26 @@ import java.util.Map;
 
 public class ResponseContextTest
 {
-  // Droppable header key
+  // Droppable header key, not in trailer
   static final Key EXTN_STRING_KEY = new StringKey(
-      "extn_string_key", true, true);
-  // Non-droppable header key
+      "extn_string_key", true, true, false);
+  // Non-droppable header key, also in trailer
   static final Key EXTN_COUNTER_KEY = new CounterKey(
-      "extn_counter_key", true);
+      "extn_counter_key", true, true);
+  // Trailer-only key
+  static final Key EXTN_TRAILER_KEY = new StringKey(
+      "extn_trailer_key", false, false, true);
 
   static {
     Keys.instance().registerKeys(new Key[] {
         EXTN_STRING_KEY,
-        EXTN_COUNTER_KEY
+        EXTN_COUNTER_KEY,
+        EXTN_TRAILER_KEY
     });
   }
 
   static final Key UNREGISTERED_KEY = new StringKey(
-      "unregistered-key", true, true);
+      "unregistered-key", true, true, true);
 
   @Test(expected = IllegalStateException.class)
   public void putISETest()
@@ -230,7 +236,7 @@ public class ResponseContextTest
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_STRING_KEY.getName(),
             "string-value")),
-        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getResult());
+        ctx1.toHeader(mapper, Integer.MAX_VALUE).getResult());
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     // Add two non-header fields, and one that will be in the header
@@ -240,12 +246,12 @@ public class ResponseContextTest
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_COUNTER_KEY.getName(), 100)),
-        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getResult());
+        ctx2.toHeader(mapper, Integer.MAX_VALUE).getResult());
   }
 
-  private Map<ResponseContext.Key, Object> deserializeContext(String input, ObjectMapper mapper) throws IOException
+  private ResponseContext deserializeContext(String input, ObjectMapper mapper) throws IOException
   {
-    return ResponseContext.deserialize(input, mapper).getDelegate();
+    return mapper.readValue(input, ResponseContext.class);
   }
 
   @Test
@@ -255,19 +261,19 @@ public class ResponseContextTest
     ctx.put(EXTN_COUNTER_KEY, 100L);
     ctx.put(EXTN_STRING_KEY, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(ctx.getDelegate(), deserializeContext(res1.getResult(), objectMapper));
+    final ResponseContext.SerializationResult res1 = ctx.toHeader(objectMapper, Integer.MAX_VALUE);
+    Assert.assertEquals(ctx.getDelegate(), deserializeContext(res1.getResult(), objectMapper).getDelegate());
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final int target = EXTN_COUNTER_KEY.getName().length() + 3 +
                        Keys.TRUNCATED.getName().length() + 5 +
                        15; // Fudge factor for quotes, separators, etc.
-    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, target);
+    final ResponseContext.SerializationResult res2 = ctx.toHeader(objectMapper, target);
     ctxCopy.remove(EXTN_STRING_KEY);
     ctxCopy.put(Keys.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        deserializeContext(res2.getResult(), objectMapper)
+        deserializeContext(res2.getResult(), objectMapper).getDelegate()
     );
   }
 
@@ -290,7 +296,7 @@ public class ResponseContextTest
     bogus.put("null", null);
     final ObjectMapper mapper = new DefaultObjectMapper();
     String serialized = mapper.writeValueAsString(bogus);
-    ResponseContext ctx = ResponseContext.deserialize(serialized, mapper);
+    ResponseContext ctx = deserializeContext(serialized, mapper);
     Assert.assertEquals(1, ctx.getDelegate().size());
     Assert.assertEquals("eTag", ctx.get(Keys.ETAG));
   }
@@ -320,13 +326,9 @@ public class ResponseContextTest
         Strings.repeat("x", INTERVAL_LEN * 7)
     );
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(ctx.getDelegate(),
-        deserializeContext(res1.getResult(), objectMapper)
-    );
     final int maxLen = INTERVAL_LEN * 4 + Keys.UNCOVERED_INTERVALS.getName().length() + 4 +
                        Keys.TRUNCATED.getName().length() + 6;
-    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, maxLen);
+    final ResponseContext.SerializationResult res2 = ctx.toHeader(objectMapper, maxLen);
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     // The resulting key array length will be half the start
     // length.
@@ -334,7 +336,7 @@ public class ResponseContextTest
     ctxCopy.put(Keys.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        deserializeContext(res2.getResult(), objectMapper)
+        deserializeContext(res2.getResult(), objectMapper).getDelegate()
     );
   }
 
@@ -342,7 +344,7 @@ public class ResponseContextTest
   public void deserializeTest() throws IOException
   {
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
-    final ResponseContext ctx = ResponseContext.deserialize(
+    final ResponseContext ctx = deserializeContext(
         mapper.writeValueAsString(
             ImmutableMap.of(
                 Keys.ETAG.getName(), "string-value",
@@ -385,5 +387,51 @@ public class ResponseContextTest
     ctx.putEntityTag("etag");
     Map<String, Object> map = ctx.toMap();
     Assert.assertEquals(map.get(ResponseContext.Keys.ETAG.getName()), "etag");
+  }
+
+  @Test
+  public void trailerTest()
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    // Header only
+    ctx.add(EXTN_STRING_KEY, "not in trailer");
+    // Header and trailer
+    ctx.add(EXTN_COUNTER_KEY, 1L);
+    ctx.add(EXTN_TRAILER_KEY, "in trailer");
+    Map<String, Object> trailerMap = ctx.trailerCopy().toMap();
+    Map<String, Object> expected = new HashMap<>();
+    expected.put(EXTN_COUNTER_KEY.getName(), 1L);
+    expected.put(EXTN_TRAILER_KEY.getName(), "in trailer");
+    Assert.assertEquals(expected, trailerMap);
+  }
+
+  @Test
+  public void testTruncated()
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    Assert.assertFalse(ctx.getTruncated());
+    ctx.put(Keys.TRUNCATED, false);
+    Assert.assertFalse(ctx.getTruncated());
+    ctx.put(Keys.TRUNCATED, true);
+    Assert.assertTrue(ctx.getTruncated());
+  }
+
+  @Test
+  public void testMergeMetrics()
+  {
+    MultiQueryMetricsCollector first =
+        MultiQueryMetricsCollector.newCollector().add(
+            SingleQueryMetricsCollector
+              .newCollector()
+              .addCpuNanos(300));
+    MultiQueryMetricsCollector second =
+        MultiQueryMetricsCollector.newCollector().add(
+            SingleQueryMetricsCollector
+              .newCollector()
+              .addCpuNanos(30));
+    MultiQueryMetricsCollector result = (MultiQueryMetricsCollector)
+        Keys.METRICS.mergeValues(first, second);
+    Assert.assertEquals(1, result.getCollectors().size());
+    Assert.assertEquals(330, result.getCollectors().get(0).getCpuNanos());
   }
 }

@@ -217,7 +217,8 @@ public class DruidStatement implements Closeable
         sqlLifecycle.setParameters(parameters);
         sqlLifecycle.validateAndAuthorize(authenticationResult);
         sqlLifecycle.plan();
-        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
+        final Sequence<Object[]> baseSequence =
+            yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get().getResults();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
@@ -342,7 +343,7 @@ public class DruidStatement implements Closeable
         try {
           onClose.run();
           synchronized (lock) {
-            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(t, null, -1);
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(t);
           }
         }
         catch (Throwable t1) {
@@ -358,7 +359,7 @@ public class DruidStatement implements Closeable
       try {
         if (!(this.throwable instanceof ForbiddenException)) {
           synchronized (lock) {
-            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable, null, -1);
+            sqlLifecycle.finalizeStateAndEmitLogsAndMetrics(this.throwable);
           }
         } else {
           DruidMeta.logFailure(this.throwable);

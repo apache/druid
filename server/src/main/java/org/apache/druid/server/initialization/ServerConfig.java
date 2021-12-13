@@ -89,12 +89,23 @@ public class ServerConfig
 
   public ServerConfig()
   {
-
   }
 
   @JsonProperty
   @Min(1)
   private int numThreads = getDefaultNumThreads();
+
+  /**
+   * Minimum number of threads in the thread pool. Also the number of threads that
+   * the pool creates at startup. A negative value (the default) means
+   * to use the {@code numThreads} value for backward compatibility. The thread
+   * pool will create additional threads on demand up to {@code numThreads}.
+   * <p>
+   * This property is primarily for debugging: to reduce the number of threads to
+   * a small number (2 or 3) to make debugging a bit easier.
+   */
+  @JsonProperty
+  private int minThreads = -1;
 
   @JsonProperty
   @Min(1)
@@ -161,6 +172,11 @@ public class ServerConfig
   public int getNumThreads()
   {
     return numThreads;
+  }
+
+  public int getMinThreads()
+  {
+    return minThreads;
   }
 
   public int getQueueSize()
@@ -255,6 +271,7 @@ public class ServerConfig
     }
     ServerConfig that = (ServerConfig) o;
     return numThreads == that.numThreads &&
+           minThreads == that.minThreads &&
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
@@ -278,6 +295,7 @@ public class ServerConfig
   {
     return Objects.hash(
         numThreads,
+        minThreads,
         queueSize,
         enableRequestLimit,
         maxIdleTime,
@@ -302,6 +320,7 @@ public class ServerConfig
   {
     return "ServerConfig{" +
            "numThreads=" + numThreads +
+           ", minThreads=" + minThreads +
            ", queueSize=" + queueSize +
            ", enableRequestLimit=" + enableRequestLimit +
            ", maxIdleTime=" + maxIdleTime +

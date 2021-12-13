@@ -25,9 +25,9 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -87,7 +87,7 @@ public class TestInsertQueryMaker implements QueryMaker
   }
 
   @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     // Don't actually execute anything, but do record information that tests will check for.
 
@@ -95,6 +95,7 @@ public class TestInsertQueryMaker implements QueryMaker
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
 
     // 2) Return the dataSource and signature of the insert operation, so tests can confirm they are correct.
-    return Sequences.simple(ImmutableList.of(new Object[]{targetDataSource, signature}));
+    return QueryResponse.createWithEmptyContext(
+        Sequences.simple(ImmutableList.of(new Object[]{targetDataSource, signature})));
   }
 }

@@ -121,7 +121,6 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, serverSelector.getSegment());
   }
 
-
   @Test
   public void testRun() throws Exception
   {

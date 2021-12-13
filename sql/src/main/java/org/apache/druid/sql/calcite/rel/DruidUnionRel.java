@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -100,19 +101,24 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Sequence<Object[]> runQuery()
+  public QueryResponse<Object[]> runQuery()
   {
+    Sequence<Object[]> results;
+
     // Lazy: run each query in sequence, not all at once.
     if (limit == 0) {
-      return Sequences.empty();
+      results = Sequences.empty();
     } else {
-      final Sequence baseSequence = Sequences.concat(
-          FluentIterable.from(rels).transform(rel -> ((DruidRel) rel).runQuery())
+      final Sequence<Object[]> baseResults = Sequences.concat(
+          FluentIterable.from(rels)
+                        .transform(rel -> ((DruidRel<?>) rel).runQuery().getResults())
       );
 
-      return limit > 0 ? baseSequence.limit(limit) : baseSequence;
+      results = limit > 0 ? baseResults.limit(limit) : baseResults;
     }
+
+    // TODO(gianm): Response context won't be set for top-level UNION ALL
+    return QueryResponse.createWithEmptyContext(results);
   }
 
   @Override

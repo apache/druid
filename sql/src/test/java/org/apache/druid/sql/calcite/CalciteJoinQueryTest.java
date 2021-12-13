@@ -4486,7 +4486,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
     QueryLifecycleFactory qlf = CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate);
     QueryLifecycle ql = qlf.factorize();
-    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK);
+    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, Access.OK).getResults();
     List<Object> results = seq.toList();
     Assert.assertEquals(
         ImmutableList.of(ResultRow.of("def")),

@@ -30,9 +30,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -44,6 +46,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -55,6 +58,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -93,6 +97,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -120,55 +125,41 @@ public class QueryResourceTest
     }
   };
 
-  private static final String SIMPLE_TIMESERIES_QUERY =
+  private static final String TIMESERIES_QUERY_TEMPLATE =
       "{\n"
       + "    \"queryType\": \"timeseries\",\n"
       + "    \"dataSource\": \"mmx_metrics\",\n"
       + "    \"granularity\": \"hour\",\n"
       + "    \"intervals\": [\n"
-      + "      \"2014-12-17/2015-12-30\"\n"
+      + "      \"%s\"\n"
       + "    ],\n"
       + "    \"aggregations\": [\n"
       + "      {\n"
       + "        \"type\": \"count\",\n"
       + "        \"name\": \"rows\"\n"
       + "      }\n"
-      + "    ]\n"
+      + "    ]%s"
       + "}";
+
+  private static final String SIMPLE_TIMESERIES_QUERY =
+      StringUtils.format(TIMESERIES_QUERY_TEMPLATE,
+          "2014-12-17/2015-12-30", "\n");
 
   private static final String SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL =
-      "{\n"
-      + "    \"queryType\": \"timeseries\",\n"
-      + "    \"dataSource\": \"mmx_metrics\",\n"
-      + "    \"granularity\": \"hour\",\n"
-      + "    \"intervals\": [\n"
-      + "      \"2014-12-17/2014-12-30\"\n"
-      + "    ],\n"
-      + "    \"aggregations\": [\n"
-      + "      {\n"
-      + "        \"type\": \"count\",\n"
-      + "        \"name\": \"rows\"\n"
-      + "      }\n"
-      + "    ]\n"
-      + "}";
+      StringUtils.format(TIMESERIES_QUERY_TEMPLATE,
+          "2014-12-17/2014-12-30", "\n");
 
   private static final String SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY =
-      "{\n"
-      + "    \"queryType\": \"timeseries\",\n"
-      + "    \"dataSource\": \"mmx_metrics\",\n"
-      + "    \"granularity\": \"hour\",\n"
-      + "    \"intervals\": [\n"
-      + "      \"2014-12-17/2015-12-30\"\n"
-      + "    ],\n"
-      + "    \"aggregations\": [\n"
-      + "      {\n"
-      + "        \"type\": \"count\",\n"
-      + "        \"name\": \"rows\"\n"
-      + "      }\n"
-      + "    ],\n"
-      + "    \"context\": { \"priority\": -1 }"
-      + "}";
+      StringUtils.format(TIMESERIES_QUERY_TEMPLATE,
+          "2014-12-17/2015-12-30",
+             ",\n"
+           + "    \"context\": { \"priority\": -1 }\n");
 
+  private static final String SIMPLE_TIMESERIES_WITH_TRAILER =
+      StringUtils.format(TIMESERIES_QUERY_TEMPLATE,
+          "2014-12-17/2015-12-30",
+             ",\n"
+           + "    \"context\": { \"trailer\": %s }\n");
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
   private static final DruidNode DRUID_NODE = new DruidNode(
@@ -180,6 +171,9 @@ public class QueryResourceTest
       true,
       false
   );
+
+  public static final String RESULTS = JsonParserIterator.FIELD_RESULTS;
+  public static final String CONTEXT = JsonParserIterator.FIELD_CONTEXT;
 
   private ObjectMapper jsonMapper;
   private ObjectMapper smileMapper;
@@ -193,6 +187,16 @@ public class QueryResourceTest
     EmittingLogger.registerEmitter(NOOP_SERVICE_EMITTER);
   }
 
+  /**
+   * Set up the standard, test-independent methods for a servlet request.
+   * @param request
+   */
+  private void mockRequest(HttpServletRequest request)
+  {
+    EasyMock.expect(request.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(request.getRemoteAddr()).andReturn("localhost").anyTimes();
+  }
+
   @Before
   public void setup()
   {
@@ -202,8 +206,7 @@ public class QueryResourceTest
 
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(testServletRequest);
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
@@ -251,6 +254,101 @@ public class QueryResourceTest
     Assert.assertNotNull(response);
   }
 
+  public Map<String, Object> decodeTrailerResponse(Response response) throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    return jsonMapper.readValue(
+        baos.toByteArray(),
+        new TypeReference<Map<String, Object>>() {}
+    );
+  }
+
+  @Test
+  public void testTrailerInvalidOption() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    // Ask for a tailer using an invalid option.
+    // Since the trailer changes the format, use it even if the trailer
+    // option itself is invalid.
+    String queryStr = StringUtils.format(SIMPLE_TIMESERIES_WITH_TRAILER,
+        "\"please\"");
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(queryStr.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    final Map<String, Object> results = decodeTrailerResponse(response);
+    Assert.assertTrue(results.containsKey(RESULTS));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> context = (Map<String, Object>) results.get(CONTEXT);
+    Assert.assertNotNull(context);
+    Assert.assertEquals(1, context.size());
+    Assert.assertTrue(context.containsKey(ResponseContext.Keys.METRICS.getName()));
+  }
+
+  @Test
+  public void testTrailerMetrics() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    // Ask for metrics explicitly.
+    String queryStr = StringUtils.format(SIMPLE_TIMESERIES_WITH_TRAILER,
+        StringUtils.format("\"%s\"", QueryContexts.TRAILER_METRICS));
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(queryStr.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    final Map<String, Object> results = decodeTrailerResponse(response);
+    Assert.assertTrue(results.containsKey(RESULTS));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> context = (Map<String, Object>) results.get(CONTEXT);
+    Assert.assertNotNull(context);
+    Assert.assertEquals(1, context.size());
+    Assert.assertTrue(context.containsKey(ResponseContext.Keys.METRICS.getName()));
+  }
+
+  @Test
+  public void testTrailerAll() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    // Ask for metrics and context details.
+    String queryStr = StringUtils.format(SIMPLE_TIMESERIES_WITH_TRAILER,
+        StringUtils.format("[\"%s\", \"%s\"]",
+            QueryContexts.TRAILER_METRICS,
+            QueryContexts.TRAILER_CONTEXT));
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(queryStr.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    final Map<String, Object> results = decodeTrailerResponse(response);
+    Assert.assertTrue(results.containsKey(RESULTS));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> context = (Map<String, Object>) results.get(CONTEXT);
+    Assert.assertNotNull(context);
+    Assert.assertTrue(context.containsKey(ResponseContext.Keys.METRICS.getName()));
+    // The mock query doesn't put any footer fields in the response context,
+    // so we can't check that other context values are included.
+    // Assert.assertTrue(context.containsKey(ResponseContext.Keys.NUM_SCANNED_ROWS.getName()));
+  }
+
+  public List<Result<TimeBoundaryResultValue>> decodeTimeSeriesResponse(Response response) throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    return jsonMapper.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
+  }
+
   @Test
   public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
   {
@@ -286,12 +384,7 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(response);
 
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
-    );
+    final List<Result<TimeBoundaryResultValue>> responses = decodeTimeSeriesResponse(response);
 
     Assert.assertNotNull(response);
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -339,12 +432,7 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(response);
 
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
-    );
+    final List<Result<TimeBoundaryResultValue>> responses = decodeTimeSeriesResponse(response);
 
     Assert.assertNotNull(response);
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -415,8 +503,7 @@ public class QueryResourceTest
 
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
     EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(testServletRequest);
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
@@ -450,8 +537,7 @@ public class QueryResourceTest
 
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
     EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(testServletRequest);
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
@@ -468,8 +554,8 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithJsonRequestAndSmileAcceptHeader() throws IOException
   {
-    //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
+    // Doing a replay of testServletRequest for teardown to succeed.
+    // We don't use testServletRequest in this test case.
     EasyMock.replay(testServletRequest);
 
     //Creating our own Smile Servlet request, as to not disturb the remaining tests.
@@ -492,8 +578,7 @@ public class QueryResourceTest
 
     // Set Accept to Smile
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(smileRequest);
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
@@ -512,11 +597,11 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithSmileRequestAndSmileAcceptHeader() throws IOException
   {
-    //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
+    // Doing a replay of testServletRequest for teardown to succeed.
+    // We don't use testServletRequest in this test case.
     EasyMock.replay(testServletRequest);
 
-    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
+    // Creating our own Smile Servlet request, as to not disturb the remaining tests.
     // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
     final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
 
@@ -536,8 +621,7 @@ public class QueryResourceTest
 
     // Set Accept to Smile
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(smileRequest);
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
@@ -558,10 +642,10 @@ public class QueryResourceTest
   public void testGoodQueryWithSmileRequestNoSmileAcceptHeader() throws IOException
   {
     //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
+    //We don't use testServletRequest in this test case.
     EasyMock.replay(testServletRequest);
 
-    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
+    // Creating our own Smile Servlet request, as to not disturb the remaining tests.
     // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
     final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
 
@@ -581,8 +665,7 @@ public class QueryResourceTest
 
     // DO NOT set Accept to Smile, Content-Type in response will be default to Content-Type in request
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    mockRequest(smileRequest);
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
@@ -637,7 +720,7 @@ public class QueryResourceTest
   @Test
   public void testUnsupportedQueryThrowsException() throws IOException
   {
-    String errorMessage = "This will be support in Druid 9999";
+    String errorMessage = "This will be supported in Druid 9999";
     ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
     EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt())).andThrow(
         new QueryUnsupportedException(errorMessage));
@@ -734,12 +817,7 @@ public class QueryResourceTest
         testServletRequest
     );
 
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
-    );
+    final List<Result<TimeBoundaryResultValue>> responses = decodeTimeSeriesResponse(response);
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(0, responses.size());
@@ -1067,7 +1145,7 @@ public class QueryResourceTest
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQuery() throws InterruptedException
+  public void testTooManyQueries() throws InterruptedException
   {
     expectPermissiveHappyPathAuth();
 
@@ -1112,7 +1190,7 @@ public class QueryResourceTest
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQueryInLane() throws InterruptedException
+  public void testTooManyQueriesInLane() throws InterruptedException
   {
     expectPermissiveHappyPathAuth();
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
@@ -1164,7 +1242,7 @@ public class QueryResourceTest
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException
+  public void testTooManyQueriesInLaneImplicitFromDurationThreshold() throws InterruptedException
   {
     expectPermissiveHappyPathAuth();
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);

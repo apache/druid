@@ -20,7 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
@@ -38,5 +38,5 @@ public interface QueryMaker extends QueryFeatureInspector
    * Executes a given Druid query, which is expected to correspond to the SQL query that this QueryMaker was originally
    * created for. The returned arrays match the row type given by {@link #getResultType()}.
    */
-  Sequence<Object[]> runQuery(DruidQuery druidQuery);
+  QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
 }

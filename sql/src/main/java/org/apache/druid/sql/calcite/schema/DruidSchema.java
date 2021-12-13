@@ -899,7 +899,10 @@ public class DruidSchema extends AbstractSchema
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK);
+        .runSimple(
+            segmentMetadataQuery,
+            escalator.createEscalatedAuthenticationResult(),
+            Access.OK).getResults();
   }
 
   @VisibleForTesting

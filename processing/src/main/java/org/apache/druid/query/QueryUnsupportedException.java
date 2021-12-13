@@ -33,11 +33,12 @@ import javax.annotation.Nullable;
  * As a {@link QueryException} it is expected to be serialized to a json response with a proper HTTP error code
  * ({@link #STATUS_CODE}).
  */
+@SuppressWarnings("serial")
 public class QueryUnsupportedException extends QueryException
 {
   private static final String ERROR_CLASS = QueryUnsupportedException.class.getName();
   public static final String ERROR_CODE = "Unsupported query";
-  public static final int STATUS_CODE = 501;
+  public static final int STATUS_CODE = 501; // Not Implemented
 
   @JsonCreator
   public QueryUnsupportedException(

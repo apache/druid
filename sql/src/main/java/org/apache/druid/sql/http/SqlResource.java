@@ -28,7 +28,6 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,6 +37,8 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -58,6 +59,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -65,6 +67,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -74,7 +77,6 @@ public class SqlResource
 {
   public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
   public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
-  public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
 
   private final ObjectMapper jsonMapper;
@@ -108,12 +110,15 @@ public class SqlResource
   ) throws IOException
   {
     final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), sqlQuery.getContext());
-    final String remoteAddr = req.getRemoteAddr();
+    final String sqlQueryId = lifecycle.initialize(sqlQuery);
     final String currThreadName = Thread.currentThread().getName();
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
+
+      // Initialize the query stats using the original received query.
+      SqlLifecycle.LifecycleStats stats = lifecycle.stats();
+      stats.onStart(req.getRemoteAddr(), sqlQueryId, sqlQuery);
 
       lifecycle.setParameters(sqlQuery.getParameterList());
       lifecycle.validateAndAuthorize(req);
@@ -122,82 +127,31 @@ public class SqlResource
 
       lifecycle.plan();
 
-      final SqlRowTransformer rowTransformer = lifecycle.createRowTransformer();
-      final Sequence<Object[]> sequence = lifecycle.execute();
-      final Yielder<Object[]> yielder0 = Yielders.each(sequence);
-
-      try {
-        final Response.ResponseBuilder responseBuilder = Response
-            .ok(
-                (StreamingOutput) outputStream -> {
-                  Exception e = null;
-                  CountingOutputStream os = new CountingOutputStream(outputStream);
-                  Yielder<Object[]> yielder = yielder0;
-
-                  try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                  .createFormatter(os, jsonMapper)) {
-                    writer.writeResponseStart();
-
-                    if (sqlQuery.includeHeader()) {
-                      writer.writeHeader(
-                          rowTransformer.getRowType(),
-                          sqlQuery.includeTypesHeader(),
-                          sqlQuery.includeSqlTypesHeader()
-                      );
-                    }
-
-                    while (!yielder.isDone()) {
-                      final Object[] row = yielder.get();
-                      writer.writeRowStart();
-                      for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
-                        final Object value = rowTransformer.transform(row, i);
-                        writer.writeRowField(rowTransformer.getFieldList().get(i), value);
-                      }
-                      writer.writeRowEnd();
-                      yielder = yielder.next(null);
-                    }
-
-                    writer.writeResponseEnd();
-                  }
-                  catch (Exception ex) {
-                    e = ex;
-                    log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
-                    throw new RuntimeException(ex);
-                  }
-                  finally {
-                    yielder.close();
-                    endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, os.getCount());
-                  }
-                }
-            )
-            .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
-
-        if (sqlQuery.includeHeader()) {
-          responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
-        }
-
-        return responseBuilder.build();
-      }
-      catch (Throwable e) {
-        // make sure to close yielder if anything happened before starting to serialize the response.
-        yielder0.close();
-        throw new RuntimeException(e);
-      }
+      // The only failure possible in this last line is if the query
+      // run within QueryOutput fails. If so, the yielder is never
+      // created. Else, if the query starts running, the QueryOutput
+      // is returned to Jetty, which will call write() which will ensure
+      // that the yielder is closed.
+      return Response
+          .ok(new QueryOutput(lifecycle))
+          .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
+          .type(sqlQuery.getResultFormat().contentType())
+          .build();
     }
     catch (QueryCapacityExceededException cap) {
-      endLifecycle(sqlQueryId, lifecycle, cap, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, cap);
       return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap, sqlQueryId);
     }
     catch (QueryUnsupportedException unsupported) {
-      endLifecycle(sqlQueryId, lifecycle, unsupported, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, unsupported);
       return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported, sqlQueryId);
     }
     catch (QueryTimeoutException timeout) {
-      endLifecycle(sqlQueryId, lifecycle, timeout, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, timeout);
       return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout, sqlQueryId);
     }
     catch (SqlPlanningException | ResourceLimitExceededException e) {
-      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, e);
       return buildNonOkResponse(BadQueryException.STATUS_CODE, e, sqlQueryId);
     }
     catch (ForbiddenException e) {
@@ -206,24 +160,150 @@ public class SqlResource
                                              .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
     }
     catch (RelOptPlanner.CannotPlanException e) {
-      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, e);
       SqlPlanningException spe = new SqlPlanningException(SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
           e.getMessage());
       return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
     }
-    // calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
+    catch (QueryInterruptedException e) {
+      endLifecycle(sqlQueryId, lifecycle, e);
+      log.info("Query cancelled: %s", sqlQuery);
+      return buildNonOkResponse(QueryInterruptedException.STATUS_CODE, e, sqlQueryId);
+    }
+    // Calcite throws a java.lang.AssertionError which is type error not exception. using throwable will catch all
     catch (Throwable e) {
       log.warn(e, "Failed to handle query: %s", sqlQuery);
-      endLifecycle(sqlQueryId, lifecycle, e, remoteAddr, -1);
+      endLifecycle(sqlQueryId, lifecycle, e);
 
       return buildNonOkResponse(
           Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(e),
+          new QueryInterruptedException(e),
           sqlQueryId
       );
     }
     finally {
       Thread.currentThread().setName(currThreadName);
+    }
+  }
+
+  /**
+   * Streaming output to run the query and deliver results to the HTTP client.
+   * This class continues to run after the POST request returns: it is
+   * responsible for cleaning up for any errors that occur during reading
+   * output, and for finishing up upon completion.
+   * <p>
+   * The {@code yielder} is of critical importance. Is is created in the
+   * constructor. If the query fails before returning control to Jetty,
+   * then the handler code *must* call {#link #close()} to close the
+   * yielder. During the {#link write()} call, this class ensures that
+   * the yielder is closed on both the success and failure paths.
+   */
+  private class QueryOutput implements StreamingOutput
+  {
+    final SqlLifecycle lifecycle;
+
+    final SqlRowTransformer rowTransformer;
+    final QueryResponse<Object[]> queryResponse;
+    final String sqlQueryId;
+    Yielder<Object[]> yielder;
+
+    private QueryOutput(
+        final SqlLifecycle lifecycle
+    )
+    {
+      this.lifecycle = lifecycle;
+      this.sqlQueryId = lifecycle.sqlQueryId();
+      this.rowTransformer = lifecycle.createRowTransformer();
+      this.queryResponse = lifecycle.execute();
+      this.yielder = Yielders.each(queryResponse.getResults());
+    }
+
+    @Override
+    public void write(OutputStream outputStream) throws WebApplicationException
+    {
+      Exception e = null;
+      final CountingOutputStream os = new CountingOutputStream(outputStream);
+      long resultRowCount = 0;
+      final SqlQuery sqlQuery = lifecycle.sqlQuery();
+
+      try (final ResultFormat.Writer writer = sqlQuery.getResultFormat().createFormatter(os, jsonMapper)) {
+        writer.writeResponseStart();
+
+        if (sqlQuery.includeHeader()) {
+          writer.writeHeader(
+              rowTransformer.getRowType(),
+              sqlQuery.includeTypesHeader(),
+              sqlQuery.includeSqlTypesHeader()
+          );
+        }
+
+        while (!yielder.isDone()) {
+          final Object[] row = yielder.get();
+          writer.writeRowStart();
+          for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
+            final Object value = rowTransformer.transform(row, i);
+            writer.writeRowField(rowTransformer.getFieldList().get(i), value);
+          }
+          writer.writeRowEnd();
+          resultRowCount++;
+          yielder = yielder.next(null);
+        }
+
+        // Avoid closing again in the finally block if "yielder.close" fails.
+        close();
+
+        SqlLifecycle.LifecycleStats stats = lifecycle.stats();
+        final ResponseContext responseContext =
+            queryResponse.getResponseContext().orElse(ResponseContext.createEmpty());
+        stats.setResponseContext(responseContext);
+        stats.onResultsSent(resultRowCount, os.getCount());
+        if (sqlQuery.getResultFormat().hasTrailer()) {
+          writer.writeTrailer(stats.trailer());
+        }
+
+        writer.writeResponseEnd();
+      }
+
+      // Handle exceptions that occur while producing results.
+      catch (QueryCapacityExceededException cap) {
+        e = cap;
+        log.error(cap, "SQL query failed [%s]", sqlQueryId);
+      }
+      catch (QueryTimeoutException timeout) {
+        e = timeout;
+        log.error(timeout, "SQL query failed [%s]", sqlQueryId);
+      }
+      catch (Exception ex) {
+        e = ex;
+        log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
+        throw new RuntimeException(ex);
+      }
+      finally {
+        try {
+          close();
+        }
+        catch (Exception ex2) {
+          if (e == null) {
+            e = ex2;
+          } else {
+            e.addSuppressed(ex2);
+          }
+        }
+        endLifecycle(sqlQueryId, lifecycle, e);
+      }
+    }
+
+    public void close() throws IOException
+    {
+      if (yielder == null) {
+        return;
+      }
+      try {
+        yielder.close();
+      }
+      finally {
+        yielder = null;
+      }
     }
   }
 
@@ -238,12 +318,10 @@ public class SqlResource
   private void endLifecycle(
       String sqlQueryId,
       SqlLifecycle lifecycle,
-      @Nullable final Throwable e,
-      @Nullable final String remoteAddress,
-      final long bytesWritten
+      @Nullable final Throwable e
   )
   {
-    lifecycle.finalizeStateAndEmitLogsAndMetrics(e, remoteAddress, bytesWritten);
+    lifecycle.finalizeStateAndEmitLogsAndMetrics(e);
     sqlLifecycleManager.remove(sqlQueryId, lifecycle);
   }
 

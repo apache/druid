@@ -75,6 +75,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -292,7 +293,7 @@ public class DruidPlanner implements Closeable
     if (explain != null) {
       return planExplanation(druidRel, explain, true);
     } else {
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         // sanity check
         final Set<ResourceAction> readResourceActions =
             plannerContext.getResourceActions()
@@ -358,10 +359,10 @@ public class DruidPlanner implements Closeable
           (JavaTypeFactory) planner.getTypeFactory(),
           plannerContext.getParameters()
       );
-      final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
+      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
-        return Sequences.withBaggage(new BaseSequence<>(
+        final Sequence<Object[]> resultSequence = Sequences.withBaggage(new BaseSequence<>(
             new BaseSequence.IteratorMaker<Object[], EnumeratorIterator<Object[]>>()
             {
               @Override
@@ -390,6 +391,7 @@ public class DruidPlanner implements Closeable
               }
             }
         ), enumerator::close);
+        return QueryResponse.createWithEmptyContext(resultSequence);
       };
       return new PlannerResult(resultsSupplier, root.validatedRowType);
     }
@@ -428,8 +430,9 @@ public class DruidPlanner implements Closeable
       log.error(jpe, "Encountered exception while serializing Resources for explain output");
       resourcesString = null;
     }
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString})));
+    final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
+        QueryResponse.createWithEmptyContext(
+            Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString}))));
     return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()));
   }
 

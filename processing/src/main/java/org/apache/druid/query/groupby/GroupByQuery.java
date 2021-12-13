@@ -457,6 +457,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return getContextBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   @Override
   public Ordering getResultOrdering()
   {
@@ -988,7 +989,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
-    public Builder setDataSource(Query query)
+    public Builder setDataSource(Query<?> query)
     {
       this.dataSource = new QueryDataSource(query);
       return this;
