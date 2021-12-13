@@ -185,6 +185,14 @@ package object spark {
       reader.option(brokerPrefix(DruidConfigurationKeys.timeoutMillisecondsKey), timeoutMilliseconds)
     }
 
+    def timestampColumn(timestampColumn: String): DataFrameReader = {
+      reader.option(readerPrefix(DruidConfigurationKeys.timestampColumnKey), timestampColumn)
+    }
+
+    def timestampFormat(timestampFormat: String): DataFrameReader = {
+      reader.option(readerPrefix(DruidConfigurationKeys.timestampFormatKey), timestampFormat)
+    }
+
     def useCompactSketches(useCompactSketches: Boolean): DataFrameReader = {
       reader.option(readerPrefix(DruidConfigurationKeys.useCompactSketchesKey), useCompactSketches)
     }

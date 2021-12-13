@@ -1915,7 +1915,7 @@ DimensionSchema
 DimensionSchemas
 DataSegment
 LoadSpecs
-ComplexMetricRegistry
+ComplexTypeRegistry
 SegmentWriterRegistry
 SegmentReaderRegistry
 SQLConnectorRegistry

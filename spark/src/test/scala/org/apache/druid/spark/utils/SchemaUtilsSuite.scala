@@ -23,7 +23,7 @@ import org.apache.druid.data.input.MapBasedInputRow
 import org.apache.druid.data.input.impl.{DimensionSchema, DoubleDimensionSchema,
   FloatDimensionSchema, LongDimensionSchema, StringDimensionSchema}
 import org.apache.druid.java.util.common.IAE
-import org.apache.druid.spark.registries.ComplexMetricRegistry
+import org.apache.druid.spark.registries.ComplexTypeRegistry
 import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -59,7 +59,7 @@ class SchemaUtilsSuite extends AnyFunSuite with Matchers with DruidDataSourceV2T
       "uniq_id1" -> ("thetaSketch", false)
     )
 
-    ComplexMetricRegistry.registerByName("thetaSketch", false)
+    ComplexTypeRegistry.registerByName("thetaSketch", false)
     val actualSchema = SchemaUtils.convertDruidSchemaToSparkSchema(columnMap)
     actualSchema.fields should contain theSameElementsAs schema.fields
   }
@@ -243,5 +243,4 @@ class SchemaUtilsSuite extends AnyFunSuite with Matchers with DruidDataSourceV2T
 
     an[IAE] should be thrownBy SchemaUtils.validateDimensionSpecAgainstSparkSchema(dimensions, schema)
   }
-
 }

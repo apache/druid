@@ -258,7 +258,7 @@ object DruidDataSourceReader {
    * memory on the driver to check their schema is expensive and inefficient and has the same schema
    * evolution and accurate statistics problem.
    * The `INFORMATION_SCHEMA.COLUMNS` table does not contain information about whether or not a column
-   * could contain multiple values and does not know the actual metric type for complex metrics. Less
+   * could contain multiple values and does not know the actual metric type for complex types. Less
    * relevantly, we wouldn't have access to possibly useful statistics about the segments
    * that could be used to perform more efficient reading, and the Druid cluster to read from would
    * need to have sql querying initialized and be running a version of Druid >= 0.14. Since we're

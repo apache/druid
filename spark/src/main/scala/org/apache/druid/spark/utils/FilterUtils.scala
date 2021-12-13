@@ -151,8 +151,8 @@ object FilterUtils {
     dataType match {
       case LongType | IntegerType | DoubleType | FloatType => StringComparators.NUMERIC
       case StringType | ArrayType(StringType, _) => StringComparators.LEXICOGRAPHIC
-      // Filters on complex metrics should return false when evaluated in isSupportedFilter, something's gone wrong
-      case _ => throw new ISE("This reader doesn't support filtering on a Complex metric! Complex metric " +
+      // Filters on complex types should return false when evaluated in isSupportedFilter, something's gone wrong
+      case _ => throw new ISE("This reader doesn't support filtering on complex types! Complex type " +
         "filters should not be pushed down.")
     }
   }

@@ -35,38 +35,38 @@ import org.apache.druid.spark.mixins.Logging
 import scala.collection.mutable
 
 /**
- * A registry for plugging in support for Druid complex metric types. Provides definitions for supporting complex types
- * in extensions-core out of the box.
+ * A registry for plugging in support for Druid complex types. Provides definitions for supporting complex types in
+  * extensions-core out of the box.
  */
-object ComplexMetricRegistry extends Logging {
+object ComplexTypeRegistry extends Logging {
   private val registeredSerdeInitFunctions: mutable.HashMap[String, () => Unit] = new mutable.HashMap()
   private val registeredSerializeFunctions: mutable.HashMap[Class[_], Any => Array[Byte]] =
     new mutable.HashMap()
 
   /**
-    * Register a function REGISTERSERDEFUNC that initializes serializers and deserializers for the complex metric with
-    * the type name NAME. Assumes that the associated complex metric is serialized as a byte array.
+    * Register a function REGISTERSERDEFUNC that initializes serializers and deserializers for the complex type with
+    * the name NAME. Assumes that the associated complex type is serialized as a byte array.
     *
-    * @param name The type name of the complex metric to register.
-    * @param registerSerdeFunc The function to use to register the necessary serdes for this complex metric type.
+    * @param name The type name of the complex type to register.
+    * @param registerSerdeFunc The function to use to register the necessary serdes for this complex type.
     */
   def register(
                 name: String,
                 registerSerdeFunc: () => Unit
               ): Unit = {
-    logInfo(s"Registering serde initializers for complex metric type $name.")
+    logInfo(s"Registering serde initializers for complex type $name.")
     registeredSerdeInitFunctions(name) = registerSerdeFunc
   }
 
   /**
     * Register a function REGISTERSERDEFUNC that initializes serializers and deserializers, a class DESERIALIZEDCLASS
     * to deserialize byte arrays into, and a function SERIALIZEFUNC for converting from instances of DESERIALIZEDCLASS
-    * to byte arrays for the complex metric with the type name NAME. Assumes that the associated complex metric is
+    * to byte arrays for the complex type with the name NAME. Assumes that the associated complex type is
     * serialized as a byte array.
     *
-    * @param name The type name of the complex metric to register.
-    * @param registerSerdeFunc The function to use to register the necessary serdes for this complex metric type.
-    * @param deserializedClass The class to deserialize complex metrics of the registered type to from byte arrays.
+    * @param name The type name of the complex type to register.
+    * @param registerSerdeFunc The function to use to register the necessary serdes for this complex type.
+    * @param deserializedClass The class to deserialize values of the registered type to from byte arrays.
     * @param serializeFunc The function to use when serializing instances of DESERIALIZEDCLASS to byte arrays.
     */
   def register(
@@ -74,21 +74,21 @@ object ComplexMetricRegistry extends Logging {
                 registerSerdeFunc: () => Unit,
                 deserializedClass: Class[_],
                 serializeFunc: Any => Array[Byte]): Unit = {
-    logInfo(s"Registering serde initializers and serialization functions for complex metric type $name.")
+    logInfo(s"Registering serde initializers and serialization functions for complex type $name.")
     registeredSerdeInitFunctions(name) = registerSerdeFunc
     registeredSerializeFunctions(deserializedClass) = serializeFunc
   }
 
   /**
-    * Shortcut for registering known complex metric serdes (e.g. those in extensions-core) by name.
+    * Shortcut for registering known complex type serdes (e.g. those in extensions-core) by name.
     *
-    * @param name The type name of the complex metric to register.
-    * @param shouldCompact Whether or not to store compacted versions of this complex metric. Ignored for complex metric
-   *                      type that don't have compacted forms.
+    * @param name The type name of the complex type to register.
+    * @param shouldCompact Whether or not to store compacted versions of this complex type. Ignored for complex types
+    *                      that don't have compacted forms.
     */
   def registerByName(name: String, shouldCompact: Boolean = false): Unit = {
-    if (!registeredSerdeInitFunctions.contains(name) && knownMetrics.contains(name)) {
-      knownMetrics(name)(shouldCompact)
+    if (!registeredSerdeInitFunctions.contains(name) && knownTypes.contains(name)) {
+      knownTypes(name)(shouldCompact)
     }
   }
 
@@ -100,9 +100,9 @@ object ComplexMetricRegistry extends Logging {
     registeredSerializeFunctions.keySet.toSet
   }
 
-  def registerSerdeInitFunctions(complexMetricTypeName: String): Unit = {
-    if (registeredSerdeInitFunctions.contains(complexMetricTypeName)) {
-      registeredSerdeInitFunctions(complexMetricTypeName).apply()
+  def registerSerdeInitFunctions(complexTypeName: String): Unit = {
+    if (registeredSerdeInitFunctions.contains(complexTypeName)) {
+      registeredSerdeInitFunctions(complexTypeName).apply()
     }
   }
 
@@ -121,13 +121,13 @@ object ComplexMetricRegistry extends Logging {
   }
 
   /**
-    * Register metric serdes for all complex metric types in extensions-core.
+    * Register serdes for all complex types in extensions-core.
     */
   def initializeDefaults(shouldCompact: Boolean = false): Unit = {
-    knownMetrics.foreach(_._2.apply(shouldCompact))
+    knownTypes.foreach(_._2.apply(shouldCompact))
   }
 
-  private val knownMetrics: Map[String, Boolean => Unit] = Map[String, Boolean => Unit](
+  private val knownTypes: Map[String, Boolean => Unit] = Map[String, Boolean => Unit](
     // Approximate Histograms
     "approximateHistogram" -> ((_: Boolean) =>
       register(

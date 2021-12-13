@@ -24,10 +24,10 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec
 import org.apache.druid.query.filter.DimFilter
 import org.apache.druid.segment.column.ValueType
 import org.apache.druid.segment.vector.{VectorColumnSelectorFactory, VectorCursor}
-import org.apache.druid.segment.{QueryableIndexStorageAdapter, VirtualColumns}
+import org.apache.druid.segment.VirtualColumns
 import org.apache.druid.spark.configuration.{Configuration, SerializableHadoopConfiguration}
 import org.apache.druid.spark.mixins.Logging
-import org.apache.druid.spark.registries.ComplexMetricRegistry
+import org.apache.druid.spark.registries.ComplexTypeRegistry
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.execution.vectorized.{OnHeapColumnVector, WritableColumnVector}
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
@@ -57,7 +57,7 @@ class DruidColumnarInputPartitionReader(
     useDefaultNullHandling
   ) with InputPartitionReader[ColumnarBatch] with Logging {
 
-  private val adapter = new QueryableIndexStorageAdapter(queryableIndex)
+  private val adapter = segment.asStorageAdapter()
 
   private val cursor: VectorCursor = adapter.makeVectorCursor(
     filter.map(_.toOptimizedFilter).orNull,
@@ -90,8 +90,8 @@ class DruidColumnarInputPartitionReader(
       if (Option(cursor).nonEmpty) {
         cursor.close()
       }
-      if (Option(queryableIndex).nonEmpty) {
-        queryableIndex.close()
+      if (Option(segment).nonEmpty) {
+        segment.close()
       }
       if (Option(tmpDir).nonEmpty) {
         FileUtils.deleteDirectory(tmpDir)
@@ -99,8 +99,8 @@ class DruidColumnarInputPartitionReader(
     } catch {
       case e: Exception =>
         // Since we're just going to rethrow e and tearing down the JVM will clean up the result batch, column vectors,
-        // cursor, and queryable index even if we can't, the only leak we have to worry about is the temp file. Spark
-        // should clean up temp files as well, but rather than rely on that we'll try to take care of it ourselves.
+        // cursor, and segment even if we can't, the only leak we have to worry about is the temp file. Spark should
+        // clean up temp files as well, but rather than rely on that we'll try to take care of it ourselves.
         logWarn("Encountered exception attempting to close a DruidColumnarInputPartitionReader!")
         if (Option(tmpDir).nonEmpty && tmpDir.exists()) {
           FileUtils.deleteDirectory(tmpDir)
@@ -343,15 +343,15 @@ class DruidColumnarInputPartitionReader(
       val obj = vector(i)
       if (obj == null) { // scalastyle:ignore null
         columnVector.putNull(i)
-      } else if (ComplexMetricRegistry.getRegisteredSerializedClasses.contains(obj.getClass)) {
-        val bytes = ComplexMetricRegistry.deserialize(obj)
+      } else if (ComplexTypeRegistry.getRegisteredSerializedClasses.contains(obj.getClass)) {
+        val bytes = ComplexTypeRegistry.deserialize(obj)
         columnVector.putByteArray(i, bytes)
       } else {
         obj match {
           case arr: Array[Byte] =>
             columnVector.putByteArray(i, arr)
           case _ => throw new IllegalArgumentException(
-            s"Unable to parse ${column.getClass.toString} into a ByteArray! Try registering a ComplexMetric Plugin."
+            s"Unable to parse ${column.getClass.toString} into a ByteArray! Try registering a Complex Type Plugin."
           )
         }
       }
