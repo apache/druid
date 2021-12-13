@@ -153,26 +153,33 @@ public class DimensionRangeShardSpec implements ShardSpec
       return false;
     }
     return rangeSet.asRanges().equals(
-        Collections.singleton(Range.closed(val, val))
+        Collections.singleton(Range.singleton(val))
     );
   }
 
+  /**
+   * Pruning scenarios at dimension i: (When the Effective domain is empty)
+   *  0) query domain left-aligns with start and right-aligns with end and then deviates outside to align with neither
+   *  1) The query domain left-aligns with start until dimension i and then deviates to be strictly less than start[i]
+   *  2) The query domain right-aligns with end until dimension i and then deviates to be strictly greater than end[i]
+   *
+   * Immediate acceptance criteria at dimension i:
+   *  Effective domain is non-empty and no longer aligns with any boundary
+   *
+   * @param domain The domain inferred from the query. Assumed to be non-emtpy
+   * @return boolean indicating if the segment needs to be considered or pruned
+   */
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    // Trivial check for empty cartesian product
-    for (RangeSet<String> domainForDimension: domain.values()) {
-      if (domainForDimension.isEmpty()) {
-        return false;
-      }
-    }
-
     final StringTuple segmentStart = start == null ? new StringTuple(new String[dimensions.size()]) : start;
     final StringTuple segmentEnd = end == null ? new StringTuple(new String[dimensions.size()]) : end;
-    //Indicates if the start values of the previous dimensions marks the upper boundary of the query domain
-    boolean startIsGreatestInDomain = true;
-    //Indicates if the end values of the previous dimensions marks the lower boundary of the query domain
-    boolean endIsLeastInDomain = true;
+
+    // Indicates if the effective domain is equivalent to start till the previous dimension
+    boolean effectiveDomainIsStart = true;
+    // Indicates if the effective domain is equivalent to end till the previous dimension
+    boolean effectiveDomainIsEnd = true;
+
     for (int i = 0; i < dimensions.size(); i++) {
       String dimension = dimensions.get(i);
       RangeSet<String> queryDomainForDimension = domain.get(dimension);
@@ -180,26 +187,31 @@ public class DimensionRangeShardSpec implements ShardSpec
         queryDomainForDimension = TreeRangeSet.create();
         queryDomainForDimension.add(Range.all());
       }
-      // Range to compare the domain against
+
+      // Compute the segment's range based on its metadata and (outward) boundary alignment
       Range<String> rangeTillSegmentBoundary = Range.all();
-      if (startIsGreatestInDomain && segmentStart.get(i) != null) {
+      if (effectiveDomainIsStart && segmentStart.get(i) != null) {
         rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atLeast(segmentStart.get(i)));
       }
-      if (endIsLeastInDomain && segmentEnd.get(i) != null) {
+      if (effectiveDomainIsEnd && segmentEnd.get(i) != null) {
         rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atMost(segmentEnd.get(i)));
       }
+
+      // EffectiveDomain = QueryDomain INTERSECTION SegmentRange
       RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
       // Prune segment because domain is out of range
       if (effectiveDomainForDimension.isEmpty()) {
         return false;
       }
-      // Update flags based on whether the effective domain lies on the boundary of this dimension
-      startIsGreatestInDomain = startIsGreatestInDomain
+
+      // Boundary aligment for current dimension
+      effectiveDomainIsStart = effectiveDomainIsStart
                                 && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
-      endIsLeastInDomain = endIsLeastInDomain
+      effectiveDomainIsEnd = effectiveDomainIsEnd
                            && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
-      // If the query domain overflows either boundary of the segment, we cannot prune any further
-      if (!startIsGreatestInDomain && !endIsLeastInDomain) {
+
+      // Query domain segues into segment boundary
+      if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {
         return true;
       }
     }
