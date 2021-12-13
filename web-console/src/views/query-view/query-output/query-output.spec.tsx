@@ -17,21 +17,23 @@
  */
 
 import { render } from '@testing-library/react';
-import { QueryResult, SqlQuery } from 'druid-query-toolkit';
+import { QueryResult, sane, SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const parsedQuery = SqlQuery.parse(`SELECT
-  "language",
-  COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
-FROM "github"
-WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY AND "language" != 'TypeScript'
-GROUP BY 1
-HAVING "Count" != 37392
-ORDER BY "Count" DESC`);
+    const parsedQuery = SqlQuery.parse(sane`
+      SELECT
+        "language",
+        COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
+      FROM "github"
+      WHERE "__time" >= CURRENT_TIMESTAMP - INTERVAL '1' DAY AND "language" != 'TypeScript'
+      GROUP BY 1
+      HAVING "Count" != 37392
+      ORDER BY "Count" DESC
+    `);
 
     const queryOutput = (
       <QueryOutput
@@ -48,7 +50,7 @@ ORDER BY "Count" DESC`);
           false,
           true,
         ).attachQuery({}, parsedQuery)}
-        onQueryChange={() => {}}
+        onQueryAction={() => {}}
         onLoadMore={() => {}}
       />
     );

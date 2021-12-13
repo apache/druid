@@ -56,7 +56,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Nullable
   private final LongSupplier rowIdSupplier;
   private final RowAdapter<T> adapter;
-  private final Supplier<ColumnInspector> columnInspectorSupplier;
+  private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
 
   /**
@@ -67,15 +67,15 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       final Supplier<T> rowSupplier,
       @Nullable final LongSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
-      final Supplier<ColumnInspector> columnInspectorSupplier,
+      final ColumnInspector columnInspector,
       final boolean throwParseExceptions
   )
   {
     this.rowSupplier = rowSupplier;
     this.rowIdSupplier = rowIdSupplier;
     this.adapter = adapter;
-    this.columnInspectorSupplier =
-        Preconditions.checkNotNull(columnInspectorSupplier, "columnInspectorSupplier must be nonnull");
+    this.columnInspector =
+        Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
   }
 
@@ -84,7 +84,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    *
    * @param adapter                 adapter for these row objects
    * @param supplier                supplier of row objects
-   * @param columnInspectorSupplier will be used for reporting available columns and their capabilities. Note that this
+   * @param columnInspector         will be used for reporting available columns and their capabilities. Note that this
    *                                factory will still allow creation of selectors on any named field in the rows, even if
    *                                it doesn't appear in "columnInspector". (It only needs to be accessible via
    *                                {@link RowAdapter#columnFunction}.) As a result, you can achieve an untyped mode by
@@ -95,11 +95,11 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
-      final Supplier<ColumnInspector> columnInspectorSupplier,
+      final ColumnInspector columnInspector,
       final boolean throwParseExceptions
   )
   {
-    return new RowBasedColumnSelectorFactory<>(supplier, null, adapter, columnInspectorSupplier, throwParseExceptions);
+    return new RowBasedColumnSelectorFactory<>(supplier, null, adapter, columnInspector, throwParseExceptions);
   }
 
   @Nullable
@@ -495,6 +495,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return getColumnCapabilities(columnInspectorSupplier.get(), columnName);
+    return getColumnCapabilities(columnInspector, columnName);
   }
 }

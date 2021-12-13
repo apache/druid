@@ -83,7 +83,7 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
       return message;
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode protobuf message!");
+      throw new ParseException(null, e, "Fail to decode protobuf message!");
     }
   }
 
@@ -98,13 +98,17 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
         url = new URL(descriptorFilePath);
       }
       catch (MalformedURLException e) {
-        throw new ParseException(e, "Descriptor not found in class path or malformed URL:" + descriptorFilePath);
+        throw new ParseException(
+            descriptorFilePath,
+            e,
+            "Descriptor not found in class path or malformed URL:" + descriptorFilePath
+        );
       }
       try {
         fin = url.openConnection().getInputStream();
       }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot read descriptor file: " + url);
+        throw new ParseException(url.toString(), e, "Cannot read descriptor file: " + url);
       }
     }
     DynamicSchema dynamicSchema;
@@ -112,21 +116,22 @@ public class FileBasedProtobufBytesDecoder implements ProtobufBytesDecoder
       dynamicSchema = DynamicSchema.parseFrom(fin);
     }
     catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(e, "Invalid descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Invalid descriptor file: " + descriptorFilePath);
     }
     catch (IOException e) {
-      throw new ParseException(e, "Cannot read descriptor file: " + descriptorFilePath);
+      throw new ParseException(null, e, "Cannot read descriptor file: " + descriptorFilePath);
     }
 
     Set<String> messageTypes = dynamicSchema.getMessageTypes();
     if (messageTypes.size() == 0) {
-      throw new ParseException("No message types found in the descriptor: " + descriptorFilePath);
+      throw new ParseException(null, "No message types found in the descriptor: " + descriptorFilePath);
     }
 
     String messageType = protoMessageType == null ? (String) messageTypes.toArray()[0] : protoMessageType;
     Descriptors.Descriptor desc = dynamicSchema.getMessageDescriptor(messageType);
     if (desc == null) {
       throw new ParseException(
+          null,
           StringUtils.format(
               "Protobuf message type %s not found in the specified descriptor.  Available messages types are %s",
               protoMessageType,

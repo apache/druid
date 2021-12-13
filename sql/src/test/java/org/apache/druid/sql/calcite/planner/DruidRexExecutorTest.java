@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -178,6 +179,29 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
+            reduced.get(0)
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringNotReduced()
+  {
+    DruidRexExecutor rexy = new DruidRexExecutor(PLANNER_CONTEXT);
+    RexNode call = rexBuilder.makeCall(
+        MultiValueStringOperatorConversions.StringToMultiString.SQL_FUNCTION,
+        rexBuilder.makeLiteral("a,b,c"),
+        rexBuilder.makeLiteral(",")
+    );
+    List<RexNode> reduced = new ArrayList<>();
+    rexy.reduce(rexBuilder, ImmutableList.of(call), reduced);
+    Assert.assertEquals(1, reduced.size());
+    Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
+    Assert.assertEquals(
+        DruidExpression.fromExpression("string_to_array('a,b,c',',')"),
+        Expressions.toDruidExpression(
+            PLANNER_CONTEXT,
+            RowSignature.builder().build(),
             reduced.get(0)
         )
     );

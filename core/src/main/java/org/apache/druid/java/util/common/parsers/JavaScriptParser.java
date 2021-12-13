@@ -74,13 +74,13 @@ public class JavaScriptParser implements Parser<String, Object>
     try {
       final Object compiled = fn.apply(input);
       if (!(compiled instanceof Map)) {
-        throw new ParseException("JavaScript parsed value must be in {key: value} format!");
+        throw new ParseException(input, "JavaScript parsed value [%s] must be in {key: value} format!", input);
       }
 
       return (Map) compiled;
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", input);
+      throw new ParseException(input, e, "Unable to parse row [%s]", input);
     }
   }
 

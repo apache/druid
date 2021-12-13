@@ -28,7 +28,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import { MenuCheckbox } from '../../../components';
 import { getLink } from '../../../links';
@@ -129,12 +129,12 @@ const RunButtonExtraMenu = (props: RunButtonProps) => {
 export const RunButton = React.memo(function RunButton(props: RunButtonProps) {
   const { runeMode, onRun, loading, onExplain } = props;
 
-  const handleRun = React.useCallback(() => {
+  const handleRun = useCallback(() => {
     if (!onRun) return;
     onRun();
   }, [onRun]);
 
-  const hotkeys = React.useMemo(() => {
+  const hotkeys = useMemo(() => {
     return [
       {
         allowInInput: true,

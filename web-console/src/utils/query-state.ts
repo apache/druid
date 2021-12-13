@@ -18,23 +18,25 @@
 
 export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 
-export interface QueryStateOptions<T, E extends Error = Error> {
+export interface QueryStateOptions<T, E extends Error = Error, I = never> {
   loading?: boolean;
+  intermediate?: I;
   error?: E;
   data?: T;
   lastData?: T;
 }
 
-export class QueryState<T, E extends Error = Error> {
-  static INIT: QueryState<any> = new QueryState({});
+export class QueryState<T, E extends Error = Error, I = never> {
+  static INIT: QueryState<any, any> = new QueryState({});
   static LOADING: QueryState<any> = new QueryState({ loading: true });
 
   public state: QueryStateState = 'init';
+  public intermediate?: I;
   public error?: E;
   public data?: T;
   public lastData?: T;
 
-  constructor(opts: QueryStateOptions<T, E>) {
+  constructor(opts: QueryStateOptions<T, E, I>) {
     const hasData = typeof opts.data !== 'undefined';
     if (typeof opts.error !== 'undefined') {
       if (hasData) {
@@ -47,8 +49,11 @@ export class QueryState<T, E extends Error = Error> {
       if (hasData) {
         this.state = 'data';
         this.data = opts.data;
+      } else if (opts.loading) {
+        this.state = 'loading';
+        this.intermediate = opts.intermediate;
       } else {
-        this.state = opts.loading ? 'loading' : 'init';
+        this.state = 'init';
       }
     }
     this.lastData = opts.lastData;

@@ -227,16 +227,8 @@ public class DruidPlanner implements Closeable
         if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
           logger = log.noStackTrace();
         }
-        logger.warn(e, "Failed to plan the query '%s'", plannerContext.getSql());
-        String errorMessage = plannerContext.getPlanningError();
-        if (null == errorMessage && cannotPlanException instanceof UnsupportedSQLQueryException) {
-          errorMessage = cannotPlanException.getMessage();
-        }
-        if (null == errorMessage) {
-          errorMessage = "Please check broker logs for more details";
-        } else {
-          errorMessage = "Possible error: " + errorMessage;
-        }
+        String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
+        logger.warn(e, errorMessage);
         throw new UnsupportedSQLQueryException(errorMessage);
       }
     }
@@ -690,6 +682,22 @@ public class DruidPlanner implements Closeable
         );
       }
     }
+  }
+
+  private String buildSQLPlanningErrorMessage(Throwable exception)
+  {
+    String errorMessage = plannerContext.getPlanningError();
+    if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
+      errorMessage = exception.getMessage();
+    }
+    if (null == errorMessage) {
+      errorMessage = "Please check broker logs for more details";
+    } else {
+      // Re-phrase since planning errors are more like hints
+      errorMessage = "Possible error: " + errorMessage;
+    }
+    // Finally, add the query itself to error message that user will get.
+    return StringUtils.format("Cannot build plan for query: %s. %s", plannerContext.getSql(), errorMessage);
   }
 
   private static class EnumeratorIterator<T> implements Iterator<T>

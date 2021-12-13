@@ -53,6 +53,7 @@ exports.SQL_KEYWORDS = [
   'ROW',
   'ROWS',
   'ONLY',
+  'VALUES',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

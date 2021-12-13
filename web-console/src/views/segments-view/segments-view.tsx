@@ -173,8 +173,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     const columns = compact([
       visibleColumns.shown('Segment ID') && `"segment_id"`,
       visibleColumns.shown('Datasource') && `"datasource"`,
-      visibleColumns.shown('Start') && `"start"`,
-      visibleColumns.shown('End') && `"end"`,
+      `"start"`,
+      `"end"`,
       visibleColumns.shown('Version') && `"version"`,
       visibleColumns.shown('Time span') &&
         `CASE
@@ -191,6 +191,7 @@ END AS "time_span"`,
   WHEN "shard_spec" LIKE '%"type":"numbered"%' THEN 'dynamic'
   WHEN "shard_spec" LIKE '%"type":"hashed"%' THEN 'hashed'
   WHEN "shard_spec" LIKE '%"type":"single"%' THEN 'single_dim'
+  WHEN "shard_spec" LIKE '%"type":"range"%' THEN 'range'
   WHEN "shard_spec" LIKE '%"type":"none"%' THEN 'none'
   WHEN "shard_spec" LIKE '%"type":"linear"%' THEN 'linear'
   WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
@@ -205,10 +206,6 @@ END AS "partitioning"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
       visibleColumns.shown('Is overshadowed') && `"is_overshadowed"`,
     ]);
-
-    if (!columns.length) {
-      columns.push(`"segment_id"`);
-    }
 
     return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
   }
@@ -516,7 +513,7 @@ END AS "partitioning"`,
         pivotBy={groupByInterval ? ['interval'] : []}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length > STANDARD_TABLE_PAGE_SIZE}
+        showPagination
         columns={[
           {
             Header: 'Segment ID',
@@ -625,6 +622,7 @@ END AS "partitioning"`,
               <BracedText
                 text={row.original.is_available ? formatInteger(row.value) : '(unknown)'}
                 braces={numRowsValues}
+                unselectableThousandsSeparator
               />
             ),
           },

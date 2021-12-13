@@ -20,6 +20,7 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
+import { QueryRunner } from 'druid-query-toolkit';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
@@ -87,6 +88,10 @@ Api.initialize(apiConfig);
 if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);
 }
+
+QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
+  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+};
 
 ReactDOM.render(
   React.createElement(ConsoleApplication, {

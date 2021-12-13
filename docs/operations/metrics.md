@@ -23,9 +23,7 @@ title: "Metrics"
   -->
 
 
-Druid generates metrics related to queries, ingestion, and coordination.
-
-Metrics are emitted as JSON objects to a runtime log file or over HTTP (to a service such as Apache Kafka). Metric emission is disabled by default.
+You can configure Druid to [emit metrics](../configuration/index.html#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
 
 All Druid metrics share a common set of fields:
 
@@ -37,7 +35,7 @@ All Druid metrics share a common set of fields:
 
 Metrics may have additional dimensions beyond those listed above.
 
-Most metric values reset each emission period. By default druid emission period is 1 minute, this can be changed by setting the property `druid.monitoring.emissionPeriod`.
+> Most metric values reset each emission period, as specified in `druid.monitoring.emissionPeriod`.
 
 Available Metrics
 -----------------
@@ -49,7 +47,7 @@ Available Metrics
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
-|`query/bytes`|number of bytes returned in query response.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.| |
+|`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker.  Other services report the total bytes for their portion of the query. |Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`. Aggregation Queries: `numMetrics`, `numComplexMetrics`. GroupBy: `numDimensions`. TopN: `threshold`, `dimension`.| |
 |`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|id, status, server.|< 1s|
 |`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
@@ -215,6 +213,7 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
 |`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
 |`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the TaskSlotCountStatsMonitor module is included.|category.|Varies.|
+|`task/segmentAvailability/wait/time`|The amount of milliseconds a batch indexing task waited for newly created segments to become available for querying.|dataSource, taskType, taskId, segmentAvailabilityConfirmed|Varies.|
 
 ## Shuffle metrics (Native parallel task)
 

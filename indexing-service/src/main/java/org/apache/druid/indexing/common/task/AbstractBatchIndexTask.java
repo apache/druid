@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -279,17 +280,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    *
    * @return whether the lock was acquired
    */
-  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals)
+  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals, IndexIOConfig ioConfig)
       throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false);
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -298,7 +300,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
-        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
         return tryLockWithDetermineResult(client, result);
       } else {
         // This branch is the only one that will not initialize taskLockHelper.
@@ -326,9 +328,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, false);
+
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false);
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
       segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
@@ -336,7 +340,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
       segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
@@ -671,6 +675,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
     finally {
       segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+      toolbox.getEmitter().emit(
+          new ServiceMetricEvent.Builder()
+              .setDimension("dataSource", getDataSource())
+              .setDimension("taskType", getType())
+              .setDimension("taskId", getId())
+              .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
+              .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
+      );
     }
   }
 

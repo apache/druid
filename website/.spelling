@@ -38,6 +38,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+concat
 CIDR
 CORS
 CNF
@@ -1359,6 +1360,7 @@ numMetrics
 poolKind
 poolName
 remoteAddress
+segmentAvailabilityConfirmed
 serviceName
 taskStatus
 taskType
