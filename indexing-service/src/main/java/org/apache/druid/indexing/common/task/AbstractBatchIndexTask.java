@@ -412,6 +412,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (prev != null && cur.equals(prev)) {
         continue;
       }
+
+      if (maxAllowedLockCount >= 0 && locksAcquired >= maxAllowedLockCount) {
+        throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
+      }
+
       prev = cur;
       final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
       if (lock == null) {
@@ -421,9 +426,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
       }
       locksAcquired++;
-      if (maxAllowedLockCount >= 0 && locksAcquired > maxAllowedLockCount) {
-        throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
-      }
     }
     return true;
   }

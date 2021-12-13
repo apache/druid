@@ -345,7 +345,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       version = ParallelIndexSupervisorTask.findVersion(versions, interval);
       if (version == null) {
         final int maxAllowedLockCount = getIngestionSchema().getTuningConfig().getMaxAllowedLockCount();
-        if (maxAllowedLockCount >= 0 && locks.size() == maxAllowedLockCount) {
+        if (maxAllowedLockCount >= 0 && locks.size() >= maxAllowedLockCount) {
           throw new MaxAllowedLocksExceededException(maxAllowedLockCount);
         }
 
