@@ -23,6 +23,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -50,13 +51,14 @@ public class ConvertBoundsToSelectors extends BottomUpTransform
           rowSignature,
           SimpleExtraction.of(bound.getDimension(), bound.getExtractionFn())
       );
-
+      boolean numOrString = (bound.getOrdering() == StringComparators.NUMERIC)
+                            || (bound.getOrdering() == StringComparators.LEXICOGRAPHIC);
       if (bound.hasUpperBound()
           && bound.hasLowerBound()
           && bound.getUpper().equals(bound.getLower())
           && !bound.isUpperStrict()
           && !bound.isLowerStrict()
-          && bound.getOrdering().equals(comparator)) {
+          && numOrString) {
         return new SelectorDimFilter(
             bound.getDimension(),
             bound.getUpper(),
