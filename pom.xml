@@ -77,14 +77,14 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.8.0</apache.kafka.version>
+        <apache.kafka.version>3.0.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>2.0.0</datasketches.version>
-        <datasketches.memory.version>1.3.0</datasketches.memory.version>
+        <datasketches.version>3.0.0</datasketches.version>
+        <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <errorprone.version>2.8.0</errorprone.version>
@@ -96,11 +96,11 @@
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.8.2</log4j.version>
+        <log4j.version>2.15.0</log4j.version>
         <mysql.version>5.1.48</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.63.Final</netty4.version>
+        <netty4.version>4.1.68.Final</netty4.version>
         <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -112,6 +112,8 @@
         <aws.sdk.version>1.12.37</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
+        <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
+        <httpclient.version>4.5.10</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.9</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
@@ -392,7 +394,7 @@
             <dependency>
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-storage-api</artifactId>
-                <version>2.7.1</version>
+                <version>2.8.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -459,7 +461,7 @@
             <dependency>
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-validator</artifactId>
-                <version>5.2.5.Final</version>
+                <version>${hibernate-validator.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.validation</groupId>
@@ -727,59 +729,12 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.10</version>
+                <version>${httpclient.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.11</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-auth</artifactId>
-                <version>${hadoop.compile.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.apache.avro</groupId>
-                        <artifactId>avro</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-hdfs-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-yarn-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-mapreduce-client-core</artifactId>
-              <version>${hadoop.compile.version}</version>
-              <scope>provided</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-              </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -814,11 +769,6 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil-core</artifactId>
-                <version>${fastutil.version}</version>
-            </dependency>
-             <dependency>
-                <groupId>it.unimi.dsi</groupId>
-                <artifactId>fastutil-extra</artifactId>
                 <version>${fastutil.version}</version>
             </dependency>
             <dependency>
@@ -1016,6 +966,13 @@
                 <groupId>com.google.caliper</groupId>
                 <artifactId>caliper</artifactId>
                 <version>0.5-rc1</version>
+                <exclusions>
+                    <!-- caliper ships a very old asm version which can cause issues during testing  -->
+                    <exclusion>
+                        <groupId>asm</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1176,16 +1133,46 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.stefanbirkner</groupId>
-                <artifactId>system-rules</artifactId>
-                <version>1.19.0</version>
-                <scope>test</scope>
+              <groupId>com.github.stefanbirkner</groupId>
+              <artifactId>system-rules</artifactId>
+              <version>1.19.0</version>
+              <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.timeandspace</groupId>
-                <artifactId>cron-scheduler</artifactId>
-                <version>0.1</version>
-            </dependency>
+          <dependency>
+            <groupId>io.timeandspace</groupId>
+            <artifactId>cron-scheduler</artifactId>
+            <version>0.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1285,11 +1272,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.14.0</version>
+                <version>3.15.0</version>
                 <configuration>
+                    <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
-                        <ruleset>/rulesets/java/imports.xml</ruleset>
+                        <ruleset>${project.parent.basedir}/codestyle/pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
@@ -1310,7 +1298,7 @@
                 <artifactId>forbiddenapis</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
+                    <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
@@ -1493,7 +1481,6 @@
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
                 <version>6.0.3</version>
-                <inherited>false</inherited>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1505,9 +1492,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
                     </execution>
                 </executions>
@@ -1561,11 +1545,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>2.7</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-help-plugin</artifactId>
-                    <version>2.1.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1641,15 +1620,15 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
-                <plugin>
-                    <groupId>com.github.eirslett</groupId>
-                    <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.11.3</version>
-                    <configuration>
-                        <nodeVersion>${node.version}</nodeVersion>
-                        <npmVersion>${npm.version}</npmVersion>
-                    </configuration>
-                </plugin>
+              <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <configuration>
+                  <nodeVersion>${node.version}</nodeVersion>
+                  <npmVersion>${npm.version}</npmVersion>
+                </configuration>
+              </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1906,6 +1885,7 @@
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>.editorconfig</exclude>
+                                <exclude>**/hadoop.indexer.libs.version</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -1967,5 +1947,19 @@
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
+      <profile>
+        <id>hadoop3</id>
+        <activation>
+          <property>
+            <name>hadoop3.enabled</name>
+            <value>true</value>
+          </property>
+        </activation>
+        <properties>
+          <hadoop.compile.version>3.3.1</hadoop.compile.version>
+          <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
+          <httpclient.version>4.5.13</httpclient.version>
+        </properties>
+      </profile>
     </profiles>
 </project>

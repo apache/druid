@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client;
 
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
@@ -39,17 +39,12 @@ import org.jboss.netty.util.Timer;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class HttpClientInit
 {
@@ -89,6 +84,7 @@ public class HttpClientInit
                   new ChannelResourceFactory(
                       createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
                       config.getSslContext(),
+                      config.getProxyConfig(),
                       timer,
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
                   ),
@@ -110,11 +106,8 @@ public class HttpClientInit
 
   public static SSLContext sslContextWithTrustedKeyStore(final String keyStorePath, final String keyStorePassword)
   {
-    FileInputStream in = null;
-    try {
+    try (FileInputStream in = new FileInputStream(keyStorePath)) {
       final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-
-      in = new FileInputStream(keyStorePath);
       ks.load(in, keyStorePassword.toCharArray());
       in.close();
 
@@ -125,26 +118,9 @@ public class HttpClientInit
 
       return sslContext;
     }
-    catch (CertificateException e) {
+    catch (Exception e) {
+      Throwables.propagateIfPossible(e);
       throw new RuntimeException(e);
-    }
-    catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    }
-    catch (KeyStoreException e) {
-      throw new RuntimeException(e);
-    }
-    catch (KeyManagementException e) {
-      throw new RuntimeException(e);
-    }
-    catch (FileNotFoundException e) {
-      throw new RuntimeException(e);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    finally {
-      CloseQuietly.close(in);
     }
   }
 

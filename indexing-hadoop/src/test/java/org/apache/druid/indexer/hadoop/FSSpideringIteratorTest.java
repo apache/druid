@@ -51,9 +51,9 @@ public class FSSpideringIteratorTest
       new File(baseDir, "dir1/file1").createNewFile();
       new File(baseDir, "dir1/file2").createNewFile();
 
-      new File(baseDir, "dir2/subDir1").mkdirs();
+      FileUtils.mkdirp(new File(baseDir, "dir2/subDir1"));
       new File(baseDir, "dir2/subDir1/file3").createNewFile();
-      new File(baseDir, "dir2/subDir2").mkdirs();
+      FileUtils.mkdirp(new File(baseDir, "dir2/subDir2"));
       new File(baseDir, "dir2/subDir2/file4").createNewFile();
       new File(baseDir, "dir2/subDir2/file5").createNewFile();
 
@@ -101,10 +101,9 @@ public class FSSpideringIteratorTest
     try {
       new File(baseDir, "dir1").mkdir();
 
-      new File(baseDir, "dir2/subDir1").mkdirs();
-      new File(baseDir, "dir2/subDir2").mkdirs();
-
-      new File(baseDir, "dir3/subDir1").mkdirs();
+      FileUtils.mkdirp(new File(baseDir, "dir2/subDir1"));
+      FileUtils.mkdirp(new File(baseDir, "dir2/subDir2"));
+      FileUtils.mkdirp(new File(baseDir, "dir3/subDir1"));
 
       List<String> files = Lists.newArrayList(
           Iterables.transform(

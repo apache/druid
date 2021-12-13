@@ -181,6 +181,12 @@ public class HashJoinEngine
 
         assert !joinMatcher.hasMatch();
 
+        if (leftCursor.isDone()) {
+          // No right-hand matches and nothing on the left cursor. We're done; return.
+          assert isDone();
+          return;
+        }
+
         do {
           // No more right-hand side matches; advance the left-hand side.
           leftCursor.advanceUninterruptibly();

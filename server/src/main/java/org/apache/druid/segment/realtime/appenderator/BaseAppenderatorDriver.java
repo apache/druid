@@ -383,7 +383,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @param sequenceName             sequenceName for this row's segment
    * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
    *                                 if {@param allowIncrementalPersists} is set to false then this will not be used
-   * @param skipSegmentLineageCheck  if true, perform lineage validation using previousSegmentId for this sequence.
+   * @param skipSegmentLineageCheck  if false, perform lineage validation using previousSegmentId for this sequence.
    *                                 Should be set to false if replica tasks would index events in same order
    * @param allowIncrementalPersists whether to allow persist to happen when maxRowsInMemory or intermediate persist period
    *                                 threshold is hit

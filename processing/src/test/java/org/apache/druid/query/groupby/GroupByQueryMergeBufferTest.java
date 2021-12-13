@@ -132,8 +132,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         new GroupByStrategyV1(
             configSupplier,
             new GroupByQueryEngine(configSupplier, BUFFER_POOL),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            BUFFER_POOL
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             PROCESSING_CONFIG,

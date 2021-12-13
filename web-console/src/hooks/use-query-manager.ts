@@ -16,35 +16,37 @@
  * limitations under the License.
  */
 
-import { CancelToken } from 'axios';
 import { useEffect, useState } from 'react';
 
-import { QueryManager, QueryState } from '../utils';
+import { QueryManager, QueryManagerOptions, QueryState } from '../utils';
 
-export interface UseQueryManagerOptions<Q, R> {
-  processQuery: (
-    query: Q,
-    cancelToken: CancelToken,
-    setIntermediateQuery: (intermediateQuery: any) => void,
-  ) => Promise<R>;
-  debounceIdle?: number;
-  debounceLoading?: number;
-  query?: Q;
+import { useConstant } from './use-constant';
+import { usePermanentCallback } from './use-permanent-callback';
+
+export interface UseQueryManagerOptions<Q, R, I, E extends Error>
+  extends Omit<QueryManagerOptions<Q, R, I, E>, 'onStateChange'> {
+  query?: Q | undefined;
   initQuery?: Q;
 }
 
-export function useQueryManager<Q, R>(
-  options: UseQueryManagerOptions<Q, R>,
-): [QueryState<R>, QueryManager<Q, R>] {
-  const { processQuery, debounceIdle, debounceLoading, query, initQuery } = options;
+export function useQueryManager<Q, R, I = never, E extends Error = Error>(
+  options: UseQueryManagerOptions<Q, R, I, E>,
+): [QueryState<R, E, I>, QueryManager<Q, R, I, E>] {
+  const { query, initQuery, initState, processQuery, backgroundStatusCheck } = options;
 
-  const [resultState, setResultState] = useState(QueryState.INIT);
+  const concreteProcessQuery = usePermanentCallback(processQuery);
+  const concreteBackgroundStatusCheck = usePermanentCallback(
+    backgroundStatusCheck || ((() => {}) as any),
+  );
 
-  const [queryManager] = useState(() => {
-    return new QueryManager({
-      processQuery,
-      debounceIdle,
-      debounceLoading,
+  const [resultState, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
+
+  const queryManager = useConstant(() => {
+    return new QueryManager<Q, R, I, E>({
+      ...options,
+      initState,
+      processQuery: concreteProcessQuery,
+      backgroundStatusCheck: backgroundStatusCheck ? concreteBackgroundStatusCheck : undefined,
       onStateChange: setResultState,
     });
   });
@@ -56,13 +58,15 @@ export function useQueryManager<Q, R>(
     return () => {
       queryManager.terminate();
     };
-  }, [initQuery, queryManager]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (query) {
+    if (typeof query !== 'undefined') {
       queryManager.runQuery(query);
     }
-  }, [query, queryManager]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   return [resultState, queryManager];
 }

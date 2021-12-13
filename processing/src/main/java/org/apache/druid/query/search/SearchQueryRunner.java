@@ -44,7 +44,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.List;
@@ -74,8 +73,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         ColumnValueSelector selector
     )
     {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      switch (capabilities.getType()) {
         case STRING:
           return new StringSearchColumnSelectorStrategy();
         case LONG:
@@ -85,7 +83,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         case DOUBLE:
           return new DoubleSearchColumnSelectorStrategy();
         default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
     }
   }

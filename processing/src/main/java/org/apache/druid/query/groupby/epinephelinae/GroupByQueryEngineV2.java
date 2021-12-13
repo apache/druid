@@ -63,6 +63,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -298,7 +300,7 @@ public class GroupByQueryEngineV2
     }
 
     // Choose array-based aggregation if the grouping key is a single string dimension of a known cardinality
-    if (columnCapabilities != null && columnCapabilities.getType().equals(ValueType.STRING) && cardinality > 0) {
+    if (Types.is(columnCapabilities, ValueType.STRING) && cardinality > 0) {
       final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs().toArray(new AggregatorFactory[0]);
       final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
           cardinality,
@@ -351,7 +353,7 @@ public class GroupByQueryEngineV2
     for (int i = 0; i < dimensionSpecs.size(); i++) {
       DimensionSpec dimSpec = dimensionSpecs.get(i);
       final int resultRowIndex = resultRowDimensionStart + i;
-      final ValueType outputType = dimSpec.getOutputType();
+      final ColumnType outputType = dimSpec.getOutputType();
 
       resultRow.set(
           resultRowIndex,
@@ -368,7 +370,7 @@ public class GroupByQueryEngineV2
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
     if (capabilities != null) {
       // strings can be pushed down if dictionaries are sorted and unique per id
-      if (capabilities.getType() == ValueType.STRING) {
+      if (capabilities.is(ValueType.STRING)) {
         return capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
       }
       // party on
@@ -387,8 +389,7 @@ public class GroupByQueryEngineV2
         ColumnValueSelector selector
     )
     {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      switch (capabilities.getType()) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
           if (dimSelector.getValueCardinality() >= 0) {
@@ -403,7 +404,7 @@ public class GroupByQueryEngineV2
         case DOUBLE:
           return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
         default:
-          throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+          throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
     }
 

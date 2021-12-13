@@ -296,7 +296,7 @@ public class MemoryOpenHashTableTest
     }
 
     return new MemoryOpenHashTable(
-        WritableMemory.wrap(buffer, ByteOrder.nativeOrder()),
+        WritableMemory.writableWrap(buffer, ByteOrder.nativeOrder()),
         numBuckets,
         maxSize,
         keySize,

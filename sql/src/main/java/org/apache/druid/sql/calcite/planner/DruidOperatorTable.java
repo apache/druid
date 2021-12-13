@@ -33,11 +33,10 @@ import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
@@ -97,6 +96,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -125,11 +125,11 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
+  // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
-                   .add(new ApproxCountDistinctSqlAggregator())
+                   .add(new BuiltinApproxCountDistinctSqlAggregator())
                    .add(new AvgSqlAggregator())
-                   .add(new CountSqlAggregator())
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
                    .add(EarliestLatestAnySqlAggregator.LATEST)
                    .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
@@ -144,7 +144,6 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
                    .build();
-
 
   // STRLEN has so many aliases.
   private static final SqlOperatorConversion CHARACTER_LENGTH_CONVERSION = new DirectOperatorConversion(
@@ -238,6 +237,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.Slice())
                    .add(new MultiValueStringOperatorConversions.MultiStringToString())
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
+                   .add(new MultiValueStringOperatorConversions.FilterOnly())
+                   .add(new MultiValueStringOperatorConversions.FilterNone())
                    .build();
 
   private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =
@@ -258,6 +259,11 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT)
                    .add(HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT)
                    .add(HumanReadableFormatOperatorConversion.DECIMAL_FORMAT)
+                   .build();
+
+  private static final List<SqlOperatorConversion> CUSTOM_MATH_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new SafeDivideOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =
@@ -354,6 +360,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
                    .addAll(FORMAT_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
+                   .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

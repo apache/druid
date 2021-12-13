@@ -22,6 +22,7 @@ package org.apache.druid.security.basic.authentication.validator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
@@ -43,6 +44,7 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -58,6 +60,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private final LruBlockCache cache;
 
   private final BasicAuthLDAPConfig ldapConfig;
+  // Custom overrides that can be passed via tests
+  @Nullable
+  private final Properties overrideProperties;
 
   @JsonCreator
   public LDAPCredentialsValidator(
@@ -91,6 +96,19 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         this.ldapConfig.getCredentialVerifyDuration(),
         this.ldapConfig.getCredentialMaxDuration()
     );
+    this.overrideProperties = null;
+  }
+
+  @VisibleForTesting
+  public LDAPCredentialsValidator(
+      final BasicAuthLDAPConfig ldapConfig,
+      final LruBlockCache cache,
+      final Properties overrideProperties
+  )
+  {
+    this.ldapConfig = ldapConfig;
+    this.cache = cache;
+    this.overrideProperties = overrideProperties;
   }
 
   Properties bindProperties(BasicAuthLDAPConfig ldapConfig)
@@ -119,6 +137,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       properties.put(Context.SECURITY_PROTOCOL, "ssl");
       properties.put("java.naming.ldap.factory.socket", BasicSecuritySSLSocketFactory.class.getName());
     }
+    if (null != overrideProperties) {
+      properties.putAll(overrideProperties);
+    }
     return properties;
   }
 
@@ -139,7 +160,11 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
       return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
+      ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
       try {
+        // Set the context classloader same as the loader of this class so that BasicSecuritySSLSocketFactory
+        // class can be found
+        Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
         InitialDirContext dirContext = new InitialDirContext(bindProperties(this.ldapConfig));
         try {
           userResult = getLdapUserObject(this.ldapConfig, dirContext, username);
@@ -161,6 +186,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       catch (NamingException e) {
         LOG.error(e, "Exception during user lookup");
         return null;
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(currentClassLoader);
       }
 
       if (!validatePassword(this.ldapConfig, userDn, password)) {
@@ -213,8 +241,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   boolean validatePassword(BasicAuthLDAPConfig ldapConfig, LdapName userDn, char[] password)
   {
     InitialDirContext context = null;
+    ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
 
     try {
+      Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
       context = new InitialDirContext(userProperties(ldapConfig, userDn, password));
       return true;
     }
@@ -235,10 +265,11 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         LOG.warn("Exception closing LDAP context");
         // ignored
       }
+      Thread.currentThread().setContextClassLoader(currentClassLoader);
     }
   }
 
-  private static class LruBlockCache extends LinkedHashMap<String, LdapUserPrincipal>
+  public static class LruBlockCache extends LinkedHashMap<String, LdapUserPrincipal>
   {
     private static final long serialVersionUID = 7509410739092012261L;
 

@@ -295,8 +295,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
           query:
         </p>
         <p>
-          SELECT keyColumn, valueColumn, tsColumn? FROM namespace.<strong>table</strong> WHERE
-          filter
+          SELECT keyColumn, valueColumn, tsColumn? FROM <strong>table</strong> WHERE filter
         </p>
       </>
     ),
@@ -314,8 +313,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
           the SQL query:
         </p>
         <p>
-          SELECT <strong>keyColumn</strong>, valueColumn, tsColumn? FROM namespace.table WHERE
-          filter
+          SELECT <strong>keyColumn</strong>, valueColumn, tsColumn? FROM table WHERE filter
         </p>
       </>
     ),
@@ -333,8 +331,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
           the SQL query:
         </p>
         <p>
-          SELECT keyColumn, <strong>valueColumn</strong>, tsColumn? FROM namespace.table WHERE
-          filter
+          SELECT keyColumn, <strong>valueColumn</strong>, tsColumn? FROM table WHERE filter
         </p>
       </>
     ),
@@ -352,8 +349,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
           the SQL query:
         </p>
         <p>
-          SELECT keyColumn, valueColumn, <strong>tsColumn</strong>? FROM namespace.table WHERE
-          filter
+          SELECT keyColumn, valueColumn, <strong>tsColumn</strong>? FROM table WHERE filter
         </p>
       </>
     ),
@@ -370,8 +366,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
           lookup population. This will become the expression filter in the SQL query:
         </p>
         <p>
-          SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE{' '}
-          <strong>filter</strong>
+          SELECT keyColumn, valueColumn, tsColumn? FROM table WHERE <strong>filter</strong>
         </p>
       </>
     ),

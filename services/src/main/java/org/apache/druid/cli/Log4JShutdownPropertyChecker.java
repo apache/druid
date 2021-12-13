@@ -32,5 +32,8 @@ public class Log4JShutdownPropertyChecker implements PropertyChecker
     if (!properties.containsKey("log4j.shutdownHookEnabled")) {
       properties.setProperty("log4j.shutdownHookEnabled", "true");
     }
+    if (!properties.containsKey("log4j2.is.webapp")) {
+      properties.setProperty("log4j2.is.webapp", "false");
+    }
   }
 }

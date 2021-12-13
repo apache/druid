@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 
@@ -71,11 +72,11 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
   {
-    ExprType type = ExprTypeConversion.operator(
+    ExpressionType type = ExpressionTypeConversion.operator(
         left.getOutputType(inspector),
         right.getOutputType(inspector)
     );
-    if (ExprType.STRING.equals(type)) {
+    if (Types.is(type, ExprType.STRING)) {
       return VectorStringProcessors.concat(inspector, left, right);
     }
     return VectorMathProcessors.plus(inspector, left, right);

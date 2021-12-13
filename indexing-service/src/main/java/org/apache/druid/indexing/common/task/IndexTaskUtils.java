@@ -20,9 +20,11 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -32,6 +34,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CircularBuffer;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -41,7 +44,10 @@ import java.util.List;
 public class IndexTaskUtils
 {
   @Nullable
-  public static List<String> getMessagesFromSavedParseExceptions(CircularBuffer<ParseException> savedParseExceptions)
+  public static List<String> getMessagesFromSavedParseExceptions(
+      CircularBuffer<ParseException> savedParseExceptions,
+      boolean includeTimeOfException
+  )
   {
     if (savedParseExceptions == null) {
       return null;
@@ -49,10 +55,31 @@ public class IndexTaskUtils
 
     List<String> events = new ArrayList<>();
     for (int i = 0; i < savedParseExceptions.size(); i++) {
-      events.add(savedParseExceptions.getLatest(i).getMessage());
+      if (includeTimeOfException) {
+        DateTime timeOfException = DateTimes.utc(savedParseExceptions.getLatest(i).getTimeOfExceptionMillis());
+        events.add(timeOfException + ", " + savedParseExceptions.getLatest(i).getMessage());
+      } else {
+        events.add(savedParseExceptions.getLatest(i).getMessage());
+      }
     }
 
     return events;
+  }
+
+  @Nullable
+  public static List<ParseExceptionReport> getReportListFromSavedParseExceptions(
+      CircularBuffer<ParseExceptionReport> savedParseExceptionReports
+  )
+  {
+    if (savedParseExceptionReports == null) {
+      return null;
+    }
+    List<ParseExceptionReport> reports = new ArrayList<>();
+    for (int i = 0; i < savedParseExceptionReports.size(); i++) {
+      reports.add(savedParseExceptionReports.getLatest(i));
+    }
+
+    return reports;
   }
 
   /**

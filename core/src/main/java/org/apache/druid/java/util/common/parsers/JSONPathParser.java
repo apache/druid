@@ -71,7 +71,7 @@ public class JSONPathParser implements Parser<String, Object>
       return flattener.flatten(document);
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unable to parse row [%s]", input);
+      throw new ParseException(input, e, "Unable to parse row [%s]", input);
     }
   }
 }

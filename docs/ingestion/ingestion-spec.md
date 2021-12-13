@@ -49,8 +49,8 @@ Example ingestion spec for task type `index_parallel` (native batch):
       },
       "dimensionsSpec": {
         "dimensions": [
-          { "page" },
-          { "language" },
+          "page",
+          "language",
           { "type": "long", "name": "userId" }
         ]
       },
@@ -124,8 +124,8 @@ An example `dataSchema` is:
   },
   "dimensionsSpec": {
     "dimensions": [
-      { "page" },
-      { "language" },
+      "page",
+      "language",
       { "type": "long", "name": "userId" }
     ]
   },
@@ -301,7 +301,7 @@ A `granularitySpec` can have the following components:
 | segmentGranularity | [Time chunking](../design/architecture.md#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br><br>Ignored if `type` is set to `arbitrary`.| `day` |
 | queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br><br>Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
 | rollup | Whether to use ingestion-time [rollup](./rollup.md) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
-| intervals | A list of intervals describing what time chunks of segments should be created. If `type` is set to `uniform`, this list will be broken up and rounded-off based on the `segmentGranularity`. If `type` is set to `arbitrary`, this list will be used as-is.<br><br>If `null` or not provided, batch ingestion tasks will generally determine which time chunks to output based on what timestamps are found in the input data.<br><br>If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks will throw away any records with timestamps outside of the specified intervals.<br><br>Ignored for any form of streaming ingestion. | `null` |
+| intervals | A list of intervals defining time chunks for segments. Specify interval values using ISO8601 format. For example, `["2021-12-06T21:27:10+00:00/2021-12-07T00:00:00+00:00"]`. If you omit the time, the time defaults to "00:00:00".<br><br>If `type` is set to `uniform`, Druid breaks the list up and rounds-off the list values based on the `segmentGranularity`. If `type` is set to `arbitrary`, Druid uses the list as-is.<br><br>If `null` or not provided, batch ingestion tasks generally determine which time chunks to output based on the timestamps found in the input data.<br><br>If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks throw away any records with timestamps outside of the specified intervals.<br><br>Ignored for any form of streaming ingestion. | `null` |
 
 ### `transformSpec`
 
@@ -401,8 +401,8 @@ An example `parser` is:
     },
     "dimensionsSpec": {
       "dimensions": [
-        { "page" },
-        { "language" },
+        "page",
+        "language",
         { "type": "long", "name": "userId" }
       ]
     }
@@ -465,7 +465,7 @@ is:
 |maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until next persist will decreases, and task will fail when the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory`.<br /><br />Setting maxBytesInMemory to -1 disables this check, meaning Druid will rely entirely on maxRowsInMemory to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set maxBytesInMemory to -1 and rely on maxRowsInMemory instead.|One-sixth of max JVM heap size|
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Tune how data is indexed. See below for more information.|See table below|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-ingestion.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 #### `indexSpec`
 

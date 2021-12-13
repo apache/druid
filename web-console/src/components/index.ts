@@ -23,6 +23,7 @@ export * from './auto-form/auto-form';
 export * from './braced-text/braced-text';
 export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
+export * from './deferred/deferred';
 export * from './external-link/external-link';
 export * from './form-json-selector/form-json-selector';
 export * from './formatted-input/formatted-input';

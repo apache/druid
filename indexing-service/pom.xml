@@ -43,11 +43,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-client</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
@@ -113,16 +108,6 @@
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
@@ -297,6 +282,75 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>hadoop2</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-mapreduce-client-core</artifactId>
+                    <scope>provided</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>javax.servlet</groupId>
+                            <artifactId>servlet-api</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-common</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-client</artifactId>
+                    <version>${hadoop.compile.version}</version>
+                    <scope>provided</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.avro</groupId>
+                            <artifactId>avro</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-yarn-common</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+            <properties>
+                <hadoop-task-libs>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</hadoop-task-libs>
+            </properties>
+        </profile>
+        <profile>
+            <id>hadoop3</id>
+            <activation>
+                <property>
+                    <name>hadoop3.enabled</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-client-api</artifactId>
+                    <version>${hadoop.compile.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+            <properties>
+                <hadoop-task-libs>
+                    org.apache.hadoop:hadoop-client-api:${hadoop.compile.version},org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}
+                </hadoop-task-libs>
+            </properties>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
@@ -309,6 +363,20 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <configuration>
+                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                    <resources>
+                        <resource>
+                            <directory>src/main/resources</directory>
+                            <includes>hadoop.indexer.libs.version</includes>
+                            <filtering>true</filtering>
+                        </resource>
+                    </resources>
+                </configuration>
             </plugin>
         </plugins>
     </build>

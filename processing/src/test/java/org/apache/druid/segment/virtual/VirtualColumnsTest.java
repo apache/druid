@@ -46,7 +46,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -151,7 +151,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "__time",
         "x + y",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -167,14 +167,14 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + y",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr",
         "x * 2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -190,14 +190,14 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + expr2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
         "expr2",
         "expr * 2",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
 
@@ -212,13 +212,13 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -231,13 +231,13 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
     final VirtualColumns virtualColumns2 = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -256,8 +256,8 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final ImmutableList<VirtualColumn> theColumns = ImmutableList.of(
-        new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
-        new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+        new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("expr2", "x + z", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
     );
     final VirtualColumns virtualColumns = VirtualColumns.create(theColumns);
 
@@ -283,7 +283,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "1",
-        ValueType.FLOAT,
+        ColumnType.FLOAT,
         TestExprMacroTable.INSTANCE
     );
     final DottyVirtualColumn dotty = new DottyVirtualColumn("foo");
@@ -417,7 +417,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     @Override
     public ColumnCapabilities capabilities(String columnName)
     {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
     }
 
     @Override

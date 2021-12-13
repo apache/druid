@@ -104,7 +104,7 @@ public class Aggregations
 
     if (druidExpression.isSimpleExtraction() &&
         (!druidExpression.isDirectColumnAccess()
-         || rowSignature.getColumnType(druidExpression.getDirectColumn()).orElse(null) == ValueType.STRING)) {
+         || rowSignature.getColumnType(druidExpression.getDirectColumn()).map(type -> type.is(ValueType.STRING)).orElse(false))) {
       // Aggregators are unable to implicitly cast strings to numbers.
       // So remove the simple extraction, which forces the expression to be used instead of the direct column access.
       return druidExpression.map(simpleExtraction -> null, Function.identity());

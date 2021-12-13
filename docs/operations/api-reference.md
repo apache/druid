@@ -659,7 +659,7 @@ Returns a list of objects of the currently active supervisors.
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
@@ -671,7 +671,7 @@ Returns a list of objects of the currently active supervisors and their current 
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|supervisor unique identifier|
-|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-ingestion.md#operations) for details.|
+|`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
 |`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
