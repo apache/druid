@@ -326,7 +326,9 @@ jobs:
       env:
         - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!spark'
       after_failure:
-        - cat /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/*.txt
+        - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/
+        - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/
+        - for d in /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/*.txt; do echo $d; cat $d; done
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"
