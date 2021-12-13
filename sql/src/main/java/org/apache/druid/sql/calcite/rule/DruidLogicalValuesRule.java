@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  * This rule is used when the query directly reads in-memory tuples. For example, given a query of
  * `SELECT 1 + 1`, the query planner will create {@link LogicalValues} that contains one tuple,
  * which in turn containing one column of value 2.
- *
+ * <p>
  * The query planner can sometimes reduce a regular query to a query that reads in-memory tuples.
  * For example, `SELECT count(*) FROM foo WHERE 1 = 0` is reduced to `SELECT 0`. This rule will
  * be used for this case as well.
@@ -98,23 +98,29 @@ public class DruidLogicalValuesRule extends RelOptRule
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
-    if (RexLiteral.value(literal) == null) {
-      return null;
-    }
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
         return RexLiteral.stringValue(literal);
       case FLOAT:
+        if (literal.isNull()) {
+          return null;
+        }
         return ((Number) RexLiteral.value(literal)).floatValue();
       case DOUBLE:
       case REAL:
       case DECIMAL:
+        if (literal.isNull()) {
+          return null;
+        }
         return ((Number) RexLiteral.value(literal)).doubleValue();
       case TINYINT:
       case SMALLINT:
       case INTEGER:
       case BIGINT:
+        if (literal.isNull()) {
+          return null;
+        }
         return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
