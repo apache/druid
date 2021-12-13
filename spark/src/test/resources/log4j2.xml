@@ -35,9 +35,5 @@
         <Logger level="error" name="org.apache.druid.java.util.common.io.NativeIO" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
-        <!-- Suppressing Reference Counter warnings during local tests -->
-        <Logger level="error" name="org.apache.druid.collections.StupidPool" additivity="false">
-            <AppenderRef ref="Console"/>
-        </Logger>
     </Loggers>
 </Configuration>

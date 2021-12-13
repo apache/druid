@@ -34,7 +34,7 @@
     </parent>
 
     <properties>
-        <scala.version>${scala.major.version}.15</scala.version>
+        <scala.version>${scala.major.version}.12</scala.version>
         <scala.major.version>2.12</scala.major.version>
         <spark.version>2.4.8</spark.version>
         <!-- These two properties allow -Dcheckstyle.skip to suppress scalastyle checks as well -->
@@ -145,11 +145,6 @@
                     <artifactId>config-magic</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
 
         <!-- Extensions included since we won't be running in a Druid cluster and can't use injection -->

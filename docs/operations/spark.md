@@ -90,14 +90,14 @@ be used directly. Instead, these connectors use a plugin registry architecture, 
 most functionality in `extensions-core`. Custom plugins consisting of a string name and one or more serializable
 generator functions must be registered before the first Spark action which would depend on them is called.
 
-### ComplexTypeRegistry
-The `ComplexTypeRegistry` provides support for serializing and deserializing complex types between Spark and Druid.
-Support for complex types in Druid core extensions is provided out of the box.
+### ComplexMetricRegistry
+The `ComplexMetricRegistry` provides support for serializing and deserializing complex metric types between Spark and
+Druid. Support for complex metric types in Druid core extensions is provided out of the box.
 
-Users wishing to override the default behavior or who need to add support for additional complex types can use the
-`ComplexTypeRegistry.register` functions to associate serde functions with a given complex type. The name used to
-register custom behavior must match the complex type name reported by Druid.
-**Custom complex type plugins must be registered with both the executors and the Spark driver.**
+Users wishing to override the default behavior or who need to add support for additional complex metric types can
+use the `ComplexMetricRegistry.register` functions to associate serde functions with a given complex metric type. The
+name used to register custom behavior must match the complex metric type name reported by Druid.
+**Note that custom plugins must be registered with both the executors and the Spark driver.**
 
 ### DynamicConfigProviderRegistry
 The `DynamicConfigProviderRegistry` provides support for deserializing dynamic configuration values via Druid
@@ -171,12 +171,10 @@ The properties used to configure the DataSourceReader when reading data from Dru
 |`table`|The Druid data source to read from|Yes||
 |`reader.deepStorageType`|The type of deep storage used to back the target Druid cluster|No|`local`|
 |`reader.segments`|A hard-coded list of Druid segments to read. If set, the table and druid metadata client configurations are ignored and the specified segments are read directly. Must be deserializable into Druid DataSegment instances|No|
-|`reader.useCompactSketches`|Controls whether or not compact representations of complex types are used (only for types that support compact forms)|No|False|
+|`reader.useCompactSketches`|Controls whether or not compact representations of complex metrics are used (only for metrics that support compact forms)|No|False|
 |`reader.useDefaultValueForNull`|If true, use Druid's default values for null values. If false, explicitly use null for null values. See the [Druid configuration reference](../configuration/index.html#sql-compatible-null-handling) for more details|No|True|
 |`reader.useSparkConfForDeepStorage`|If true, use the Spark job's configuration to set up access to deep storage|No|False|
 |`reader.allowIncompletePartitions`|If true, read both complete and incomplete Druid partitions. If false, read only complete partitions.|No|False|
-|`reader.timestampColumn`|The timestamp column name for the data source to read from|No|`__time`|
-|`reader.timestampFormat`|The format of the timestamps in `timestampColumn`|No|`millis`|
 |`reader.vectorize`|**Experimental!** If true, reads data from segments in batches if possible|No|False|
 |`reader.batchSize`|**Experimental!** The number of rows to read in one batch if `reader.vectorize` is set to true|No|512|
 

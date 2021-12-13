@@ -21,13 +21,12 @@ package org.apache.druid.spark.v2.reader
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import org.apache.druid.java.util.common.{FileUtils, ISE, StringUtils}
-import org.apache.druid.segment.{QueryableIndex, Segment, SegmentLazyLoadFailCallback}
-import org.apache.druid.segment.loading.SegmentLoader
+import org.apache.druid.segment.QueryableIndex
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys, SerializableHadoopConfiguration}
 import org.apache.druid.spark.mixins.Logging
-import org.apache.druid.spark.registries.{ComplexTypeRegistry, SegmentReaderRegistry}
-import org.apache.druid.spark.utils.{NullHandlingUtils, PartitionReaderSegmentLoader}
+import org.apache.druid.spark.registries.{ComplexMetricRegistry, SegmentReaderRegistry}
+import org.apache.druid.spark.utils.NullHandlingUtils
 import org.apache.druid.spark.v2.INDEX_IO
 import org.apache.druid.timeline.DataSegment
 import org.apache.spark.broadcast.Broadcast
@@ -48,14 +47,14 @@ class DruidBaseInputPartitionReader(
   NullHandlingUtils.initializeDruidNullHandling(useDefaultNullHandling)
 
   if (columnTypes.isDefined) {
-    // Callers will need to explicitly register any complex types not known to ComplexTypeRegistry by default
+    // Callers will need to explicitly register any complex metrics not known to ComplexMetricRegistry by default
     columnTypes.get.foreach {
-      ComplexTypeRegistry.registerByName(_, useCompactSketches)
+      ComplexMetricRegistry.registerByName(_, useCompactSketches)
     }
   } else {
-    ComplexTypeRegistry.initializeDefaults()
+    ComplexMetricRegistry.initializeDefaults()
   }
-  ComplexTypeRegistry.registerSerdes()
+  ComplexMetricRegistry.registerSerdes()
 
   // If there are mixed deep storage types, callers will need to handle initialization themselves.
   if (!useSparkConfForDeepStorage && DruidBaseInputPartitionReader.initialized.compareAndSet(false, true)) {
@@ -64,13 +63,28 @@ class DruidBaseInputPartitionReader(
     SegmentReaderRegistry.initialize(deepStorageType, conf.dive(deepStorageType))
   }
 
-  private[reader] val dataSegment =
+  private[reader] val segment =
     MAPPER.readValue[DataSegment](segmentStr, new TypeReference[DataSegment] {})
-  private[reader] lazy val hadoopConf = broadcastedHadoopConf.value.value
+  private[reader] val queryableIndex: QueryableIndex = loadSegment(segment)
+  private lazy val hadoopConf = broadcastedHadoopConf.value.value
   private[reader] lazy val tmpDir: File = FileUtils.createTempDir
-  private[reader] lazy val segmentLoader: SegmentLoader = new PartitionReaderSegmentLoader(tmpDir, hadoopConf, INDEX_IO)
-  private[reader] lazy val segment: Segment =
-    segmentLoader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP)
+
+
+  private[reader] def loadSegment(segment: DataSegment): QueryableIndex = {
+    val segmentDir = new File(tmpDir, segment.getId.toString)
+    if (!segmentDir.exists) {
+      logInfo(
+        StringUtils.format(
+          "Fetching segment [%s] to [%s].", segment.getId, segmentDir
+        )
+      )
+      if (!segmentDir.mkdir) throw new ISE("Failed to make directory[%s]", segmentDir)
+      SegmentReaderRegistry.load(segment.getLoadSpec, segmentDir, hadoopConf)
+    }
+    val index = INDEX_IO.loadIndex(segmentDir)
+    logInfo(s"Loaded segment [${segment.getId}].")
+    index
+  }
 }
 
 private[reader] object DruidBaseInputPartitionReader {

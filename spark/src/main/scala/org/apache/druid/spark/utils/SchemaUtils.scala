@@ -20,12 +20,11 @@
 package org.apache.druid.spark.utils
 
 import org.apache.druid.data.input.InputRow
-import org.apache.druid.data.input.impl.{DimensionSchema, DimensionsSpec, DoubleDimensionSchema,
+import org.apache.druid.data.input.impl.{DimensionSchema, DoubleDimensionSchema,
   FloatDimensionSchema, LongDimensionSchema, StringDimensionSchema}
 import org.apache.druid.java.util.common.IAE
-import org.apache.druid.segment.QueryableIndex
 import org.apache.druid.segment.column.{RowSignature, ValueType}
-import org.apache.druid.spark.registries.ComplexTypeRegistry
+import org.apache.druid.spark.registries.ComplexMetricRegistry
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types.{ArrayType, BinaryType, DataType, DoubleType, FloatType,
@@ -33,8 +32,7 @@ import org.apache.spark.sql.types.{ArrayType, BinaryType, DataType, DoubleType, 
 import org.apache.spark.unsafe.types.UTF8String
 
 import java.util.{Collection => JCollection}
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter,
-  iterableAsScalaIterableConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 /**
   * Converters and utilities for working with Spark and Druid schemas.
@@ -56,7 +54,7 @@ object SchemaUtils {
           case "DOUBLE" => DoubleType
           case "FLOAT" => FloatType
           case "TIMESTAMP" => TimestampType
-          case complexType: String if ComplexTypeRegistry.getRegisteredMetricNames.contains(complexType) =>
+          case complexType: String if ComplexMetricRegistry.getRegisteredMetricNames.contains(complexType) =>
             BinaryType
           // Add other supported types later
           case _ => throw new IAE(s"Unrecognized type $colType!")
@@ -153,8 +151,8 @@ object SchemaUtils {
         )
       }
       case BinaryType =>
-        if (ComplexTypeRegistry.getRegisteredSerializedClasses.contains(col.getClass)) {
-          ComplexTypeRegistry.deserialize(col)
+        if (ComplexMetricRegistry.getRegisteredSerializedClasses.contains(col.getClass)) {
+          ComplexMetricRegistry.deserialize(col)
         } else {
           col match {
             case arr: Array[Byte] =>
@@ -281,27 +279,5 @@ object SchemaUtils {
       case ArrayType(StringType, _) => ValueType.STRING_ARRAY
       case _ => ValueType.COMPLEX
     }
-  }
-
-  def getDimensionsSpecFromIndex(queryableIndex: QueryableIndex): DimensionsSpec = {
-    val dimensionHandlers = queryableIndex.getDimensionHandlers.asScala
-
-    new DimensionsSpec(queryableIndex.getAvailableDimensions.asScala.toSeq.map{
-      dim =>
-        val columnHolder = queryableIndex.getColumnHolder(dim)
-        val handler = dimensionHandlers(dim)
-        columnHolder.getCapabilities.getType match {
-          case ValueType.DOUBLE => new DoubleDimensionSchema(dim)
-          case ValueType.FLOAT => new FloatDimensionSchema(dim)
-          case ValueType.LONG => new LongDimensionSchema(dim)
-          case ValueType.STRING => new StringDimensionSchema(
-            dim, handler.getMultivalueHandling, columnHolder.getCapabilities.hasBitmapIndexes
-          )
-          case ValueType.DOUBLE_ARRAY | ValueType.LONG_ARRAY | ValueType.STRING_ARRAY | ValueType.COMPLEX =>
-            throw new IAE(
-              s"This reader cannot process dimension [$dim] with type [${columnHolder.getCapabilities.getType}]!"
-            )
-        }
-    }.toList.asJava)
   }
 }
