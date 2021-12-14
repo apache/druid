@@ -30,7 +30,7 @@ import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.guice.annotations.Processing;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
@@ -40,12 +40,14 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
@@ -69,13 +71,10 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Manages {@link Appenderator} instances for the CliIndexer task execution service, which runs all tasks in
@@ -107,7 +106,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
-  private final ExecutorService queryExecutorService;
+  private final QueryProcessingPool queryProcessingPool;
   private final JoinableFactory joinableFactory;
   private final WorkerConfig workerConfig;
   private final Cache cache;
@@ -121,7 +120,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   @Inject
   public UnifiedIndexerAppenderatorsManager(
-      @Processing ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       WorkerConfig workerConfig,
       Cache cache,
@@ -132,7 +131,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider
   )
   {
-    this.queryExecutorService = queryExecutorService;
+    this.queryProcessingPool = queryProcessingPool;
     this.joinableFactory = joinableFactory;
     this.workerConfig = workerConfig;
     this.cache = cache;
@@ -160,7 +159,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
@@ -175,7 +174,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = new AppenderatorImpl(
+      Appenderator appenderator = new StreamAppenderator(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -234,6 +233,80 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
+  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          DatasourceBundle::new
+      );
+
+      Appenderator appenderator = Appenderators.createOpenSegmentsOffline(
+          taskId,
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          wrapIndexMerger(indexMerger),
+          rowIngestionMeters,
+          parseExceptionHandler
+      );
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
+  }
+
+  @Override
+  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+      String taskId,
+      DataSchema schema,
+      AppenderatorConfig config,
+      FireDepartmentMetrics metrics,
+      DataSegmentPusher dataSegmentPusher,
+      ObjectMapper objectMapper,
+      IndexIO indexIO,
+      IndexMerger indexMerger,
+      RowIngestionMeters rowIngestionMeters,
+      ParseExceptionHandler parseExceptionHandler
+  )
+  {
+    synchronized (this) {
+      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
+          schema.getDataSource(),
+          DatasourceBundle::new
+      );
+
+      Appenderator appenderator = Appenderators.createClosedSegmentsOffline(
+          taskId,
+          schema,
+          rewriteAppenderatorConfigMemoryLimits(config),
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          wrapIndexMerger(indexMerger),
+          rowIngestionMeters,
+          parseExceptionHandler
+      );
+      datasourceBundle.addAppenderator(taskId, appenderator);
+      return appenderator;
+    }
+  }
+
+  @Override
   public void removeAppenderatorsForTask(
       String taskId,
       String dataSource
@@ -242,11 +315,13 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     synchronized (this) {
       DatasourceBundle datasourceBundle = datasourceBundles.get(dataSource);
       if (datasourceBundle == null) {
-        LOG.error("Could not find datasource bundle for [%s], task [%s]", dataSource, taskId);
+        // Not a warning, because not all tasks use Appenderators.
+        LOG.debug("Could not find datasource bundle for [%s], task [%s]", dataSource, taskId);
       } else {
         List<Appenderator> existingAppenderators = datasourceBundle.taskAppenderatorMap.remove(taskId);
         if (existingAppenderators == null) {
-          LOG.error("Tried to remove appenderators for task [%s] but none were found.", taskId);
+          // Not a warning, because not all tasks use Appenderators.
+          LOG.debug("Tried to remove appenderators for task [%s] but none were found.", taskId);
         }
         if (datasourceBundle.taskAppenderatorMap.isEmpty()) {
           datasourceBundles.remove(dataSource);
@@ -343,7 +418,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           objectMapper,
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
-          queryExecutorService,
+          queryProcessingPool,
           joinableFactory,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
@@ -360,9 +435,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       taskAppenderatorMap.computeIfAbsent(
           taskId,
-          (myTaskId) -> {
-            return new ArrayList<>();
-          }
+          myTaskId -> new ArrayList<>()
       ).add(appenderator);
     }
   }
@@ -410,6 +483,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public long getMaxBytesInMemory()
     {
       return newMaxBytesInMemory;
+    }
+
+    @Override
+    public boolean isSkipBytesInMemoryOverheadCheck()
+    {
+      return baseConfig.isSkipBytesInMemoryOverheadCheck();
     }
 
     @Override
@@ -484,7 +563,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   /**
    * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by
-   * {@link AppenderatorImpl} with a shared executor service. Merge/persist methods that are not used by
+   * {@link StreamAppenderator} with a shared executor service. Merge/persist methods that are not used by
    * AppenderatorImpl will throw an exception if called.
    */
   public static class LimitedPoolIndexMerger implements IndexMerger
@@ -505,77 +584,25 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     }
 
     @Override
-    public File mergeQueryableIndex(
-        List<QueryableIndex> indexes,
-        boolean rollup,
-        AggregatorFactory[] metricAggs,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
-    )
-    {
-      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.mergeQueryableIndex(
-                    indexes,
-                    rollup,
-                    metricAggs,
-                    outDir,
-                    indexSpec,
-                    segmentWriteOutMediumFactory,
-                    maxColumnsToMerge
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
-      );
-
-      try {
-        return mergeFuture.get();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
     public File persist(
         IncrementalIndex index,
         Interval dataInterval,
         File outDir,
         IndexSpec indexSpec,
+        ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          new Callable<File>()
-          {
-            @Override
-            public File call()
-            {
-              try {
-                return baseMerger.persist(
-                    index,
-                    dataInterval,
-                    outDir,
-                    indexSpec,
-                    segmentWriteOutMediumFactory
-                );
-              }
-              catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-              }
-            }
-          }
+          () ->
+              baseMerger.persist(
+                  index,
+                  dataInterval,
+                  outDir,
+                  indexSpec,
+                  progress,
+                  segmentWriteOutMediumFactory
+              )
       );
 
       try {
@@ -596,52 +623,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File convert(
-        File inDir,
-        File outDir,
-        IndexSpec indexSpec
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File append(
-        List<IndexableAdapter> indexes,
-        AggregatorFactory[] aggregators,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        File outDir,
-        IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
-      throw new UOE(ERROR_MSG);
-    }
-
-    @Override
-    public File persist(
-        IncrementalIndex index,
-        Interval dataInterval,
-        File outDir,
-        IndexSpec indexSpec,
-        ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
-    )
-    {
+      // Only used in certain tests. No need to implement.
       throw new UOE(ERROR_MSG);
     }
 
@@ -650,14 +632,37 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         List<QueryableIndex> indexes,
         boolean rollup,
         AggregatorFactory[] metricAggs,
+        @Nullable DimensionsSpec dimensionsSpec,
         File outDir,
         IndexSpec indexSpec,
+        IndexSpec indexSpecForIntermediatePersists,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         int maxColumnsToMerge
     )
     {
-      throw new UOE(ERROR_MSG);
+      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
+          () ->
+              baseMerger.mergeQueryableIndex(
+                  indexes,
+                  rollup,
+                  metricAggs,
+                  dimensionsSpec,
+                  outDir,
+                  indexSpec,
+                  indexSpecForIntermediatePersists,
+                  new BaseProgressIndicator(),
+                  segmentWriteOutMediumFactory,
+                  maxColumnsToMerge
+              )
+      );
+
+      try {
+        return mergeFuture.get();
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }

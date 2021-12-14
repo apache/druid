@@ -36,7 +36,6 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
@@ -54,7 +53,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  *
@@ -174,28 +172,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  @Nullable
-  public String getColumnTypeName(String columnName)
-  {
-    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-
-    if (columnHolder == null) {
-      return null;
-    }
-
-    try (final BaseColumn col = columnHolder.getColumn()) {
-      if (col instanceof ComplexColumn) {
-        return ((ComplexColumn) col).getTypeName();
-      } else {
-        return columnHolder.getCapabilities().getType().toString();
-      }
-    }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-
-  @Override
   public DateTime getMaxIngestedEventTime()
   {
     // For immutable indexes, maxIngestedEventTime is maxTime.
@@ -211,8 +187,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     if (filter != null) {
       final boolean filterCanVectorize =
-          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns))
-          || filter.canVectorizeMatcher();
+          filter.shouldUseBitmapIndex(makeBitmapIndexSelector(virtualColumns)) || filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;
@@ -317,15 +292,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   public static ColumnInspector getColumnInspectorForIndex(ColumnSelector index)
   {
-    return new ColumnInspector()
-    {
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
-      }
-    };
+    return column -> getColumnCapabilities(index, column);
   }
 
   @Override
@@ -391,13 +358,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      *
      * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
      */
-    final Set<Filter> preFilters;
+    final List<Filter> preFilters;
     final List<Filter> postFilters = new ArrayList<>();
     int preFilteredRows = totalRows;
     if (filter == null) {
-      preFilters = Collections.emptySet();
+      preFilters = Collections.emptyList();
     } else {
-      preFilters = new HashSet<>();
+      preFilters = new ArrayList<>();
 
       if (filter instanceof AndFilter) {
         // If we get an AndFilter, we can split the subfilters across both filtering stages
@@ -445,7 +412,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       queryMetrics.reportPreFilteredRows(preFilteredRows);
     }
 
-    return new FilterAnalysis(preFilterBitmap, Filters.and(postFilters));
+    return new FilterAnalysis(preFilterBitmap, Filters.maybeAnd(postFilters).orElse(null));
   }
 
   @VisibleForTesting

@@ -22,10 +22,12 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -50,11 +52,15 @@ import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -71,9 +77,9 @@ public class Filters
    *
    * @return list of Filters
    */
-  public static Set<Filter> toFilters(List<DimFilter> dimFilters)
+  public static List<Filter> toFilters(List<DimFilter> dimFilters)
   {
-    return dimFilters.stream().map(DimFilter::toFilter).collect(Collectors.toSet());
+    return dimFilters.stream().map(Filters::toFilter).collect(Collectors.toList());
   }
 
   /**
@@ -480,56 +486,99 @@ public class Filters
   }
 
   /**
-   * Create a filter representing an AND relationship across a list of filters.
+   * Create a filter representing an AND relationship across a list of filters. Deduplicates filters, flattens stacks,
+   * and removes null filters and literal "false" filters.
    *
-   * @param filterList List of filters
+   * @param filters List of filters
    *
-   * @return If filterList has more than one element, return an AND filter composed of the filters from filterList
-   * If filterList has a single element, return that element alone
-   * If filterList is empty, return null
+   * @return If "filters" has more than one filter remaining after processing, returns {@link AndFilter}.
+   * If "filters" has a single element remaining after processing, return that filter alone.
+   *
+   * @throws IllegalArgumentException if "filters" is empty or only contains nulls
    */
-  @Nullable
-  public static Filter and(List<Filter> filterList)
+  public static Filter and(final List<Filter> filters)
   {
-    if (filterList.isEmpty()) {
-      return null;
-    }
-
-    if (filterList.size() == 1) {
-      return filterList.get(0);
-    }
-
-    return new AndFilter(filterList);
+    return maybeAnd(filters).orElseThrow(() -> new IAE("Expected nonempty filters list"));
   }
 
   /**
-   * Create a filter representing an OR relationship across a set of filters.
-   *
-   * @param filterSet Set of filters
-   *
-   * @return If filterSet has more than one element, return an OR filter composed of the filters from filterSet
-   * If filterSet has a single element, return that element alone
-   * If filterSet is empty, return null
+   * Like {@link #and}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
    */
-  @Nullable
-  public static Filter or(Set<Filter> filterSet)
+  public static Optional<Filter> maybeAnd(List<Filter> filters)
   {
-    if (filterSet.isEmpty()) {
-      return null;
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
+      return Optional.empty();
     }
 
-    if (filterSet.size() == 1) {
-      return filterSet.iterator().next();
+    final LinkedHashSet<Filter> filtersToUse = flattenAndChildren(nonNullFilters);
+
+    if (filtersToUse.isEmpty()) {
+      assert !filters.isEmpty();
+      // Original "filters" list must have been 100% literally-true filters.
+      return Optional.of(TrueFilter.instance());
+    } else if (filtersToUse.stream().anyMatch(filter -> filter instanceof FalseFilter)) {
+      // AND of FALSE with anything is FALSE.
+      return Optional.of(FalseFilter.instance());
+    } else if (filtersToUse.size() == 1) {
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
+    } else {
+      return Optional.of(new AndFilter(filtersToUse));
+    }
+  }
+
+  /**
+   * Create a filter representing an OR relationship across a list of filters. Deduplicates filters, flattens stacks,
+   * and removes null filters and literal "false" filters.
+   *
+   * @param filters List of filters
+   *
+   * @return If "filters" has more than one filter remaining after processing, returns {@link OrFilter}.
+   * If "filters" has a single element remaining after processing, return that filter alone.
+   *
+   * @throws IllegalArgumentException if "filters" is empty
+   */
+  public static Filter or(final List<Filter> filters)
+  {
+    return maybeOr(filters).orElseThrow(() -> new IAE("Expected nonempty filters list"));
+  }
+
+  /**
+   * Like {@link #or}, but returns an empty Optional instead of throwing an exception if "filters" is empty
+   * or only contains nulls.
+   */
+  public static Optional<Filter> maybeOr(final List<Filter> filters)
+  {
+    final List<Filter> nonNullFilters = nonNull(filters);
+
+    if (nonNullFilters.isEmpty()) {
+      return Optional.empty();
     }
 
-    return new OrFilter(filterSet);
+    final LinkedHashSet<Filter> filtersToUse = flattenOrChildren(nonNullFilters);
+
+    if (filtersToUse.isEmpty()) {
+      assert !nonNullFilters.isEmpty();
+      // Original "filters" list must have been 100% literally-false filters.
+      return Optional.of(FalseFilter.instance());
+    } else if (filtersToUse.stream().anyMatch(filter -> filter instanceof TrueFilter)) {
+      // OR of TRUE with anything is TRUE.
+      return Optional.of(TrueFilter.instance());
+    } else if (filtersToUse.size() == 1) {
+      return Optional.of(Iterables.getOnlyElement(filtersToUse));
+    } else {
+      return Optional.of(new OrFilter(filtersToUse));
+    }
   }
 
   /**
    * @param filter the filter.
+   *
    * @return The normalized or clauses for the provided filter.
    */
-  public static Set<Filter> toNormalizedOrClauses(Filter filter)
+  public static List<Filter> toNormalizedOrClauses(Filter filter)
   {
     Filter normalizedFilter = Filters.toCnf(filter);
 
@@ -537,11 +586,11 @@ public class Filters
     // CNF normalization will generate either
     // - an AND filter with multiple subfilters
     // - or a single non-AND subfilter which cannot be split further
-    Set<Filter> normalizedOrClauses;
+    List<Filter> normalizedOrClauses;
     if (normalizedFilter instanceof AndFilter) {
-      normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
+      normalizedOrClauses = new ArrayList<>(((AndFilter) normalizedFilter).getFilters());
     } else {
-      normalizedOrClauses = Collections.singleton(normalizedFilter);
+      normalizedOrClauses = Collections.singletonList(normalizedFilter);
     }
     return normalizedOrClauses;
   }
@@ -551,5 +600,55 @@ public class Filters
   {
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
     return valueMatcher.matches();
+  }
+
+
+  /**
+   * Returns a list equivalent to the input list, but with nulls removed. If the original list has no nulls,
+   * it is returned directly.
+   */
+  private static List<Filter> nonNull(final List<Filter> filters)
+  {
+    if (filters.stream().anyMatch(Objects::isNull)) {
+      return filters.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    } else {
+      return filters;
+    }
+  }
+
+  /**
+   * Flattens children of an AND, removes duplicates, and removes literally-true filters.
+   */
+  private static LinkedHashSet<Filter> flattenAndChildren(final Collection<Filter> filters)
+  {
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
+
+    for (Filter child : filters) {
+      if (child instanceof AndFilter) {
+        retVal.addAll(flattenAndChildren(((AndFilter) child).getFilters()));
+      } else if (!(child instanceof TrueFilter)) {
+        retVal.add(child);
+      }
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Flattens children of an OR, removes duplicates, and removes literally-false filters.
+   */
+  private static LinkedHashSet<Filter> flattenOrChildren(final Collection<Filter> filters)
+  {
+    final LinkedHashSet<Filter> retVal = new LinkedHashSet<>();
+
+    for (Filter child : filters) {
+      if (child instanceof OrFilter) {
+        retVal.addAll(flattenOrChildren(((OrFilter) child).getFilters()));
+      } else if (!(child instanceof FalseFilter)) {
+        retVal.add(child);
+      }
+    }
+
+    return retVal;
   }
 }

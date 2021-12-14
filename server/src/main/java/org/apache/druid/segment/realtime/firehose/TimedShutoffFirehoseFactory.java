@@ -120,7 +120,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
     {
       if (!closed) {
         closed = true;
-        CloseableUtils.closeBoth(firehose, shutdownExec::shutdownNow);
+        CloseableUtils.closeAll(firehose, shutdownExec::shutdownNow);
       }
     }
   }

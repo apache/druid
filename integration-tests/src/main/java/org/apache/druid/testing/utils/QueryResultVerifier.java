@@ -20,13 +20,15 @@
 package org.apache.druid.testing.utils;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class QueryResultVerifier
 {
   public static boolean compareResults(
       Iterable<Map<String, Object>> actual,
-      Iterable<Map<String, Object>> expected
+      Iterable<Map<String, Object>> expected,
+      List<String> fieldsToTest
   )
   {
     Iterator<Map<String, Object>> actualIter = actual.iterator();
@@ -36,8 +38,16 @@ public class QueryResultVerifier
       Map<String, Object> actualRes = actualIter.next();
       Map<String, Object> expRes = expectedIter.next();
 
-      if (!actualRes.equals(expRes)) {
-        return false;
+      if (fieldsToTest != null && !fieldsToTest.isEmpty()) {
+        for (String field : fieldsToTest) {
+          if (!actualRes.get(field).equals(expRes.get(field))) {
+            return false;
+          }
+        }
+      } else {
+        if (!actualRes.equals(expRes)) {
+          return false;
+        }
       }
     }
 

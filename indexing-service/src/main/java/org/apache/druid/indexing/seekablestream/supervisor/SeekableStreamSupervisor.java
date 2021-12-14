@@ -56,8 +56,10 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
@@ -71,6 +73,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -82,6 +85,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
@@ -89,9 +95,12 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -101,7 +110,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
+import java.util.TreeSet;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -144,6 +155,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final int MAX_INITIALIZATION_RETRIES = 20;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
+
+  private static final Comparator<ParseExceptionReport> PARSE_EXCEPTION_REPORT_COMPARATOR =
+      new Comparator<ParseExceptionReport>()
+      {
+        @Override
+        public int compare(ParseExceptionReport o1, ParseExceptionReport o2)
+        {
+          int timeCompare = Long.compare(o1.getTimeOfExceptionMillis(), o2.getTimeOfExceptionMillis());
+          if (timeCompare != 0) {
+            return timeCompare;
+          }
+          int errorTypeCompare = StringComparators.LEXICOGRAPHIC.compare(o1.getErrorType(), o2.getErrorType());
+          if (errorTypeCompare != 0) {
+            return errorTypeCompare;
+          }
+
+          return StringComparators.LEXICOGRAPHIC.compare(o1.getInput(), o2.getInput());
+        }
+      };
 
   // Internal data structures
   // --------------------------------------------------------
@@ -267,7 +297,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private interface Notice
   {
+    /**
+     * Returns a descriptive label for this notice type. Used for metrics emission and logging.
+     *
+     * @return task type label
+     */
+    String getType();
+
     void handle() throws ExecutionException, InterruptedException, TimeoutException;
+
+    /**
+     * Whether this notice can also handle the work of another notice. Used to coalesce notices and avoid
+     * redundant work.
+     */
+    default boolean canAlsoHandle(Notice otherNotice)
+    {
+      return false;
+    }
   }
 
   private static class StatsFromTaskResult
@@ -303,8 +349,43 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  private static class ErrorsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final List<ParseExceptionReport> errors;
+
+    public ErrorsFromTaskResult(
+        int groupId,
+        String taskId,
+        List<ParseExceptionReport> errors
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.errors = errors;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public List<ParseExceptionReport> getErrors()
+    {
+      return errors;
+    }
+  }
+
   private class RunNotice implements Notice
   {
+    private static final String TYPE = "run_notice";
+
     @Override
     public void handle()
     {
@@ -316,6 +397,146 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       runInternal();
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+
+    @Override
+    public boolean canAlsoHandle(Notice otherNotice)
+    {
+      return otherNotice.getType().equals(TYPE);
+    }
+  }
+
+  // change taskCount without resubmitting.
+  private class DynamicAllocationTasksNotice implements Notice
+  {
+    Callable<Integer> scaleAction;
+    private static final String TYPE = "dynamic_allocation_tasks_notice";
+
+    DynamicAllocationTasksNotice(Callable<Integer> scaleAction)
+    {
+      this.scaleAction = scaleAction;
+    }
+
+    /**
+     * This method will do lag points collection and check dynamic scale action is necessary or not.
+     */
+    @Override
+    public void handle()
+    {
+      if (autoScalerConfig == null) {
+        log.warn("autoScalerConfig is null but dynamic allocation notice is submitted, how can it be ?");
+      } else {
+        try {
+          long nowTime = System.currentTimeMillis();
+          if (spec.isSuspended()) {
+            log.info("Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is suspended",
+                    dataSource
+            );
+            return;
+          }
+          log.debug("PendingCompletionTaskGroups is [%s] for dataSource [%s]", pendingCompletionTaskGroups,
+                  dataSource
+          );
+          for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
+            if (!list.isEmpty()) {
+              log.info(
+                      "Skipping DynamicAllocationTasksNotice execution for datasource [%s] because following tasks are pending [%s]",
+                      dataSource, pendingCompletionTaskGroups
+              );
+              return;
+            }
+          }
+          if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
+            log.info(
+                    "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for dataSource [%s], skipping it!",
+                    nowTime - dynamicTriggerLastRunTime, autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(), dataSource
+            );
+            return;
+          }
+          final Integer desriedTaskCount = scaleAction.call();
+          boolean allocationSuccess = changeTaskCount(desriedTaskCount);
+          if (allocationSuccess) {
+            dynamicTriggerLastRunTime = nowTime;
+          }
+        }
+        catch (Exception ex) {
+          log.warn(ex, "Error parsing DynamicAllocationTasksNotice");
+        }
+      }
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
+  }
+
+  /**
+   * This method determines how to do scale actions based on collected lag points.
+   * If scale action is triggered :
+   *    First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
+   *    Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled in the next 'RunNotice'.
+   *    Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
+   * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
+   * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
+   * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerScaleActionFrequencyMillis' before next 'changeTaskCount'.
+   *         If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private boolean changeTaskCount(int desiredActiveTaskCount) throws InterruptedException, ExecutionException, TimeoutException
+  {
+    int currentActiveTaskCount;
+    Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
+    currentActiveTaskCount = activeTaskGroups.size();
+
+    if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
+      return false;
+    } else {
+      log.info(
+              "Starting scale action, current active task count is [%d] and desired task count is [%d] for dataSource [%s].",
+              currentActiveTaskCount, desiredActiveTaskCount, dataSource
+      );
+      gracefulShutdownInternal();
+      changeTaskCountInIOConfig(desiredActiveTaskCount);
+      clearAllocationInfo();
+      log.info("Changed taskCount to [%s] for dataSource [%s].", desiredActiveTaskCount, dataSource);
+      return true;
+    }
+  }
+
+  private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
+  {
+    ioConfig.setTaskCount(desiredActiveTaskCount);
+    try {
+      Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
+      if (supervisorManager.isPresent()) {
+        MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
+        metadataSupervisorManager.insert(dataSource, spec);
+      } else {
+        log.error("supervisorManager is null in taskMaster, skipping scale action for dataSource [%s].", dataSource);
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to sync taskCount to MetaStorage for dataSource [%s].", dataSource);
+    }
+  }
+
+  private void clearAllocationInfo()
+  {
+    activelyReadingTaskGroups.clear();
+    partitionGroups.clear();
+    partitionOffsets.clear();
+
+    pendingCompletionTaskGroups.clear();
+    partitionIds.clear();
   }
 
   private class GracefulShutdownNotice extends ShutdownNotice
@@ -330,6 +551,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class ShutdownNotice implements Notice
   {
+    private static final String TYPE = "shutdown_notice";
+
     @Override
     public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
@@ -340,11 +563,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         stopLock.notifyAll();
       }
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   private class ResetNotice implements Notice
   {
     final DataSourceMetadata dataSourceMetadata;
+    private static final String TYPE = "reset_notice";
 
     ResetNotice(DataSourceMetadata dataSourceMetadata)
     {
@@ -356,12 +586,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       resetInternal(dataSourceMetadata);
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   protected class CheckpointNotice implements Notice
   {
     private final int taskGroupId;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata;
+    private static final String TYPE = "checkpoint_notice";
 
     CheckpointNotice(
         int taskGroupId,
@@ -432,6 +669,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       return true;
     }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
+    }
   }
 
   // Map<{group id}, {actively reading task group}>; see documentation for TaskGroup class
@@ -470,6 +713,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
   private final SeekableStreamSupervisorIOConfig ioConfig;
+  private final AutoScalerConfig autoScalerConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
@@ -480,14 +724,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
-  private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
+  private final BlockingDeque<Notice> notices = new LinkedBlockingDeque<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final ReentrantLock recordSupplierLock = new ReentrantLock();
+  private List<ParseExceptionReport> lastKnownParseErrors = new ArrayList<>();
 
   private final boolean useExclusiveStartingSequence;
   private boolean listenerRegistered = false;
   private long lastRunTime;
+  private long dynamicTriggerLastRunTime;
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
@@ -519,20 +765,40 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.useExclusiveStartingSequence = useExclusiveStartingSequence;
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
+    this.autoScalerConfig = ioConfig.getAutoscalerConfig();
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
     this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId));
     this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Reporting-%d");
+
     this.stateManager = new SeekableStreamSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
         spec.isSuspended()
     );
 
-    int workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                         ? this.tuningConfig.getWorkerThreads()
-                         : Math.min(10, this.ioConfig.getTaskCount()));
+    int workerThreads;
+    int chatThreads;
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+      log.info("Running Task autoscaler for datasource [%s]", dataSource);
+
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+              ? this.tuningConfig.getWorkerThreads()
+              : Math.min(10, autoScalerConfig.getTaskCountMax()));
+
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas()));
+    } else {
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+              ? this.tuningConfig.getWorkerThreads()
+              : Math.min(10, this.ioConfig.getTaskCount()));
+
+      chatThreads = (this.tuningConfig.getChatThreads() != null
+              ? this.tuningConfig.getChatThreads()
+              : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    }
 
     this.workerExec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(
@@ -578,9 +844,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
-    int chatThreads = (this.tuningConfig.getChatThreads() != null
-                       ? this.tuningConfig.getChatThreads()
-                       : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
     this.taskClient = taskClientFactory.build(
         taskInfoProvider,
         dataSource,
@@ -595,6 +858,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         this.tuningConfig.getHttpTimeout(),
         this.tuningConfig.getChatRetries()
     );
+  }
+
+
+  @Override
+  public int getActiveTaskGroupsCount()
+  {
+    return activelyReadingTaskGroups.values().size();
   }
 
   @Override
@@ -659,6 +929,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         scheduledExec.shutdownNow(); // stop recurring executions
         reportingExec.shutdownNow();
 
+
         if (started) {
           Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
           if (taskRunner.isPresent()) {
@@ -672,10 +943,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           synchronized (stopLock) {
             if (stopGracefully) {
               log.info("Posting GracefulShutdownNotice, signalling managed tasks to complete and publish");
-              notices.add(new GracefulShutdownNotice());
+              addNotice(new GracefulShutdownNotice());
             } else {
               log.info("Posting ShutdownNotice");
-              notices.add(new ShutdownNotice());
+              addNotice(new ShutdownNotice());
             }
 
             long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
@@ -712,7 +983,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
     log.info("Posting ResetNotice");
-    notices.add(new ResetNotice(dataSourceMetadata));
+    addNotice(new ResetNotice(dataSourceMetadata));
   }
 
   public ReentrantLock getRecordSupplierLock()
@@ -748,8 +1019,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     continue;
                   }
 
+                  // Coalesce notices.
+                  Notice nextNotice;
+                  while ((nextNotice = notices.peek()) != null && notice.canAlsoHandle(nextNotice)) {
+                    notices.removeFirst();
+                  }
+
                   try {
+                    Instant handleNoticeStartTime = Instant.now();
                     notice.handle();
+                    Instant handleNoticeEndTime = Instant.now();
+                    Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
+                    String noticeType = notice.getType();
+                    log.debug("Handled notice [%s] from notices queue in [%d] ms, current notices queue size [%d] for datasource [%s]", noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource);
+                    emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
                     stateManager.recordThrowableEvent(e);
@@ -774,7 +1057,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
 
         scheduleReporting(reportingExec);
-
         started = true;
         log.info(
             "Started SeekableStreamSupervisor[%s], first run in [%s], with spec: [%s]",
@@ -797,9 +1079,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
+  {
+    return () -> notices.add(new DynamicAllocationTasksNotice(scaleAction));
+  }
+
   private Runnable buildRunTask()
   {
-    return () -> notices.add(new RunNotice());
+    return () -> addNotice(new RunNotice());
   }
 
   @Override
@@ -915,7 +1202,27 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.error(ie, "getStats() interrupted.");
+      log.warn(ie, "getStats() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
+    }
+  }
+
+  @Override
+  public List<ParseExceptionReport> getParseErrors()
+  {
+    try {
+      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() <= 0) {
+        return ImmutableList.of();
+      }
+      lastKnownParseErrors = getCurrentParseErrors();
+      return lastKnownParseErrors;
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.warn(ie, "getCurrentParseErrors() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {
@@ -991,6 +1298,89 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return allStats;
   }
 
+  /**
+   * Collect parse errors from all tasks managed by this supervisor.
+   *
+   * @return A list of parse error strings
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private List<ParseExceptionReport> getCurrentParseErrors()
+      throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final List<ListenableFuture<ErrorsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
+
+    for (int groupId : activelyReadingTaskGroups.keySet()) {
+      TaskGroup group = activelyReadingTaskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getParseErrorsAsync(taskId),
+                (Function<List<ParseExceptionReport>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                    groupId,
+                    taskId,
+                    taskErrors
+                )
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getParseErrorsAsync(taskId),
+                  (Function<List<ParseExceptionReport>, ErrorsFromTaskResult>) (taskErrors) -> new ErrorsFromTaskResult(
+                      groupId,
+                      taskId,
+                      taskErrors
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
+      }
+    }
+
+    // We use a tree set to sort the parse errors by time, and eliminate duplicates across calls to this method
+    TreeSet<ParseExceptionReport> parseErrorsTreeSet = new TreeSet<>(PARSE_EXCEPTION_REPORT_COMPARATOR);
+    parseErrorsTreeSet.addAll(lastKnownParseErrors);
+
+    List<ErrorsFromTaskResult> results = Futures.successfulAsList(futures)
+                                               .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      ErrorsFromTaskResult result = results.get(i);
+      if (result != null) {
+        parseErrorsTreeSet.addAll(result.getErrors());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get errors for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+      }
+    }
+
+    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
+
+    // store a limited number of parse exceptions, keeping the most recent ones
+    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
+                          spec.getSpec().getIOConfig().getTaskCount();
+    parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
+
+    final List<ParseExceptionReport> limitedParseErrors = new ArrayList<>();
+    Iterator<ParseExceptionReport> descendingIterator = parseErrorsTreeSet.descendingIterator();
+    for (int i = 0; i < parseErrorLimit; i++) {
+      limitedParseErrors.add(descendingIterator.next());
+    }
+
+    return limitedParseErrors;
+  }
 
   @VisibleForTesting
   public void addTaskGroupToActivelyReadingTaskGroup(
@@ -1117,7 +1507,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             @Override
             public void statusChanged(String taskId, TaskStatus status)
             {
-              notices.add(new RunNotice());
+              addNotice(new RunNotice());
             }
           }, Execs.directExecutor()
       );
@@ -1901,6 +2291,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  public int getPartitionCount()
+  {
+    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
+  }
+
   private boolean updatePartitionDataFromStream()
   {
     List<PartitionIdType> previousPartitionIds = new ArrayList<>(partitionIds);
@@ -2024,7 +2419,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             taskGroupId
         );
 
-        newlyDiscovered.computeIfAbsent(taskGroupId, ArrayList::new).add(partitionId);
+        newlyDiscovered.computeIfAbsent(taskGroupId, k -> new ArrayList<>()).add(partitionId);
       }
     }
 
@@ -2947,6 +3342,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void addNotice(Notice notice)
   {
+    log.debug("Adding notice [%s] to notices queue", notice.getClass().getName());
     notices.add(notice);
   }
 
@@ -3419,12 +3815,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * default implementation, schedules periodic fetch of latest offsets and {@link #emitLag} reporting for Kafka and Kinesis
+   * and periodic reporting of {@Link #emitNoticesQueueSize} for various data sources.
    */
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
   {
     SeekableStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     SeekableStreamSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
-    reportingExec.scheduleAtFixedRate(
+    // Lag is collected with fixed delay instead of fixed rate as lag collection can involve calling external
+    // services and with fixed delay, a cooling buffer is guaranteed between successive calls
+    reportingExec.scheduleWithFixedDelay(
         this::updateCurrentAndLatestOffsets,
         ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
         Math.max(
@@ -3435,6 +3834,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     reportingExec.scheduleAtFixedRate(
         this::emitLag,
+        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
+        spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
+        TimeUnit.MILLISECONDS
+    );
+    reportingExec.scheduleAtFixedRate(
+        this::emitNoticesQueueSize,
         ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
         spec.getMonitorSchedulerConfig().getEmitterPeriod().getMillis(),
         TimeUnit.MILLISECONDS
@@ -3487,6 +3892,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
            && makeSequenceNumber(earliestOffset).compareTo(makeSequenceNumber(offsetFromMetadata)) <= 0;
   }
 
+  protected void emitNoticeProcessTime(String noticeType, long timeInMillis)
+  {
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+              .setDimension("noticeType", noticeType)
+              .setDimension("dataSource", dataSource)
+              .build("ingest/notices/time", timeInMillis)
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit notices process time");
+    }
+  }
+
+  protected void emitNoticesQueueSize()
+  {
+    if (spec.isSuspended()) {
+      // don't emit metrics if supervisor is suspended
+      return;
+    }
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+              .setDimension("dataSource", dataSource)
+              .build("ingest/notices/queueSize", getNoticesQueueSize())
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit notices queue size");
+    }
+  }
+
   protected void emitLag()
   {
     if (spec.isSuspended() || !stateManager.isSteadyState()) {
@@ -3508,29 +3946,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
-        long maxLag = 0, totalLag = 0, avgLag;
-        for (long lag : partitionLags.values()) {
-          if (lag > maxLag) {
-            maxLag = lag;
-          }
-          totalLag += lag;
-        }
-        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-
+        LagStats lagStats = computeLags(partitionLags);
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), totalLag)
+                              .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), maxLag)
+                              .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
-                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), avgLag)
+                              .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };
 
@@ -3541,6 +3971,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     catch (Exception e) {
       log.warn(e, "Unable to compute lag");
     }
+  }
+
+
+  /**
+   *  This method computes maxLag, totalLag and avgLag
+   * @param partitionLags lags per partition
+   */
+  protected LagStats computeLags(Map<PartitionIdType, Long> partitionLags)
+  {
+    long maxLag = 0, totalLag = 0, avgLag;
+    for (long lag : partitionLags.values()) {
+      if (lag > maxLag) {
+        maxLag = lag;
+      }
+      totalLag += lag;
+    }
+    avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
+    return new LagStats(maxLag, totalLag, avgLag);
   }
 
   /**

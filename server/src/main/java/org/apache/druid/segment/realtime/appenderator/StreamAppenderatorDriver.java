@@ -36,11 +36,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
-import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -167,8 +167,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param sequenceName             sequenceName for this row's segment
    * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
    *                                 if {@param allowIncrementalPersists} is set to false then this will not be used
-   * @param skipSegmentLineageCheck  if true, perform lineage validation using previousSegmentId for this sequence.
-   *                                 Should be set to false if replica tasks would index events in same order
+   * @param skipSegmentLineageCheck  Should be set {@code false} to perform lineage validation using previousSegmentId for this sequence.
+   *                                 Note that for Kafka Streams we should disable this check and set this parameter to
+   *                                 {@code true}.
+   *                                 if {@code true}, skips, does not enforce, lineage validation.
    * @param allowIncrementalPersists whether to allow persist to happen when maxRowsInMemory or intermediate persist period
    *                                 threshold is hit
    *
@@ -278,6 +280,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
+            null,
             null,
             sam,
             publisher,

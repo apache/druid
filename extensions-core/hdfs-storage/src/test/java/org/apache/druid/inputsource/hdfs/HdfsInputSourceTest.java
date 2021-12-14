@@ -20,9 +20,11 @@
 package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -38,8 +40,9 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,13 +73,14 @@ import java.util.stream.IntStream;
 @RunWith(Enclosed.class)
 public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
-  private static final String PATH = "/foo/bar";
+  private static final String PATH = "hdfs://localhost:7020/foo/bar";
   private static final Configuration CONFIGURATION = new Configuration();
+  private static final HdfsInputSourceConfig DEFAULT_INPUT_SOURCE_CONFIG = new HdfsInputSourceConfig(null);
   private static final String COLUMN = "value";
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec(null, null, null),
       DimensionsSpec.EMPTY,
-      Collections.emptyList()
+      ColumnsFilter.all()
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TimestampSpec.DEFAULT_COLUMN, COLUMN),
@@ -85,6 +89,80 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       null,
       0
   );
+
+  public static class ConstructorTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testConstructorAllowsOnlyDefaultProtocol()
+    {
+      HdfsInputSource.builder()
+                     .paths(PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Only [hdfs] protocols are allowed");
+      HdfsInputSource.builder()
+                     .paths("file:/foo/bar*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+    }
+
+    @Test
+    public void testConstructorAllowsOnlyCustomProtocol()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.ftp.impl", "org.apache.hadoop.fs.ftp.FTPFileSystem");
+      HdfsInputSource.builder()
+                     .paths("ftp://localhost:21/foo/bar")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("ftp")))
+                     .build();
+
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Only [druid] protocols are allowed");
+      HdfsInputSource.builder()
+                     .paths(PATH + "*")
+                     .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("druid")))
+                     .build();
+    }
+
+    @Test
+    public void testConstructorWithDefaultHdfs()
+    {
+      final Configuration conf = new Configuration();
+      conf.set("fs.default.name", "hdfs://localhost:7020");
+      HdfsInputSource.builder()
+                     .paths("/foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("hdfs:///foo/bar*")
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+
+      HdfsInputSource.builder()
+                     .paths("hdfs://localhost:10020/foo/bar*") // different hdfs
+                     .configuration(conf)
+                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                     .build();
+    }
+  }
 
   public static class SerializeDeserializeTest
   {
@@ -101,7 +179,8 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       hdfsInputSourceBuilder = HdfsInputSource.builder()
                                               .paths(PATH)
-                                              .configuration(CONFIGURATION);
+                                              .configuration(CONFIGURATION)
+                                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG);
     }
 
     @Test
@@ -143,8 +222,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       final ObjectMapper mapper = new ObjectMapper();
       mapper.setInjectableValues(
-          new InjectableValues.Std()
+          new Std()
               .addValue(Configuration.class, new Configuration())
+              .addValue(HdfsInputSourceConfig.class, DEFAULT_INPUT_SOURCE_CONFIG)
               .addValue(
                   InputSourceSecurityConfig.class,
                   InputSourceSecurityConfig.ALLOW_ALL
@@ -173,7 +253,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
   public static class ReaderTest
   {
-    private static final String PATH = "/test";
+    private static final String PATH = "test";
     private static final int NUM_FILE = 3;
     private static final String KEY_VALUE_SEPARATOR = ",";
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz";
@@ -181,7 +261,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-    private MiniDFSCluster dfsCluster;
+    private FileSystem fileSystem;
     private HdfsInputSource target;
     private Set<Path> paths;
     private Map<Long, String> timestampToValue;
@@ -193,8 +273,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
       File dir = temporaryFolder.getRoot();
       Configuration configuration = new Configuration(true);
-      configuration.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, dir.getAbsolutePath());
-      dfsCluster = new MiniDFSCluster.Builder(configuration).build();
+      fileSystem = new LocalFileSystem();
+      fileSystem.initialize(dir.toURI(), configuration);
+      fileSystem.setWorkingDirectory(new Path(dir.getAbsolutePath()));
 
       paths = IntStream.range(0, NUM_FILE)
                        .mapToObj(
@@ -202,7 +283,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                              char value = ALPHABET.charAt(i % ALPHABET.length());
                              timestampToValue.put((long) i, Character.toString(value));
                              return createFile(
-                                 dfsCluster,
+                                 fileSystem,
                                  String.valueOf(i),
                                  i + KEY_VALUE_SEPARATOR + value
                              );
@@ -211,29 +292,29 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                        .collect(Collectors.toSet());
 
       target = HdfsInputSource.builder()
-                              .paths(dfsCluster.getURI() + PATH + "*")
+                              .paths(fileSystem.makeQualified(new Path(PATH)) + "*")
                               .configuration(CONFIGURATION)
+                              .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("hdfs", "file")))
                               .build();
     }
 
     @After
-    public void teardown()
+    public void teardown() throws IOException
     {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown(true);
-      }
+      temporaryFolder.delete();
+      fileSystem.close();
     }
 
-    private static Path createFile(MiniDFSCluster dfsCluster, String pathSuffix, String contents)
+    private static Path createFile(FileSystem fs, String pathSuffix, String contents)
     {
       try {
         Path path = new Path(PATH + pathSuffix);
         try (Writer writer = new BufferedWriter(
-            new OutputStreamWriter(dfsCluster.getFileSystem().create(path), StandardCharsets.UTF_8)
+            new OutputStreamWriter(fs.create(path), StandardCharsets.UTF_8)
         )) {
           writer.write(contents);
         }
-        return path;
+        return fs.makeQualified(path);
       }
       catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -265,7 +346,6 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       splits.forEach(split -> Assert.assertEquals(1, split.get().size()));
       Set<Path> actualPaths = splits.stream()
                                     .flatMap(split -> split.get().stream())
-                                    .map(Path::getPathWithoutSchemeAndAuthority)
                                     .collect(Collectors.toSet());
       Assert.assertEquals(paths, actualPaths);
     }
@@ -306,7 +386,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void testDenyAllPaths()
     {
       HdfsInputSource.builder()
-                     .paths(dfsCluster.getURI() + PATH + "*")
+                     .paths(fileSystem.getUri() + PATH + "*")
                      .configuration(CONFIGURATION)
                      .build()
                      .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.emptyList(), null));
@@ -316,12 +396,12 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void testAllowPath()
     {
       HdfsInputSource.builder()
-                     .paths(dfsCluster.getURI() + PATH + "*")
+                     .paths(fileSystem.getUri() + PATH + "*")
                      .configuration(CONFIGURATION)
                      .build()
                      .validateAllowDenyPrefixList(
                          new InputSourceSecurityConfig(
-                             Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)),
+                             Collections.singletonList(URI.create(fileSystem.getUri() + PATH)),
                              null
                          ));
     }
@@ -330,10 +410,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void testDenyPathsRelativeToAllowPaths()
     {
       HdfsInputSource.builder()
-                     .paths(dfsCluster.getURI() + PATH + "/../../test2")
+                     .paths(fileSystem.getUri() + PATH + "/../../test2")
                      .configuration(CONFIGURATION)
                      .build()
-                     .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(URI.create(dfsCluster.getURI() + PATH)), null));
+                     .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(URI.create(fileSystem.getUri() + PATH)), null));
     }
   }
 
@@ -347,6 +427,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       target = HdfsInputSource.builder()
                               .paths(Collections.emptyList())
                               .configuration(CONFIGURATION)
+                              .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                               .build();
     }
 

@@ -17,8 +17,7 @@
  */
 
 import { UNIFIED_CONSOLE_URL } from './druid';
-import { createBrowser } from './playwright';
-import { createPage } from './playwright';
+import { createBrowser, createPage } from './playwright';
 
 export async function waitTillWebConsoleReady() {
   const browser = await createBrowser();

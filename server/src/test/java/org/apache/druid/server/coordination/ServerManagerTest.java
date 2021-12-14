@@ -46,10 +46,12 @@ import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -61,18 +63,24 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -85,6 +93,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -92,7 +101,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.File;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,24 +146,12 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment)
+          public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
-            return false;
-          }
-
-          @Override
-          public Segment getSegment(final DataSegment segment, boolean lazy)
-          {
-            return new SegmentForTesting(
+            return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
                 (Interval) segment.getLoadSpec().get("interval")
-            );
-          }
-
-          @Override
-          public File getSegmentFiles(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
+            ), segment.getShardSpec());
           }
 
           @Override
@@ -178,7 +175,7 @@ public class ServerManagerTest
           }
         },
         new NoopServiceEmitter(),
-        serverManagerExec,
+        new ForwardingQueryProcessingPool(serverManagerExec),
         new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
@@ -458,8 +455,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -477,8 +474,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -497,8 +494,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -528,8 +525,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(closedSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(closedSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -666,7 +663,8 @@ public class ServerManagerTest
               IndexIO.CURRENT_VERSION_ID,
               123L
           ),
-          false
+          false,
+          SegmentLazyLoadFailCallback.NOOP
       );
     }
     catch (SegmentLoadingException e) {
@@ -727,7 +725,7 @@ public class ServerManagerTest
 
     @Override
     public QueryRunner<Result<SearchResultValue>> mergeRunners(
-        ExecutorService queryExecutor,
+        QueryProcessingPool queryProcessingPool,
         Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
     )
     {
@@ -837,7 +835,7 @@ public class ServerManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return makeFakeStorageAdapter(interval, 0);
     }
 
     @Override
@@ -846,6 +844,105 @@ public class ServerManagerTest
       synchronized (lock) {
         closed = true;
       }
+    }
+
+    private StorageAdapter makeFakeStorageAdapter(Interval interval, int cardinality)
+    {
+      StorageAdapter adapter = new StorageAdapter()
+      {
+        @Override
+        public Interval getInterval()
+        {
+          return interval;
+        }
+
+        @Override
+        public int getDimensionCardinality(String column)
+        {
+          return cardinality;
+        }
+
+        @Override
+        public DateTime getMinTime()
+        {
+          return interval.getStart();
+        }
+
+
+        @Override
+        public DateTime getMaxTime()
+        {
+          return interval.getEnd();
+        }
+
+        // stubs below this line not important for tests
+
+        @Override
+        public Indexed<String> getAvailableDimensions()
+        {
+          return null;
+        }
+
+        @Override
+        public Iterable<String> getAvailableMetrics()
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public Comparable getMinValue(String column)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public Comparable getMaxValue(String column)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          return null;
+        }
+
+        @Override
+        public int getNumRows()
+        {
+          return 0;
+        }
+
+        @Override
+        public DateTime getMaxIngestedEventTime()
+        {
+          return null;
+        }
+
+        @Override
+        public Metadata getMetadata()
+        {
+          return null;
+        }
+
+        @Override
+        public Sequence<Cursor> makeCursors(
+            @Nullable Filter filter,
+            Interval interval,
+            VirtualColumns virtualColumns,
+            Granularity gran,
+            boolean descending,
+            @Nullable QueryMetrics<?> queryMetrics
+        )
+        {
+          return null;
+        }
+      };
+
+      return adapter;
     }
   }
 

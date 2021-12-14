@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -47,6 +48,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -61,7 +63,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -80,6 +82,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -93,7 +96,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   private final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
-  private SegmentLoaderFactory segmentLoaderFactory;
+  private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -102,6 +105,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
@@ -120,7 +124,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
-    segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
+    segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
   }
 
   @After
@@ -150,9 +154,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox.remove(task);
   }
 
-  public SegmentLoader newSegmentLoader(File storageDir)
+  public SegmentCacheManager newSegmentLoader(File storageDir)
   {
-    return segmentLoaderFactory.manufacturate(storageDir);
+    return segmentCacheManagerFactory.manufacturate(storageDir);
   }
 
   public ObjectMapper getObjectMapper()
@@ -165,9 +169,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return taskStorage;
   }
 
-  public SegmentLoaderFactory getSegmentLoaderFactory()
+  public SegmentCacheManagerFactory getSegmentCacheManagerFactory()
   {
-    return segmentLoaderFactory;
+    return segmentCacheManagerFactory;
   }
 
   public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()
@@ -311,7 +315,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            null,
+            new TaskConfig(null, null, null, null, null, false, null, null, null, false, false,
+                           TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
@@ -401,31 +406,31 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     }
 
     @Override
-    public long getTotalTaskSlotCount()
+    public Map<String, Long> getTotalTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getIdleTaskSlotCount()
+    public Map<String, Long> getIdleTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getUsedTaskSlotCount()
+    public Map<String, Long> getUsedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getLazyTaskSlotCount()
+    public Map<String, Long> getLazyTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getBlacklistedTaskSlotCount()
+    public Map<String, Long> getBlacklistedTaskSlotCount()
     {
       throw new UnsupportedOperationException();
     }

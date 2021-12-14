@@ -20,6 +20,8 @@
 @import '../../../blueprint-overrides/common/colors';
 
 .query-input {
+  position: relative;
+
   .ace-container {
     position: absolute;
     width: 100%;
@@ -68,11 +70,14 @@
     background: $dark-gray2;
   }
 
-  hr {
-    margin: 10px 0;
+  .doc-name {
+    font-size: 18px;
+    border-bottom: 2px solid gray;
+    padding-bottom: 4px;
   }
 
-  .function-doc-name {
-    font-size: 18px;
+  .doc-syntax {
+    padding-top: 8px;
+    padding-bottom: 10px;
   }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -47,7 +48,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import scala.Some;
-import scala.collection.immutable.List$;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -91,14 +91,21 @@ public class TestKafkaExtractionCluster
   {
     zkServer = new TestingCluster(1);
     zkServer.start();
+    closer.register(() -> {
+      zkServer.stop();
+    });
 
     kafkaServer = new KafkaServer(
           getBrokerProperties(),
           Time.SYSTEM,
           Some.apply(StringUtils.format("TestingBroker[%d]-", 1)),
-          List$.MODULE$.empty());
+          false);
 
     kafkaServer.startup();
+    closer.register(() -> {
+      kafkaServer.shutdown();
+      kafkaServer.awaitShutdown();
+    });
     log.info("---------------------------Started Kafka Broker ---------------------------");
 
     log.info("---------------------------Publish Messages to topic-----------------------");
@@ -150,7 +157,7 @@ public class TestKafkaExtractionCluster
   private Map<String, String> getConsumerProperties()
   {
     final Map<String, String> props = new HashMap<>(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().port();
+    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
     props.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     return props;
   }
@@ -194,7 +201,7 @@ public class TestKafkaExtractionCluster
   {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(KAFKA_PROPERTIES);
-    int port = kafkaServer.socketServer().config().port();
+    int port = kafkaServer.socketServer().config().advertisedListeners().apply(0).port();
     kafkaProducerProperties.put("bootstrap.servers", StringUtils.format("127.0.0.1:%d", port));
     kafkaProducerProperties.put("key.serializer", ByteArraySerializer.class.getName());
     kafkaProducerProperties.put("value.serializer", ByteArraySerializer.class.getName());
@@ -203,15 +210,18 @@ public class TestKafkaExtractionCluster
     return kafkaProducerProperties;
   }
 
-  private void checkServer()
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private void checkServer() throws Exception
   {
-    if (!kafkaServer.dataPlaneRequestProcessor().controller().isActive()) {
-      throw new ISE("server is not active!");
+    try (Admin adminClient = Admin.create((Map) getConsumerProperties())) {
+      if (adminClient.describeCluster().controller().get() == null) {
+        throw new ISE("server is not active!");
+      }
     }
   }
 
   @Test(timeout = 60_000L)
-  public void testSimpleLookup() throws InterruptedException
+  public void testSimpleLookup() throws Exception
   {
     try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
       checkServer();

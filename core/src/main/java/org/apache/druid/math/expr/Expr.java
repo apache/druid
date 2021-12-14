@@ -23,14 +23,17 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -38,8 +41,9 @@ import java.util.Set;
  * immutable.
  */
 @SubclassesMustOverrideEqualsAndHashCode
-public interface Expr
+public interface Expr extends Cacheable
 {
+
   String NULL_LITERAL = "null";
   Joiner ARG_JOINER = Joiner.on(", ");
 
@@ -132,14 +136,20 @@ public interface Expr
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression. A return
-   * value of null indicates that the given type information was not enough to resolve the output type, so the
-   * expression must be evaluated using default {@link #eval} handling where types are only known after evaluation,
-   * through {@link ExprEval#type}.
-   * @param inspector
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
+   *
+   * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
+   * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
+   * the entire expression. Otherwise, all vectorizable expressions must produce an output type to correctly operate
+   * with the vectorized engine.
+   *
+   * Outside the context of vectorized expressions, a return value of null can also indicate that the given type
+   * information was not enough to resolve the output type, so the expression must be evaluated using default
+   * {@link #eval} handling where types are only known after evaluation, through {@link ExprEval#type}, such as
+   * transform expressions at ingestion time
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inspector)
+  default ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -165,6 +175,12 @@ public interface Expr
     throw Exprs.cannotVectorize(this);
   }
 
+  @Override
+  default byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
+  }
+
   /**
    * Mechanism to supply input types for the bindings which will back {@link IdentifierExpr}, to use in the aid of
    * inferring the output type of an expression with {@link #getOutputType}. A null value means that either the binding
@@ -173,22 +189,28 @@ public interface Expr
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
-     * things depending on the backing adapter)
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but
+     * could be other things depending on the backing adapter)
      */
     @Nullable
-    ExprType getType(String name);
+    ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(List<Expr> args)
     {
       boolean numeric = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
@@ -198,13 +220,97 @@ public interface Expr
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(Expr... args)
     {
       return areNumeric(Arrays.asList(args));
+    }
+
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(List<Expr> args)
+    {
+      ExpressionType currentType = null;
+      boolean allSame = true;
+      for (Expr arg : args) {
+        ExpressionType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        if (currentType == null) {
+          currentType = argType;
+        }
+        allSame &= Objects.equals(argType, currentType);
+      }
+      return allSame;
+    }
+
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(Expr... args)
+    {
+      return areSameTypes(Arrays.asList(args));
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areScalar(List<Expr> args)
+    {
+      boolean scalar = true;
+      for (Expr arg : args) {
+        ExpressionType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        scalar &= argType.isPrimitive();
+      }
+      return scalar;
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
+     *
+     * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areScalar(Expr... args)
+    {
+      return areScalar(Arrays.asList(args));
     }
 
     /**
@@ -239,7 +345,7 @@ public interface Expr
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
@@ -250,7 +356,7 @@ public interface Expr
 
   /**
    * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
-   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * the vectorized column selector interfaces, and includes {@link ExpressionType} information about all input bindings
    * which exist
    */
   interface VectorInputBinding extends VectorInputBindingInspector
@@ -265,6 +371,13 @@ public interface Expr
     boolean[] getNullVector(String name);
 
     int getCurrentVectorSize();
+
+    /**
+     * Returns an integer that uniquely identifies the current position of the underlying vector offset, if this
+     * binding is backed by a segment. This is useful for caching: it is safe to assume nothing has changed in the
+     * offset so long as the id remains the same. See also: ReadableVectorOffset (in druid-processing)
+     */
+    int getCurrentVectorId();
   }
 
   /**
@@ -312,13 +425,15 @@ public interface Expr
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

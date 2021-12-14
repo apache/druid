@@ -62,6 +62,12 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  public ParallelIndexSupervisorTaskKillTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @After
   public void teardown()
   {
@@ -78,7 +84,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             // Sub tasks would run forever
             new TestInputSource(Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.SUCCESS), 4)),
             new NoopInputFormat(),
-            false
+            false,
+            null
         )
     );
     getIndexingServiceClient().runTask(task.getId(), task);
@@ -110,7 +117,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
                 Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.FAILED), 3)
             ),
             new NoopInputFormat(),
-            false
+            false,
+            null
         )
     );
     final TaskActionClient actionClient = createActionClient(task);
@@ -119,8 +127,10 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final TaskState state = task.run(toolbox).getStatusCode();
-    Assert.assertEquals(TaskState.FAILED, state);
+    final TaskStatus taskStatus = task.run(toolbox);
+    Assert.assertEquals("Failed in phase[segment generation]. See task logs for details.",
+                        taskStatus.getErrorMsg());
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
     final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
     Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
@@ -180,7 +190,9 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
+            null,
             numTotalSubTasks,
+            null,
             null,
             null,
             null,
@@ -325,7 +337,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
                   null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
-                  getIngestionSchema().getIOConfig().isAppendToExisting()
+                  getIngestionSchema().getIOConfig().isAppendToExisting(),
+                  getIngestionSchema().getIOConfig().isDropExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),
@@ -357,6 +370,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           getGroupId(),
           null,
           getSupervisorTaskId(),
+          getId(),
           numAttempts,
           getIngestionSpec(),
           getContext()
@@ -371,6 +385,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
         String groupId,
         TaskResource taskResource,
         String supervisorTaskId,
+        String subtaskSpecId,
         int numAttempts,
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
@@ -381,6 +396,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           groupId,
           taskResource,
           supervisorTaskId,
+          subtaskSpecId,
           numAttempts,
           ingestionSchema,
           context

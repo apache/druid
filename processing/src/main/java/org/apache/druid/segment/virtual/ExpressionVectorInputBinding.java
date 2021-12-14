@@ -20,10 +20,10 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.vector.NilVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorSizeInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -34,28 +34,28 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
 {
   private final Map<String, VectorValueSelector> numeric;
   private final Map<String, VectorObjectSelector> objects;
-  private final Map<String, ExprType> types;
+  private final Map<String, ExpressionType> types;
   private final NilVectorSelector nilSelector;
 
-  private final VectorSizeInspector sizeInspector;
+  private final ReadableVectorInspector vectorInspector;
 
-  public ExpressionVectorInputBinding(VectorSizeInspector sizeInspector)
+  public ExpressionVectorInputBinding(ReadableVectorInspector vectorInspector)
   {
     this.numeric = new HashMap<>();
     this.objects = new HashMap<>();
     this.types = new HashMap<>();
-    this.sizeInspector = sizeInspector;
-    this.nilSelector = NilVectorSelector.create(sizeInspector);
+    this.vectorInspector = vectorInspector;
+    this.nilSelector = NilVectorSelector.create(this.vectorInspector);
   }
 
-  public ExpressionVectorInputBinding addNumeric(String name, ExprType type, VectorValueSelector selector)
+  public ExpressionVectorInputBinding addNumeric(String name, ExpressionType type, VectorValueSelector selector)
   {
     numeric.put(name, selector);
     types.put(name, type);
     return this;
   }
 
-  public ExpressionVectorInputBinding addObjectSelector(String name, ExprType type, VectorObjectSelector selector)
+  public ExpressionVectorInputBinding addObjectSelector(String name, ExpressionType type, VectorObjectSelector selector)
   {
     objects.put(name, selector);
     types.put(name, type);
@@ -63,15 +63,15 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   }
 
   @Override
-  public <T> T[] getObjectVector(String name)
+  public ExpressionType getType(String name)
   {
-    return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
+    return types.get(name);
   }
 
   @Override
-  public ExprType getType(String name)
+  public <T> T[] getObjectVector(String name)
   {
-    return types.get(name);
+    return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
   }
 
   @Override
@@ -96,12 +96,18 @@ class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   @Override
   public int getMaxVectorSize()
   {
-    return sizeInspector.getMaxVectorSize();
+    return vectorInspector.getMaxVectorSize();
   }
 
   @Override
   public int getCurrentVectorSize()
   {
-    return sizeInspector.getCurrentVectorSize();
+    return vectorInspector.getCurrentVectorSize();
+  }
+
+  @Override
+  public int getCurrentVectorId()
+  {
+    return vectorInspector.getId();
   }
 }

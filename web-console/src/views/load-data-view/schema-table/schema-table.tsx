@@ -29,7 +29,12 @@ import {
   inflateDimensionSpec,
   MetricSpec,
 } from '../../../druid-models';
-import { caseInsensitiveContains, filterMap } from '../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../utils';
 import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
 
 import './schema-table.scss';
@@ -45,14 +50,8 @@ export interface SchemaTableProps {
   selectedDimensionSpecIndex: number;
   selectedMetricSpecIndex: number;
   onAutoDimensionSelect: (dimensionName: string) => void;
-  onDimensionSelect: (
-    selectedDimensionSpec: DimensionSpec | undefined,
-    selectedDimensionSpecIndex: number,
-  ) => void;
-  onMetricSelect: (
-    selectedMetricSpec: MetricSpec | undefined,
-    selectedMetricSpecIndex: number,
-  ) => void;
+  onDimensionSelect: (dimensionSpec: DimensionSpec, index: number) => void;
+  onMetricSelect: (metricSpec: MetricSpec, index: number) => void;
 }
 
 export const SchemaTable = React.memo(function SchemaTable(props: SchemaTableProps) {
@@ -72,6 +71,10 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
     <ReactTable
       className="schema-table -striped -highlight"
       data={headerAndRows.rows}
+      sortable={false}
+      defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+      pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+      showPagination={headerAndRows.rows.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(headerAndRows.header, (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
 
@@ -98,7 +101,9 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             className: columnClassName,
             id: String(i),
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: ({ value }) => <TableCell value={value} />,
+            Cell: function SchemaTableCell({ value }) {
+              return <TableCell value={value} />;
+            },
           };
         } else {
           const isTimestamp = columnName === '__time';
@@ -142,13 +147,12 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             id: String(i),
             width: isTimestamp ? 200 : 100,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
-            Cell: row => <TableCell value={isTimestamp ? new Date(row.value) : row.value} />,
+            Cell: function SchemaTableCell(row) {
+              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
+            },
           };
         }
       })}
-      defaultPageSize={50}
-      showPagination={false}
-      sortable={false}
     />
   );
 });

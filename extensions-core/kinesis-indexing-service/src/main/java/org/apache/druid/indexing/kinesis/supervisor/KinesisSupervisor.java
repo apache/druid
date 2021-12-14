@@ -39,6 +39,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -376,6 +377,21 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  // Unlike the Kafka Indexing Service,
+  // Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number,
+  // rather than message count.
+  @Override
+  public LagStats computeLagStats()
+  {
+    Map<String, Long> partitionTimeLags = getPartitionTimeLag();
+
+    if (partitionTimeLags == null) {
+      return new LagStats(0, 0, 0);
+    }
+
+    return computeLags(partitionTimeLags);
   }
 
   @Override

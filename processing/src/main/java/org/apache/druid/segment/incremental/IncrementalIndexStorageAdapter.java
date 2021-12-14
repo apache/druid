@@ -120,9 +120,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
 
-  final IncrementalIndex<?> index;
+  final IncrementalIndex index;
 
-  public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
+  public IncrementalIndexStorageAdapter(IncrementalIndex index)
   {
     this.index = index;
   }
@@ -209,7 +209,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    // Different from index.getCapabilities because, in a way, IncrementalIndex's string-typed dimensions
+    // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
     // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
     //
@@ -222,7 +222,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC);
+    return ColumnCapabilitiesImpl.snapshot(
+        index.getColumnCapabilities(column),
+        STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+    );
   }
 
   /**
@@ -234,24 +237,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
     return ColumnCapabilitiesImpl.snapshot(
-        index.getCapabilities(column),
+        index.getColumnCapabilities(column),
         SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
     );
-  }
-
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final String metricType = index.getMetricType(column);
-    if (metricType != null) {
-      return metricType;
-    }
-    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    if (columnCapabilities != null) {
-      return columnCapabilities.getType().toString();
-    } else {
-      return null;
-    }
   }
 
   @Override
@@ -333,7 +321,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       cursorIterable = index.getFacts().timeRangeIterable(
           descending,
           timeStart,
-          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStart()).getMillis())
+          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStartMillis()))
       );
       emptyRange = !cursorIterable.iterator().hasNext();
       time = gran.toDateTime(interval.getStartMillis());

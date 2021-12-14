@@ -59,15 +59,15 @@
 
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
-  "taskSlot/total/count" : { "dimensions" : [], "type" : "count" },
-  "taskSlot/idle/count" : { "dimensions" : [], "type" : "count" },
-  "taskSlot/busy/count" : { "dimensions" : [], "type" : "count" },
-  "taskSlot/lazy/count" : { "dimensions" : [], "type" : "count" },
-  "taskSlot/blacklisted/count" : { "dimensions" : [], "type" : "count" },
+  "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/busy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
@@ -110,7 +110,7 @@
   "jvm/gc/count" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
   "jvm/gc/cpu" : { "dimensions" : ["gcName", "gcGen"], "type" : "count" },
 
-  "ingest/events/buffered" : { "dimensions" : ["serviceName, bufferCapacity"], "type" : "gauge"},
+  "ingest/events/buffered" : { "dimensions" : ["serviceName", "bufferCapacity"], "type" : "gauge"},
 
   "sys/swap/free" : { "dimensions" : [], "type" : "gauge"},
   "sys/swap/max" : { "dimensions" : [], "type" : "gauge"},
@@ -130,5 +130,14 @@
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge"},
 
   "coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }
+  "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
+
+  "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/idle": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/busy": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/isLowOnThreads": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/min": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/max": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" }
 }

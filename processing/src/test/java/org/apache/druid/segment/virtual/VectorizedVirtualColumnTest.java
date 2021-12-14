@@ -44,7 +44,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Before;
 import org.junit.Rule;
@@ -120,7 +120,7 @@ public class VectorizedVirtualColumnTest
   public void testGroupBySingleValueString()
   {
     testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ValueType.STRING)
+                    .setType(ColumnType.STRING)
                     .setDictionaryEncoded(true)
                     .setDictionaryValuesUnique(true)
                     .setHasMultipleValues(false)
@@ -133,7 +133,7 @@ public class VectorizedVirtualColumnTest
     // cannot currently group by string columns that might be multi valued
     cannotVectorize();
     testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ValueType.STRING)
+                    .setType(ColumnType.STRING)
                     .setDictionaryEncoded(true)
                     .setDictionaryValuesUnique(true)
                     .setHasMultipleValues(true)
@@ -146,7 +146,7 @@ public class VectorizedVirtualColumnTest
     // cannot currently group by string columns that might be multi valued
     cannotVectorize();
     testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ValueType.STRING)
+                    .setType(ColumnType.STRING)
                     .setDictionaryEncoded(true)
                     .setDictionaryValuesUnique(true)
     );
@@ -155,10 +155,8 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testGroupBySingleValueStringNotDictionaryEncoded()
   {
-    // cannot currently group by string columns that are not dictionary encoded
-    cannotVectorize();
     testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ValueType.STRING)
+                    .setType(ColumnType.STRING)
                     .setDictionaryEncoded(false)
                     .setDictionaryValuesUnique(false)
                     .setHasMultipleValues(false)
@@ -171,7 +169,7 @@ public class VectorizedVirtualColumnTest
     // cannot currently group by string columns that might be multi valued
     cannotVectorize();
     testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ValueType.STRING)
+                    .setType(ColumnType.STRING)
                     .setDictionaryEncoded(false)
                     .setDictionaryValuesUnique(false)
                     .setHasMultipleValues(true)
@@ -181,26 +179,26 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testGroupByLong()
   {
-    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG));
+    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG));
   }
 
   @Test
   public void testGroupByDouble()
   {
-    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE));
+    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE));
   }
 
   @Test
   public void testGroupByFloat()
   {
-    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT));
+    testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT));
   }
 
   @Test
   public void testTimeseriesSingleValueString()
   {
     testTimeseries(new ColumnCapabilitiesImpl()
-                       .setType(ValueType.STRING)
+                       .setType(ColumnType.STRING)
                        .setDictionaryEncoded(true)
                        .setDictionaryValuesUnique(true)
                        .setHasMultipleValues(false)
@@ -211,7 +209,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesMultiValueString()
   {
     testTimeseries(new ColumnCapabilitiesImpl()
-                       .setType(ValueType.STRING)
+                       .setType(ColumnType.STRING)
                        .setDictionaryEncoded(true)
                        .setDictionaryValuesUnique(true)
                        .setHasMultipleValues(true)
@@ -222,7 +220,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesMultiValueStringUnknown()
   {
     testTimeseries(new ColumnCapabilitiesImpl()
-                       .setType(ValueType.STRING)
+                       .setType(ColumnType.STRING)
                        .setDictionaryEncoded(true)
                        .setDictionaryValuesUnique(true)
     );
@@ -232,7 +230,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesSingleValueStringNotDictionaryEncoded()
   {
     testTimeseries(new ColumnCapabilitiesImpl()
-                       .setType(ValueType.STRING)
+                       .setType(ColumnType.STRING)
                        .setDictionaryEncoded(false)
                        .setDictionaryValuesUnique(false)
                        .setHasMultipleValues(false)
@@ -243,7 +241,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesMultiValueStringNotDictionaryEncoded()
   {
     testTimeseries(new ColumnCapabilitiesImpl()
-                       .setType(ValueType.STRING)
+                       .setType(ColumnType.STRING)
                        .setDictionaryEncoded(false)
                        .setDictionaryValuesUnique(false)
                        .setHasMultipleValues(true)
@@ -253,19 +251,19 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testTimeseriesLong()
   {
-    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG));
+    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG));
   }
 
   @Test
   public void testTimeseriesDouble()
   {
-    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE));
+    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE));
   }
 
   @Test
   public void testTimeseriesFloat()
   {
-    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT));
+    testTimeseries(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT));
   }
 
   @Test
@@ -273,7 +271,7 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_VECTORIZE_FORCE,
         false
     );
@@ -284,7 +282,7 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
         false
     );
@@ -295,7 +293,7 @@ public class VectorizedVirtualColumnTest
   {
     expectNonvectorized();
     testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_USE_DEFAULTS,
         true
     );
@@ -306,7 +304,7 @@ public class VectorizedVirtualColumnTest
   {
     expectNonvectorized();
     testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
         true
     );
@@ -317,7 +315,7 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
         true
     );
@@ -327,7 +325,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesContradictionVectorizeFalseVirtualForceNoVirtualColumns()
   {
     testTimeseriesNoVirtual(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE
     );
   }
@@ -335,7 +333,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesContradictionVectorizeForceVirtualFalseNoVirtual()
   {
     testTimeseriesNoVirtual(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE
     );
   }
@@ -344,7 +342,7 @@ public class VectorizedVirtualColumnTest
   public void testTimeseriesForceDoestAffectWhenNoVirtualColumns()
   {
     testTimeseriesNoVirtual(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE
     );
   }
@@ -354,7 +352,7 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_VECTORIZE_FORCE,
         false
     );
@@ -366,7 +364,7 @@ public class VectorizedVirtualColumnTest
     cannotVectorize();
     testGroupBy(
         new ColumnCapabilitiesImpl()
-            .setType(ValueType.STRING)
+            .setType(ColumnType.STRING)
             .setDictionaryEncoded(true)
             .setDictionaryValuesUnique(true)
             .setHasMultipleValues(false),
@@ -380,7 +378,7 @@ public class VectorizedVirtualColumnTest
   {
     expectNonvectorized();
     testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_USE_DEFAULTS,
         false
     );
@@ -391,7 +389,7 @@ public class VectorizedVirtualColumnTest
   {
     expectNonvectorized();
     testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
         true
     );
@@ -402,7 +400,7 @@ public class VectorizedVirtualColumnTest
   {
     cannotVectorize();
     testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT),
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
         true
     );
@@ -413,7 +411,7 @@ public class VectorizedVirtualColumnTest
   {
     testGroupByNoVirtual(
         new ColumnCapabilitiesImpl()
-            .setType(ValueType.STRING)
+            .setType(ColumnType.STRING)
             .setDictionaryEncoded(true)
             .setDictionaryValuesUnique(true)
             .setHasMultipleValues(false),
@@ -426,7 +424,7 @@ public class VectorizedVirtualColumnTest
   {
     testGroupByNoVirtual(
         new ColumnCapabilitiesImpl()
-            .setType(ValueType.STRING)
+            .setType(ColumnType.STRING)
             .setDictionaryEncoded(true)
             .setDictionaryValuesUnique(true)
             .setHasMultipleValues(false),
@@ -439,7 +437,7 @@ public class VectorizedVirtualColumnTest
   {
     testGroupByNoVirtual(
         new ColumnCapabilitiesImpl()
-            .setType(ValueType.STRING)
+            .setType(ColumnType.STRING)
             .setDictionaryEncoded(true)
             .setDictionaryValuesUnique(true)
             .setHasMultipleValues(false),
@@ -536,7 +534,7 @@ public class VectorizedVirtualColumnTest
         .setVirtualColumns(
             new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities, canVectorize)
         )
-        .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.getType()))
+        .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.toColumnType()))
         .setAggregatorSpecs(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
         .setInterval("2000/2030")
         .setContext(context)
@@ -565,7 +563,7 @@ public class VectorizedVirtualColumnTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns()
-        .addDimension(new DefaultDimensionSpec("placement", "placement", capabilities.getType()))
+        .addDimension(new DefaultDimensionSpec("placement", "placement", capabilities.toColumnType()))
         .setAggregatorSpecs(new CountAggregatorFactory(COUNT))
         .setInterval("2000/2030")
         .setContext(context)

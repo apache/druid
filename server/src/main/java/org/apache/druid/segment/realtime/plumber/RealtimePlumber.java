@@ -47,16 +47,19 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -137,7 +140,7 @@ public class RealtimePlumber implements Plumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
+      QueryProcessingPool queryProcessingPool,
       JoinableFactory joinableFactory,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
@@ -167,7 +170,7 @@ public class RealtimePlumber implements Plumber
         objectMapper,
         emitter,
         conglomerate,
-        queryExecutorService,
+        queryProcessingPool,
         joinableFactory,
         cache,
         cacheConfig,
@@ -200,7 +203,13 @@ public class RealtimePlumber implements Plumber
   @Override
   public Object startJob()
   {
-    computeBaseDir(schema).mkdirs();
+    try {
+      FileUtils.mkdirp(computeBaseDir(schema));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     initializeExecutors();
     handoffNotifier.start();
     Object retVal = bootstrapSinksFromDisk();
@@ -435,8 +444,11 @@ public class RealtimePlumber implements Plumber
                     indexes,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
+                    null,
                     mergedTarget,
                     config.getIndexSpec(),
+                    config.getIndexSpecForIntermediatePersists(),
+                    new BaseProgressIndicator(),
                     config.getSegmentWriteOutMediumFactory(),
                     -1
                 );
@@ -456,7 +468,7 @@ public class RealtimePlumber implements Plumber
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())),
                   false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getId());

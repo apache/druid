@@ -83,7 +83,7 @@ public class LocalInputSourceTest
   {
     final long fileSize = 15;
     final HumanReadableBytes maxSplitSize = new HumanReadableBytes(50L);
-    final Set<File> files = mockFiles(10, fileSize);
+    final List<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     final List<InputSplit<List<File>>> splits = inputSource
         .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize, null))
@@ -100,7 +100,7 @@ public class LocalInputSourceTest
   {
     final long fileSize = 13;
     final HumanReadableBytes maxSplitSize = new HumanReadableBytes(40L);
-    final Set<File> files = mockFiles(10, fileSize);
+    final List<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     Assert.assertEquals(
         4,
@@ -120,7 +120,7 @@ public class LocalInputSourceTest
       }
       filesInBaseDir.add(file);
     }
-    Set<File> files = new HashSet<>(filesInBaseDir.subList(0, 5));
+    List<File> files = filesInBaseDir.subList(0, 5);
     for (int i = 0; i < 3; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
@@ -165,7 +165,7 @@ public class LocalInputSourceTest
   public void testGetFileIteratorWithOnlyFilesIteratingAllFiles() throws IOException
   {
     File baseDir = temporaryFolder.newFolder();
-    Set<File> filesInBaseDir = new HashSet<>();
+    List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
@@ -173,28 +173,24 @@ public class LocalInputSourceTest
       }
       filesInBaseDir.add(file);
     }
-    Iterator<File> fileIterator = new LocalInputSource(
-        null,
-        null,
-        filesInBaseDir
-    ).getFileIterator();
-    Set<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toSet());
+    Iterator<File> fileIterator = new LocalInputSource(null, null, filesInBaseDir).getFileIterator();
+    List<File> actualFiles = Streams.sequentialStreamFrom(fileIterator).collect(Collectors.toList());
     Assert.assertEquals(filesInBaseDir, actualFiles);
   }
 
   @Test
   public void testFileIteratorWithEmptyFilesIteratingNonEmptyFilesOnly()
   {
-    final Set<File> files = new HashSet<>(mockFiles(10, 5));
+    final List<File> files = mockFiles(10, 5);
     files.addAll(mockFiles(10, 0));
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     List<File> iteratedFiles = Lists.newArrayList(inputSource.getFileIterator());
     Assert.assertTrue(iteratedFiles.stream().allMatch(file -> file.length() > 0));
   }
 
-  private static Set<File> mockFiles(int numFiles, long fileSize)
+  private static List<File> mockFiles(int numFiles, long fileSize)
   {
-    final Set<File> files = new HashSet<>();
+    final List<File> files = new ArrayList<>();
     for (int i = 0; i < numFiles; i++) {
       final File file = EasyMock.niceMock(File.class);
       EasyMock.expect(file.length()).andReturn(fileSize).anyTimes();
@@ -225,7 +221,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         denyDir,
         "filter",
-        Collections.singleton(new File("deny/dir/file"))
+        Collections.singletonList(new File("deny/dir/file"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI()))
     );
   }
@@ -237,7 +233,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         denyDir,
         "filter",
-        Collections.singleton(new File("deny/dir/file"))
+        Collections.singletonList(new File("deny/dir/file"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(null, Collections.singletonList(denyDir.toURI()))
     );
   }
@@ -249,7 +245,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         denyDir,
         "filter",
-        Collections.singleton(new File("anydir"))
+        Collections.singletonList(new File("anydir"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.emptyList(), null)
     );
   }
@@ -261,7 +257,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         allow,
         "filter",
-        Collections.singleton(new File("allow/dir"))
+        Collections.singletonList(new File("allow/dir"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }
@@ -273,7 +269,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         allow,
         "filter",
-        Collections.singleton(new File("allow/dir/subDir"))
+        Collections.singletonList(new File("allow/dir/subDir"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }
@@ -285,7 +281,7 @@ public class LocalInputSourceTest
     new LocalInputSource(
         null,
         null,
-        Collections.singleton(new File("allow/dir/../../dir2/"))
+        Collections.singletonList(new File("allow/dir/../../dir2/"))
     ).validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(allow.toURI()), null)
     );
   }

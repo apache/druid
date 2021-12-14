@@ -25,7 +25,7 @@ title: "Globally Cached Lookups"
 
 > Lookups are an [experimental](../experimental.md) feature.
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-global` as an extension.
+To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
 > Static configuration is no longer supported. Lookups can be configured through
@@ -64,7 +64,6 @@ Globally cached lookups can be specified as part of the [cluster wide config for
     "extractionNamespace": {
        "type": "jdbc",
        "connectorConfig": {
-         "createTables": true,
          "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
          "user": "druid",
          "password": "diurd"
@@ -107,7 +106,6 @@ In a simple case where only one [tier](../../querying/lookups.md#dynamic-configu
         "extractionNamespace": {
           "type": "jdbc",
           "connectorConfig": {
-            "createTables": true,
             "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
             "user": "druid",
             "password": "diurd"
@@ -136,7 +134,6 @@ Where the Coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
     "extractionNamespace": {
       "type": "jdbc",
       "connectorConfig": {
-        "createTables": true,
         "connectURI": "jdbc:mysql://localhost:3306/druid",
         "user": "druid",
         "password": "diurd"
@@ -207,19 +204,21 @@ The remapping values for each globally cached lookup can be specified by a JSON 
         "\"value\"]"
       ]
   },
-  "pollPeriod":"PT5M"
+  "pollPeriod":"PT5M",
+  "maxHeapPercentage": 10
 }
 ```
 
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
-|`uri`|URI for the file of interest, specified as a file, hdfs, or s3 path|No|Use `uriPrefix`|
+|`uri`|URI for the file of interest, specified as a file, hdfs, s3 or gs path|No|Use `uriPrefix`|
 |`uriPrefix`|A URI that specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
 |`fileRegex`|Optional regex for matching the file name under `uriPrefix`. Only used if `uriPrefix` is used|No|`".*"`|
 |`namespaceParseSpec`|How to interpret the data at the URI|Yes||
+|`maxHeapPercentage`|The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs.|No|10% of JVM heap size|
 
-One of either `uri` or `uriPrefix` must be specified, as either a local file system (file://), HDFS (hdfs://), or S3 (s3://) location. HTTP location is not currently supported.
+One of either `uri` or `uriPrefix` must be specified, as either a local file system (file://), HDFS (hdfs://), S3 (s3://) or GCS (gs://) location. HTTP location is not currently supported.
 
 The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to look for new data later. Whenever an poll occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data set, replacing the local cache of the lookup data.
 
@@ -347,21 +346,19 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`namespace`|The namespace to define|Yes||
-|`connectorConfig`|The connector config to use|Yes||
+|`connectorConfig`|The connector config to use. You can set `connectURI`, `user` and `password`. You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes||
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
 |`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
+|`maxHeapPercentage`|The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs.|No|10% of JVM heap size|
 
 ```json
 {
   "type":"jdbc",
-  "namespace":"some_lookup",
   "connectorConfig":{
-    "createTables":true,
     "connectURI":"jdbc:mysql://localhost:3306/druid",
     "user":"druid",
     "password":"diurd"
@@ -370,14 +367,16 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "keyColumn":"the_old_dim_value",
   "valueColumn":"the_new_dim_value",
   "tsColumn":"timestamp_column",
-  "pollPeriod":600000
+  "pollPeriod":600000,
+  "maxHeapPercentage": 10
 }
 ```
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
 > For Postgres, the connector JAR is already included.
-> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/.
-> Copy or symlink the downloaded file to `extensions/druid-lookups-cached-global` under the distribution root directory.
+> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+> The connector JAR should reside in the classpath of Druid's main class loader.
+> To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
 
 ## Introspection
 

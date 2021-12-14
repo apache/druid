@@ -20,15 +20,14 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
-import org.joda.time.DateTime;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -68,7 +67,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     TimestampCeilExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      this.granularity = getGranularity(args, ExprUtils.nilBindings());
+      this.granularity = getGranularity(args, InputBindings.nilBindings());
     }
 
     @Nonnull
@@ -80,12 +79,12 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
         // Return null if the argument if null.
         return ExprEval.of(null);
       }
-      DateTime argTime = DateTimes.utc(eval.asLong());
-      DateTime bucketStartTime = granularity.bucketStart(argTime);
-      if (argTime.equals(bucketStartTime)) {
-        return ExprEval.of(bucketStartTime.getMillis());
+      long argTime = eval.asLong();
+      long bucketStartTime = granularity.bucketStart(argTime);
+      if (argTime == bucketStartTime) {
+        return ExprEval.of(bucketStartTime);
       }
-      return ExprEval.of(granularity.increment(bucketStartTime).getMillis());
+      return ExprEval.of(granularity.increment(bucketStartTime));
     }
 
     @Override
@@ -97,9 +96,9 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -148,12 +147,12 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     public ExprEval eval(final ObjectBinding bindings)
     {
       final PeriodGranularity granularity = getGranularity(args, bindings);
-      DateTime argTime = DateTimes.utc(args.get(0).eval(bindings).asLong());
-      DateTime bucketStartTime = granularity.bucketStart(argTime);
-      if (argTime.equals(bucketStartTime)) {
-        return ExprEval.of(bucketStartTime.getMillis());
+      long argTime = args.get(0).eval(bindings).asLong();
+      long bucketStartTime = granularity.bucketStart(argTime);
+      if (argTime == bucketStartTime) {
+        return ExprEval.of(bucketStartTime);
       }
-      return ExprEval.of(granularity.increment(bucketStartTime).getMillis());
+      return ExprEval.of(granularity.increment(bucketStartTime));
     }
 
     @Override
@@ -165,9 +164,9 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 }

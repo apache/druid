@@ -28,6 +28,8 @@ import java.io.IOException;
  * InputEntityReader knows how to parse data into {@link InputRow}.
  * This class is <i>stateful</i> and a new InputEntityReader should be created per {@link InputEntity}.
  *
+ * Not thread-safe.
+ *
  * @see IntermediateRowParsingReader
  * @see TextReader
  */

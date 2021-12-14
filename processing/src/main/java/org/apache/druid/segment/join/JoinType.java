@@ -23,13 +23,13 @@ public enum JoinType
 {
   INNER {
     @Override
-    boolean isLefty()
+    public boolean isLefty()
     {
       return false;
     }
 
     @Override
-    boolean isRighty()
+    public boolean isRighty()
     {
       return false;
     }
@@ -37,13 +37,13 @@ public enum JoinType
 
   LEFT {
     @Override
-    boolean isLefty()
+    public boolean isLefty()
     {
       return true;
     }
 
     @Override
-    boolean isRighty()
+    public boolean isRighty()
     {
       return false;
     }
@@ -51,13 +51,13 @@ public enum JoinType
 
   RIGHT {
     @Override
-    boolean isLefty()
+    public boolean isLefty()
     {
       return false;
     }
 
     @Override
-    boolean isRighty()
+    public boolean isRighty()
     {
       return true;
     }
@@ -65,13 +65,13 @@ public enum JoinType
 
   FULL {
     @Override
-    boolean isLefty()
+    public boolean isLefty()
     {
       return true;
     }
 
     @Override
-    boolean isRighty()
+    public boolean isRighty()
     {
       return true;
     }
@@ -80,10 +80,10 @@ public enum JoinType
   /**
    * "Lefty" joins (LEFT or FULL) always include the full left-hand side, and can generate nulls on the right.
    */
-  abstract boolean isLefty();
+  public abstract boolean isLefty();
 
   /**
    * "Righty" joins (RIGHT or FULL) always include the full right-hand side, and can generate nulls on the left.
    */
-  abstract boolean isRighty();
+  public abstract boolean isRighty();
 }

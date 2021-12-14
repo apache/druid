@@ -24,7 +24,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.joda.time.Chronology;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -90,16 +91,20 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     TimestampShiftExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      period = getPeriod(args, ExprUtils.nilBindings());
-      chronology = getTimeZone(args, ExprUtils.nilBindings());
-      step = getStep(args, ExprUtils.nilBindings());
+      period = getPeriod(args, InputBindings.nilBindings());
+      chronology = getTimeZone(args, InputBindings.nilBindings());
+      step = getStep(args, InputBindings.nilBindings());
     }
 
     @Nonnull
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
+      ExprEval timestamp = args.get(0).eval(bindings);
+      if (timestamp.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+      return ExprEval.of(chronology.add(period, timestamp.asLong(), step));
     }
 
     @Override
@@ -111,9 +116,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 
@@ -128,10 +133,14 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
+      ExprEval timestamp = args.get(0).eval(bindings);
+      if (timestamp.isNumericNull()) {
+        return ExprEval.of(null);
+      }
       final Period period = getPeriod(args, bindings);
       final Chronology chronology = getTimeZone(args, bindings);
       final int step = getStep(args, bindings);
-      return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
+      return ExprEval.of(chronology.add(period, timestamp.asLong(), step));
     }
 
     @Override
@@ -143,9 +152,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 }

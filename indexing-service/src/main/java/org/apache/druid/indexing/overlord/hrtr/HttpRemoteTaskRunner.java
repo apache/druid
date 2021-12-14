@@ -47,6 +47,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -68,6 +69,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -88,6 +90,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -424,7 +427,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             config.getTaskAssignmentTimeout()
         ).emit();
         // taskComplete(..) must be called outside of statusLock, see comments on method.
-        taskComplete(workItem, workerHolder, TaskStatus.failure(taskId));
+        taskComplete(
+            workItem,
+            workerHolder,
+            TaskStatus.failure(
+                taskId,
+                StringUtils.format(
+                    "The worker that this task is assigned did not start it in timeout[%s]. "
+                    + "See overlord and middleManager/indexer logs for more details.",
+                    config.getTaskAssignmentTimeout()
+                )
+            )
+        );
       }
 
       return true;
@@ -456,13 +470,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       workerHolder.setLastCompletedTaskTime(DateTimes.nowUtc());
     }
 
-    // Notify interested parties
-    taskRunnerWorkItem.setResult(taskStatus);
-    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+    if (taskRunnerWorkItem.getResult().isDone()) {
+      // This is not the first complete event.
+      try {
+        TaskState lastKnownState = taskRunnerWorkItem.getResult().get().getStatusCode();
+        if (taskStatus.getStatusCode() != lastKnownState) {
+          log.warn(
+              "The state of the new task complete event is different from its last known state. "
+              + "New state[%s], last known state[%s]",
+              taskStatus.getStatusCode(),
+              lastKnownState
+          );
+        }
+      }
+      catch (InterruptedException e) {
+        log.warn(e, "Interrupted while getting the last known task status.");
+        Thread.currentThread().interrupt();
+      }
+      catch (ExecutionException e) {
+        // This case should not really happen.
+        log.warn(e, "Failed to get the last known task status. Ignoring this failure.");
+      }
+    } else {
+      // Notify interested parties
+      taskRunnerWorkItem.setResult(taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
 
-    // Update success/failure counters, Blacklist node if there are too many failures.
-    if (workerHolder != null) {
-      blacklistWorkerIfNeeded(taskStatus, workerHolder);
+      // Update success/failure counters, Blacklist node if there are too many failures.
+      if (workerHolder != null) {
+        blacklistWorkerIfNeeded(taskStatus, workerHolder);
+      }
     }
 
     synchronized (statusLock) {
@@ -647,14 +684,26 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
             for (HttpRemoteTaskRunnerWorkItem taskItem : tasksToFail) {
               if (!taskItem.getResult().isDone()) {
-                log.info(
+                log.warn(
                     "Failing task[%s] because worker[%s] disappeared and did not report within cleanup timeout[%s].",
                     workerHostAndPort,
                     taskItem.getTaskId(),
                     config.getTaskCleanupTimeout()
                 );
                 // taskComplete(..) must be called outside of statusLock, see comments on method.
-                taskComplete(taskItem, null, TaskStatus.failure(taskItem.getTaskId()));
+                taskComplete(
+                    taskItem,
+                    null,
+                    TaskStatus.failure(
+                        taskItem.getTaskId(),
+                        StringUtils.format(
+                            "The worker that this task was assigned disappeared and "
+                            + "did not report cleanup within timeout[%s]. "
+                            + "See overlord and middleManager/indexer logs for more details.",
+                            config.getTaskCleanupTimeout()
+                        )
+                    )
+                );
               }
             }
           }
@@ -1179,7 +1228,15 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         if (taskItem.getTask() == null) {
           log.makeAlert("No Task obj found in TaskItem for taskID[%s]. Failed.", taskId).emit();
           // taskComplete(..) must be called outside of statusLock, see comments on method.
-          taskComplete(taskItem, null, TaskStatus.failure(taskId));
+          taskComplete(
+              taskItem,
+              null,
+              TaskStatus.failure(
+                  taskId,
+                  "No payload found for this task. "
+                  + "See overlord logs and middleManager/indexer logs for more details."
+              )
+          );
           continue;
         }
 
@@ -1205,7 +1262,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
              .emit();
 
           // taskComplete(..) must be called outside of statusLock, see comments on method.
-          taskComplete(taskItem, null, TaskStatus.failure(taskId));
+          taskComplete(
+              taskItem,
+              null,
+              TaskStatus.failure(taskId, "Failed to assign this task. See overlord logs for more details.")
+          );
         }
         finally {
           synchronized (statusLock) {
@@ -1568,55 +1629,80 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
-    long totalPeons = 0;
+    Map<String, Long> totalPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerCapacity = worker.getWorker().getCapacity();
+      totalPeons.compute(
+          workerCategory,
+          (category, totalCapacity) -> totalCapacity == null ? workerCapacity : totalCapacity + workerCapacity
+      );
     }
 
     return totalPeons;
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    long totalIdlePeons = 0;
+    Map<String, Long> totalIdlePeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
-      totalIdlePeons += worker.getAvailableCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerAvailableCapacity = worker.getAvailableCapacity();
+      totalIdlePeons.compute(
+          workerCategory,
+          (category, availableCapacity) -> availableCapacity == null ? workerAvailableCapacity : availableCapacity + workerAvailableCapacity
+      );
     }
 
     return totalIdlePeons;
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
-    long totalUsedPeons = 0;
+    Map<String, Long> totalUsedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalUsedPeons += worker.getCurrCapacityUsed();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerUsedCapacity = worker.getCurrCapacityUsed();
+      totalUsedPeons.compute(
+          workerCategory,
+          (category, usedCapacity) -> usedCapacity == null ? workerUsedCapacity : usedCapacity + workerUsedCapacity
+      );
     }
 
     return totalUsedPeons;
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    long totalLazyPeons = 0;
+    Map<String, Long> totalLazyPeons = new HashMap<>();
     for (Worker worker : getLazyWorkers()) {
-      totalLazyPeons += worker.getCapacity();
+      String workerCategory = worker.getCategory();
+      int workerLazyPeons = worker.getCapacity();
+      totalLazyPeons.compute(
+          workerCategory,
+          (category, lazyPeons) -> lazyPeons == null ? workerLazyPeons : lazyPeons + workerLazyPeons
+      );
     }
 
     return totalLazyPeons;
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    long totalBlacklistedPeons = 0;
+    Map<String, Long> totalBlacklistedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
-      totalBlacklistedPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerBlacklistedPeons = worker.getWorker().getCapacity();
+      totalBlacklistedPeons.compute(
+          workerCategory,
+          (category, blacklistedPeons) -> blacklistedPeons == null ? workerBlacklistedPeons : blacklistedPeons + workerBlacklistedPeons
+      );
     }
 
     return totalBlacklistedPeons;

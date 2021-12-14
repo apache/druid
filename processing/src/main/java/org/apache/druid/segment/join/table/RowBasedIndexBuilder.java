@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -49,17 +50,17 @@ public class RowBasedIndexBuilder
 
   private int currentRow = 0;
   private int nullKeys = 0;
-  private final ValueType keyType;
+  private final ColumnType keyType;
   private final Map<Object, IntList> index;
 
   private long minLongKey = Long.MAX_VALUE;
   private long maxLongKey = Long.MIN_VALUE;
 
-  public RowBasedIndexBuilder(ValueType keyType)
+  public RowBasedIndexBuilder(ColumnType keyType)
   {
     this.keyType = keyType;
 
-    if (keyType == ValueType.LONG) {
+    if (keyType.is(ValueType.LONG)) {
       // We're specializing the type even though we don't specialize usage in this class, for two reasons:
       //  (1) It's still useful to reduce overall memory footprint.
       //  (2) MapIndex specifically checks for Long2ObjectMap instances and *does* specialize usage.
@@ -84,11 +85,11 @@ public class RowBasedIndexBuilder
       rowNums.add(currentRow);
 
       // Track min, max long value so we can decide later on if it's appropriate to use an array-backed implementation.
-      if (keyType == ValueType.LONG && (long) castKey < minLongKey) {
+      if (keyType.is(ValueType.LONG) && (long) castKey < minLongKey) {
         minLongKey = (long) castKey;
       }
 
-      if (keyType == ValueType.LONG && (long) castKey > maxLongKey) {
+      if (keyType.is(ValueType.LONG) && (long) castKey > maxLongKey) {
         maxLongKey = (long) castKey;
       }
     } else {
@@ -107,7 +108,7 @@ public class RowBasedIndexBuilder
   {
     final boolean keysUnique = index.size() == currentRow - nullKeys;
 
-    if (keyType == ValueType.LONG && keysUnique && index.size() > 0) {
+    if (keyType.is(ValueType.LONG) && keysUnique && index.size() > 0) {
       // May be a good candidate for UniqueLongArrayIndex. Check the range of values as compared to min and max.
       long range;
 

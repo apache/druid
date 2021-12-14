@@ -34,6 +34,11 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 public class FloatCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
 {
+  public static void addFloatToCollector(final HyperLogLogCollector collector, final float n)
+  {
+    collector.add(CardinalityAggregator.HASH_FUNCTION.hashInt(Float.floatToIntBits(n)).asBytes());
+  }
+
   @Override
   public void hashRow(BaseFloatColumnValueSelector selector, Hasher hasher)
   {
@@ -46,7 +51,7 @@ public class FloatCardinalityAggregatorColumnSelectorStrategy
   public void hashValues(BaseFloatColumnValueSelector selector, HyperLogLogCollector collector)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.add(CardinalityAggregator.HASH_FUNCTION.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
+      addFloatToCollector(collector, selector.getFloat());
     }
   }
 }

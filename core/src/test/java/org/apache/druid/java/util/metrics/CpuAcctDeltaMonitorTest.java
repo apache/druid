@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
@@ -53,7 +54,8 @@ public class CpuAcctDeltaMonitorTest
         cgroupDir,
         "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
     );
-    Assert.assertTrue((cpuacctDir.isDirectory() && cpuacctDir.exists()) || cpuacctDir.mkdirs());
+
+    FileUtils.mkdirp(cpuacctDir);
     TestUtils.copyResource("/cpuacct.usage_all", new File(cpuacctDir, "cpuacct.usage_all"));
   }
 

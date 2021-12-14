@@ -246,6 +246,12 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
+  public String getType()
+  {
+    return Type.HASHED;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

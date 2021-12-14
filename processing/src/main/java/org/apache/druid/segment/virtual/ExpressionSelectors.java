@@ -24,12 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -142,16 +144,16 @@ public class ExpressionSelectors
   {
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
-      final ValueType inputType = plan.getSingleInputType();
-      if (inputType == ValueType.LONG) {
+      final ColumnType inputType = plan.getSingleInputType();
+      if (inputType.is(ValueType.LONG)) {
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
             !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
-      } else if (inputType == ValueType.STRING) {
+      } else if (inputType.is(ValueType.STRING)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
             plan.getExpression()
         );
       }
@@ -159,7 +161,7 @@ public class ExpressionSelectors
     final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
 
     // Optimization for constant expressions
-    if (bindings.equals(ExprUtils.nilBindings())) {
+    if (bindings.equals(InputBindings.nilBindings())) {
       return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 
@@ -185,10 +187,10 @@ public class ExpressionSelectors
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
 
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
+    if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
-      if (plan.getSingleInputType() == ValueType.STRING) {
-        return new SingleStringInputDimensionSelector(
+      if (plan.getSingleInputType().is(ValueType.STRING)) {
+        return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
         );
@@ -199,6 +201,10 @@ public class ExpressionSelectors
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
+      if (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT)) {
+        final String[] value = baseSelector.getObject().asStringArray();
+        return DimensionSelector.multiConstant(value == null ? null : Arrays.asList(value), extractionFn);
+      }
       return DimensionSelector.constant(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
@@ -242,61 +248,92 @@ public class ExpressionSelectors
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
-  private static Expr.ObjectBinding createBindings(
+  public static Expr.ObjectBinding createBindings(
       Expr.BindingAnalysis bindingAnalysis,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
-    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
+    return createBindings(columnSelectorFactory, columns);
+  }
+
+  /**
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
+   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
+   * are used as array or scalar inputs
+   */
+  public static Expr.ObjectBinding createBindings(
+      ColumnSelectorFactory columnSelectorFactory,
+      List<String> columns
+  )
+  {
+    final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
+      final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
 
-      if (nativeType == ValueType.FLOAT) {
+      if (columnCapabilities == null || columnCapabilities.isArray()) {
+        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
+        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
+      } else if (columnCapabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (nativeType == ValueType.LONG) {
+      } else if (columnCapabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (nativeType == ValueType.DOUBLE) {
+      } else if (columnCapabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (nativeType == ValueType.STRING) {
+      } else if (columnCapabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal
         );
-      } else if (nativeType == null) {
-        // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
-        // Unhandleable ValueType (COMPLEX).
-        supplier = null;
+        // complex type just pass straight through
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
+        if (!(selector instanceof NilColumnValueSelector)) {
+          supplier = selector::getObject;
+        } else {
+          supplier = null;
+        }
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, supplier);
+        suppliers.put(columnName, new Pair<>(expressionType, supplier));
       }
     }
 
     if (suppliers.isEmpty()) {
-      return ExprUtils.nilBindings();
+      return InputBindings.nilBindings();
     } else if (suppliers.size() == 1 && columns.size() == 1) {
       // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
       // asked for something.
       final String column = Iterables.getOnlyElement(suppliers.keySet());
-      final Supplier<Object> supplier = Iterables.getOnlyElement(suppliers.values());
+      final Pair<ExpressionType, Supplier<Object>> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return identifierName -> {
-        // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-        assert column.equals(identifierName);
-        return supplier.get();
+      return new Expr.ObjectBinding()
+      {
+        @Nullable
+        @Override
+        public Object get(String name)
+        {
+          // There's only one binding, and it must be the single column, so it can safely be ignored in production.
+          assert column.equals(name);
+          return supplier.rhs.get();
+        }
+
+        @Nullable
+        @Override
+        public ExpressionType getType(String name)
+        {
+          return supplier.lhs;
+        }
       };
     } else {
-      return Parser.withSuppliers(suppliers);
+      return InputBindings.withTypedSuppliers(suppliers);
     }
   }
 
@@ -338,9 +375,9 @@ public class ExpressionSelectors
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
         if (row.size() == 0) {
-          return new String[]{null};
+          return new Object[]{null};
         }
-        final String[] strings = new String[row.size()];
+        final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection
         for (int i = 0; i < row.size(); i++) {
           strings[i] = selector.lookupName(row.get(i));
@@ -370,90 +407,32 @@ public class ExpressionSelectors
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
-        if (val instanceof Number || val instanceof String) {
-          return val;
-        } else if (val instanceof List) {
-          return coerceListToArray((List) val);
+        if (val instanceof List) {
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         } else {
-          return null;
+          return val;
         }
       };
     } else if (clazz.isAssignableFrom(List.class)) {
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return coerceListToArray((List) val);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         }
         return null;
       };
     } else {
-      // No numbers or strings.
-      return null;
+      // No numbers or strings, just pass it through
+      return selector::getObject;
     }
-  }
-
-  /**
-   * Selectors are not consistent in treatment of null, [], and [null], so coerce [] to [null]
-   */
-  public static Object coerceListToArray(@Nullable List<?> val)
-  {
-    if (val != null && val.size() > 0) {
-      Class coercedType = null;
-
-      for (Object elem : val) {
-        if (elem != null) {
-          coercedType = convertType(coercedType, elem.getClass());
-        }
-      }
-
-      if (coercedType == Long.class || coercedType == Integer.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).longValue() : null).toArray(Long[]::new);
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
-        return val.stream().map(x -> x != null ? ((Number) x).doubleValue() : null).toArray(Double[]::new);
-      }
-      // default to string
-      return val.stream().map(x -> x != null ? x.toString() : null).toArray(String[]::new);
-    }
-    return new String[]{null};
-  }
-
-  private static Class convertType(@Nullable Class existing, Class next)
-  {
-    if (Number.class.isAssignableFrom(next) || next == String.class) {
-      if (existing == null) {
-        return next;
-      }
-      // string wins everything
-      if (existing == String.class) {
-        return existing;
-      }
-      if (next == String.class) {
-        return next;
-      }
-      // all numbers win over Integer
-      if (existing == Integer.class) {
-        return next;
-      }
-      if (existing == Float.class) {
-        // doubles win over floats
-        if (next == Double.class) {
-          return next;
-        }
-        return existing;
-      }
-      if (existing == Long.class) {
-        if (next == Integer.class) {
-          // long beats int
-          return existing;
-        }
-        // double and float win over longs
-        return next;
-      }
-      // otherwise double
-      return Double.class;
-    }
-    throw new UOE("Invalid array expression type: %s", next);
   }
 
   /**
@@ -463,15 +442,9 @@ public class ExpressionSelectors
   @Nullable
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
-    switch (eval.type()) {
-      case STRING_ARRAY:
-        return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
-      case DOUBLE_ARRAY:
-        return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
-      case LONG_ARRAY:
-        return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
-      default:
-        return eval.value();
+    if (eval.type().isArray()) {
+      return Arrays.stream(eval.asArray()).collect(Collectors.toList());
     }
+    return eval.value();
   }
 }

@@ -32,4 +32,15 @@
       display: none;
     }
   }
+
+  &.show-segment-timeline {
+    .segment-timeline {
+      height: calc(50% - 55px);
+      margin-top: 10px;
+    }
+
+    .ReactTable {
+      top: 50%;
+    }
+  }
 }

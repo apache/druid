@@ -2,7 +2,7 @@
 
 exports[`data source view matches snapshot 1`] = `
 <div
-  className="datasource-view app-view no-chart"
+  className="datasource-view app-view"
 >
   <Memo(ViewControlBar)
     label="Datasources"
@@ -26,7 +26,7 @@ exports[`data source view matches snapshot 1`] = `
       }
     >
       <Blueprint3.MenuItem
-        disabled={false}
+        disabled={true}
         icon="application"
         multiline={false}
         onClick={[Function]}
@@ -47,13 +47,13 @@ exports[`data source view matches snapshot 1`] = `
     <Blueprint3.Switch
       checked={false}
       disabled={false}
-      label="Show segment timeline"
+      label="Show unused"
       onChange={[Function]}
     />
     <Blueprint3.Switch
       checked={false}
       disabled={false}
-      label="Show unused"
+      label="Show segment timeline"
       onChange={[Function]}
     />
     <Memo(TableColumnSelector)
@@ -61,8 +61,9 @@ exports[`data source view matches snapshot 1`] = `
         Array [
           "Datasource name",
           "Availability",
-          "Segment load/drop queues",
+          "Availability detail",
           "Total data size",
+          "Segment rows",
           "Segment size",
           "Segment granularity",
           "Total rows",
@@ -76,7 +77,13 @@ exports[`data source view matches snapshot 1`] = `
         ]
       }
       onChange={[Function]}
-      tableColumnsHidden={Array []}
+      onClose={[Function]}
+      tableColumnsHidden={
+        Array [
+          "Segment size",
+          "Segment granularity",
+        ]
+      }
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -150,9 +157,8 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": "Availability",
-          "accessor": [Function],
+          "accessor": "num_segments",
           "filterable": false,
-          "id": "availability",
           "minWidth": 200,
           "show": true,
           "sortMethod": [Function],
@@ -160,13 +166,12 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment load/drop
+            Availability
             <br />
-            queues
+            detail
           </React.Fragment>,
           "accessor": "num_segments_to_load",
           "filterable": false,
-          "id": "load-drop",
           "minWidth": 100,
           "show": true,
         },
@@ -185,7 +190,7 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
-            Segment size (rows)
+            Segment rows
             <br />
             minimum / average / maximum
           </React.Fragment>,
@@ -197,6 +202,18 @@ exports[`data source view matches snapshot 1`] = `
         Object {
           "Cell": [Function],
           "Header": <React.Fragment>
+            Segment size
+            <br />
+            minimum / average / maximum
+          </React.Fragment>,
+          "accessor": "avg_segment_size",
+          "filterable": false,
+          "show": false,
+          "width": 270,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": <React.Fragment>
             Segment
             <br />
             granularity
@@ -204,7 +221,7 @@ exports[`data source view matches snapshot 1`] = `
           "accessor": [Function],
           "filterable": false,
           "id": "segment_granularity",
-          "show": true,
+          "show": false,
           "width": 100,
         },
         Object {
@@ -356,12 +373,9 @@ exports[`data source view matches snapshot 1`] = `
     pageJumpText="jump to page"
     pageSizeOptions={
       Array [
-        5,
-        10,
-        20,
-        25,
         50,
         100,
+        200,
       ]
     }
     pageText="Page"
@@ -375,7 +389,7 @@ exports[`data source view matches snapshot 1`] = `
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
-    showPagination={true}
+    showPagination={false}
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}

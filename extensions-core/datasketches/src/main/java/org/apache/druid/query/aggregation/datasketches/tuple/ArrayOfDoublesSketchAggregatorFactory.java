@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.Util;
-import org.apache.datasketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
-import org.apache.datasketches.tuple.ArrayOfDoublesUnion;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSetOperationBuilder;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -41,7 +41,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -165,10 +165,10 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(numberOfValues).buildUnion();
     if (lhs != null) {
-      union.update((ArrayOfDoublesSketch) lhs);
+      union.union((ArrayOfDoublesSketch) lhs);
     }
     if (rhs != null) {
-      union.update((ArrayOfDoublesSketch) rhs);
+      union.union((ArrayOfDoublesSketch) rhs);
     }
     return union.getResult();
   }
@@ -192,7 +192,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       public void fold(final ColumnValueSelector selector)
       {
         final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) selector.getObject();
-        union.update(sketch);
+        union.union(sketch);
       }
 
       @Override
@@ -293,28 +293,19 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return object == null ? null : ((ArrayOfDoublesSketch) object).getEstimate();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    if (metricColumns == null) {
-      return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG;
-    }
-    return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG;
-  }
-
   /**
    * actual type is {@link ArrayOfDoublesSketch}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return metricColumns == null ? ArrayOfDoublesSketchModule.MERGE_TYPE : ArrayOfDoublesSketchModule.BUILD_TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @Override

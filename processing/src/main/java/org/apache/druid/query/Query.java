@@ -46,8 +46,8 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "queryType")
@@ -108,7 +108,7 @@ public interface Query<T>
   /**
    * Comparator that represents the order in which results are generated from the
    * {@link QueryRunnerFactory#createRunner(Segment)} and
-   * {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} calls. This is used to combine streams of
+   * {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} calls. This is used to combine streams of
    * results from different sources; for example, it's used by historicals to combine streams from different segments,
    * and it's used by the broker to combine streams from different historicals.
    *
@@ -138,6 +138,7 @@ public interface Query<T>
    */
   Query<T> withSubQueryId(String subQueryId);
 
+  @SuppressWarnings("unused")
   default Query<T> withDefaultSubQueryId()
   {
     return withSubQueryId(UUID.randomUUID().toString());
@@ -192,5 +193,21 @@ public interface Query<T>
   default VirtualColumns getVirtualColumns()
   {
     return VirtualColumns.EMPTY;
+  }
+
+  /**
+   * Returns the set of columns that this query will need to access out of its datasource.
+   *
+   * This method does not "look into" what the datasource itself is doing. For example, if a query is built on a
+   * {@link QueryDataSource}, this method will not return the columns used by that subquery. As another example, if a
+   * query is built on a {@link JoinDataSource}, this method will not return the columns from the underlying datasources
+   * that are used by the join condition, unless those columns are also used by this query in other ways.
+   *
+   * Returns null if the set of required columns cannot be known ahead of time.
+   */
+  @Nullable
+  default Set<String> getRequiredColumns()
+  {
+    return null;
   }
 }

@@ -134,6 +134,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(StringExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.STRING, ExpressionType.DOUBLE)
                   .usingGetClass()
                   .verify();
   }
@@ -143,6 +144,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(DoubleExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.LONG)
                   .usingGetClass()
                   .verify();
   }
@@ -152,33 +154,33 @@ public class ExprTest
   {
     EqualsVerifier.forClass(LongExpr.class)
                   .withIgnoredFields("outputType")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG, ExpressionType.STRING)
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testEqualsContractForStringArrayExpr()
+  public void testEqualsContractForArrayExpr()
   {
-    EqualsVerifier.forClass(StringArrayExpr.class)
-                  .withIgnoredFields("outputType")
+    EqualsVerifier.forClass(ArrayExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG_ARRAY, ExpressionType.DOUBLE_ARRAY)
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testEqualsContractForLongArrayExpr()
+  public void testEqualsContractForComplexExpr()
   {
-    EqualsVerifier.forClass(LongArrayExpr.class)
-                  .withIgnoredFields("outputType")
-                  .usingGetClass()
-                  .verify();
-  }
-
-  @Test
-  public void testEqualsContractForDoubleArrayExpr()
-  {
-    EqualsVerifier.forClass(DoubleArrayExpr.class)
-                  .withIgnoredFields("outputType")
+    EqualsVerifier.forClass(ComplexExpr.class)
+                  .withPrefabValues(Object.class, new Object[]{1L}, new Object[0])
+                  .withPrefabValues(
+                      ExpressionType.class,
+                      ExpressionTypeFactory.getInstance().ofComplex("foo"),
+                      ExpressionTypeFactory.getInstance().ofComplex("bar")
+                  )
+                  .withNonnullFields("outputType")
                   .usingGetClass()
                   .verify();
   }
@@ -198,7 +200,8 @@ public class ExprTest
   public void testEqualsContractForNullLongExpr()
   {
     EqualsVerifier.forClass(NullLongExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.LONG, ExpressionType.STRING)
                   .verify();
   }
 
@@ -206,7 +209,8 @@ public class ExprTest
   public void testEqualsContractForNullDoubleExpr()
   {
     EqualsVerifier.forClass(NullDoubleExpr.class)
-                  .withIgnoredFields("outputType")
+                  .withIgnoredFields("outputType", "value")
+                  .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.STRING)
                   .verify();
   }
 }

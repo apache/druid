@@ -246,13 +246,13 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true
-            ),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
             new IndexTuningConfig(
                 null,
                 null,
                 null,
                 10,
+                null,
                 null,
                 null,
                 9999,
@@ -270,7 +270,8 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1L
             )
         ),
         null,
@@ -309,6 +310,10 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
+    Assert.assertEquals(
+        taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+    );
   }
 
   @Test
@@ -330,8 +335,7 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true
-            ),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
             new IndexTuningConfig(
                 null,
                 null,
@@ -342,11 +346,13 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
+                null,
                 new DynamicPartitionsSpec(10000, null),
                 indexSpec,
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -408,6 +414,7 @@ public class TaskSerdeTest
                 null,
                 1,
                 10L,
+                null,
                 new Period("PT10M"),
                 null,
                 null,
@@ -416,7 +423,6 @@ public class TaskSerdeTest
                 1,
                 NoneShardSpec.instance(),
                 indexSpec,
-                null,
                 null,
                 0,
                 0,

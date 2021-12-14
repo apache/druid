@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import com.google.inject.ProvisionException;
 import org.apache.druid.data.input.impl.InputSourceSecurityConfig;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -57,8 +58,7 @@ public class InputSourceModuleTest
   @Before
   public void setUp()
   {
-    InputSourceModule inputSourceModule = new InputSourceModule();
-    for (Module jacksonModule : inputSourceModule.getJacksonModules()) {
+    for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
       mapper.registerModule(jacksonModule);
     }
   }
@@ -84,7 +84,10 @@ public class InputSourceModuleTest
     props.put("druid.ingestion.uri.allowPrefixList", "[\"http://allow.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
-    Assert.assertEquals(new InputSourceSecurityConfig(Collections.singletonList(URI.create("http://allow.com")), null), instance);
+    Assert.assertEquals(
+        new InputSourceSecurityConfig(Collections.singletonList(URI.create("http://allow.com")), null),
+        instance
+    );
   }
 
   @Test
@@ -94,7 +97,10 @@ public class InputSourceModuleTest
     props.put("druid.ingestion.uri.denyPrefixList", "[\"http://deny.com\"]");
     Injector injector = makeInjectorWithProperties(props);
     InputSourceSecurityConfig instance = injector.getInstance(InputSourceSecurityConfig.class);
-    Assert.assertEquals(new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("http://deny.com"))), instance);
+    Assert.assertEquals(
+        new InputSourceSecurityConfig(null, Collections.singletonList(URI.create("http://deny.com"))),
+        instance
+    );
   }
 
   @Test(expected = ProvisionException.class)
@@ -109,6 +115,16 @@ public class InputSourceModuleTest
 
   @Test
   public void testHttpInputSourceDefaultConfig()
+  {
+    Properties props = new Properties();
+    Injector injector = makeInjectorWithProperties(props);
+    HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
+    Assert.assertEquals(new HttpInputSourceConfig(null), instance);
+    Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, instance.getAllowedProtocols());
+  }
+
+  @Test
+  public void testHttpInputSourceDefaultSecurityConfig()
   {
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);

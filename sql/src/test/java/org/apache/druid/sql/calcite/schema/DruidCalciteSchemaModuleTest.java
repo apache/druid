@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -37,6 +36,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -119,7 +119,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .annotatedWith(IndexingService.class)
                 .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
-          binder.bind(ObjectMapper.class).toInstance(objectMapper);
+          binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
         },
@@ -157,7 +157,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   {
     Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<NamedSchema>>(){}));
     Set<Class<? extends NamedSchema>> expectedSchemas =
-        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class);
+        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class, NamedViewSchema.class);
     Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());
     Assert.assertEquals(
         expectedSchemas,
@@ -203,12 +203,12 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaAnnotatedIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog rootSchema = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -216,10 +216,10 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -227,7 +227,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAndHasInformationSchema()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
     Assert.assertNotNull(rootSchema);
     Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));

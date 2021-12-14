@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -64,6 +65,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   private final ObjectMapper mapper;
   private final InputEntity source;
   private final InputRowSchema inputRowSchema;
+  private final JsonFactory jsonFactory;
 
   JsonReader(
       InputRowSchema inputRowSchema,
@@ -77,6 +79,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
     this.source = source;
     this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
     this.mapper = mapper;
+    this.jsonFactory = new JsonFactory();
   }
 
   @Override
@@ -90,28 +93,37 @@ public class JsonReader extends IntermediateRowParsingReader<String>
   @Override
   protected List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException
   {
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+    final List<InputRow> inputRows;
+    try (JsonParser parser = jsonFactory.createParser(intermediateRow)) {
       final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
-      return FluentIterable.from(() -> delegate)
-                           .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
-                           .toList();
+      inputRows = FluentIterable.from(() -> delegate)
+                                .transform(jsonNode -> MapInputRowParser.parse(inputRowSchema, flattener.flatten(jsonNode)))
+                                .toList();
     }
     catch (RuntimeException e) {
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        throw new ParseException(intermediateRow, e, "Unable to parse row [%s]", intermediateRow);
       }
 
       //throw unknown exception
       throw e;
     }
+    if (CollectionUtils.isNullOrEmpty(inputRows)) {
+      throw new ParseException(
+          intermediateRow,
+          "Unable to parse [%s] as the intermediateRow resulted in empty input row",
+          intermediateRow
+      );
+    }
+    return inputRows;
   }
 
   @Override
   protected List<Map<String, Object>> toMap(String intermediateRow) throws IOException
   {
-    try (JsonParser parser = new JsonFactory().createParser(intermediateRow)) {
+    try (JsonParser parser = jsonFactory.createParser(intermediateRow)) {
       final MappingIterator<Map> delegate = mapper.readValues(parser, Map.class);
       return FluentIterable.from(() -> delegate)
                            .transform(map -> (Map<String, Object>) map)
@@ -121,7 +133,7 @@ public class JsonReader extends IntermediateRowParsingReader<String>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        throw new ParseException(e, "Unable to parse row [%s]", intermediateRow);
+        throw new ParseException(intermediateRow, e, "Unable to parse row [%s]", intermediateRow);
       }
 
       //throw unknown exception

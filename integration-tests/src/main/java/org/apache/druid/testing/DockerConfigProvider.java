@@ -32,6 +32,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The values here should be kept in sync with the values used in the docker-compose files used to bring up the
+ * integration-test clusters.
+ *
+ * integration-tests/docker/docker-compose.base.yml defines most of the hostnames, ports, and addresses, but some
+ * might live in the overrides as well.
+ */
 public class DockerConfigProvider implements IntegrationTestingConfigProvider
 {
   @JsonProperty
@@ -49,6 +56,15 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
 
   @JsonProperty
   private String cloudRegion;
+
+  @JsonProperty
+  private String s3AssumeRoleWithExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleExternalId;
+
+  @JsonProperty
+  private String s3AssumeRoleWithoutExternalId;
 
   @JsonProperty
   private String hadoopGcsCredentialsPath;
@@ -318,6 +334,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getSchemaRegistryHost()
+      {
+        return dockerIp + ":8085";
+      }
+
+      @Override
+      public String getSchemaRegistryInternalHost()
+      {
+        return "schema-registry:8085";
+      }
+
+      @Override
       public String getProperty(String prop)
       {
         return properties.get(prop);
@@ -369,6 +397,24 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudRegion()
       {
         return cloudRegion;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithExternalId()
+      {
+        return s3AssumeRoleWithExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleExternalId()
+      {
+        return s3AssumeRoleExternalId;
+      }
+
+      @Override
+      public String getS3AssumeRoleWithoutExternalId()
+      {
+        return s3AssumeRoleWithoutExternalId;
       }
 
       @Override

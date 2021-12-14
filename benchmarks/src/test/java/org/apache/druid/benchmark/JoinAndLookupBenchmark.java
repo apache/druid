@@ -42,7 +42,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -124,7 +124,7 @@ public class JoinAndLookupBenchmark
   {
     tmpDir = FileUtils.createTempDir();
     ColumnConfig columnConfig = () -> columnCacheSizeBytes;
-    index = JoinTestHelper.createFactIndexBuilder(tmpDir, rows).buildMMappedIndex(columnConfig);
+    index = JoinTestHelper.createFactIndexBuilder(columnConfig, tmpDir, rows).buildMMappedIndex();
 
     final String prefix = "c.";
 
@@ -150,6 +150,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesLookupStringKey,
@@ -160,6 +161,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinLookupStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesLookupStringKey,
         preAnalysisLookupStringKey
     );
@@ -184,6 +186,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesLookupLongKey,
@@ -194,6 +197,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinLookupLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesLookupLongKey,
         preAnalysisLookupLongKey
     );
@@ -218,6 +222,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesLookupLongKey,
@@ -228,6 +233,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesIndexedTableStringKey,
         preAnalysisIndexedStringKey
     );
@@ -252,6 +258,7 @@ public class JoinAndLookupBenchmark
                     false,
                     false,
                     false,
+                    false,
                     0
                 ),
                 joinableClausesIndexedTableLongKey,
@@ -262,6 +269,7 @@ public class JoinAndLookupBenchmark
 
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        null,
         joinableClausesIndexedTableLongKey,
         preAnalysisIndexedLongKey
     );
@@ -311,13 +319,13 @@ public class JoinAndLookupBenchmark
             new ExpressionVirtualColumn(
                 LOOKUP_COUNTRY_CODE_TO_NAME,
                 "lookup(countryIsoCode, '" + LOOKUP_COUNTRY_CODE_TO_NAME + "')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 exprMacroTable
             ),
             new ExpressionVirtualColumn(
                 LOOKUP_COUNTRY_NUMBER_TO_NAME,
                 "lookup(countryNumber, '" + LOOKUP_COUNTRY_NUMBER_TO_NAME + "')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 exprMacroTable
             )
         )

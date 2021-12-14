@@ -46,6 +46,10 @@ public class DataSourceCompactionConfig
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
+  private final UserCompactionTaskGranularityConfig granularitySpec;
+  private final UserCompactionTaskDimensionsConfig dimensionsSpec;
+  private final UserCompactionTaskTransformConfig transformSpec;
+  private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -56,6 +60,10 @@ public class DataSourceCompactionConfig
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
+      @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
+      @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
+      @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
+      @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -69,6 +77,10 @@ public class DataSourceCompactionConfig
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
+    this.ioConfig = ioConfig;
+    this.granularitySpec = granularitySpec;
+    this.dimensionsSpec = dimensionsSpec;
+    this.transformSpec = transformSpec;
     this.taskContext = taskContext;
   }
 
@@ -113,6 +125,34 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
+  public UserCompactionTaskIOConfig getIoConfig()
+  {
+    return ioConfig;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskGranularityConfig getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskDimensionsConfig getDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  @JsonProperty
+  @Nullable
+  public UserCompactionTaskTransformConfig getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @Nullable
   public Map<String, Object> getTaskContext()
   {
     return taskContext;
@@ -131,8 +171,13 @@ public class DataSourceCompactionConfig
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(granularitySpec, that.granularitySpec) &&
+           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Objects.equals(transformSpec, that.transformSpec) &&
+           Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
   }
 
@@ -143,8 +188,13 @@ public class DataSourceCompactionConfig
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
+        maxRowsPerSegment,
         skipOffsetFromLatest,
         tuningConfig,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        ioConfig,
         taskContext
     );
   }

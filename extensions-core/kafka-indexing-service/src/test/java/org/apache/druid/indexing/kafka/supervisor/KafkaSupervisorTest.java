@@ -61,13 +61,16 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -77,6 +80,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -158,6 +162,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private ExceptionCapturingServiceEmitter serviceEmitter;
   private SupervisorStateManagerConfig supervisorConfig;
+  private KafkaSupervisorIngestionSpec ingestionSchema;
 
   private static String getTopic()
   {
@@ -214,6 +219,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     serviceEmitter = new ExceptionCapturingServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
     supervisorConfig = new SupervisorStateManagerConfig();
+    ingestionSchema = EasyMock.createMock(KafkaSupervisorIngestionSpec.class);
   }
 
   @After
@@ -230,6 +236,196 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     zkServer.stop();
     zkServer = null;
+  }
+
+  @Test
+  public void testNoInitialStateWithAutoscaler() throws Exception
+  {
+    KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
+            null,
+            null
+    )
+    {
+      @Override
+      public KafkaIndexTaskClient build(
+              TaskInfoProvider taskInfoProvider,
+              String dataSource,
+              int numThreads,
+              Duration httpTimeout,
+              long numRetries
+      )
+      {
+        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
+        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        return taskClient;
+      }
+    };
+
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("lagCollectionIntervalMillis", 500);
+    autoScalerConfig.put("lagCollectionRangeMillis", 500);
+    autoScalerConfig.put("scaleOutThreshold", 0);
+    autoScalerConfig.put("triggerScaleOutFractionThreshold", 0.0);
+    autoScalerConfig.put("scaleInThreshold", 1000000);
+    autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
+    autoScalerConfig.put("scaleActionStartDelayMillis", 0);
+    autoScalerConfig.put("scaleActionPeriodMillis", 100);
+    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMin", 1);
+    autoScalerConfig.put("scaleInStep", 1);
+    autoScalerConfig.put("scaleOutStep", 2);
+    autoScalerConfig.put("minTriggerScaleActionFrequencyMillis", 1200000);
+
+    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
+    consumerProperties.put("myCustomKey", "myCustomValue");
+    consumerProperties.put("bootstrap.servers", kafkaHost);
+
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+            topic,
+            INPUT_FORMAT,
+            1,
+            1,
+            new Period("PT1H"),
+            consumerProperties,
+            OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            new Period("P1D"),
+            new Period("PT30S"),
+            true,
+            new Period("PT30M"),
+            null,
+            null,
+            null
+    );
+
+    final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
+            null,
+            1000,
+            null,
+            null,
+            50000,
+            null,
+            new Period("P1Y"),
+            new File("/test"),
+            null,
+            null,
+            null,
+            false,
+            null,
+            false,
+            null,
+            numThreads,
+            TEST_CHAT_THREADS,
+            TEST_CHAT_RETRIES,
+            TEST_HTTP_TIMEOUT,
+            TEST_SHUTDOWN_TIMEOUT,
+            null,
+            null,
+            null,
+            null,
+            null
+    );
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(kafkaSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(tuningConfigOri).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    SeekableStreamSupervisorSpec testableSupervisorSpec = new KafkaSupervisorSpec(
+            ingestionSchema,
+            dataSchema,
+            tuningConfigOri,
+            kafkaSupervisorIOConfig,
+            null,
+            false,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            OBJECT_MAPPER,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            new SupervisorStateManagerConfig()
+    );
+
+    supervisor = new TestableKafkaSupervisor(
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            OBJECT_MAPPER,
+            (KafkaSupervisorSpec) testableSupervisorSpec,
+            rowIngestionMetersFactory
+    );
+
+    SupervisorTaskAutoScaler autoscaler = testableSupervisorSpec.createAutoscaler(supervisor);
+
+
+    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
+    addSomeEvents(1);
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+            new KafkaDataSourceMetadata(
+                    null
+            )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
+    Assert.assertEquals(1, taskCountBeforeScale);
+    autoscaler.start();
+    supervisor.runInternal();
+    Thread.sleep(1 * 1000);
+    verifyAll();
+
+    int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
+    Assert.assertEquals(2, taskCountAfterScale);
+
+
+    KafkaIndexTask task = captured.getValue();
+    Assert.assertEquals(KafkaSupervisorTest.dataSchema, task.getDataSchema());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
+    Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
+    Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
+    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
+    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
+    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+
+    Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(0));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(1));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(2));
+
+    Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
+    Assert.assertEquals(
+            Long.MAX_VALUE,
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(0)
+    );
+    Assert.assertEquals(
+            Long.MAX_VALUE,
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(1)
+    );
+    Assert.assertEquals(
+            Long.MAX_VALUE,
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(2)
+    );
+
+    autoscaler.reset();
+    autoscaler.stop();
   }
 
   @Test
@@ -993,7 +1189,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.of(task)).anyTimes();
     }
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
-            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId(), "Dummy task status failure err message")));
     EasyMock.expect(taskStorage.getTask(iHaveFailed.getId())).andReturn(Optional.of(iHaveFailed)).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.capture(aNewTaskCapture))).andReturn(true);
     EasyMock.replay(taskStorage);
@@ -1082,7 +1278,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(ImmutableList.of(captured.getValue()))
             .anyTimes();
     EasyMock.expect(taskStorage.getStatus(iHaveFailed.getId()))
-            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId())));
+            .andReturn(Optional.of(TaskStatus.failure(iHaveFailed.getId(), "Dummy task status failure err message")));
     EasyMock.expect(taskStorage.getStatus(runningTaskId))
             .andReturn(Optional.of(TaskStatus.running(runningTaskId)))
             .anyTimes();
@@ -2921,6 +3117,75 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetCurrentParseErrors()
+  {
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition(0),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition(1),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    ParseExceptionReport exception1 = new ParseExceptionReport(
+        "testInput1",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        1000L
+    );
+
+    ParseExceptionReport exception2 = new ParseExceptionReport(
+        "testInput2",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        2000L
+    );
+
+    ParseExceptionReport exception3 = new ParseExceptionReport(
+        "testInput3",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        3000L
+    );
+
+    ParseExceptionReport exception4 = new ParseExceptionReport(
+        "testInput4",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        4000L
+    );
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task1")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception1,
+        exception2
+    ))).times(1);
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task2")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception3,
+        exception4
+    ))).times(1);
+
+    replayAll();
+
+    List<ParseExceptionReport> errors = supervisor.getParseErrors();
+
+    verifyAll();
+
+    Assert.assertEquals(ImmutableList.of(exception4, exception3, exception2, exception1), errors);
+  }
+
+  @Test
   public void testDoNotKillCompatibleTasks()
       throws Exception
   {
@@ -3075,6 +3340,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             1000,
             null,
+            null,
             50000,
             null,
             new Period("P1Y"),
@@ -3082,7 +3348,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            true,
             false,
             null,
             false,
@@ -3115,6 +3380,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         42, // This is different
         null,
+        null,
         50000,
         null,
         new Period("P1Y"),
@@ -3122,7 +3388,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         null,
@@ -3376,6 +3641,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -3411,6 +3677,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         1000,
         null,
+        null,
         50000,
         null,
         new Period("P1Y"),
@@ -3418,7 +3685,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         resetOffsetAutomatically,
@@ -3432,7 +3698,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        10
     );
 
     return new TestableKafkaSupervisor(
@@ -3487,6 +3753,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -3522,6 +3789,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         1000,
         null,
+        null,
         50000,
         null,
         new Period("P1Y"),
@@ -3529,7 +3797,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        true,
         false,
         null,
         false,
@@ -3602,6 +3869,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),

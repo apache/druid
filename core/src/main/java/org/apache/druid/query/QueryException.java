@@ -21,21 +21,26 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.exception.SanitizableException;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.net.InetAddress;
+import java.util.function.Function;
 
 /**
  * Base serializable error response
  *
  * QueryResource and SqlResource are expected to emit the JSON form of this object when errors happen.
  */
-public class QueryException extends RuntimeException
+public class QueryException extends RuntimeException implements SanitizableException
 {
   private final String errorCode;
   private final String errorClass;
   private final String host;
 
-  public QueryException(Throwable cause, String errorCode, String errorClass, String host)
+  protected QueryException(Throwable cause, String errorCode, String errorClass, String host)
   {
     super(cause == null ? null : cause.getMessage(), cause);
     this.errorCode = errorCode;
@@ -43,6 +48,7 @@ public class QueryException extends RuntimeException
     this.host = host;
   }
 
+  @VisibleForTesting
   @JsonCreator
   public QueryException(
       @JsonProperty("error") @Nullable String errorCode,
@@ -81,5 +87,22 @@ public class QueryException extends RuntimeException
   public String getHost()
   {
     return host;
+  }
+
+  @Nullable
+  protected static String resolveHostname()
+  {
+    try {
+      return InetAddress.getLocalHost().getCanonicalHostName();
+    }
+    catch (Exception e) {
+      return null;
+    }
+  }
+
+  @Override
+  public QueryException sanitize(@NotNull Function<String, String> errorMessageTransformFunction)
+  {
+    return new QueryException(errorCode, errorMessageTransformFunction.apply(getMessage()), null, null);
   }
 }

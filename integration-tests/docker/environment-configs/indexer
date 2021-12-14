@@ -21,7 +21,7 @@ DRUID_SERVICE=indexer
 DRUID_LOG_PATH=/shared/logs/indexer.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5008
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx1g -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5008
 
 # Druid configs
 druid_host=druid-indexer

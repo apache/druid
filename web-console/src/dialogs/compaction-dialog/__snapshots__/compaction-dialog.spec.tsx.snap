@@ -84,8 +84,83 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               <p>
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 renamed to 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+              </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -97,6 +172,17 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               </p>
               <p>
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.numShards",
@@ -124,8 +210,30 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
           Object {
             "defined": [Function],
             "info": <p>
-              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              The dimensions to partition on.
             </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -133,9 +241,22 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
           },
           Object {
             "defined": [Function],
-            "info": <p>
-              Maximum number of rows to include in a partition.
-            </p>,
+            "info": <React.Fragment>
+              <p>
+                Maximum number of rows to include in a partition.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -333,8 +454,83 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               <p>
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 renamed to 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+              </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -346,6 +542,17 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               </p>
               <p>
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.numShards",
@@ -373,8 +580,30 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
           Object {
             "defined": [Function],
             "info": <p>
-              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              The dimensions to partition on.
             </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -382,9 +611,22 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
           },
           Object {
             "defined": [Function],
-            "info": <p>
-              Maximum number of rows to include in a partition.
-            </p>,
+            "info": <React.Fragment>
+              <p>
+                Maximum number of rows to include in a partition.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -582,8 +824,83 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               <p>
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 renamed to 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+              </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -595,6 +912,17 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               </p>
               <p>
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.numShards",
@@ -622,8 +950,30 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           Object {
             "defined": [Function],
             "info": <p>
-              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              The dimensions to partition on.
             </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -631,9 +981,22 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           },
           Object {
             "defined": [Function],
-            "info": <p>
-              Maximum number of rows to include in a partition.
-            </p>,
+            "info": <React.Fragment>
+              <p>
+                Maximum number of rows to include in a partition.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -831,8 +1194,83 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               <p>
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+            "placeholder": "(defaults to 500000)",
+            "type": "number",
+            "zeroMeansUndefined": true,
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 renamed to 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+              </p>
+              <p>
+                If 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 is left unspecified, the Parallel task will determine
+                 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 automatically by 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                .
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
+            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "type": "number",
             "zeroMeansUndefined": true,
           },
@@ -844,6 +1282,17 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               </p>
               <p>
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  numShards
+                </Unknown>
+                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
               </p>
             </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.numShards",
@@ -871,8 +1320,30 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
           Object {
             "defined": [Function],
             "info": <p>
-              Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              The dimensions to partition on.
             </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
+            "info": <React.Fragment>
+              <p>
+                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
             "required": [Function],
             "type": "number",
@@ -880,9 +1351,22 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
           },
           Object {
             "defined": [Function],
-            "info": <p>
-              Maximum number of rows to include in a partition.
-            </p>,
+            "info": <React.Fragment>
+              <p>
+                Maximum number of rows to include in a partition.
+              </p>
+              <p>
+                Note that either 
+                <Unknown>
+                  targetRowsPerSegment
+                </Unknown>
+                 or 
+                <Unknown>
+                  maxRowsPerSegment
+                </Unknown>
+                 will be used to find the best partitioning. Leave blank to show all properties.
+              </p>
+            </React.Fragment>,
             "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
             "required": [Function],
             "type": "number",

@@ -24,9 +24,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -36,12 +37,14 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -54,10 +57,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -80,7 +83,7 @@ public class SqlInputSourceTest
           new ArrayList<>(),
           new ArrayList<>()
       ),
-      Collections.emptyList()
+      ColumnsFilter.all()
   );
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -99,7 +102,7 @@ public class SqlInputSourceTest
   public static void teardown() throws IOException
   {
     for (File dir : FIREHOSE_TMP_DIRS) {
-      FileUtils.forceDelete(dir);
+      org.apache.commons.io.FileUtils.forceDelete(dir);
     }
   }
 
@@ -128,8 +131,8 @@ public class SqlInputSourceTest
         SqlInputSourceTest.class.getSimpleName(),
         dirSuffix
     );
-    FileUtils.forceDelete(firehoseTempDir);
-    FileUtils.forceMkdir(firehoseTempDir);
+    org.apache.commons.io.FileUtils.forceDelete(firehoseTempDir);
+    FileUtils.mkdirp(firehoseTempDir);
     FIREHOSE_TMP_DIRS.add(firehoseTempDir);
     return firehoseTempDir;
   }
@@ -246,7 +249,17 @@ public class SqlInputSourceTest
         @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig
     )
     {
-      final BasicDataSource datasource = getDatasource(metadataStorageConnectorConfig);
+      final BasicDataSource datasource = getDatasource(
+          metadataStorageConnectorConfig,
+          new JdbcAccessSecurityConfig()
+          {
+            @Override
+            public Set<String> getAllowedProperties()
+            {
+              return ImmutableSet.of("user", "create");
+            }
+          }
+      );
       datasource.setDriverClassLoader(getClass().getClassLoader());
       datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
       this.dbi = new DBI(datasource);
@@ -282,6 +295,12 @@ public class SqlInputSourceTest
     public DBI getDBI()
     {
       return dbi;
+    }
+
+    @Override
+    public Set<String> findPropertyKeysFromConnectURL(String connectUri, boolean allowUnknown)
+    {
+      return ImmutableSet.of("user", "create");
     }
   }
 }

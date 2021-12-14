@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class QueryContextsTest
 {
@@ -130,5 +131,65 @@ public class QueryContextsTest
         ImmutableMap.of()
     );
     Assert.assertTrue(QueryContexts.isSecondaryPartitionPruningEnabled(query));
+  }
+
+  @Test
+  public void testGetEnableJoinLeftScanDirect()
+  {
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of()));
+    Assert.assertTrue(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        true
+    )));
+    Assert.assertFalse(QueryContexts.getEnableJoinLeftScanDirect(ImmutableMap.of(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        false
+    )));
+  }
+
+  @Test
+  public void testGetBrokerServiceName()
+  {
+    Map<String, Object> queryContext = new HashMap<>();
+    Assert.assertNull(QueryContexts.getBrokerServiceName(queryContext));
+
+    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, "hotBroker");
+    Assert.assertEquals("hotBroker", QueryContexts.getBrokerServiceName(queryContext));
+  }
+
+  @Test
+  public void testGetBrokerServiceName_withNonStringValue()
+  {
+    Map<String, Object> queryContext = new HashMap<>();
+    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, 100);
+
+    exception.expect(ClassCastException.class);
+    QueryContexts.getBrokerServiceName(queryContext);
+  }
+
+  @Test
+  public void testDefaultEnableQueryDebugging()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of()
+    );
+    Assert.assertFalse(QueryContexts.isDebug(query));
+    Assert.assertFalse(QueryContexts.isDebug(query.getContext()));
+  }
+
+  @Test
+  public void testEnableQueryDebuggingSetToTrue()
+  {
+    Query<?> query = new TestQuery(
+        new TableDataSource("test"),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+        false,
+        ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)
+    );
+    Assert.assertTrue(QueryContexts.isDebug(query));
+    Assert.assertTrue(QueryContexts.isDebug(query.getContext()));
   }
 }

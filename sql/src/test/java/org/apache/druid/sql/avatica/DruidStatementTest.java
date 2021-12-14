@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
@@ -36,6 +35,7 @@ import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -87,11 +87,11 @@ public class DruidStatementTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    SchemaPlus rootSchema =
+    DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        CalciteTests.createMockQueryMakerFactory(walker, conglomerate),
         operatorTable,
         macroTable,
         plannerConfig,
@@ -124,7 +124,7 @@ public class DruidStatementTest extends CalciteTestBase
     Assert.assertEquals(
         Lists.newArrayList(
             Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
-            Lists.newArrayList("cnt", "BIGINT", "java.lang.Long"),
+            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
@@ -148,6 +148,34 @@ public class DruidStatementTest extends CalciteTestBase
             }
         )
     );
+  }
+
+  @Test
+  public void testSubQueryWithOrderBy()
+  {
+    final String sql = "select T20.F13 as F22  from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20 order by T20.F13 ASC";
+    final DruidStatement statement = new DruidStatement("", 0, null, sqlLifecycleFactory.factorize(), () -> {
+    }).prepare(sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
+    // First frame, ask for all rows.
+    Meta.Frame frame = statement.execute(Collections.emptyList()).nextFrame(DruidStatement.START_OFFSET, 6);
+    Assert.assertEquals(
+        Meta.Frame.create(
+            0,
+            true,
+            Lists.newArrayList(
+                new Object[]{""},
+                new Object[]{
+                    "1"
+                },
+                new Object[]{"10.1"},
+                new Object[]{"2"},
+                new Object[]{"abc"},
+                new Object[]{"def"}
+            )
+        ),
+        frame
+    );
+    Assert.assertTrue(statement.isDone());
   }
 
   @Test

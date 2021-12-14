@@ -28,20 +28,8 @@ package org.apache.druid.segment.vector;
  * @see VectorOffset, the movable version.
  * @see org.apache.druid.segment.data.ReadableOffset, the non-vectorized version.
  */
-public interface ReadableVectorOffset extends VectorSizeInspector
+public interface ReadableVectorOffset extends ReadableVectorInspector
 {
-  /**
-   * A marker value that will never be returned by "getId".
-   */
-  int NULL_ID = -1;
-
-  /**
-   * Returns an integer that uniquely identifies the current position of the offset. Should *not* be construed as an
-   * actual offset; for that, use "getStartOffset" or "getOffsets". This is useful for caching: it is safe to assume
-   * nothing has changed in the offset so long as the id remains the same.
-   */
-  int getId();
-
   /**
    * Checks if the current batch is a contiguous range or not. This is only good for one batch at a time, since the
    * same object may return some contiguous batches and some non-contiguous batches. So, callers must check this method

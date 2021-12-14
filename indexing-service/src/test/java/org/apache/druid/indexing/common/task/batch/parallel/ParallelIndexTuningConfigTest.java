@@ -76,6 +76,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
@@ -100,6 +101,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -117,6 +119,7 @@ public class ParallelIndexTuningConfigTest
         null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -144,6 +147,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
@@ -161,6 +165,7 @@ public class ParallelIndexTuningConfigTest
         null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -186,6 +191,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null
@@ -210,6 +216,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         null,
+        null,
         new DynamicPartitionsSpec(100, 100L),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
@@ -234,6 +241,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -250,6 +258,7 @@ public class ParallelIndexTuningConfigTest
         null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -277,6 +286,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -293,6 +303,7 @@ public class ParallelIndexTuningConfigTest
         null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -320,6 +331,7 @@ public class ParallelIndexTuningConfigTest
         false,
         null,
         null,
+        null,
         null
     );
   }
@@ -336,6 +348,7 @@ public class ParallelIndexTuningConfigTest
         null,
         10,
         1000L,
+        null,
         null,
         null,
         null,
@@ -361,6 +374,7 @@ public class ParallelIndexTuningConfigTest
         null,
         null,
         false,
+        null,
         null,
         null,
         null

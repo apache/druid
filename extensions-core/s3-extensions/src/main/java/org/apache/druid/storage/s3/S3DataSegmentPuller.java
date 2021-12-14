@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
@@ -28,6 +29,7 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
+import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -69,7 +71,8 @@ public class S3DataSegmentPuller implements URIDataPuller
     this.s3Client = s3Client;
   }
 
-  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir) throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation s3Coords, final File outDir)
+      throws SegmentLoadingException
   {
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
@@ -79,7 +82,7 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
       final ByteSource byteSource = new ByteSource()
@@ -147,16 +150,15 @@ public class S3DataSegmentPuller implements URIDataPuller
     }
   }
 
-  private FileObject buildFileObject(final URI uri) throws AmazonServiceException
+  public FileObject buildFileObject(final URI uri) throws AmazonServiceException
   {
     final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
-    final S3ObjectSummary objectSummary =
-        S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
     final String path = uri.getPath();
 
     return new FileObject()
     {
       S3Object s3Object = null;
+      S3ObjectSummary objectSummary = null;
 
       @Override
       public URI toUri()
@@ -180,7 +182,7 @@ public class S3DataSegmentPuller implements URIDataPuller
         try {
           if (s3Object == null) {
             // lazily promote to full GET
-            s3Object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
+            s3Object = s3Client.getObject(coords.getBucket(), coords.getPath());
           }
 
           final InputStream in = s3Object.getObjectContent();
@@ -229,6 +231,13 @@ public class S3DataSegmentPuller implements URIDataPuller
       @Override
       public long getLastModified()
       {
+        if (s3Object != null) {
+          return s3Object.getObjectMetadata().getLastModified().getTime();
+        }
+        if (objectSummary == null) {
+          objectSummary =
+              S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
+        }
         return objectSummary.getLastModified().getTime();
       }
 
@@ -243,34 +252,14 @@ public class S3DataSegmentPuller implements URIDataPuller
   @Override
   public Predicate<Throwable> shouldRetryPredicate()
   {
-    // Yay! smart retries!
-    return new Predicate<Throwable>()
-    {
-      @Override
-      public boolean apply(Throwable e)
-      {
-        if (e == null) {
-          return false;
-        }
-        if (e instanceof AmazonServiceException) {
-          return S3Utils.isServiceExceptionRecoverable((AmazonServiceException) e);
-        }
-        if (S3Utils.S3RETRY.apply(e)) {
-          return true;
-        }
-        // Look all the way down the cause chain, just in case something wraps it deep.
-        return apply(e.getCause());
-      }
-    };
+    return S3Utils.S3RETRY;
   }
 
   /**
    * Returns the "version" (aka last modified timestamp) of the URI
    *
    * @param uri The URI to check the last timestamp
-   *
    * @return The time in ms of the last modification of the URI in String format
-   *
    * @throws IOException
    */
   @Override
@@ -282,8 +271,8 @@ public class S3DataSegmentPuller implements URIDataPuller
           S3Utils.getSingleObjectSummary(s3Client, coords.getBucket(), coords.getPath());
       return StringUtils.format("%d", objectSummary.getLastModified().getTime());
     }
-    catch (AmazonServiceException e) {
-      if (S3Utils.isServiceExceptionRecoverable(e)) {
+    catch (AmazonClientException e) {
+      if (AWSClientUtil.isClientExceptionRecoverable(e)) {
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
         throw new IOE(e, "Could not fetch last modified timestamp from URI [%s]", uri);
       } else {

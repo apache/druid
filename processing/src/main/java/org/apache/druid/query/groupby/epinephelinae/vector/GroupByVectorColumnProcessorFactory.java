@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class GroupByVectorColumnProcessorFactory implements VectorColumnProcessorFactory<GroupByVectorColumnSelector>
@@ -48,7 +49,7 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   )
   {
     Preconditions.checkArgument(
-        ValueType.STRING == capabilities.getType(),
+        capabilities.is(ValueType.STRING),
         "groupBy dimension processors must be STRING typed"
     );
     return new SingleValueStringGroupByVectorColumnSelector(selector);
@@ -61,10 +62,12 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
   )
   {
     Preconditions.checkArgument(
-        ValueType.STRING == capabilities.getType(),
+        capabilities.is(ValueType.STRING),
         "groupBy dimension processors must be STRING typed"
     );
-    throw new UnsupportedOperationException("Multi-value dimensions not yet implemented for vectorized groupBys");
+    throw new UnsupportedOperationException(
+        "Vectorized groupBys on multi-value dictionary-encoded dimensions are not yet implemented"
+    );
   }
 
   @Override
@@ -101,5 +104,38 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
       return new LongGroupByVectorColumnSelector(selector);
     }
     return new NullableLongGroupByVectorColumnSelector(selector);
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeObjectProcessor(
+      final ColumnCapabilities capabilities,
+      final VectorObjectSelector selector
+  )
+  {
+    if (capabilities.is(ValueType.STRING)) {
+      return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
+    }
+    return NilGroupByVectorColumnSelector.INSTANCE;
+  }
+
+  /**
+   * The group by engine vector processor has a more relaxed approach to choosing to use a dictionary encoded string
+   * selector over an object selector than some of the other {@link VectorColumnProcessorFactory} implementations.
+   *
+   * Basically, if a valid dictionary exists, we will use it to group on dictionary ids (so that we can use
+   * {@link SingleValueStringGroupByVectorColumnSelector} whenever possible instead of
+   * {@link DictionaryBuildingSingleValueStringGroupByVectorColumnSelector}).
+   *
+   * We do this even for things like virtual columns that have a single string input, because it allows deferring
+   * accessing any of the actual string values, which involves at minimum reading utf8 byte values and converting
+   * them to string form (if not already cached), and in the case of expressions, computing the expression output for
+   * the string input.
+   */
+  @Override
+  public boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
+  {
+    Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
+    Preconditions.checkArgument(capabilities.is(ValueType.STRING), "Must only be called on a STRING column");
+    return capabilities.isDictionaryEncoded().isTrue();
   }
 }

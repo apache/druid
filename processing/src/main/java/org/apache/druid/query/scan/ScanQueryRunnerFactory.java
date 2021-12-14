@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
@@ -54,7 +55,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValue, ScanQuery>
@@ -83,20 +83,21 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
-      final ExecutorService queryExecutor,
+      final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
-    // in single thread and in jetty thread instead of processing thread
+    // in single thread and in Jetty thread instead of processing thread
     return (queryPlus, responseContext) -> {
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
+      ScanQuery.verifyOrderByForNativeExecution(query);
 
       // Note: this variable is effective only when queryContext has a timeout.
       // See the comment of ResponseContext.Key.TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
-      responseContext.put(ResponseContext.Key.TIMEOUT_AT, timeoutAt);
+      responseContext.putTimeoutTime(timeoutAt);
 
-      if (query.getOrder().equals(ScanQuery.Order.NONE)) {
+      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(
@@ -113,7 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         List<Interval> intervalsOrdered = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
         List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
 
-        if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (ScanQuery.Order.DESCENDING.equals(query.getTimeOrder())) {
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
@@ -189,7 +190,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
             return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
-          throw new ResourceLimitExceededException(
+          throw ResourceLimitExceededException.withMessage(
               "Time ordering is not supported for a Scan query with %,d segments per time chunk and a row limit of %,d. "
               + "Try reducing your query limit below maxRowsQueuedForOrdering (currently %,d), or using compaction to "
               + "reduce the number of segments per time chunk, or raising maxSegmentPartitionsOrderedInMemory "
@@ -365,10 +366,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
 
+      ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
+
       // it happens in unit tests
-      final Number timeoutAt = (Number) responseContext.get(ResponseContext.Key.TIMEOUT_AT);
-      if (timeoutAt == null || timeoutAt.longValue() == 0L) {
-        responseContext.put(ResponseContext.Key.TIMEOUT_AT, JodaUtils.MAX_INSTANT);
+      final Long timeoutAt = responseContext.getTimeoutTime();
+      if (timeoutAt == null || timeoutAt == 0L) {
+        responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
       return engine.process((ScanQuery) query, segment, responseContext);
     }

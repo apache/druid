@@ -158,11 +158,24 @@ public interface IntegrationTestingConfig
 
   String getCloudRegion();
 
+  String getS3AssumeRoleWithExternalId();
+
+  String getS3AssumeRoleExternalId();
+
+  String getS3AssumeRoleWithoutExternalId();
+
   String getAzureKey();
 
   String getHadoopGcsCredentialsPath();
 
   String getStreamEndpoint();
+
+  String getSchemaRegistryHost();
+
+  default String getSchemaRegistryInternalHost()
+  {
+    return getSchemaRegistryHost();
+  }
 
   boolean isDocker();
 

@@ -35,11 +35,13 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -88,6 +90,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final ScheduledExecutorService exec;
   private final ServerTypeConfig serverTypeConfig;
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
+  private final SegmentCacheManager segmentCacheManager;
 
   private volatile boolean started = false;
 
@@ -108,6 +111,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
+      SegmentCacheManager segmentCacheManager,
       ServerTypeConfig serverTypeConfig
   )
   {
@@ -117,6 +121,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         announcer,
         serverAnnouncer,
         segmentManager,
+        segmentCacheManager,
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
@@ -132,6 +137,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
+      SegmentCacheManager segmentCacheManager,
       ScheduledExecutorService exec,
       ServerTypeConfig serverTypeConfig
   )
@@ -141,6 +147,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.announcer = announcer;
     this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
+    this.segmentCacheManager = segmentCacheManager;
     this.exec = exec;
     this.serverTypeConfig = serverTypeConfig;
 
@@ -204,17 +211,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return started;
   }
 
-  private void loadLocalCache()
+  private void loadLocalCache() throws IOException
   {
     final long start = System.currentTimeMillis();
     File baseDir = config.getInfoDir();
-    if (!baseDir.isDirectory()) {
-      if (baseDir.exists()) {
-        throw new ISE("[%s] exists but not a directory.", baseDir);
-      } else if (!baseDir.mkdirs()) {
-        throw new ISE("Failed to create directory[%s].", baseDir);
-      }
-    }
+    FileUtils.mkdirp(baseDir);
 
     List<DataSegment> cachedSegments = new ArrayList<>();
     File[] segmentsToLoad = baseDir.listFiles();
@@ -228,7 +229,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         if (!segment.getId().toString().equals(file.getName())) {
           log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
           ignored++;
-        } else if (segmentManager.isSegmentCached(segment)) {
+        } else if (segmentCacheManager.isSegmentCached(segment)) {
           cachedSegments.add(segment);
         } else {
           log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getId());
@@ -269,7 +270,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   {
     final boolean loaded;
     try {
-      loaded = segmentManager.loadSegment(segment, lazy);
+      loaded = segmentManager.loadSegment(segment,
+              lazy,
+          () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+      );
     }
     catch (Exception e) {
       removeSegment(segment, callback, false);
@@ -295,7 +299,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     Status result = null;
     try {
@@ -336,7 +340,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 
@@ -414,14 +420,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @Override
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
+  public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
   }
 
-  private void removeSegment(
+  @VisibleForTesting
+  void removeSegment(
       final DataSegment segment,
-      final DataSegmentChangeCallback callback,
+      @Nullable final DataSegmentChangeCallback callback,
       final boolean scheduleDrop
   )
   {
@@ -475,7 +482,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestDrop(segment), result);
-      callback.execute();
+      if (null != callback) {
+        callback.execute();
+      }
     }
   }
 

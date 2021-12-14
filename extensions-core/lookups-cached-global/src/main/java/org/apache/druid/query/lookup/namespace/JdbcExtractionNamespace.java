@@ -19,11 +19,15 @@
 
 package org.apache.druid.query.lookup.namespace;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.utils.ConnectionUriUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -37,6 +41,10 @@ import java.util.Objects;
 @JsonTypeName("jdbc")
 public class JdbcExtractionNamespace implements ExtractionNamespace
 {
+  private static final Logger LOG = new Logger(JdbcExtractionNamespace.class);
+
+  long DEFAULT_MAX_HEAP_PERCENTAGE = 10L;
+
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
   @JsonProperty
@@ -51,6 +59,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private final String filter;
   @JsonProperty
   private final Period pollPeriod;
+  @JsonProperty
+  private final long maxHeapPercentage;
 
   @JsonCreator
   public JdbcExtractionNamespace(
@@ -59,19 +69,55 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @NotNull @JsonProperty(value = "table", required = true) final String table,
       @NotNull @JsonProperty(value = "keyColumn", required = true) final String keyColumn,
       @NotNull @JsonProperty(value = "valueColumn", required = true) final String valueColumn,
-      @JsonProperty(value = "tsColumn", required = false) @Nullable final String tsColumn,
-      @JsonProperty(value = "filter", required = false) @Nullable final String filter,
-      @Min(0) @JsonProperty(value = "pollPeriod", required = false) @Nullable final Period pollPeriod
+      @JsonProperty(value = "tsColumn") @Nullable final String tsColumn,
+      @JsonProperty(value = "filter") @Nullable final String filter,
+      @Min(0) @JsonProperty(value = "pollPeriod") @Nullable final Period pollPeriod,
+      @JsonProperty(value = "maxHeapPercentage") @Nullable final Long maxHeapPercentage,
+      @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
     this.connectorConfig = Preconditions.checkNotNull(connectorConfig, "connectorConfig");
-    Preconditions.checkNotNull(connectorConfig.getConnectURI(), "connectorConfig.connectURI");
+    // Check the properties in the connection URL. Note that JdbcExtractionNamespace doesn't use
+    // MetadataStorageConnectorConfig.getDbcpProperties(). If we want to use them,
+    // those DBCP properties should be validated using the same logic.
+    checkConnectionURL(connectorConfig.getConnectURI(), securityConfig);
     this.table = Preconditions.checkNotNull(table, "table");
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
     this.tsColumn = tsColumn;
     this.filter = filter;
-    this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
+    if (pollPeriod == null) {
+      // Warning because if JdbcExtractionNamespace is being used for lookups, any updates to the database will not
+      // be picked up after the node starts. So for use casses where nodes start at different times (like streaming
+      // ingestion with peons) there can be data inconsistencies across the cluster.
+      LOG.warn("No pollPeriod configured for JdbcExtractionNamespace - entries will be loaded only once at startup");
+      this.pollPeriod = new Period(0L);
+    } else {
+      this.pollPeriod = pollPeriod;
+    }
+    this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
+  }
+
+  /**
+   * Check the given URL whether it contains non-allowed properties.
+   *
+   * @see JdbcAccessSecurityConfig#getAllowedProperties()
+   * @see ConnectionUriUtils#tryParseJdbcUriParameters(String, boolean)
+   */
+  private static void checkConnectionURL(String url, JdbcAccessSecurityConfig securityConfig)
+  {
+    Preconditions.checkNotNull(url, "connectorConfig.connectURI");
+
+    if (!securityConfig.isEnforceAllowedProperties()) {
+      // You don't want to do anything with properties.
+      return;
+    }
+
+    ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
+        ConnectionUriUtils.tryParseJdbcUriParameters(url, securityConfig.isAllowUnknownJdbcUrlFormat()),
+        securityConfig.getSystemPropertyPrefixes(),
+        securityConfig.getAllowedProperties()
+    );
   }
 
   public MetadataStorageConnectorConfig getConnectorConfig()
@@ -111,6 +157,12 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getMaxHeapPercentage()
+  {
+    return maxHeapPercentage;
+  }
+
+  @Override
   public String toString()
   {
     return "JdbcExtractionNamespace{" +
@@ -121,6 +173,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            ", tsColumn='" + tsColumn + '\'' +
            ", filter='" + filter + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", maxHeapPercentage=" + maxHeapPercentage +
            '}';
   }
 
@@ -142,7 +195,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            Objects.equals(keyColumn, that.keyColumn) &&
            Objects.equals(valueColumn, that.valueColumn) &&
            Objects.equals(tsColumn, that.tsColumn) &&
-           Objects.equals(pollPeriod, that.pollPeriod);
+           Objects.equals(pollPeriod, that.pollPeriod) &&
+           Objects.equals(maxHeapPercentage, that.maxHeapPercentage);
   }
 
   @Override
@@ -155,7 +209,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
         keyColumn,
         valueColumn,
         tsColumn,
-        pollPeriod
+        pollPeriod,
+        maxHeapPercentage
     );
   }
 }

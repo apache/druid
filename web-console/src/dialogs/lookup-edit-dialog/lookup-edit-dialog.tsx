@@ -27,8 +27,7 @@ import {
 } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { AutoForm, JsonInput } from '../../components';
-import { FormJsonSelector, FormJsonTabs } from '../../components';
+import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
 import { isLookupInvalid, LOOKUP_FIELDS, LookupSpec } from '../../druid-models';
 
 import './lookup-edit-dialog.scss';
@@ -36,11 +35,14 @@ import './lookup-edit-dialog.scss';
 export interface LookupEditDialogProps {
   onClose: () => void;
   onSubmit: (updateLookupVersion: boolean) => void;
-  onChange: (field: 'name' | 'tier' | 'version' | 'spec', value: string | LookupSpec) => void;
-  lookupName: string;
+  onChange: (
+    field: 'id' | 'tier' | 'version' | 'spec',
+    value: string | Partial<LookupSpec>,
+  ) => void;
+  lookupId: string;
   lookupTier: string;
   lookupVersion: string;
-  lookupSpec: LookupSpec;
+  lookupSpec: Partial<LookupSpec>;
   isEdit: boolean;
   allLookupTiers: string[];
 }
@@ -51,7 +53,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     onSubmit,
     lookupSpec,
     lookupTier,
-    lookupName,
+    lookupId,
     lookupVersion,
     onChange,
     isEdit,
@@ -59,6 +61,11 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
   } = props;
   const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
   const [updateVersionOnSubmit, setUpdateVersionOnSubmit] = useState(true);
+  const [jsonError, setJsonError] = useState<Error | undefined>();
+
+  const disableSubmit = Boolean(
+    jsonError || isLookupInvalid(lookupId, lookupVersion, lookupTier, lookupSpec),
+  );
 
   return (
     <Dialog
@@ -66,13 +73,14 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       isOpen
       onClose={onClose}
       title={isEdit ? 'Edit lookup' : 'Add lookup'}
+      canEscapeKeyClose={false}
     >
       <div className="content">
         <FormGroup label="Name">
           <InputGroup
-            value={lookupName}
-            onChange={(e: any) => onChange('name', e.target.value)}
-            intent={lookupName ? Intent.NONE : Intent.PRIMARY}
+            value={lookupId}
+            onChange={(e: any) => onChange('id', e.target.value)}
+            intent={lookupId ? Intent.NONE : Intent.PRIMARY}
             disabled={isEdit}
             placeholder="Enter the lookup name"
           />
@@ -105,7 +113,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             rightElement={
               <Button
                 minimal
-                text="Use ISO as version"
+                text="Set to current ISO time"
                 onClick={() => onChange('version', new Date().toISOString())}
               />
             }
@@ -123,10 +131,13 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
         ) : (
           <JsonInput
             value={lookupSpec}
+            height="80vh"
             onChange={m => {
               onChange('spec', m);
+              setJsonError(undefined);
             }}
-            height="80vh"
+            onError={setJsonError}
+            issueWithValue={spec => AutoForm.issueWithModel(spec, LOOKUP_FIELDS)}
           />
         )}
       </div>
@@ -136,10 +147,10 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
           <Button
             text="Submit"
             intent={Intent.PRIMARY}
+            disabled={disableSubmit}
             onClick={() => {
               onSubmit(updateVersionOnSubmit && isEdit);
             }}
-            disabled={isLookupInvalid(lookupName, lookupVersion, lookupTier, lookupSpec)}
           />
         </div>
       </div>

@@ -68,6 +68,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_APPENDABLE_INDEX,
         DEFAULT_MAX_ROWS_IN_MEMORY,
         0L,
+        DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
         DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
         DEFAULT_WINDOW_PERIOD,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
@@ -77,7 +78,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         DEFAULT_SHARD_SPEC,
         DEFAULT_INDEX_SPEC,
         DEFAULT_INDEX_SPEC,
-        true,
         0,
         0,
         DEFAULT_REPORT_PARSE_EXCEPTIONS,
@@ -91,6 +91,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean skipBytesInMemoryOverheadCheck;
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
@@ -115,6 +116,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -124,8 +126,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
       @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
@@ -140,6 +140,8 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
+    this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
+                                          DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD
                                      : intermediatePersistPeriod;
@@ -189,6 +191,13 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
+  }
+
+  @JsonProperty
+  @Override
+  public boolean isSkipBytesInMemoryOverheadCheck()
+  {
+    return skipBytesInMemoryOverheadCheck;
   }
 
   @Override
@@ -256,16 +265,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     return indexSpecForIntermediatePersists;
   }
 
-  /**
-   * Always returns true, doesn't affect the version being built.
-   */
-  @Deprecated
-  @JsonProperty
-  public Boolean getBuildV9Directly()
-  {
-    return true;
-  }
-
   @JsonProperty
   public int getPersistThreadPriority()
   {
@@ -318,6 +317,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         intermediatePersistPeriod,
         windowPeriod,
         basePersistDirectory,
@@ -327,7 +327,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,
@@ -345,6 +344,7 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
         intermediatePersistPeriod,
         windowPeriod,
         dir,
@@ -354,7 +354,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         shardSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
-        true,
         persistThreadPriority,
         mergeThreadPriority,
         reportParseExceptions,

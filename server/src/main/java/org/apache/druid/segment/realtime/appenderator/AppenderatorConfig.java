@@ -32,6 +32,8 @@ public interface AppenderatorConfig extends TuningConfig
 
   int getMaxPendingPersists();
 
+  boolean isSkipBytesInMemoryOverheadCheck();
+
   /**
    * Maximum number of rows in a single segment before pushing to deep storage
    */

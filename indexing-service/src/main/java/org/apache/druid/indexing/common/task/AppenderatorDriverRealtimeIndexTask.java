@@ -45,6 +45,7 @@ import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -61,7 +62,6 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
@@ -69,6 +69,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -87,6 +88,7 @@ import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.servlet.http.HttpServletRequest;
@@ -173,7 +175,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @JsonIgnore
   @MonotonicNonNull
   private String errorMsg;
-
 
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
@@ -275,7 +276,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
+    TaskLockType lockType = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
@@ -300,13 +302,20 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
@@ -325,11 +334,17 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
-        if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, mustBeNullOrEmptyDropSegments, segments, commitMetadata) -> {
+        if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
-              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptySegments)
+              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
+          );
+        }
+        if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
+          throw new ISE(
+              "Stream ingestion task unexpectedly attempted to drop segments: %s",
+              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
           );
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
@@ -424,9 +439,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     finally {
       toolbox.getChatHandlerProvider().unregister(getId());
 
-      CloseQuietly.close(firehose);
+      CloseableUtils.closeAndSuppressExceptions(firehose, e -> log.warn("Failed to close Firehose"));
       appenderator.close();
-      CloseQuietly.close(driver);
+      CloseableUtils.closeAndSuppressExceptions(driver, e -> log.warn("Failed to close AppenderatorDriver"));
 
       toolbox.removeMonitor(metricsMonitor);
 
@@ -552,8 +567,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     return Response.ok(events).build();
   }
@@ -575,6 +590,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
+  /**
+   * Return a map of reports for the task.
+   *
+   * A successfull task should always have a null errorMsg. A falied task should always have a non-null
+   * errorMsg.
+   *
+   * @return Map of reports for the task.
+   */
   private Map<String, TaskReport> getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
@@ -584,7 +607,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
-                errorMsg
+                errorMsg,
+                errorMsg == null,
+                0L
             )
         )
     );
@@ -593,8 +618,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> buildSegmentsParseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
@@ -614,19 +639,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   private void handleParseException(ParseException pe)
   {
-    if (pe.isFromPartiallyValidRow()) {
-      rowIngestionMeters.incrementProcessedWithError();
-    } else {
-      rowIngestionMeters.incrementUnparseable();
-    }
-
-    if (spec.getTuningConfig().isLogParseExceptions()) {
-      log.error(pe, "Encountered parse exception");
-    }
-
-    if (parseExceptionHandler.getSavedParseExceptions() != null) {
-      parseExceptionHandler.getSavedParseExceptions().add(pe);
-    }
+    parseExceptionHandler.handle(pe);
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > spec.getTuningConfig().getMaxParseExceptions()) {
@@ -761,7 +774,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getQueryRunnerFactoryConglomerate(),
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
-        toolbox.getQueryExecutorService(),
+        toolbox.getQueryProcessingPool(),
         toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
@@ -775,7 +788,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       final DataSchema dataSchema,
       final Appenderator appenderator,
       final TaskToolbox toolbox,
-      final FireDepartmentMetrics metrics
+      final FireDepartmentMetrics metrics,
+      final TaskLockType lockType
   )
   {
     return new StreamAppenderatorDriver(
@@ -792,7 +806,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 previousSegmentId,
                 skipSegmentLineageCheck,
                 NumberedPartialShardSpec.instance(),
-                LockGranularity.TIME_CHUNK
+                LockGranularity.TIME_CHUNK,
+                lockType
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

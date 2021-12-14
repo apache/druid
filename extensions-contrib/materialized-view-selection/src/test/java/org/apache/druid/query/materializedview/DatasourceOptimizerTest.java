@@ -259,7 +259,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
 
   private void setupViews() throws Exception
   {
-    baseView = new BatchServerInventoryView(zkPathsConfig, curator, jsonMapper, Predicates.alwaysTrue())
+    baseView = new BatchServerInventoryView(zkPathsConfig, curator, jsonMapper, Predicates.alwaysTrue(), "test")
     {
       @Override
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)

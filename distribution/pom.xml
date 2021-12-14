@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.21.0-SNAPSHOT</version>
+        <version>0.23.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -79,7 +79,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <phase>prepare-package</phase>
@@ -193,6 +193,186 @@
                                         <argument>${settings.localRepository}</argument>
                                         <argument>-h</argument>
                                         <argument>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-avro-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-azure-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-bloom-filter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-datasketches</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-hdfs-storage</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-histogram</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kafka-indexing-service</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kinesis-indexing-service</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-lookups-cached-global</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-lookups-cached-single</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-orc-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-parquet-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kerberos</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-aws-rds-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-google-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-stats</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:simple-client-sslcontext</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-basic-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-pac4j</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-ranger-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>${druid.distribution.pulldeps.opts}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>distro-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <finalName>apache-druid-${project.parent.version}</finalName>
+                                    <tarLongFileMode>posix</tarLongFileMode>
+                                    <descriptors>
+                                        <descriptor>src/assembly/assembly.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-licenses</id>
+                                <goals>
+                                    <goal>download-licenses</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dist-hadoop3</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-readme</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/build-textfile-readme.sh</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/../</argument>
+                                        <argument>${project.parent.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>generate-binary-license</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>generate-binary-notice</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>
+                                    <arguments>
+                                        <argument>${project.parent.basedir}/NOTICE</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>pull-deps</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <arguments>
+                                        <argument>-classpath</argument>
+                                        <classpath />
+                                        <argument>-Ddruid.extensions.loadList=[]</argument>
+                                        <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
+                                        </argument>
+                                        <argument>
+                                            -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
+                                        </argument>
+                                        <argument>-Dhadoop3.enabled=true</argument>
+                                        <argument>org.apache.druid.cli.Main</argument>
+                                        <argument>tools</argument>
+                                        <argument>pull-deps</argument>
+                                        <argument>--clean</argument>
+                                        <argument>--defaultVersion</argument>
+                                        <argument>${project.parent.version}</argument>
+                                        <argument>-l</argument>
+                                        <argument>${settings.localRepository}</argument>
+                                        <argument>-h</argument>
+                                        <argument>org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}</argument>
+                                        <argument>-h</argument>
+                                        <argument>org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-avro-extensions</argument>
                                         <argument>-c</argument>
@@ -417,6 +597,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:statsd-emitter</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:prometheus-emitter</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-thrift-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
@@ -424,6 +606,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-moving-average-query</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-momentsketch</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-tdigestsketch</argument>
                                         <argument>-c</argument>

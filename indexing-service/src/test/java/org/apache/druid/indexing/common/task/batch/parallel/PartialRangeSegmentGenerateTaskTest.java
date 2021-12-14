@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -43,11 +44,17 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
+  public PartialRangeSegmentGenerateTaskTest()
+  {
+    // We don't need to emulate transient failures for this test.
+    super(0.0, 0.0);
+  }
+
   @Test
   public void requiresForceGuaranteedRollup()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("single_dim partitionsSpec required");
+    exception.expectMessage("range or single_dim partitionsSpec required");
 
     ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
         .forceGuaranteedRollup(false)
@@ -60,10 +67,10 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   }
 
   @Test
-  public void requiresSingleDimensionPartitions()
+  public void requiresMultiDimensionPartitions()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("single_dim partitionsSpec required");
+    exception.expectMessage("range or single_dim partitionsSpec required");
 
     PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
     ParallelIndexTuningConfig tuningConfig =
@@ -134,10 +141,11 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
           ParallelIndexTestingFactory.GROUP_ID,
           ParallelIndexTestingFactory.TASK_RESOURCE,
           ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
+          ParallelIndexTestingFactory.SUBTASK_SPEC_ID,
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries("a"))
+          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries(StringTuple.create("a")))
       );
     }
   }

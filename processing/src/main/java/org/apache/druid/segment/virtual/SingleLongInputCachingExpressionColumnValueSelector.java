@@ -24,8 +24,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,7 +42,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
 
   private final ColumnValueSelector selector;
   private final Expr expression;
-  private final SingleInputBindings bindings = new SingleInputBindings();
+  private final SingleInputBindings bindings = new SingleInputBindings(ExpressionType.LONG);
 
   @Nullable
   private final LruEvalCache lruEvalCache;
@@ -51,6 +53,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   // Last computed output value, or null if there is none.
   @Nullable
   private ExprEval lastOutput;
+
+  // Computed output value for null.
+  @MonotonicNonNull
+  private ExprEval nullOutput;
 
   public SingleLongInputCachingExpressionColumnValueSelector(
       final ColumnValueSelector selector,
@@ -99,7 +105,11 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   {
     // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
     if (selector.isNull()) {
-      return ExprEval.ofLong(null);
+      if (nullOutput == null) {
+        bindings.set(null);
+        nullOutput = expression.eval(bindings);
+      }
+      return nullOutput;
     }
     // No assert for null handling, as the delegate selector already has it.
     final long input = selector.getLong();

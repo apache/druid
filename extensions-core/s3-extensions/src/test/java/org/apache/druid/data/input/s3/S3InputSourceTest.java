@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -27,6 +29,7 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -40,6 +43,8 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -85,6 +90,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.easymock.EasyMock.expectLastCall;
+
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
@@ -120,7 +127,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   );
 
   private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES = new S3InputSourceConfig(
-      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"));
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null);
 
   private static final List<CloudObjectLocation> EXPECTED_LOCATION =
       ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
@@ -221,6 +228,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     S3InputSourceConfig mockConfigPropertiesWithoutKeyAndSecret = EasyMock.createMock(S3InputSourceConfig.class);
     EasyMock.reset(mockConfigPropertiesWithoutKeyAndSecret);
+    EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.getAssumeRoleArn()).andStubReturn(null);
     EasyMock.expect(mockConfigPropertiesWithoutKeyAndSecret.isCredentialsConfigured())
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
@@ -279,6 +287,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null
+
     );
     final S3InputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), S3InputSource.class);
@@ -511,7 +520,50 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        temporaryFolder.newFolder()
+    );
+
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+
+    EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test(expected = SdkClientException.class)
+  public void testReaderRetriesOnSdkClientExceptionButNeverSucceedsThenThrows() throws Exception
+  {
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)), CONTENT);
+    expectSdkClientException(EXPECTED_URIS.get(0));
+    EasyMock.replay(S3_CLIENT);
+
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0)),
+        null,
+        null,
+        3 // only have three retries since they are slow
+    );
+
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(
@@ -556,7 +608,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     InputRowSchema someSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
-        ImmutableList.of("count")
+        ColumnsFilter.all()
     );
 
     InputSourceReader reader = inputSource.reader(
@@ -688,6 +740,31 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
   }
 
+
+  // Setup mocks for invoquing the resettable condition for the S3Entity:
+  private static void expectSdkClientException(URI uri) throws IOException
+  {
+    final String s3Bucket = uri.getAuthority();
+    final String key = S3Utils.extractS3Key(uri);
+
+    S3ObjectInputStream someInputStream = EasyMock.createMock(S3ObjectInputStream.class);
+    EasyMock.expect(someInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(new SdkClientException("Data read has a different length than the expected")).anyTimes();
+    someInputStream.close();
+    expectLastCall().andVoid().anyTimes();
+
+    S3Object someObject = EasyMock.createMock(S3Object.class);
+    EasyMock.expect(someObject.getBucketName()).andReturn(s3Bucket).anyTimes();
+    EasyMock.expect(someObject.getKey()).andReturn(key).anyTimes();
+    EasyMock.expect(someObject.getObjectContent()).andReturn(someInputStream).anyTimes();
+
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).anyTimes();
+
+    EasyMock.replay(someObject);
+    EasyMock.replay(someInputStream);
+  }
+
+
   private static void expectGetObjectCompressed(URI uri) throws IOException
   {
     final String s3Bucket = uri.getAuthority();
@@ -736,7 +813,25 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     DruidModule baseModule = new TestS3Module();
     final Injector injector = Guice.createInjector(
         new ObjectMapperModule(),
-        baseModule
+        baseModule,
+        new DruidModule()
+        {
+          @Provides
+          public AWSCredentialsProvider getAWSCredentialsProvider()
+          {
+            return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(null);
+          }
+
+          @Override public List<? extends Module> getJacksonModules()
+          {
+            return Collections.emptyList();
+          }
+
+          @Override public void configure(Binder binder)
+          {
+
+          }
+        }
     );
     final ObjectMapper baseMapper = injector.getInstance(ObjectMapper.class);
 

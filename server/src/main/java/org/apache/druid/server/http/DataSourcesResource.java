@@ -224,8 +224,19 @@ public class DataSourcesResource
       if (interval != null) {
         return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
       } else {
-        final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadataManager.markSegmentsAsUnused(dataSourceName, segmentIds);
+        final Set<SegmentId> segmentIds =
+            payload.getSegmentIds()
+                   .stream()
+                   .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
+                   .filter(Objects::nonNull)
+                   .collect(Collectors.toSet());
+
+        // Note: segments for the "wrong" datasource are ignored.
+        return segmentsMetadataManager.markSegmentsAsUnused(
+            segmentIds.stream()
+                      .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
+                      .collect(Collectors.toSet())
+        );
       }
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
@@ -407,7 +418,8 @@ public class DataSourcesResource
       @QueryParam("forceMetadataRefresh") final Boolean forceMetadataRefresh,
       @QueryParam("interval") @Nullable final String interval,
       @QueryParam("simple") @Nullable final String simple,
-      @QueryParam("full") @Nullable final String full
+      @QueryParam("full") @Nullable final String full,
+      @QueryParam("computeUsingClusterView") @Nullable String computeUsingClusterView
   )
   {
     if (forceMetadataRefresh == null) {
@@ -452,8 +464,10 @@ public class DataSourcesResource
       ).build();
     } else if (full != null) {
       // Calculate response for full mode
-      Map<String, Object2LongMap<String>> segmentLoadMap
-          = coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
+      Map<String, Object2LongMap<String>> segmentLoadMap =
+          (computeUsingClusterView != null) ?
+          coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments.get()) :
+          coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
       if (segmentLoadMap.isEmpty()) {
         return Response.serverError()
                        .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")
@@ -630,10 +644,11 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentIdString
   )
   {
-    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUnused(segmentId);
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
+    final boolean segmentStateChanged = segmentId != null && segmentsMetadataManager.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 

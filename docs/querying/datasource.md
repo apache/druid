@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql.md#from), table datasources reside in the the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -92,7 +92,7 @@ SELECT k, v FROM lookup.countries
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
-they reside in the the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
+they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
 Lookup datasources are key-value oriented and always have exactly two columns: `k` (the key) and `v` (the value), and
@@ -113,13 +113,24 @@ use table datasources.
 ### `union`
 
 <!--DOCUSAURUS_CODE_TABS-->
+<!--SQL-->
+```sql
+SELECT column1, column2
+FROM (
+  SELECT column1, column2 FROM table1
+  UNION ALL
+  SELECT column1, column2 FROM table2
+  UNION ALL
+  SELECT column1, column2 FROM table3
+)
+```
 <!--Native-->
 ```json
 {
   "queryType": "scan",
   "dataSource": {
     "type": "union",
-    "dataSources": ["<tableDataSourceName1>", "<tableDataSourceName2>", "<tableDataSourceName3>"]
+    "dataSources": ["table1", "table2", "table3"]
   },
   "columns": ["column1", "column2"],
   "intervals": ["0000/3000"]
@@ -127,14 +138,20 @@ use table datasources.
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Union datasources allow you to treat two or more table datasources as a single datasource. The datasources being unioned
-do not need to have identical schemas. If they do not fully match up, then columns that exist in one table but not
-another will be treated as if they contained all null values in the tables where they do not exist.
+Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
+applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
+"union" datasource.
 
-The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
-instead.
+With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
+and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
+numeric types). For this reason, it is more robust to write your queries to select specific columns.
 
-Union datasources are not available in Druid SQL.
+With the native union datasource, the tables being unioned do not need to have identical schemas. If they do not fully
+match up, then columns that exist in one table but not another will be treated as if they contained all null values in
+the tables where they do not exist.
+
+In either case, features like expressions, column aliasing, JOIN, GROUP BY, ORDER BY, and so on cannot be used with
+table unions.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
@@ -272,8 +289,8 @@ GROUP BY
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
 
-In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all tables
-other than the leftmost "base" table must fit in memory. It also means that the join condition must be an equality. This
+In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all datasources
+other than the leftmost "base" datasource must fit in memory. It also means that the join condition must be an equality. This
 feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
 [query](#query) datasources.
 

@@ -27,7 +27,7 @@ describe('TimedButton', () => {
       <TimedButton
         delays={[{ label: 'timeValue', delay: 1000 }]}
         onRefresh={() => null}
-        label={'Select delay'}
+        label="Select delay"
         defaultDelay={1000}
       />,
     );

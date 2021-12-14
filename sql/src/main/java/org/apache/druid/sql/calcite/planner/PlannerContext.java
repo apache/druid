@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -28,15 +29,27 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -47,9 +60,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PlannerContext
 {
   // query context keys
-  public static final String CTX_SQL_QUERY_ID = "sqlQueryId";
+  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
+  public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // This context parameter is an undocumented parameter, used internally, to allow the web console to
   // apply a limit without having to rewrite the SQL query.
@@ -58,34 +72,51 @@ public class PlannerContext
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
+  private final String sql;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
+  private final ObjectMapper jsonMapper;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
+  private final DruidSchemaCatalog rootSchema;
   private final Map<String, Object> queryContext;
-  private final List<TypedValue> parameters;
-  private final AuthenticationResult authenticationResult;
   private final String sqlQueryId;
-  private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
-
+  private final boolean stringifyArrays;
+  private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+  // bindings for dynamic parameters to bind during planning
+  private List<TypedValue> parameters = Collections.emptyList();
+  // result of authentication, providing identity to authorize set of resources produced by validation
+  private AuthenticationResult authenticationResult;
+  // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
+  private Set<ResourceAction> resourceActions = null;
+  // result of authorizing set of resources against authentication identity
+  private Access authorizationResult;
+  // error messages encountered while planning the query
+  @Nullable
+  private String planningError;
+  private QueryMaker queryMaker;
 
   private PlannerContext(
+      final String sql,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
       final DateTime localNow,
-      final Map<String, Object> queryContext,
-      final List<TypedValue> parameters,
-      final AuthenticationResult authenticationResult
+      final boolean stringifyArrays,
+      final DruidSchemaCatalog rootSchema,
+      final Map<String, Object> queryContext
   )
   {
+    this.sql = sql;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
+    this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
+    this.rootSchema = rootSchema;
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
-    this.parameters = Preconditions.checkNotNull(parameters);
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
-    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
+    this.stringifyArrays = stringifyArrays;
 
     String sqlQueryId = (String) this.queryContext.get(CTX_SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -96,18 +127,21 @@ public class PlannerContext
   }
 
   public static PlannerContext create(
+      final String sql,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
-      final Map<String, Object> queryContext,
-      final List<TypedValue> parameters,
-      final AuthenticationResult authenticationResult
+      final DruidSchemaCatalog rootSchema,
+      final Map<String, Object> queryContext
   )
   {
     final DateTime utcNow;
     final DateTimeZone timeZone;
+    final boolean stringifyArrays;
 
     if (queryContext != null) {
+      final Object stringifyParam = queryContext.get(CTX_SQL_STRINGIFY_ARRAYS);
       final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
       final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
 
@@ -122,19 +156,28 @@ public class PlannerContext
       } else {
         timeZone = plannerConfig.getSqlTimeZone();
       }
+
+      if (stringifyParam != null) {
+        stringifyArrays = Numbers.parseBoolean(stringifyParam);
+      } else {
+        stringifyArrays = true;
+      }
     } else {
       utcNow = new DateTime(DateTimeZone.UTC);
       timeZone = plannerConfig.getSqlTimeZone();
+      stringifyArrays = true;
     }
 
     return new PlannerContext(
+        sql,
         operatorTable,
         macroTable,
+        jsonMapper,
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
-        queryContext,
-        parameters,
-        authenticationResult
+        stringifyArrays,
+        rootSchema,
+        queryContext
     );
   }
 
@@ -146,6 +189,11 @@ public class PlannerContext
   public ExprMacroTable getExprMacroTable()
   {
     return macroTable;
+  }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 
   public PlannerConfig getPlannerConfig()
@@ -163,9 +211,20 @@ public class PlannerContext
     return localNow.getZone();
   }
 
+  @Nullable
+  public String getSchemaResourceType(String schema, String resourceName)
+  {
+    return rootSchema.getResourceType(schema, resourceName);
+  }
+
   public Map<String, Object> getQueryContext()
   {
     return queryContext;
+  }
+
+  public boolean isStringifyArrays()
+  {
+    return stringifyArrays;
   }
 
   public List<TypedValue> getParameters()
@@ -175,7 +234,12 @@ public class PlannerContext
 
   public AuthenticationResult getAuthenticationResult()
   {
-    return authenticationResult;
+    return Preconditions.checkNotNull(authenticationResult, "Authentication result not available");
+  }
+
+  public String getSql()
+  {
+    return sql;
   }
 
   public String getSqlQueryId()
@@ -183,7 +247,7 @@ public class PlannerContext
     return sqlQueryId;
   }
 
-  public List<String> getNativeQueryIds()
+  public CopyOnWriteArrayList<String> getNativeQueryIds()
   {
     return nativeQueryIds;
   }
@@ -191,6 +255,23 @@ public class PlannerContext
   public void addNativeQueryId(String queryId)
   {
     this.nativeQueryIds.add(queryId);
+  }
+
+  @Nullable
+  public String getPlanningError()
+  {
+    return planningError;
+  }
+
+  /**
+   * Sets the planning error in the context that will be shown to the user if the SQL query cannot be translated
+   * to a native query. This error is often a hint and thus should be phrased as such. Also, the final plan can
+   * be very different from SQL that user has written. So again, the error should be phrased to indicate this gap
+   * clearly.
+   */
+  public void setPlanningError(String formatText, Object... arguments)
+  {
+    planningError = StringUtils.nonStrictFormat(formatText, arguments);
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)
@@ -204,8 +285,7 @@ public class PlannerContext
               new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
               localNow
           ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
-          DATA_CTX_AUTHENTICATION_RESULT, authenticationResult
+          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone()
       );
       private final Map<String, Object> context;
 
@@ -217,6 +297,9 @@ public class PlannerContext
         for (TypedValue parameter : parameters) {
           builder.put("?" + i, parameter.value);
           i++;
+        }
+        if (authenticationResult != null) {
+          builder.put(DATA_CTX_AUTHENTICATION_RESULT, authenticationResult);
         }
         context = builder.build();
       }
@@ -247,5 +330,66 @@ public class PlannerContext
     }
 
     return new DruidDataContext();
+  }
+
+
+  public Access getAuthorizationResult()
+  {
+    return Preconditions.checkNotNull(authorizationResult, "Authorization result not available");
+  }
+
+  public void setParameters(List<TypedValue> parameters)
+  {
+    this.parameters = Preconditions.checkNotNull(parameters, "parameters");
+  }
+
+  public void setAuthenticationResult(AuthenticationResult authenticationResult)
+  {
+    if (this.authenticationResult != null) {
+      // It's a bug if this happens, because setAuthenticationResult should be called exactly once.
+      throw new ISE("Authentication result has already been set");
+    }
+
+    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
+  }
+
+  public void setAuthorizationResult(Access access)
+  {
+    if (this.authorizationResult != null) {
+      // It's a bug if this happens, because setAuthorizationResult should be called exactly once.
+      throw new ISE("Authorization result has already been set");
+    }
+
+    this.authorizationResult = Preconditions.checkNotNull(access, "authorizationResult");
+  }
+
+  public Set<ResourceAction> getResourceActions()
+  {
+    return Preconditions.checkNotNull(resourceActions, "Resources not available");
+  }
+
+  public void setResourceActions(Set<ResourceAction> resourceActions)
+  {
+    if (this.resourceActions != null) {
+      // It's a bug if this happens, because setResourceActions should be called exactly once.
+      throw new ISE("Resources have already been set");
+    }
+
+    this.resourceActions = Preconditions.checkNotNull(resourceActions, "resourceActions");
+  }
+
+  public void setQueryMaker(QueryMaker queryMaker)
+  {
+    if (this.queryMaker != null) {
+      // It's a bug if this happens, because setQueryMaker should be called exactly once.
+      throw new ISE("QueryMaker has already been set");
+    }
+
+    this.queryMaker = Preconditions.checkNotNull(queryMaker, "queryMaker");
+  }
+
+  public QueryMaker getQueryMaker()
+  {
+    return Preconditions.checkNotNull(queryMaker, "QueryMaker not available");
   }
 }

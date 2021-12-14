@@ -50,7 +50,9 @@ Expressions can contain variables. Variable names may contain letters, digits, '
 
 For logical operators, a number is true if and only if it is positive (0 or negative value means false). For string type, it's the evaluation result of 'Boolean.valueOf(string)'.
 
-[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values. When treated as a scalar type, an expression will automatically be transformed to apply the scalar operation across all values of the multi-valued type, to mimic Druid's native behavior. Values that result in arrays will be coerced back into the native Druid string type for aggregation. Druid aggregations on multi-value string dimensions on the individual values, _not_ the 'array', behaving similar to the `UNNEST` operator available in many SQL dialects. However, by using the `array_to_string` function, aggregations may be done on a stringified version of the complete array, allowing the complete row to be preserved. Using `string_to_array` in an expression post-aggregator, allows transforming the stringified dimension back into the true native array type.
+[Multi-value string dimensions](../querying/multi-value-dimensions.md) are supported and may be treated as either scalar or array typed values, as follows:  
+* When treated as a scalar type, the expression is automatically transformed so that the scalar operation is applied across all values of the multi-valued type, mimicking Druid's native behavior. 
+* Druid coerces values that result in arrays back into the native Druid string type for grouping and aggregation. Grouping on multi-value string dimensions in Druid groups by the individual values, not the 'array'. This behavior produces results similar to the `UNNEST` operator available in many SQL dialects. Alternatively, you can use the `array_to_string` function to perform the aggregation on a _stringified_ version of the complete array and therefore preserve the complete row. To transform the stringified dimension back into the true native array type, use `string_to_array` in an expression post-aggregator.
 
 
 The following built-in functions are available.
@@ -63,8 +65,10 @@ The following built-in functions are available.
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
-|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
+|case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
+|isnull|isnull(expr) returns 1 if the value is null, else 0|
+|notnull|notnull(expr) returns 1 if the value is not null, else 0|
 |bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## String functions
@@ -72,7 +76,7 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.md#format-java.lang.String-java.lang.Object...-).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
@@ -115,45 +119,54 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 
 |name|description|
 |----|-----------|
-|abs|abs(x) would return the absolute value of x|
-|acos|acos(x) would return the arc cosine of x|
-|asin|asin(x) would return the arc sine of x|
-|atan|atan(x) would return the arc tangent of x|
-|atan2|atan2(y, x) would return the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
-|cbrt|cbrt(x) would return the cube root of x|
-|ceil|ceil(x) would return the smallest (closest to negative infinity) double value that is greater than or equal to x and is equal to a mathematical integer|
-|copysign|copysign(x) would return the first floating-point argument with the sign of the second floating-point argument|
-|cos|cos(x) would return the trigonometric cosine of x|
-|cosh|cosh(x) would return the hyperbolic cosine of x|
-|cot|cot(x) would return the trigonometric cotangent of an angle x|
+|abs|abs(x) returns the absolute value of x|
+|acos|acos(x) returns the arc cosine of x|
+|asin|asin(x) returns the arc sine of x|
+|atan|atan(x) returns the arc tangent of x|
+|bitwiseAnd|bitwiseAnd(x,y) returns the result of x & y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseComplement|bitwiseComplement(x) returns the result of ~x. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
+|bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) converts a long to the IEEE 754 floating-point double specified by the bits stored in the long. If the input is not a long, it is implicitly cast to a long prior to conversion|
+|bitwiseOr|bitwiseOr(x,y) returns the result of x [PIPE] y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x << y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x >> y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseXor|bitwiseXor(x,y) returns the result of x ^ y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|atan2|atan2(y, x) returns the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
+|cbrt|cbrt(x) returns the cube root of x|
+|ceil|ceil(x) returns the smallest (closest to negative infinity) double value that is greater than or equal to x and is equal to a mathematical integer|
+|copysign|copysign(x) returns the first floating-point argument with the sign of the second floating-point argument|
+|cos|cos(x) returns the trigonometric cosine of x|
+|cosh|cosh(x) returns the hyperbolic cosine of x|
+|cot|cot(x) returns the trigonometric cotangent of an angle x|
 |div|div(x,y) is integer division of x by y|
-|exp|exp(x) would return Euler's number raised to the power of x|
-|expm1|expm1(x) would return e^x-1|
-|floor|floor(x) would return the largest (closest to positive infinity) double value that is less than or equal to x and is equal to a mathematical integer|
-|getExponent|getExponent(x) would return the unbiased exponent used in the representation of x|
-|hypot|hypot(x, y) would return sqrt(x^2+y^2) without intermediate overflow or underflow|
-|log|log(x) would return the natural logarithm of x|
-|log10|log10(x) would return the base 10 logarithm of x|
-|log1p|log1p(x) would the natural logarithm of x + 1|
-|max|max(x, y) would return the greater of two values|
-|min|min(x, y) would return the smaller of two values|
-|nextafter|nextafter(x, y) would return the floating-point number adjacent to the x in the direction of the y|
-|nextUp|nextUp(x) would return the floating-point value adjacent to x in the direction of positive infinity|
-|pi|pi would return the constant value of the π |
-|pow|pow(x, y) would return the value of the x raised to the power of y|
-|remainder|remainder(x, y) would return the remainder operation on two arguments as prescribed by the IEEE 754 standard|
-|rint|rint(x) would return value that is closest in value to x and is equal to a mathematical integer|
-|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x will return 0. If x is infinity, x will be converted to the nearest finite double. |
-|scalb|scalb(d, sf) would return d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
-|signum|signum(x) would return the signum function of the argument x|
-|sin|sin(x) would return the trigonometric sine of an angle x|
-|sinh|sinh(x) would return the hyperbolic sine of x|
-|sqrt|sqrt(x) would return the correctly rounded positive square root of x|
-|tan|tan(x) would return the trigonometric tangent of an angle x|
-|tanh|tanh(x) would return the hyperbolic tangent of x|
+|exp|exp(x) returns Euler's number raised to the power of x|
+|expm1|expm1(x) returns e^x-1|
+|floor|floor(x) returns the largest (closest to positive infinity) double value that is less than or equal to x and is equal to a mathematical integer|
+|getExponent|getExponent(x) returns the unbiased exponent used in the representation of x|
+|hypot|hypot(x, y) returns sqrt(x^2+y^2) without intermediate overflow or underflow|
+|log|log(x) returns the natural logarithm of x|
+|log10|log10(x) returns the base 10 logarithm of x|
+|log1p|log1p(x) will the natural logarithm of x + 1|
+|max|max(x, y) returns the greater of two values|
+|min|min(x, y) returns the smaller of two values|
+|nextafter|nextafter(x, y) returns the floating-point number adjacent to the x in the direction of the y|
+|nextUp|nextUp(x) returns the floating-point value adjacent to x in the direction of positive infinity|
+|pi|pi returns the constant value of the π |
+|pow|pow(x, y) returns the value of the x raised to the power of y|
+|remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
+|rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
+|round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
+|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns 0 or `null` if `druid.generic.useDefaultValueForNull=false` |
+|scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
+|signum|signum(x) returns the signum function of the argument x|
+|sin|sin(x) returns the trigonometric sine of an angle x|
+|sinh|sinh(x) returns the hyperbolic sine of x|
+|sqrt|sqrt(x) returns the correctly rounded positive square root of x|
+|tan|tan(x) returns the trigonometric tangent of an angle x|
+|tanh|tanh(x) returns the hyperbolic tangent of x|
 |todegrees|todegrees(x) converts an angle measured in radians to an approximately equivalent angle measured in degrees|
 |toradians|toradians(x) converts an angle measured in degrees to an approximately equivalent angle measured in radians|
-|ulp|ulp(x) would return the size of an ulp of the argument x|
+|ulp|ulp(x) returns the size of an ulp of the argument x|
 
 
 ## Array functions
@@ -169,14 +182,17 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
-| array_append(arr1,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
+| array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
+| array_set_add(arr,expr) | adds expr to arr and converts the array to a new array composed of the unique set of elements. The resulting array type determined by the type of the array |
+| array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
 | string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
 
 
 ## Apply functions
+Apply functions allow for special 'lambda' expressions to be defined and applied to array inputs to enable free-form transformations.
 
 | function | description |
 | --- | --- |
@@ -188,6 +204,26 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | any(lambda,arr) | returns 1 if any element in the array matches the lambda expression, else 0 |
 | all(lambda,arr) | returns 1 if all elements in the array matches the lambda expression, else 0 |
 
+
+### Lambda expressions syntax
+Lambda expressions are a sort of function definition, where new identifiers can be defined and passed as input to the expression body
+```
+(identifier1 ...) -> expr
+```
+e.g.
+```
+(x, y) -> x + y 
+```
+The identifier arguments of a lambda expression correspond to the elements of the array it is being applied to. For example:
+```
+map((x) -> x + 1, some_multi_value_column)
+```
+will map each element of `some_multi_value_column` to the identifier `x` so that the lambda expression body can be evaluated for each `x`. The scoping rules are that lambda arguments will override identifiers which are defined externally from the lambda expression body. Using the same example:
+
+```
+map((x) -> x + 1, x)
+```
+in this case, the `x` when evaluating `x + 1` is the lambda argument, thus an element of the multi-valued column `x`, rather than the column `x` itself.
 
 ## Reduction functions
 
@@ -215,6 +251,14 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. If `address` is a long that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 
+## Other functions
+
+| function | description |
+| --- | --- |
+| human_readable_binary_byte_format(value[, precision]) | Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_binary_byte_format(1048576) returns `1.00 MiB`</li><li>human_readable_binary_byte_format(1048576, 3) returns `1.000 MiB`</li> |
+| human_readable_decimal_byte_format(value[, precision]) | Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. `precision` must be in the range of [0,3] (default: 2). For example:<li> human_readable_decimal_byte_format(1000000) returns `1.00 MB`</li><li>human_readable_decimal_byte_format(1000000, 3) returns `1.000 MB`</li> |
+| human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
+
 
 ## Vectorization Support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
@@ -223,7 +267,44 @@ supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for numeric types
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useStrictBooleans=true`)
+* comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
+* boolean functions: `isnull`, `notnull` are supported for string and numeric types
+* conditional functions: `nvl` is supported for string and numeric types
+* string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
+
+## Logical operator modes
+Prior to the 0.23 release of Apache Druid, boolean function expressions have inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. 
+
+After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useStrictBooleans=true`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
+
+For the "or" operator:
+* `true || null`, `null || true`, -> `1`
+* `false || null`, `null || false`, `null || null`-> `null`
+
+For the "and" operator:
+* `true && null`, `null && true`, `null && null` -> `null`
+* `false && null`, `null && false` -> `0`
+
+Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
+* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
+* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
+
+Legacy behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `'troo'`
+* `'troo' || 'true'` -> `'true'`
+
+SQL compatible behavior:
+* `100 && 11` -> `1`
+* `0.7 || 0.3` -> `1`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `0`
+* `'troo' || 'true'` -> `1`
+
+

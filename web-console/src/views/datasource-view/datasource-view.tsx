@@ -19,7 +19,7 @@
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlQuery, SqlRef } from 'druid-query-toolkit';
+import { SqlQuery, SqlTableRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -49,6 +49,7 @@ import {
   addFilter,
   Capabilities,
   CapabilitiesMode,
+  compact,
   countBy,
   deepGet,
   formatBytes,
@@ -56,25 +57,30 @@ import {
   formatMillions,
   formatPercent,
   getDruidErrorMessage,
+  isNumberLikeNaN,
+  LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
+  NumberLike,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';
-import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 
 import './datasource-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  full: [
+  'full': [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
+    'Segment rows',
     'Segment size',
     'Segment granularity',
     'Total rows',
@@ -89,7 +95,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-sql': [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
     'Compaction',
     '% Compacted',
@@ -100,8 +106,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-proxy': [
     'Datasource name',
     'Availability',
-    'Segment load/drop queues',
+    'Availability detail',
     'Total data size',
+    'Segment rows',
     'Segment size',
     'Segment granularity',
     'Total rows',
@@ -111,7 +118,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   ],
 };
 
-function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string {
+const DEFAULT_RULES_KEY = '_default';
+
+function formatLoadDrop(segmentsToLoad: NumberLike, segmentsToDrop: NumberLike): string {
   const loadDrop: string[] = [];
   if (segmentsToLoad) {
     loadDrop.push(`${pluralIfNeeded(segmentsToLoad, 'segment')} to load`);
@@ -124,6 +133,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 
 const formatTotalDataSize = formatBytes;
 const formatSegmentRows = formatMillions;
+const formatSegmentSize = formatBytes;
 const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
@@ -149,33 +159,61 @@ const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: number;
-  readonly num_available_segments: number;
-  readonly num_segments_to_load: number;
-  readonly num_segments_to_drop: number;
-  readonly minute_aligned_segments: number;
-  readonly hour_aligned_segments: number;
-  readonly day_aligned_segments: number;
-  readonly month_aligned_segments: number;
-  readonly year_aligned_segments: number;
-  readonly total_data_size: number;
-  readonly replicated_size: number;
-  readonly min_segment_rows: number;
-  readonly avg_segment_rows: number;
-  readonly max_segment_rows: number;
-  readonly total_rows: number;
-  readonly avg_row_size: number;
+  readonly num_segments: NumberLike;
+  readonly num_segments_to_load: NumberLike;
+  readonly num_segments_to_drop: NumberLike;
+  readonly minute_aligned_segments: NumberLike;
+  readonly hour_aligned_segments: NumberLike;
+  readonly day_aligned_segments: NumberLike;
+  readonly month_aligned_segments: NumberLike;
+  readonly year_aligned_segments: NumberLike;
+  readonly all_granularity_segments: NumberLike;
+  readonly total_data_size: NumberLike;
+  readonly replicated_size: NumberLike;
+  readonly min_segment_rows: NumberLike;
+  readonly avg_segment_rows: NumberLike;
+  readonly max_segment_rows: NumberLike;
+  readonly min_segment_size: NumberLike;
+  readonly avg_segment_size: NumberLike;
+  readonly max_segment_size: NumberLike;
+  readonly total_rows: NumberLike;
+  readonly avg_row_size: NumberLike;
+}
+
+function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryResultRow {
+  return {
+    datasource,
+    num_segments: 0,
+    num_segments_to_load: 0,
+    num_segments_to_drop: 0,
+    minute_aligned_segments: 0,
+    hour_aligned_segments: 0,
+    day_aligned_segments: 0,
+    month_aligned_segments: 0,
+    year_aligned_segments: 0,
+    all_granularity_segments: 0,
+    total_data_size: 0,
+    replicated_size: 0,
+    min_segment_rows: 0,
+    avg_segment_rows: 0,
+    max_segment_rows: 0,
+    min_segment_size: 0,
+    avg_segment_size: 0,
+    max_segment_size: 0,
+    total_rows: 0,
+    avg_row_size: 0,
+  };
 }
 
 function segmentGranularityCountsToRank(row: DatasourceQueryResultRow): number {
-  return (
-    Number(Boolean(row.num_segments)) +
-    Number(Boolean(row.minute_aligned_segments)) +
-    Number(Boolean(row.hour_aligned_segments)) +
-    Number(Boolean(row.day_aligned_segments)) +
-    Number(Boolean(row.month_aligned_segments)) +
-    Number(Boolean(row.year_aligned_segments))
-  );
+  if (row.all_granularity_segments) return 7;
+  if (row.year_aligned_segments) return 6;
+  if (row.month_aligned_segments) return 5;
+  if (row.day_aligned_segments) return 4;
+  if (row.hour_aligned_segments) return 3;
+  if (row.minute_aligned_segments) return 2;
+  if (row.num_segments) return 1;
+  return 0;
 }
 
 interface Datasource extends DatasourceQueryResultRow {
@@ -183,6 +221,10 @@ interface Datasource extends DatasourceQueryResultRow {
   readonly compactionConfig?: CompactionConfig;
   readonly compactionStatus?: CompactionStatus;
   readonly unused?: boolean;
+}
+
+function makeUnusedDatasource(datasource: string): Datasource {
+  return { ...makeEmptyDatasourceQueryResultRow(datasource), rules: [], unused: true };
 }
 
 interface DatasourcesAndDefaultRules {
@@ -197,7 +239,7 @@ interface RetentionDialogOpenOn {
 
 interface CompactionDialogOpenOn {
   readonly datasource: string;
-  readonly compactionConfig: CompactionConfig;
+  readonly compactionConfig?: CompactionConfig;
 }
 
 export interface DatasourcesViewProps {
@@ -224,13 +266,17 @@ export interface DatasourcesViewState {
   useUnuseAction: 'use' | 'unuse';
   useUnuseInterval: string;
   showForceCompact: boolean;
-  hiddenColumns: LocalStorageBackedArray<string>;
-  showChart: boolean;
-  chartWidth: number;
-  chartHeight: number;
+  visibleColumns: LocalStorageBackedVisibility;
+  showSegmentTimeline: boolean;
 
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
+}
+
+interface DatasourceQuery {
+  capabilities: Capabilities;
+  visibleColumns: LocalStorageBackedVisibility;
+  showUnused: boolean;
 }
 
 export class DatasourcesView extends React.PureComponent<
@@ -241,34 +287,55 @@ export class DatasourcesView extends React.PureComponent<
   static FULLY_AVAILABLE_COLOR = '#57d500';
   static PARTIALLY_AVAILABLE_COLOR = '#ffbf00';
 
-  static DATASOURCE_SQL = `SELECT
-  datasource,
-  COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments,
-  COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
-  COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
-  COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
-  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments,
-  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments,
-  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments,
-  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments,
-  COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments,
-  SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size,
-  SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size,
-  MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows,
-  AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows,
-  MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows,
-  SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
-  CASE
-    WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0
-    THEN (
-      SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) /
-      SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)
-    )
-    ELSE 0
-  END AS avg_row_size
+  static query(visibleColumns: LocalStorageBackedVisibility) {
+    const columns = compact(
+      [
+        visibleColumns.shown('Datasource name') && `datasource`,
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
+          `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
+          `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
+        ],
+        visibleColumns.shown('Total data size') &&
+          `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
+        visibleColumns.shown('Segment rows') && [
+          `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
+          `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
+          `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
+        ],
+        visibleColumns.shown('Segment size') && [
+          `MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size`,
+          `AVG("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size`,
+          `MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size`,
+        ],
+        visibleColumns.shown('Segment granularity') && [
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
+          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
+        ],
+        visibleColumns.shown('Total rows') &&
+          `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
+        visibleColumns.shown('Avg. row size') &&
+          `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
+        visibleColumns.shown('Replicated size') &&
+          `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
+      ].flat(),
+    );
+
+    if (!columns.length) {
+      columns.push(`datasource`);
+    }
+
+    return `SELECT
+${columns.join(',\n')}
 FROM sys.segments
 GROUP BY 1
 ORDER BY 1`;
+  }
 
   static formatRules(rules: Rule[]): string {
     if (rules.length === 0) {
@@ -280,8 +347,12 @@ ORDER BY 1`;
     }
   }
 
-  private datasourceQueryManager: QueryManager<Capabilities, DatasourcesAndDefaultRules>;
-  private tiersQueryManager: QueryManager<Capabilities, string[]>;
+  private readonly datasourceQueryManager: QueryManager<
+    DatasourceQuery,
+    DatasourcesAndDefaultRules
+  >;
+
+  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -301,21 +372,26 @@ ORDER BY 1`;
       useUnuseAction: 'unuse',
       useUnuseInterval: '',
       showForceCompact: false,
-      hiddenColumns: new LocalStorageBackedArray<string>(
+      visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION,
+        ['Segment size', 'Segment granularity'],
       ),
-      showChart: false,
-      chartWidth: window.innerWidth * 0.85,
-      chartHeight: window.innerHeight * 0.4,
+      showSegmentTimeline: false,
 
       actions: [],
     };
 
     this.datasourceQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async (
+        { capabilities, visibleColumns, showUnused },
+        _cancelToken,
+        setIntermediateQuery,
+      ) => {
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
-          datasources = await queryDruidSql({ query: DatasourcesView.DATASOURCE_SQL });
+          const query = DatasourcesView.query(visibleColumns);
+          setIntermediateQuery(query);
+          datasources = await queryDruidSql({ query });
         } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await Api.instance.get(
             '/druid/coordinator/v1/datasources?simple',
@@ -330,7 +406,6 @@ ORDER BY 1`;
               const numSegments = availableSegments + segmentsToLoad;
               return {
                 datasource: d.name,
-                num_available_segments: availableSegments,
                 num_segments: numSegments,
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
@@ -339,11 +414,15 @@ ORDER BY 1`;
                 day_aligned_segments: -1,
                 month_aligned_segments: -1,
                 year_aligned_segments: -1,
+                all_granularity_segments: -1,
                 replicated_size: -1,
                 total_data_size: totalDataSize,
                 min_segment_rows: -1,
                 avg_segment_rows: -1,
                 max_segment_rows: -1,
+                min_segment_size: -1,
+                avg_segment_size: -1,
+                max_segment_size: -1,
                 total_rows: -1,
                 avg_row_size: -1,
               };
@@ -354,11 +433,8 @@ ORDER BY 1`;
         }
 
         if (!capabilities.hasCoordinatorAccess()) {
-          datasources.forEach((ds: any) => {
-            ds.rules = [];
-          });
           return {
-            datasources,
+            datasources: datasources.map(ds => ({ ...ds, rules: [] })),
             defaultRules: [],
           };
         }
@@ -366,46 +442,44 @@ ORDER BY 1`;
         const seen = countBy(datasources, x => x.datasource);
 
         let unused: string[] = [];
-        if (this.state.showUnused) {
-          // Using 'includeDisabled' parameter for compatibility.
-          // Should be changed to 'includeUnused' in Druid 0.17
-          const unusedResp = await Api.instance.get(
-            '/druid/coordinator/v1/metadata/datasources?includeDisabled',
+        if (showUnused) {
+          const unusedResp = await Api.instance.get<string[]>(
+            '/druid/coordinator/v1/metadata/datasources?includeUnused',
           );
-          unused = unusedResp.data.filter((d: string) => !seen[d]);
+          unused = unusedResp.data.filter(d => !seen[d]);
         }
 
-        const rulesResp = await Api.instance.get('/druid/coordinator/v1/rules');
+        const rulesResp = await Api.instance.get<Record<string, Rule[]>>(
+          '/druid/coordinator/v1/rules',
+        );
         const rules = rulesResp.data;
 
-        const compactionConfigsResp = await Api.instance.get(
-          '/druid/coordinator/v1/config/compaction',
-        );
+        const compactionConfigsResp = await Api.instance.get<{
+          compactionConfigs: CompactionConfig[];
+        }>('/druid/coordinator/v1/config/compaction');
         const compactionConfigs = lookupBy(
           compactionConfigsResp.data.compactionConfigs || [],
-          (c: CompactionConfig) => c.dataSource,
+          c => c.dataSource,
         );
 
-        const compactionStatusesResp = await Api.instance.get(
+        const compactionStatusesResp = await Api.instance.get<{ latestStatus: CompactionStatus[] }>(
           '/druid/coordinator/v1/compaction/status',
         );
         const compactionStatuses = lookupBy(
           compactionStatusesResp.data.latestStatus || [],
-          (c: CompactionStatus) => c.dataSource,
+          c => c.dataSource,
         );
-
-        const allDatasources = (datasources as any).concat(
-          unused.map(d => ({ datasource: d, unused: true })),
-        );
-        allDatasources.forEach((ds: any) => {
-          ds.rules = rules[ds.datasource] || [];
-          ds.compactionConfig = compactionConfigs[ds.datasource];
-          ds.compactionStatus = compactionStatuses[ds.datasource];
-        });
 
         return {
-          datasources: allDatasources,
-          defaultRules: rules['_default'],
+          datasources: datasources.concat(unused.map(makeUnusedDatasource)).map(ds => {
+            return {
+              ...ds,
+              rules: rules[ds.datasource] || [],
+              compactionConfig: compactionConfigs[ds.datasource],
+              compactionStatus: compactionStatuses[ds.datasource],
+            };
+          }),
+          defaultRules: rules[DEFAULT_RULES_KEY] || [],
         };
       },
       onStateChange: datasourcesAndDefaultRulesState => {
@@ -430,23 +504,21 @@ ORDER BY 1`;
     });
   }
 
-  private handleResize = () => {
-    this.setState({
-      chartWidth: window.innerWidth * 0.85,
-      chartHeight: window.innerHeight * 0.4,
-    });
-  };
-
-  private refresh = (auto: any): void => {
+  private readonly refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
     this.tiersQueryManager.rerunLastQuery(auto);
   };
 
+  private fetchDatasourceData() {
+    const { capabilities } = this.props;
+    const { visibleColumns, showUnused } = this.state;
+    this.datasourceQueryManager.runQuery({ capabilities, visibleColumns, showUnused });
+  }
+
   componentDidMount(): void {
     const { capabilities } = this.props;
-    this.datasourceQueryManager.runQuery(capabilities);
+    this.fetchDatasourceData();
     this.tiersQueryManager.runQuery(capabilities);
-    window.addEventListener('resize', this.handleResize);
   }
 
   componentWillUnmount(): void {
@@ -477,7 +549,7 @@ ORDER BY 1`;
           this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: undefined });
         }}
         onSuccess={() => {
-          this.datasourceQueryManager.rerunLastQuery();
+          this.fetchDatasourceData();
         }}
       >
         <p>
@@ -510,7 +582,7 @@ ORDER BY 1`;
           this.setState({ datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: undefined });
         }}
         onSuccess={() => {
-          this.datasourceQueryManager.rerunLastQuery();
+          this.fetchDatasourceData();
         }}
       >
         <p>{`Are you sure you want to mark as used all non-overshadowed segments in '${datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn}'?`}</p>
@@ -547,7 +619,7 @@ ORDER BY 1`;
           this.setState({ datasourceToMarkSegmentsByIntervalIn: undefined });
         }}
         onSuccess={() => {
-          this.datasourceQueryManager.rerunLastQuery();
+          this.fetchDatasourceData();
         }}
       >
         <p>{`Please select the interval in which you want to mark segments as ${usedWord} in '${datasourceToMarkSegmentsByIntervalIn}'?`}</p>
@@ -588,7 +660,7 @@ ORDER BY 1`;
           this.setState({ killDatasource: undefined });
         }}
         onSuccess={() => {
-          this.datasourceQueryManager.rerunLastQuery();
+          this.fetchDatasourceData();
         }}
         warningChecks={[
           `I understand that this operation will delete all metadata about the unused segments of ${killDatasource} and removes them from deep storage.`,
@@ -605,6 +677,7 @@ ORDER BY 1`;
 
   renderBulkDatasourceActions() {
     const { goToQuery, capabilities } = this.props;
+    const lastDatasourcesQuery = this.datasourceQueryManager.getLastIntermediateQuery();
 
     return (
       <MoreButton
@@ -623,7 +696,11 @@ ORDER BY 1`;
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
+            disabled={!lastDatasourcesQuery}
+            onClick={() => {
+              if (!lastDatasourcesQuery) return;
+              goToQuery(lastDatasourcesQuery);
+            }}
           />
         )}
         <MenuItem
@@ -660,7 +737,7 @@ ORDER BY 1`;
     );
   }
 
-  private saveRules = async (datasource: string, rules: Rule[], comment: string) => {
+  private readonly saveRules = async (datasource: string, rules: Rule[], comment: string) => {
     try {
       await Api.instance.post(`/druid/coordinator/v1/rules/${Api.encodePath(datasource)}`, rules, {
         headers: {
@@ -680,10 +757,10 @@ ORDER BY 1`;
       message: 'Retention rules submitted successfully',
       intent: Intent.SUCCESS,
     });
-    this.datasourceQueryManager.rerunLastQuery();
+    this.fetchDatasourceData();
   };
 
-  private editDefaultRules = () => {
+  private readonly editDefaultRules = () => {
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState(state => {
@@ -700,12 +777,12 @@ ORDER BY 1`;
     }, 50);
   };
 
-  private saveCompaction = async (compactionConfig: any) => {
+  private readonly saveCompaction = async (compactionConfig: any) => {
     if (!compactionConfig) return;
     try {
       await Api.instance.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
       this.setState({ compactionDialogOpenOn: undefined });
-      this.datasourceQueryManager.rerunLastQuery();
+      this.fetchDatasourceData();
     } catch (e) {
       AppToaster.show({
         message: getDruidErrorMessage(e),
@@ -714,7 +791,7 @@ ORDER BY 1`;
     }
   };
 
-  private deleteCompaction = async () => {
+  private readonly deleteCompaction = () => {
     const { compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn) return;
     const datasource = compactionDialogOpenOn.datasource;
@@ -728,9 +805,7 @@ ORDER BY 1`;
             await Api.instance.delete(
               `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}`,
             );
-            this.setState({ compactionDialogOpenOn: undefined }, () =>
-              this.datasourceQueryManager.rerunLastQuery(),
-            );
+            this.setState({ compactionDialogOpenOn: undefined }, () => this.fetchDatasourceData());
           } catch (e) {
             AppToaster.show({
               message: getDruidErrorMessage(e),
@@ -743,17 +818,17 @@ ORDER BY 1`;
   };
 
   private toggleUnused(showUnused: boolean) {
-    if (!showUnused) {
-      this.datasourceQueryManager.rerunLastQuery();
-    }
-    this.setState({ showUnused: !showUnused });
+    this.setState({ showUnused: !showUnused }, () => {
+      if (showUnused) return;
+      this.fetchDatasourceData();
+    });
   }
 
   getDatasourceActions(
     datasource: string,
-    unused: boolean,
+    unused: boolean | undefined,
     rules: Rule[],
-    compactionConfig: CompactionConfig,
+    compactionConfig: CompactionConfig | undefined,
   ): BasicAction[] {
     const { goToQuery, goToTask, capabilities } = this.props;
 
@@ -763,7 +838,7 @@ ORDER BY 1`;
       goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
+        onAction: () => goToQuery(SqlQuery.create(SqlTableRef.create(datasource)).toString()),
       });
     }
 
@@ -907,7 +982,7 @@ ORDER BY 1`;
       datasourcesAndDefaultRulesState,
       datasourceFilter,
       showUnused,
-      hiddenColumns,
+      visibleColumns,
     } = this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data
@@ -923,10 +998,12 @@ ORDER BY 1`;
     const totalDataSizeValues = datasources.map(d => formatTotalDataSize(d.total_data_size));
 
     const minSegmentRowsValues = datasources.map(d => formatSegmentRows(d.min_segment_rows));
-
     const avgSegmentRowsValues = datasources.map(d => formatSegmentRows(d.avg_segment_rows));
-
     const maxSegmentRowsValues = datasources.map(d => formatSegmentRows(d.max_segment_rows));
+
+    const minSegmentSizeValues = datasources.map(d => formatSegmentSize(d.min_segment_size));
+    const avgSegmentSizeValues = datasources.map(d => formatSegmentSize(d.avg_segment_size));
+    const maxSegmentSizeValues = datasources.map(d => formatSegmentSize(d.max_segment_size));
 
     const totalRowsValues = datasources.map(d => formatTotalRows(d.total_rows));
 
@@ -956,10 +1033,13 @@ ORDER BY 1`;
           onFilteredChange={filtered => {
             this.setState({ datasourceFilter: filtered });
           }}
+          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={datasources.length > STANDARD_TABLE_PAGE_SIZE}
           columns={[
             {
               Header: twoLines('Datasource', 'name'),
-              show: hiddenColumns.exists('Datasource name'),
+              show: visibleColumns.shown('Datasource name'),
               accessor: 'datasource',
               width: 150,
               Cell: ({ value }) => {
@@ -978,19 +1058,12 @@ ORDER BY 1`;
             },
             {
               Header: 'Availability',
-              show: hiddenColumns.exists('Availability'),
-              id: 'availability',
+              show: visibleColumns.shown('Availability'),
               filterable: false,
               minWidth: 200,
-              accessor: row => {
-                return {
-                  num_available: row.num_available_segments,
-                  num_total: row.num_segments,
-                };
-              },
-              Cell: ({ original }) => {
-                const { datasource, num_available_segments, num_segments, unused } = original;
-
+              accessor: 'num_segments',
+              Cell: ({ value: num_segments, original }) => {
+                const { datasource, unused, num_segments_to_load } = original as Datasource;
                 if (unused) {
                   return (
                     <span>
@@ -1005,7 +1078,9 @@ ORDER BY 1`;
                     {pluralIfNeeded(num_segments, 'segment')}
                   </a>
                 );
-                if (num_available_segments === num_segments) {
+                if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
+                  return '-';
+                } else if (num_segments_to_load === 0) {
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
@@ -1015,22 +1090,16 @@ ORDER BY 1`;
                     </span>
                   );
                 } else {
+                  const numAvailableSegments = num_segments - num_segments_to_load;
                   const percentAvailable = (
-                    Math.floor((num_available_segments / num_segments) * 1000) / 10
+                    Math.floor((numAvailableSegments / num_segments) * 1000) / 10
                   ).toFixed(1);
-                  const missing = num_segments - num_available_segments;
-                  const segmentsMissingEl = (
-                    <a onClick={() => goToSegments(datasource, true)}>{`${pluralIfNeeded(
-                      missing,
-                      'segment',
-                    )} unavailable`}</a>
-                  );
                   return (
                     <span>
                       <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
-                        {num_available_segments ? '\u25cf' : '\u25cb'}&nbsp;
+                        {numAvailableSegments ? '\u25cf' : '\u25cb'}&nbsp;
                       </span>
-                      {percentAvailable}% available ({segmentsEl}, {segmentsMissingEl})
+                      {percentAvailable}% available ({segmentsEl})
                     </span>
                   );
                 }
@@ -1042,20 +1111,19 @@ ORDER BY 1`;
               },
             },
             {
-              Header: twoLines('Segment load/drop', 'queues'),
-              show: hiddenColumns.exists('Segment load/drop queues'),
-              id: 'load-drop',
+              Header: twoLines('Availability', 'detail'),
+              show: visibleColumns.shown('Availability detail'),
               accessor: 'num_segments_to_load',
               filterable: false,
               minWidth: 100,
               Cell: ({ original }) => {
-                const { num_segments_to_load, num_segments_to_drop } = original;
+                const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
                 return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
               },
             },
             {
               Header: twoLines('Total', 'data size'),
-              show: hiddenColumns.exists('Total data size'),
+              show: visibleColumns.shown('Total data size'),
               accessor: 'total_data_size',
               filterable: false,
               width: 100,
@@ -1064,97 +1132,169 @@ ORDER BY 1`;
               ),
             },
             {
-              Header: twoLines('Segment size (rows)', 'minimum / average / maximum'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment size'),
+              Header: twoLines('Segment rows', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment rows'),
               accessor: 'avg_segment_rows',
               filterable: false,
               width: 220,
-              Cell: ({ value, original }) => (
-                <>
-                  <BracedText
-                    text={formatSegmentRows(original.min_segment_rows)}
-                    braces={minSegmentRowsValues}
-                  />{' '}
-                  &nbsp;{' '}
-                  <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
-                  &nbsp;{' '}
-                  <BracedText
-                    text={formatSegmentRows(original.max_segment_rows)}
-                    braces={maxSegmentRowsValues}
-                  />
-                </>
-              ),
+              Cell: ({ value, original }) => {
+                const { min_segment_rows, max_segment_rows } = original as Datasource;
+                if (
+                  isNumberLikeNaN(value) ||
+                  isNumberLikeNaN(min_segment_rows) ||
+                  isNumberLikeNaN(max_segment_rows)
+                )
+                  return '-';
+                return (
+                  <>
+                    <BracedText
+                      text={formatSegmentRows(min_segment_rows)}
+                      braces={minSegmentRowsValues}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText text={formatSegmentRows(value)} braces={avgSegmentRowsValues} />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatSegmentRows(max_segment_rows)}
+                      braces={maxSegmentRowsValues}
+                    />
+                  </>
+                );
+              },
+            },
+            {
+              Header: twoLines('Segment size', 'minimum / average / maximum'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment size'),
+              accessor: 'avg_segment_size',
+              filterable: false,
+              width: 270,
+              Cell: ({ value, original }) => {
+                const { min_segment_size, max_segment_size } = original as Datasource;
+                if (
+                  isNumberLikeNaN(value) ||
+                  isNumberLikeNaN(min_segment_size) ||
+                  isNumberLikeNaN(max_segment_size)
+                )
+                  return '-';
+                return (
+                  <>
+                    <BracedText
+                      text={formatSegmentSize(min_segment_size)}
+                      braces={minSegmentSizeValues}
+                    />{' '}
+                    &nbsp;{' '}
+                    <BracedText text={formatSegmentSize(value)} braces={avgSegmentSizeValues} />{' '}
+                    &nbsp;{' '}
+                    <BracedText
+                      text={formatSegmentSize(max_segment_size)}
+                      braces={maxSegmentSizeValues}
+                    />
+                  </>
+                );
+              },
             },
             {
               Header: twoLines('Segment', 'granularity'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Segment granularity'),
+              show: capabilities.hasSql() && visibleColumns.shown('Segment granularity'),
               id: 'segment_granularity',
               accessor: segmentGranularityCountsToRank,
               filterable: false,
               width: 100,
               Cell: ({ original }) => {
+                const {
+                  num_segments,
+                  minute_aligned_segments,
+                  hour_aligned_segments,
+                  day_aligned_segments,
+                  month_aligned_segments,
+                  year_aligned_segments,
+                  all_granularity_segments,
+                } = original as Datasource;
                 const segmentGranularities: string[] = [];
-                if (!original.num_segments) return '-';
-                if (original.num_segments - original.minute_aligned_segments) {
-                  segmentGranularities.push('Sub minute');
+                if (!num_segments || isNumberLikeNaN(year_aligned_segments)) return '-';
+                if (all_granularity_segments) {
+                  segmentGranularities.push('All');
                 }
-                if (original.minute_aligned_segments - original.hour_aligned_segments) {
-                  segmentGranularities.push('Minute');
+                if (year_aligned_segments) {
+                  segmentGranularities.push('Year');
                 }
-                if (original.hour_aligned_segments - original.day_aligned_segments) {
-                  segmentGranularities.push('Hour');
-                }
-                if (original.day_aligned_segments - original.month_aligned_segments) {
-                  segmentGranularities.push('Day');
-                }
-                if (original.month_aligned_segments - original.year_aligned_segments) {
+                if (month_aligned_segments !== year_aligned_segments) {
                   segmentGranularities.push('Month');
                 }
-                if (original.year_aligned_segments) {
-                  segmentGranularities.push('Year');
+                if (day_aligned_segments !== month_aligned_segments) {
+                  segmentGranularities.push('Day');
+                }
+                if (hour_aligned_segments !== day_aligned_segments) {
+                  segmentGranularities.push('Hour');
+                }
+                if (minute_aligned_segments !== hour_aligned_segments) {
+                  segmentGranularities.push('Minute');
+                }
+                if (
+                  Number(num_segments) - Number(all_granularity_segments) !==
+                  Number(minute_aligned_segments)
+                ) {
+                  segmentGranularities.push('Sub minute');
                 }
                 return segmentGranularities.join(', ');
               },
             },
             {
               Header: twoLines('Total', 'rows'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Total rows'),
+              show: capabilities.hasSql() && visibleColumns.shown('Total rows'),
               accessor: 'total_rows',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNumberLikeNaN(value)) return '-';
+                return (
+                  <BracedText
+                    text={formatTotalRows(value)}
+                    braces={totalRowsValues}
+                    unselectableThousandsSeparator
+                  />
+                );
+              },
             },
             {
               Header: twoLines('Avg. row size', '(bytes)'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Avg. row size'),
+              show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
               accessor: 'avg_row_size',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNumberLikeNaN(value)) return '-';
+                return (
+                  <BracedText
+                    text={formatAvgRowSize(value)}
+                    braces={avgRowSizeValues}
+                    unselectableThousandsSeparator
+                  />
+                );
+              },
             },
             {
               Header: twoLines('Replicated', 'size'),
-              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
+              show: capabilities.hasSql() && visibleColumns.shown('Replicated size'),
               accessor: 'replicated_size',
               filterable: false,
               width: 100,
-              Cell: ({ value }) => (
-                <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
-              ),
+              Cell: ({ value }) => {
+                if (isNumberLikeNaN(value)) return '-';
+                return (
+                  <BracedText text={formatReplicatedSize(value)} braces={replicatedSizeValues} />
+                );
+              },
             },
             {
               Header: 'Compaction',
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('Compaction'),
               id: 'compactionStatus',
               accessor: row => Boolean(row.compactionStatus),
               filterable: false,
               width: 150,
               Cell: ({ original }) => {
-                const { datasource, compactionConfig, compactionStatus } = original;
+                const { datasource, compactionConfig, compactionStatus } = original as Datasource;
                 return (
                   <span
                     className="clickable-cell"
@@ -1175,7 +1315,7 @@ ORDER BY 1`;
             },
             {
               Header: twoLines('% Compacted', 'bytes / segments / intervals'),
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('% Compacted'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('% Compacted'),
               id: 'percentCompacted',
               width: 200,
               accessor: ({ compactionStatus }) =>
@@ -1185,7 +1325,7 @@ ORDER BY 1`;
                   : 0,
               filterable: false,
               Cell: ({ original }) => {
-                const { compactionStatus } = original;
+                const { compactionStatus } = original as Datasource;
 
                 if (!compactionStatus || zeroCompactionStatus(compactionStatus)) {
                   return (
@@ -1235,14 +1375,14 @@ ORDER BY 1`;
             {
               Header: twoLines('Left to be', 'compacted'),
               show:
-                capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Left to be compacted'),
+                capabilities.hasCoordinatorAccess() && visibleColumns.shown('Left to be compacted'),
               id: 'leftToBeCompacted',
               width: 100,
               accessor: ({ compactionStatus }) =>
                 (compactionStatus && compactionStatus.bytesAwaitingCompaction) || 0,
               filterable: false,
               Cell: ({ original }) => {
-                const { compactionStatus } = original;
+                const { compactionStatus } = original as Datasource;
 
                 if (!compactionStatus) {
                   return <BracedText text="-" braces={leftToBeCompactedValues} />;
@@ -1258,13 +1398,13 @@ ORDER BY 1`;
             },
             {
               Header: 'Retention',
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
+              show: capabilities.hasCoordinatorAccess() && visibleColumns.shown('Retention'),
               id: 'retention',
               accessor: row => row.rules.length,
               filterable: false,
               minWidth: 100,
               Cell: ({ original }) => {
-                const { datasource, rules } = original;
+                const { datasource, rules } = original as Datasource;
                 return (
                   <span
                     onClick={() =>
@@ -1288,13 +1428,13 @@ ORDER BY 1`;
             },
             {
               Header: ACTION_COLUMN_LABEL,
-              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
+              show: visibleColumns.shown(ACTION_COLUMN_LABEL),
               accessor: 'datasource',
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
               filterable: false,
               Cell: ({ value: datasource, original }) => {
-                const { unused, rules, compactionConfig } = original;
+                const { unused, rules, compactionConfig } = original as Datasource;
                 const datasourceActions = this.getDatasourceActions(
                   datasource,
                   unused,
@@ -1315,7 +1455,6 @@ ORDER BY 1`;
               },
             },
           ]}
-          defaultPageSize={50}
         />
         {this.renderUnuseAction()}
         {this.renderUseAction()}
@@ -1332,17 +1471,17 @@ ORDER BY 1`;
     const { capabilities } = this.props;
     const {
       showUnused,
-      hiddenColumns,
-      showChart,
-      chartHeight,
-      chartWidth,
+      visibleColumns,
+      showSegmentTimeline,
       datasourceTableActionDialogId,
       actions,
     } = this.state;
 
     return (
       <div
-        className={classNames('datasource-view app-view', showChart ? 'show-chart' : 'no-chart')}
+        className={classNames('datasource-view app-view', {
+          'show-segment-timeline': showSegmentTimeline,
+        })}
       >
         <ViewControlBar label="Datasources">
           <RefreshButton
@@ -1353,36 +1492,32 @@ ORDER BY 1`;
           />
           {this.renderBulkDatasourceActions()}
           <Switch
-            checked={showChart}
-            label="Show segment timeline"
-            onChange={() => this.setState({ showChart: !showChart })}
-            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
-          />
-          <Switch
             checked={showUnused}
             label="Show unused"
             onChange={() => this.toggleUnused(showUnused)}
             disabled={!capabilities.hasCoordinatorAccess()}
           />
+          <Switch
+            checked={showSegmentTimeline}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
+          />
           <TableColumnSelector
             columns={tableColumns[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
-                hiddenColumns: prevState.hiddenColumns.toggle(column),
+                visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
-            tableColumnsHidden={hiddenColumns.storedArray}
+            onClose={added => {
+              if (!added) return;
+              this.fetchDatasourceData();
+            }}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
-        {showChart && (
-          <div className={'chart-container'}>
-            <SegmentTimeline
-              capabilities={capabilities}
-              chartHeight={chartHeight}
-              chartWidth={chartWidth}
-            />
-          </div>
-        )}
+        {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
         {this.renderDatasourceTable()}
         {datasourceTableActionDialogId && (
           <DatasourceTableActionDialog

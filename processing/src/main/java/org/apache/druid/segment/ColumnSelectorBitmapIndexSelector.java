@@ -31,8 +31,10 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -109,6 +111,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder == null) {
+      return null;
+    }
+    if (!columnHolder.getCapabilities().toColumnType().is(ValueType.STRING)) {
+      // this method only supports returning STRING values, so other types of dictionary encoded columns will not
+      // work correctly here until reworking is done to support filtering/indexing other types of columns
       return null;
     }
     BaseColumn col = columnHolder.getColumn();
@@ -238,7 +245,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 
         /**
          * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
-         * {@link org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier}
+         * {@link StringBitmapIndexColumnPartSupplier}
          * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
          * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
          */
@@ -258,7 +265,9 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
           }
         }
       };
-    } else if (columnHolder.getCapabilities().hasBitmapIndexes()) {
+    } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return columnHolder.getBitmapIndex();
     } else {
       return null;
@@ -285,7 +294,9 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       }
     }
 
-    if (!columnHolder.getCapabilities().hasBitmapIndexes()) {
+    if (!columnHolder.getCapabilities().hasBitmapIndexes() || !columnHolder.getCapabilities().is(ValueType.STRING)) {
+      // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
+      // other types of dictionary encoded columns
       return null;
     }
 

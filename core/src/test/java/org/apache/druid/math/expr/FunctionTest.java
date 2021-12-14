@@ -22,11 +22,19 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ObjectByteStrategy;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypesTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -36,29 +44,45 @@ import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private Expr.ObjectBinding bindings;
+
+  @BeforeClass
+  public static void setupClass()
+  {
+    Types.registerStrategy(
+        TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        new TypesTest.PairObjectByteStrategy()
+    );
+  }
 
   @Before
   public void setup()
   {
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
-        .put("x", "foo")
-        .put("y", 2)
-        .put("z", 3.1)
-        .put("d", 34.56D)
-        .put("maxLong", Long.MAX_VALUE)
-        .put("minLong", Long.MIN_VALUE)
-        .put("f", 12.34F)
-        .put("nan", Double.NaN)
-        .put("inf", Double.POSITIVE_INFINITY)
-        .put("-inf", Double.NEGATIVE_INFINITY)
-        .put("o", 0)
-        .put("od", 0D)
-        .put("of", 0F)
-        .put("a", new String[] {"foo", "bar", "baz", "foobar"})
-        .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
-        .put("c", new Double[] {3.1, 4.2, 5.3});
-    bindings = Parser.withMap(builder.build());
+                                                               .put("x", "foo")
+                                                               .put("y", 2)
+                                                               .put("z", 3.1)
+                                                               .put("d", 34.56D)
+                                                               .put("maxLong", Long.MAX_VALUE)
+                                                               .put("minLong", Long.MIN_VALUE)
+                                                               .put("f", 12.34F)
+                                                               .put("nan", Double.NaN)
+                                                               .put("inf", Double.POSITIVE_INFINITY)
+                                                               .put("-inf", Double.NEGATIVE_INFINITY)
+                                                               .put("o", 0)
+                                                               .put("od", 0D)
+                                                               .put("of", 0F)
+                                                               .put("a", new String[]{"foo", "bar", "baz", "foobar"})
+                                                               .put("b", new Long[]{1L, 2L, 3L, 4L, 5L})
+                                                               .put("c", new Double[]{3.1, 4.2, 5.3})
+                                                               .put(
+                                                                   "someComplex",
+                                                                   new TypesTest.NullableLongPair(1L, 2L)
+                                                               );
+    bindings = InputBindings.withMap(builder.build());
   }
 
   @Test
@@ -274,7 +298,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayAppend()
   {
     assertArrayExpr("array_append([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertArrayExpr("array_append([1, 2, 3], 'bar')", new Long[]{1L, 2L, 3L, NullHandling.defaultLongValue()});
     assertArrayExpr("array_append([], 1)", new String[]{"1"});
     assertArrayExpr("array_append(<LONG>[], 1)", new Long[]{1L});
   }
@@ -287,6 +311,27 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_concat(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
     assertArrayExpr("array_concat(map(y -> y * 3, b), [1, 2, 3])", new Long[]{3L, 6L, 9L, 12L, 15L, 1L, 2L, 3L});
     assertArrayExpr("array_concat(0, 1)", new Long[]{0L, 1L});
+  }
+
+  @Test
+  public void testArraySetAdd()
+  {
+    assertArrayExpr("array_set_add([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add([1, 2, 3], 'bar')", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
+    assertArrayExpr("array_set_add([1, 2, 2], 1)", new Long[]{1L, 2L});
+    assertArrayExpr("array_set_add([], 1)", new String[]{"1"});
+    assertArrayExpr("array_set_add(<LONG>[], 1)", new Long[]{1L});
+    assertArrayExpr("array_set_add(<LONG>[], null)", new Long[]{NullHandling.defaultLongValue()});
+  }
+
+  @Test
+  public void testArraySetAddAll()
+  {
+    assertArrayExpr("array_set_add_all([1, 2, 3], [2, 4, 6])", new Long[]{1L, 2L, 3L, 4L, 6L});
+    assertArrayExpr("array_set_add_all([1, 2, 3], 4)", new Long[]{1L, 2L, 3L, 4L});
+    assertArrayExpr("array_set_add_all(0, [1, 2, 3])", new Long[]{0L, 1L, 2L, 3L});
+    assertArrayExpr("array_set_add_all(map(y -> y * 3, b), [1, 2, 3])", new Long[]{1L, 2L, 3L, 6L, 9L, 12L, 15L});
+    assertArrayExpr("array_set_add_all(0, 1)", new Long[]{0L, 1L});
   }
 
   @Test
@@ -311,17 +356,20 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("cast([1, 2, 3], 'STRING_ARRAY')", new String[]{"1", "2", "3"});
     assertArrayExpr("cast([1, 2, 3], 'DOUBLE_ARRAY')", new Double[]{1.0, 2.0, 3.0});
     assertArrayExpr("cast(c, 'LONG_ARRAY')", new Long[]{3L, 4L, 5L});
-    assertArrayExpr("cast(string_to_array(array_to_string(b, ','), ','), 'LONG_ARRAY')", new Long[]{1L, 2L, 3L, 4L, 5L});
+    assertArrayExpr(
+        "cast(string_to_array(array_to_string(b, ','), ','), 'LONG_ARRAY')",
+        new Long[]{1L, 2L, 3L, 4L, 5L}
+    );
     assertArrayExpr("cast(['1.0', '2.0', '3.0'], 'LONG_ARRAY')", new Long[]{1L, 2L, 3L});
   }
 
   @Test
   public void testArraySlice()
   {
-    assertArrayExpr("array_slice([1, 2, 3, 4], 1, 3)", new Long[] {2L, 3L});
-    assertArrayExpr("array_slice([1.0, 2.1, 3.2, 4.3], 2)", new Double[] {3.2, 4.3});
-    assertArrayExpr("array_slice(['a', 'b', 'c', 'd'], 4, 6)", new String[] {null, null});
-    assertArrayExpr("array_slice([1, 2, 3, 4], 2, 2)", new Long[] {});
+    assertArrayExpr("array_slice([1, 2, 3, 4], 1, 3)", new Long[]{2L, 3L});
+    assertArrayExpr("array_slice([1.0, 2.1, 3.2, 4.3], 2)", new Double[]{3.2, 4.3});
+    assertArrayExpr("array_slice(['a', 'b', 'c', 'd'], 4, 6)", new String[]{null, null});
+    assertArrayExpr("array_slice([1, 2, 3, 4], 2, 2)", new Long[]{});
     assertArrayExpr("array_slice([1, 2, 3, 4], 5, 7)", null);
     assertArrayExpr("array_slice([1, 2, 3, 4], 2, 1)", null);
   }
@@ -330,7 +378,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayPrepend()
   {
     assertArrayExpr("array_prepend(4, [1, 2, 3])", new Long[]{4L, 1L, 2L, 3L});
-    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{null, 1L, 2L, 3L});
+    assertArrayExpr("array_prepend('bar', [1, 2, 3])", new Long[]{NullHandling.defaultLongValue(), 1L, 2L, 3L});
     assertArrayExpr("array_prepend(1, [])", new String[]{"1"});
     assertArrayExpr("array_prepend(1, <LONG>[])", new Long[]{1L});
     assertArrayExpr("array_prepend(1, <DOUBLE>[])", new Double[]{1.0});
@@ -399,38 +447,53 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("round(maxLong)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
     assertExpr("round(minLong)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
     // overflow
-    assertExpr("round(maxLong + 1, 1)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(1, RoundingMode.HALF_UP).longValue());
+    assertExpr(
+        "round(maxLong + 1, 1)",
+        BigDecimal.valueOf(Long.MIN_VALUE).setScale(1, RoundingMode.HALF_UP).longValue()
+    );
     // underflow
-    assertExpr("round(minLong - 1, -2)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(-2, RoundingMode.HALF_UP).longValue());
+    assertExpr(
+        "round(minLong - 1, -2)",
+        BigDecimal.valueOf(Long.MAX_VALUE).setScale(-2, RoundingMode.HALF_UP).longValue()
+    );
 
-    assertExpr("round(CAST(maxLong, 'DOUBLE') + 1, 1)", BigDecimal.valueOf(((double) Long.MAX_VALUE) + 1).setScale(1, RoundingMode.HALF_UP).doubleValue());
-    assertExpr("round(CAST(minLong, 'DOUBLE') - 1, -2)", BigDecimal.valueOf(((double) Long.MIN_VALUE) - 1).setScale(-2, RoundingMode.HALF_UP).doubleValue());
+    assertExpr(
+        "round(CAST(maxLong, 'DOUBLE') + 1, 1)",
+        BigDecimal.valueOf(((double) Long.MAX_VALUE) + 1).setScale(1, RoundingMode.HALF_UP).doubleValue()
+    );
+    assertExpr(
+        "round(CAST(minLong, 'DOUBLE') - 1, -2)",
+        BigDecimal.valueOf(((double) Long.MIN_VALUE) - 1).setScale(-2, RoundingMode.HALF_UP).doubleValue()
+    );
   }
 
   @Test
-  public void testRoundWithInvalidFirstArgument()
+  public void testRoundWithNullValueOrInvalid()
   {
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
-        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("null", "STRING"),
         Pair.of("x", "STRING"),
-        Pair.of("c", "DOUBLE_ARRAY"),
-        Pair.of("a", "STRING_ARRAY")
-
+        Pair.of("b", "ARRAY<LONG>"),
+        Pair.of("c", "ARRAY<DOUBLE>"),
+        Pair.of("a", "ARRAY<STRING>")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      try {
-        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
-        Assert.fail("Did not throw IllegalArgumentException");
-      }
-      catch (IllegalArgumentException e) {
-        Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
-                "The first argument to the function[round] should be integer or double type but got the type: %s",
-                argAndType.rhs
-            ),
-            e.getMessage()
-        );
+      if (NullHandling.sqlCompatible()) {
+        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+      } else {
+        try {
+          assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
+          Assert.fail("Did not throw IllegalArgumentException");
+        }
+        catch (IllegalArgumentException e) {
+          Assert.assertEquals(
+              StringUtils.format(
+                  "The first argument to the function[round] should be integer or double type but got the type: %s",
+                  argAndType.rhs
+              ),
+              e.getMessage()
+          );
+        }
       }
     }
   }
@@ -441,8 +504,8 @@ public class FunctionTest extends InitializedNullHandlingTest
     Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
         Pair.of("1.2", "DOUBLE"),
         Pair.of("x", "STRING"),
-        Pair.of("a", "STRING_ARRAY"),
-        Pair.of("c", "DOUBLE_ARRAY")
+        Pair.of("a", "ARRAY<STRING>"),
+        Pair.of("c", "ARRAY<DOUBLE>")
 
     );
     for (Pair<String, String> argAndType : invalidArguments) {
@@ -452,8 +515,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       }
       catch (IllegalArgumentException e) {
         Assert.assertEquals(
-            String.format(
-                Locale.ENGLISH,
+            StringUtils.format(
                 "The second argument to the function[round] should be integer type but got the type: %s",
                 argAndType.rhs
             ),
@@ -482,7 +544,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[greatest] does not accept STRING_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[greatest] does not accept ARRAY<STRING> types", e.getMessage());
     }
 
     // Null handling
@@ -510,13 +572,360 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.fail("Did not throw IllegalArgumentException");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertEquals("Function[least] does not accept LONG_ARRAY types", e.getMessage());
+      Assert.assertEquals("Function[least] does not accept ARRAY<LONG> types", e.getMessage());
     }
 
     // Null handling
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+  }
+
+  @Test
+  public void testSizeFormat()
+  {
+    assertExpr("human_readable_binary_byte_format(-1024)", "-1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024)", "1.00 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024)", "1.00 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024)", "1.00 TiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024*1024)", "1.00 PiB");
+
+    assertExpr("human_readable_decimal_byte_format(-1000)", "-1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000)", "1.00 KB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000)", "1.00 MB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000)", "1.00 GB");
+    assertExpr("human_readable_decimal_byte_format(1000*1000*1000*1000)", "1.00 TB");
+
+    assertExpr("human_readable_decimal_format(-1000)", "-1.00 K");
+    assertExpr("human_readable_decimal_format(1000)", "1.00 K");
+    assertExpr("human_readable_decimal_format(1000*1000)", "1.00 M");
+    assertExpr("human_readable_decimal_format(1000*1000*1000)", "1.00 G");
+    assertExpr("human_readable_decimal_format(1000*1000*1000*1000)", "1.00 T");
+  }
+
+  @Test
+  public void testSizeFormatWithDifferentPrecision()
+  {
+    assertExpr("human_readable_binary_byte_format(1024, 0)", "1 KiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024, 1)", "1.0 MiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024, 2)", "1.00 GiB");
+    assertExpr("human_readable_binary_byte_format(1024*1024*1024*1024, 3)", "1.000 TiB");
+
+    assertExpr("human_readable_decimal_byte_format(1234, 0)", "1 KB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000, 1)", "1.2 MB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000, 2)", "1.23 GB");
+    assertExpr("human_readable_decimal_byte_format(1234*1000*1000*1000, 3)", "1.234 TB");
+
+    assertExpr("human_readable_decimal_format(1234, 0)", "1 K");
+    assertExpr("human_readable_decimal_format(1234*1000,1)", "1.2 M");
+    assertExpr("human_readable_decimal_format(1234*1000*1000,2)", "1.23 G");
+    assertExpr("human_readable_decimal_format(1234*1000*1000*1000,3)", "1.234 T");
+  }
+
+  @Test
+  public void testSizeFormatWithEdgeCases()
+  {
+    //a nonexist value is null which is treated as 0
+    assertExpr("human_readable_binary_byte_format(nonexist)", NullHandling.sqlCompatible() ? null : "0 B");
+
+    //f = 12.34
+    assertExpr("human_readable_binary_byte_format(f)", "12 B");
+
+    //nan is Double.NaN
+    assertExpr("human_readable_binary_byte_format(nan)", "0 B");
+
+    //inf = Double.POSITIVE_INFINITY
+    assertExpr("human_readable_binary_byte_format(inf)", "8.00 EiB");
+
+    //inf = Double.NEGATIVE_INFINITY
+    assertExpr("human_readable_binary_byte_format(-inf)", "-8.00 EiB");
+
+    // o = 0
+    assertExpr("human_readable_binary_byte_format(o)", "0 B");
+
+    // od = 0D
+    assertExpr("human_readable_binary_byte_format(od)", "0 B");
+
+    // of = 0F
+    assertExpr("human_readable_binary_byte_format(of)", "0 B");
+  }
+
+  @Test
+  public void testSizeForatInvalidArgumentType()
+  {
+    try {
+      //x = "foo"
+      Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      // for sqlCompatible, function above returns null and goes here
+      // but for non-sqlCompatible, it must not go to here
+      Assert.assertTrue(NullHandling.sqlCompatible() ? true : false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Function[human_readable_binary_byte_format] needs a number as its first argument",
+          e.getMessage()
+      );
+    }
+
+    try {
+      //x = "foo"
+      Parser.parse("human_readable_binary_byte_format(1024, x)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Function[human_readable_binary_byte_format] needs an integer as its second argument",
+          e.getMessage()
+      );
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("human_readable_binary_byte_format(1024, of)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Function[human_readable_binary_byte_format] needs an integer as its second argument",
+          e.getMessage()
+      );
+    }
+
+    try {
+      //of = 0F
+      Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
+            .eval(bindings);
+
+      //must not go to here
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Function[human_readable_binary_byte_format] needs an integer as its second argument",
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testSizeFormatInvalidPrecision()
+  {
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Given precision[9223372036854775807] of Function[human_readable_binary_byte_format] must be in the range of [0,3]",
+          e.getMessage()
+      );
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Given precision[-9223372036854775808] of Function[human_readable_binary_byte_format] must be in the range of [0,3]",
+          e.getMessage()
+      );
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, -1)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Given precision[-1] of Function[human_readable_binary_byte_format] must be in the range of [0,3]",
+          e.getMessage()
+      );
+    }
+
+    try {
+      Parser.parse("human_readable_binary_byte_format(1024, 4)", ExprMacroTable.nil())
+            .eval(bindings);
+      Assert.assertTrue(false);
+    }
+    catch (IAE e) {
+      Assert.assertEquals(
+          "Given precision[4] of Function[human_readable_binary_byte_format] must be in the range of [0,3]",
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testSizeFormatInvalidArgumentSize()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[human_readable_binary_byte_format] needs 1 or 2 arguments");
+    Parser.parse("human_readable_binary_byte_format(1024, 2, 3)", ExprMacroTable.nil())
+          .eval(bindings);
+  }
+
+  @Test
+  public void testSafeDivide()
+  {
+    // happy path maths
+    assertExpr("safe_divide(3, 1)", 3L);
+    assertExpr("safe_divide(4.5, 2)", 2.25);
+    assertExpr("safe_divide(3, 0)", NullHandling.defaultLongValue());
+    assertExpr("safe_divide(1, 0.0)", NullHandling.defaultDoubleValue());
+    // NaN and Infinity cases
+    assertExpr("safe_divide(NaN, 0.0)", NullHandling.defaultDoubleValue());
+    assertExpr("safe_divide(0, NaN)", 0.0);
+    assertExpr("safe_divide(0, POSITIVE_INFINITY)", NullHandling.defaultLongValue());
+    assertExpr("safe_divide(POSITIVE_INFINITY,0)", NullHandling.defaultLongValue());
+  }
+
+  @Test
+  public void testBitwise()
+  {
+    // happy path maths
+    assertExpr("bitwiseAnd(3, 1)", 1L);
+    assertExpr("bitwiseAnd(2, 1)", 0L);
+    assertExpr("bitwiseOr(3, 1)", 3L);
+    assertExpr("bitwiseOr(2, 1)", 3L);
+    assertExpr("bitwiseXor(3, 1)", 2L);
+    assertExpr("bitwiseXor(2, 1)", 3L);
+    assertExpr("bitwiseShiftLeft(2, 1)", 4L);
+    assertExpr("bitwiseShiftRight(2, 1)", 1L);
+    assertExpr("bitwiseAnd(bitwiseComplement(1), 7)", 6L);
+
+    // funny types
+    // two strings is sad
+    assertExpr("bitwiseAnd('2', '1')", null);
+    // but one is ok, druid forgives you
+    assertExpr("bitwiseAnd(3, '1')", 1L);
+    assertExpr("bitwiseAnd(2, null)", NullHandling.replaceWithDefault() ? 0L : null);
+
+    // unary doesn't accept any slop
+    assertExpr("bitwiseComplement('1')", null);
+    assertExpr("bitwiseComplement(null)", null);
+
+    // data truncation
+    try {
+      assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null);
+      Assert.fail("Did not throw IllegalArgumentException");
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertEquals(
+          "Possible data truncation, param [461168601842738800000000000000.000000] is out of long value range",
+          e.getMessage()
+      );
+    }
+
+    // doubles are cast
+    assertExpr("bitwiseOr(2.345, 1)", 3L);
+    assertExpr("bitwiseOr(2, 1.3)", 3L);
+    assertExpr("bitwiseAnd(2.345, 2.0)", 2L);
+
+    // but can be converted to be double-like
+    assertExpr(
+        "bitwiseAnd(bitwiseConvertDoubleToLongBits(2.345), bitwiseConvertDoubleToLongBits(2.0))",
+        4611686018427387904L
+    );
+    assertExpr(
+        "bitwiseConvertLongBitsToDouble(bitwiseAnd(bitwiseConvertDoubleToLongBits(2.345), bitwiseConvertDoubleToLongBits(2.0)))",
+        2.0
+    );
+    assertExpr("bitwiseConvertDoubleToLongBits(2.0)", 4611686018427387904L);
+    assertExpr("bitwiseConvertDoubleToLongBits(bitwiseConvertDoubleToLongBits(2.0))", 4886405595696988160L);
+    assertExpr("bitwiseConvertLongBitsToDouble(4611686018427387904)", 2.0);
+    assertExpr("bitwiseConvertLongBitsToDouble(bitwiseConvertLongBitsToDouble(4611686018427387904))", 1.0E-323);
+
+    // conversion returns null if nonsense inputs
+    assertExpr("bitwiseConvertLongBitsToDouble('wat')", null);
+    assertExpr("bitwiseConvertLongBitsToDouble('1')", null);
+    assertExpr("bitwiseConvertLongBitsToDouble(null)", null);
+    assertExpr("bitwiseConvertDoubleToLongBits('wat')", null);
+    assertExpr("bitwiseConvertDoubleToLongBits('1.0')", null);
+    assertExpr("bitwiseConvertDoubleToLongBits(null)", null);
+  }
+
+  @Test
+  public void testRepeat()
+  {
+    assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat(null, 10)", null);
+    assertExpr("repeat(nonexistent, 10)", null);
+  }
+
+  @Test
+  public void testComplexDecode()
+  {
+    TypesTest.NullableLongPair expected = new TypesTest.NullableLongPair(1L, 2L);
+    ObjectByteStrategy strategy = Types.getStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName());
+    assertExpr(
+        StringUtils.format(
+            "complex_decode_base64('%s', '%s')",
+            TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+            StringUtils.encodeBase64String(strategy.toBytes(expected))
+        ),
+        expected
+    );
+  }
+
+  @Test
+  public void testComplexDecodeNull()
+  {
+    assertExpr(
+        StringUtils.format(
+            "complex_decode_base64('%s', null)",
+            TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
+        ),
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseWrongArgCount()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[complex_decode_base64] needs 2 arguments");
+    assertExpr(
+        "complex_decode_base64(string)",
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseArg0BadType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Function[complex_decode_base64] first argument must be constant 'STRING' expression containing a valid complex type name");
+    assertExpr(
+        "complex_decode_base64(1, string)",
+        null
+    );
+  }
+
+  @Test
+  public void testComplexDecodeBaseArg0Unknown()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Function[complex_decode_base64] first argument must be a valid complex type name, unknown complex type [COMPLEX<unknown>]");
+    assertExpr(
+        "complex_decode_base64('unknown', string)",
+        null
+    );
   }
 
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
@@ -533,6 +942,8 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
   private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
@@ -549,5 +960,7 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
+    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 }

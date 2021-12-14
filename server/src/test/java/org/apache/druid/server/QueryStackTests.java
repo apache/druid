@@ -80,6 +80,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Utilities for creating query-stack objects for tests.
@@ -180,7 +181,10 @@ public class QueryStackTests
     );
   }
 
-  public static DruidProcessingConfig getProcessingConfig(boolean useParallelMergePoolConfigured)
+  public static DruidProcessingConfig getProcessingConfig(
+      boolean useParallelMergePoolConfigured,
+      final int mergeBuffers
+  )
   {
     return new DruidProcessingConfig()
     {
@@ -206,9 +210,10 @@ public class QueryStackTests
       @Override
       public int getNumMergeBuffers()
       {
-        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-        // Two buffers for the broker and one for the queryable.
-        return 3;
+        if (mergeBuffers == DEFAULT_NUM_MERGE_BUFFERS) {
+          return 2;
+        }
+        return mergeBuffers;
       }
 
       @Override
@@ -224,20 +229,49 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, true);
+    return createQueryRunnerFactoryConglomerate(closer, true, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final boolean useParallelMergePoolConfigured
+      final Supplier<Integer> minTopNThresholdSupplier
   )
   {
-    return createQueryRunnerFactoryConglomerate(closer, getProcessingConfig(useParallelMergePoolConfigured));
+    return createQueryRunnerFactoryConglomerate(closer, true, minTopNThresholdSupplier);
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final boolean useParallelMergePoolConfigured,
+      final Supplier<Integer> minTopNThresholdSupplier
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        getProcessingConfig(
+            useParallelMergePoolConfigured,
+            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+        ),
+        minTopNThresholdSupplier
+    );
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        processingConfig,
+        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+    );
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
+      final Supplier<Integer> minTopNThresholdSupplier
   )
   {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
@@ -298,7 +332,14 @@ public class QueryStackTests
                 TopNQuery.class,
                 new TopNQueryRunnerFactory(
                     stupidPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()
+                    {
+                      @Override
+                      public int getMinTopNThreshold()
+                      {
+                        return minTopNThresholdSupplier.get();
+                      }
+                    }),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
