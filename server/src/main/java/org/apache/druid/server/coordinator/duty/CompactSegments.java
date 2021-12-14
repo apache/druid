@@ -31,6 +31,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -351,6 +352,7 @@ public class CompactSegments implements CoordinatorDuty
         Granularity segmentGranularityToUse = null;
         if (config.getGranularitySpec() == null ||config.getGranularitySpec().getSegmentGranularity() == null) {
           // Determines segmentGranularity from the segmentsToCompact
+          // Each batch of segmentToCompact from CompactionSegmentIterator will contains a single time chunk
           boolean allSegmentsOverlapped = true;
           Interval union = null;
           for (DataSegment segment : segmentsToCompact) {
@@ -359,12 +361,22 @@ public class CompactSegments implements CoordinatorDuty
             } else if (union.overlaps(segment.getInterval())) {
               union = Intervals.utc(union.getStartMillis(), Math.max(union.getEndMillis(), segment.getInterval().getEndMillis()));
             } else {
+              // Each batch of segmentsToCompact for auto compaction should only contains one time chuck.
+              // Hence, all segments should overlap as they are from the same time chuck.
+              // This check is in case the above behavior changes and to fall back to setting segmentGranularity as null
+              // which will determine segmentGranularity later when the compaction task is run
               allSegmentsOverlapped = false;
               break;
             }
           }
           if (allSegmentsOverlapped && union != null) {
-            segmentGranularityToUse = GranularityType.fromPeriod(union.toPeriod()).getDefaultGranularity();
+            try {
+              segmentGranularityToUse = GranularityType.fromPeriod(union.toPeriod()).getDefaultGranularity();
+            } catch (IAE iae) {
+              // This case can happen if the existing segment interval result in complicated periods.
+              // Fall back to setting segmentGranularity as null
+              LOG.warn("Cannot determine segmentGranularity from interval [%s]", union);
+            }
           }
         } else {
           segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
