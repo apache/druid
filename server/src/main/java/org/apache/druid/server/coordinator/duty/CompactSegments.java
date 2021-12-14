@@ -350,7 +350,7 @@ public class CompactSegments implements CoordinatorDuty
         // Create granularitySpec to send to compaction task
         ClientCompactionTaskGranularitySpec granularitySpec;
         Granularity segmentGranularityToUse = null;
-        if (config.getGranularitySpec() == null ||config.getGranularitySpec().getSegmentGranularity() == null) {
+        if (config.getGranularitySpec() == null || config.getGranularitySpec().getSegmentGranularity() == null) {
           // Determines segmentGranularity from the segmentsToCompact
           // Each batch of segmentToCompact from CompactionSegmentIterator will contains a single time chunk
           boolean allSegmentsOverlapped = true;
@@ -372,7 +372,8 @@ public class CompactSegments implements CoordinatorDuty
           if (allSegmentsOverlapped && union != null) {
             try {
               segmentGranularityToUse = GranularityType.fromPeriod(union.toPeriod()).getDefaultGranularity();
-            } catch (IAE iae) {
+            }
+            catch (IAE iae) {
               // This case can happen if the existing segment interval result in complicated periods.
               // Fall back to setting segmentGranularity as null
               LOG.warn("Cannot determine segmentGranularity from interval [%s]", union);

@@ -315,7 +315,7 @@ public class HttpIndexingServiceClientTest
             .anyTimes();
     EasyMock.replay(druidLeaderClient, mockMapper);
 
-    HttpIndexingServiceClient httpIndexingServiceClient  = new HttpIndexingServiceClient(
+    HttpIndexingServiceClient httpIndexingServiceClient = new HttpIndexingServiceClient(
         mockMapper,
         druidLeaderClient
     );
@@ -332,7 +332,8 @@ public class HttpIndexingServiceClientTest
           null,
           null
       );
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Ignore IllegalStateException as taskId is internally generated and returned task id will failed check
       Assert.assertEquals(IllegalStateException.class.getName(), e.getCause().getClass().getName());
     }
