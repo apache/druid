@@ -2,7 +2,7 @@
 id: kafka-supervisor-operations
 title: "Apache Kafka supervisor operations reference"
 sidebar_label: "Apache Kafka operations"
-description: "Refrence topic for running and maintaining Apache Kafka supervisors"
+description: "Reference topic for running and maintaining Apache Kafka supervisors"
 ---
 
 <!--
