@@ -347,7 +347,7 @@ Likewise, this filter expresses `age >= 18`
 ```
 
 
-## Interval Filter
+## Interval filter
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
