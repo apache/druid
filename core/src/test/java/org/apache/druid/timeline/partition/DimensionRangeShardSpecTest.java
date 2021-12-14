@@ -301,6 +301,66 @@ public class DimensionRangeShardSpecTest
   }
 
   @Test
+  public void testPossibleInDomain_withNullValues()
+  {
+    setDimensions("planet", "country", "city");
+
+    final StringTuple start = StringTuple.create("Earth", "India", "Delhi");
+    final StringTuple end = StringTuple.create("Krypton", null, "Kryptonopolis"); // null is practically INF here
+
+    final RangeSet<String> universalSet = TreeRangeSet.create();
+    universalSet.add(Range.all());
+
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    Map<String, RangeSet<String>> domain = new HashMap<>();
+
+    // (-INF, INF) * (-INF, INF) * (-INF, INF)
+    // 3 -> Accept
+    populateDomain(domain,
+                   universalSet,
+                   universalSet,
+                   universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Earth} * (-INF, INF) * (-INF, INF)
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Earth")),
+                   universalSet,
+                   universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // (-INF, Earth) U (Krypton, INF) * (-INF, INF) * (-INF, INF)
+    // 2 -> Prune
+    populateDomain(domain,
+                   getUnion(Range.lessThan("Earth"), Range.greaterThan("Krypton")),
+                   universalSet,
+                   universalSet
+    );
+    assertFalse(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, France) * (-INF, INF)
+    // 3 -> Accept
+    populateDomain(domain,
+                   universalSet,
+                   getUnion(Range.lessThan("France")),
+                   universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Krypton} * (-INF, France] * {Paris}
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Krypton")),
+                   getUnion(Range.atMost("France")),
+                   universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+  }
+
+  @Test
   public void testPossibleInDomain()
   {
     setDimensions("planet", "country", "city");
@@ -313,62 +373,95 @@ public class DimensionRangeShardSpecTest
 
     ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
     Map<String, RangeSet<String>> domain = new HashMap<>();
-    RangeSet<String> planetSet;
-    RangeSet<String> countrySet;
-    RangeSet<String> citySet;
-
-    // null * null * null === (-INF, INF) * (-INF, INF) * (-INF, INF)
-    assertTrue(shard.possibleInDomain(domain));
 
     // (-INF, INF) * (-INF, INF) * (-INF, INF)
-    populateDomain(domain, universalSet, universalSet, universalSet);
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   universalSet,
+                   universalSet,
+                   universalSet
+    );
     assertTrue(shard.possibleInDomain(domain));
 
     // {Earth} * (-INF, INF) * (-INF, INF)
-    planetSet = getUnion(Range.singleton("Earth"));
-    populateDomain(domain, planetSet, universalSet, universalSet);
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Earth")),
+                   universalSet,
+                   universalSet
+    );
     assertTrue(shard.possibleInDomain(domain));
 
-    // (-INF, Earth) * (-INF, INF) * (-INF, INF)
-    planetSet = getUnion(Range.lessThan("Earth"));
-    populateDomain(domain, planetSet, universalSet, universalSet);
+    // (-INF, Earth) U (Earth, INF) * (-INF, INF) * (-INF, INF)
+    // 2 -> Prune
+    populateDomain(domain,
+                   getUnion(Range.lessThan("Earth"), Range.greaterThan("Earth")),
+                   universalSet,
+                   universalSet
+    );
     assertFalse(shard.possibleInDomain(domain));
 
     // (-INF, INF) * (-INF, "France") * (-INF, INF)
-    countrySet = getUnion(Range.lessThan("France"));
-    populateDomain(domain, universalSet, countrySet, universalSet);
+    // 1.b, 2 -> Prune
+    populateDomain(domain,
+                   universalSet,
+                   getUnion(Range.lessThan("France")),
+                   universalSet
+    );
     assertFalse(shard.possibleInDomain(domain));
 
-    // (-INF, INF) * (-INF, "France"] * Any non-empty set
-    countrySet = getUnion(Range.atMost("USA"));
-    populateDomain(domain, universalSet, countrySet, universalSet);
+    // (-INF, INF) * [USA, INF) * {New York}
+    // 1.b, 1.b, 1.a -> Accept
+    populateDomain(domain,
+                   universalSet,
+                   getUnion(Range.atLeast("USA")),
+                   getUnion(Range.singleton("New York"))
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // (-INF, INF) * (-INF, "France"] * (Paris, INF)
+    // 1.b, 1.b, 3 -> Accept
+    populateDomain(domain,
+                   universalSet,
+                   getUnion(Range.atMost("France")),
+                   getUnion(Range.greaterThan("Paris"))
+    );
     assertTrue(shard.possibleInDomain(domain));
 
     // (-INF, INF) * (-INF, "France] * (-INF, Paris)
-    countrySet = getUnion(Range.atMost("France"));
-    citySet = getUnion(Range.lessThan("Paris"));
-    populateDomain(domain, universalSet, countrySet, citySet);
+    // 1.b, 1.b, 2 -> Prune
+    populateDomain(domain,
+                   universalSet,
+                   getUnion(Range.atMost("France")),
+                   getUnion(Range.lessThan("Paris"))
+    );
     assertFalse(shard.possibleInDomain(domain));
 
     // {Earth} * {USA} * {New York}
-    planetSet = getUnion(Range.singleton("Earth"));
-    countrySet = getUnion(Range.singleton("USA"));
-    citySet = getUnion(Range.singleton("New York"));
-    populateDomain(domain, planetSet, countrySet, citySet);
+    // 1.b, 1.b, 1.a -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Earth")),
+                   getUnion(Range.singleton("USA")),
+                   getUnion(Range.singleton("New York"))
+    );
     assertTrue(shard.possibleInDomain(domain));
 
     // {Earth} * {USA} * (New York, INF)
-    planetSet = getUnion(Range.singleton("Earth"));
-    countrySet = getUnion(Range.singleton("USA"));
-    citySet = getUnion(Range.greaterThan("New York"));
-    populateDomain(domain, planetSet, countrySet, citySet);
+    // 1.b, 1.b, 2 -> Prune
+    populateDomain(domain,
+                   getUnion(Range.singleton("Earth")),
+                   getUnion(Range.singleton("USA")),
+                   getUnion(Range.greaterThan("New York"))
+    );
     assertFalse(shard.possibleInDomain(domain));
 
     // {Earth} * {India} * Any Non-empty set
-    planetSet = getUnion(Range.singleton("Earth"));
-    countrySet = getUnion(Range.singleton("India"));
-    citySet = getUnion(Range.greaterThan("New York"));
-    populateDomain(domain, planetSet, countrySet, citySet);
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Earth")),
+                   getUnion(Range.singleton("India")),
+                   getUnion(Range.greaterThan("New York"))
+    );
     assertTrue(shard.possibleInDomain(domain));
   }
 
@@ -382,7 +475,9 @@ public class DimensionRangeShardSpecTest
   }
 
   private void populateDomain(Map<String, RangeSet<String>> domain,
-                              RangeSet<String> planetSet, RangeSet<String> countrySet, RangeSet<String> citySet)
+                              RangeSet<String> planetSet,
+                              RangeSet<String> countrySet,
+                              RangeSet<String> citySet)
   {
     domain.clear();
     domain.put("planet", planetSet);

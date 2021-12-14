@@ -158,16 +158,67 @@ public class DimensionRangeShardSpec implements ShardSpec
   }
 
   /**
-   * Pruning scenarios at dimension i: (When the Effective domain is empty)
-   *  0) query domain left-aligns with start and right-aligns with end and then deviates outside to align with neither
-   *  1) The query domain left-aligns with start until dimension i and then deviates to be strictly less than start[i]
-   *  2) The query domain right-aligns with end until dimension i and then deviates to be strictly greater than end[i]
+   * Set[:i] is the cartesian product of Set[0],...,Set[i - 1]
+   * EffectiveDomain[:i] is defined as QueryDomain[:i] INTERSECTION SegmentRange[:i]
    *
-   * Immediate acceptance criteria at dimension i:
-   *  Effective domain is non-empty and no longer aligns with any boundary
+   *        i = 1
+   * 1)     If EffectiveDomain[:i] == {start[:i]} || EffectiveDomain == {end[:i]}:
+   * 1.a)     if i == index.dimensions.size:
+   *            ACCEPT segment
+   * 1.b)     else:
+   *            Repeat (1) with i = i + 1
+   * 2)     else if EffectiveDomain[:i] == {}:
+   *          PRUNE segment
+   * 3)     else:
+   *          ACCEPT segment
+   *
+   *
+   * Example: Index on (Hour, Minute, Second). Index.size is 3
+   * I)
+   * start = (3, 25, 10)
+   * end = (5, 10, 30)
+   * query domain = {3} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {3} == start[:1]
+   * EffectiveDomain[:2] == {3} * ([0, 10] INTERSECTION [25, INF))
+   *                     == {} -> PRUNE
+   *
+   * II)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {4} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {4} (!= start[:1] && != {end[:1]}) -> ACCEPT
+   *
+   * III)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([0, 10] INTERSECTION (-INF, 15])
+   *                     == {5} * [0, 10] (!= {end[:2]}) -> ACCEPT
+   *
+   * IV)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [15, 40] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([15, 40] INTERSECTION (-INF, 15])
+   *                     == {5} * {15} == {end[:2]}
+   * EffectiveDomain[:3] == {5} * {15} * ({10, 20, 30, 40} * (-INF, 30])
+   *                     == {5} * {15} * {10, 20, 30} != {}  -> ACCEPT
+   *
+   * V)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [15, 40] * {50}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([15, 40] INTERSECTION (-INF, 15])
+   *                     == {5} * {15} == {end[:2]}
+   * EffectiveDomain[:3] == {5} * {15} * ({40} * (-INF, 30])
+   *                     == {5} * {15} * {}
+   *                     == {} -> PRUNE
    *
    * @param domain The domain inferred from the query. Assumed to be non-emtpy
-   * @return boolean indicating if the segment needs to be considered or pruned
+   * @return true if segment needs to be considered for query, false if it can be pruned
    */
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
@@ -175,9 +226,9 @@ public class DimensionRangeShardSpec implements ShardSpec
     final StringTuple segmentStart = start == null ? new StringTuple(new String[dimensions.size()]) : start;
     final StringTuple segmentEnd = end == null ? new StringTuple(new String[dimensions.size()]) : end;
 
-    // Indicates if the effective domain is equivalent to start till the previous dimension
+    // Indicates if the effective domain is equivalent to {start} till the previous dimension
     boolean effectiveDomainIsStart = true;
-    // Indicates if the effective domain is equivalent to end till the previous dimension
+    // Indicates if the effective domain is equivalent to {end} till the previous dimension
     boolean effectiveDomainIsEnd = true;
 
     for (int i = 0; i < dimensions.size(); i++) {
@@ -188,7 +239,7 @@ public class DimensionRangeShardSpec implements ShardSpec
         queryDomainForDimension.add(Range.all());
       }
 
-      // Compute the segment's range based on its metadata and (outward) boundary alignment
+      // Compute the segment's range for given dimension based on its start, end and boundary conditions
       Range<String> rangeTillSegmentBoundary = Range.all();
       if (effectiveDomainIsStart && segmentStart.get(i) != null) {
         rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atLeast(segmentStart.get(i)));
@@ -197,20 +248,20 @@ public class DimensionRangeShardSpec implements ShardSpec
         rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atMost(segmentEnd.get(i)));
       }
 
-      // EffectiveDomain = QueryDomain INTERSECTION SegmentRange
+      // EffectiveDomain[i] = QueryDomain[i] INTERSECTION SegmentRange[i]
       RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
-      // Prune segment because domain is out of range
+      // Prune segment because query domain is out of segment range
       if (effectiveDomainForDimension.isEmpty()) {
         return false;
       }
 
-      // Boundary aligment for current dimension
+      // EffectiveDomain is singleton and lies only on the boundaries -> consider next dimensions
       effectiveDomainIsStart = effectiveDomainIsStart
                                 && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
       effectiveDomainIsEnd = effectiveDomainIsEnd
                            && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
 
-      // Query domain segues into segment boundary
+      // EffectiveDomain lies within the boundaries as well -> cannot prune based on next dimensions
       if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {
         return true;
       }
