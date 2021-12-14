@@ -29,7 +29,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -48,6 +47,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 
 @RunWith(Enclosed.class)
@@ -101,10 +101,12 @@ public class DruidLogicalValuesRuleTest
       Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
       RexLiteral literal = Mockito.mock(RexLiteral.class);
       try {
-        FieldUtils.writeField(literal, "value", val, true);
+        Field field = literal.getClass().getSuperclass().getDeclaredField("value");
+        field.setAccessible(true);
+        field.set(literal, val);
       }
       catch (Exception e) {
-        Assert.fail("Unable to mock the literal for test.");
+        Assert.fail("Unable to mock the literal for test.\nException: " + e);
       }
       Mockito.when(literal.getType()).thenReturn(dataType);
       Mockito.when(literal.getValueAs(ArgumentMatchers.any())).thenReturn(javaType.cast(val));

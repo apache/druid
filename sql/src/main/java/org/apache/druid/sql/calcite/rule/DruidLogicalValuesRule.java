@@ -101,7 +101,8 @@ public class DruidLogicalValuesRule extends RelOptRule
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
-        return RexLiteral.stringValue(literal);
+        // RexLiteral.stringValue(literal) was causing some issue during tests
+        return literal.getValueAs(String.class);
       case FLOAT:
         if (literal.isNull()) {
           return null;
