@@ -62,6 +62,7 @@ public class Grouping
   @Nullable
   private final DimFilter havingFilter;
   private final RowSignature outputRowSignature;
+  private final boolean droppedDimensionsWhileApplyingProject;
 
   private Grouping(
       final List<DimensionExpression> dimensions,
@@ -71,11 +72,24 @@ public class Grouping
       final RowSignature outputRowSignature
   )
   {
+    this(dimensions, subtotals, aggregations, havingFilter, outputRowSignature, false);
+  }
+
+  private Grouping(
+      final List<DimensionExpression> dimensions,
+      final Subtotals subtotals,
+      final List<Aggregation> aggregations,
+      @Nullable final DimFilter havingFilter,
+      final RowSignature outputRowSignature,
+      final boolean droppedDimensionsWhileApplyingProject
+  )
+  {
     this.dimensions = ImmutableList.copyOf(dimensions);
     this.subtotals = Preconditions.checkNotNull(subtotals, "subtotals");
     this.aggregations = ImmutableList.copyOf(aggregations);
     this.havingFilter = havingFilter;
     this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
+    this.droppedDimensionsWhileApplyingProject = droppedDimensionsWhileApplyingProject;
 
     // Verify no collisions between dimensions, aggregations, post-aggregations.
     final Set<String> seen = new HashSet<>();
@@ -101,6 +115,27 @@ public class Grouping
         throw new ISE("Missing field in rowOrder: %s", field);
       }
     }
+  }
+
+  // This method is private since droppedDimensionsWhileApplyingProject should only be deviated from default in
+  // applyProject
+  private static Grouping create(
+      final List<DimensionExpression> dimensions,
+      final Subtotals subtotals,
+      final List<Aggregation> aggregations,
+      @Nullable final DimFilter havingFilter,
+      final RowSignature outputRowSignature,
+      final boolean droppedDimensionsWhileApplyingProject
+  )
+  {
+    return new Grouping(
+        dimensions,
+        subtotals,
+        aggregations,
+        havingFilter,
+        outputRowSignature,
+        droppedDimensionsWhileApplyingProject
+    );
   }
 
   public static Grouping create(
@@ -160,6 +195,11 @@ public class Grouping
     return outputRowSignature;
   }
 
+  public boolean isDroppedDimensionsWhileApplyingProject()
+  {
+    return droppedDimensionsWhileApplyingProject;
+  }
+
   /**
    * Applies a post-grouping projection.
    *
@@ -187,11 +227,13 @@ public class Grouping
     // actually want to include a dimension 'dummy'.
     final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(project.getChildExps(), null);
     final int[] newDimIndexes = new int[dimensions.size()];
+    boolean droppedDimensions = false;
 
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionExpression dimension = dimensions.get(i);
       if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
                 .isLiteral() && !aggregateProjectBits.get(i)) {
+        droppedDimensions = true;
         newDimIndexes[i] = -1;
       } else {
         newDimIndexes[i] = newDimensions.size();
@@ -225,7 +267,8 @@ public class Grouping
         newSubtotals,
         newAggregations,
         havingFilter,
-        postAggregationProjection.getOutputRowSignature()
+        postAggregationProjection.getOutputRowSignature(),
+        droppedDimensions
     );
   }
 
@@ -243,12 +286,20 @@ public class Grouping
            subtotals.equals(grouping.subtotals) &&
            aggregations.equals(grouping.aggregations) &&
            Objects.equals(havingFilter, grouping.havingFilter) &&
-           outputRowSignature.equals(grouping.outputRowSignature);
+           outputRowSignature.equals(grouping.outputRowSignature) &&
+           droppedDimensionsWhileApplyingProject == grouping.droppedDimensionsWhileApplyingProject;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dimensions, subtotals, aggregations, havingFilter, outputRowSignature);
+    return Objects.hash(
+        dimensions,
+        subtotals,
+        aggregations,
+        havingFilter,
+        outputRowSignature,
+        droppedDimensionsWhileApplyingProject
+    );
   }
 }

@@ -856,7 +856,9 @@ public class DruidQuery
     // An aggregation query should return one row per group, with no grouping (e.g. ALL granularity), the entire table
     // is the group, so we should not skip empty buckets. When there are no results, this means we return the
     // initialized state for given aggregators instead of nothing.
-    if (!Granularities.ALL.equals(queryGranularity)) {
+    // Alternatively, the timeseries query should return empty buckets, even with ALL granularity when timeseries query
+    // was originally a groupBy query, but with the grouping dimensions removed away in Grouping#applyProject
+    if (!Granularities.ALL.equals(queryGranularity) || grouping.isDroppedDimensionsWhileApplyingProject()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
     theContext.putAll(plannerContext.getQueryContext());

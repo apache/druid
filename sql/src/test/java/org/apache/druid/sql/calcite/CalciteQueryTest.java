@@ -3911,12 +3911,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new CountAggregatorFactory("a0"),
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
-                  .context(QUERY_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
         ),
-        ImmutableList.of(
-            new Object[]{0L, NullHandling.sqlCompatible() ? null : Long.MIN_VALUE}
-        )
+        ImmutableList.of()
     );
   }
 
@@ -13339,6 +13337,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                              .threshold(1)
                              .build()),
+        ImmutableList.of()
+    );
+  }
+
+  // When optimization in Grouping#applyProject is applied, and it reduces a Group By query to a timeseries, we
+  // want it to return empty bucket if no row matches
+  @Test
+  public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseries() throws Exception
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(
+                      and(
+                          selector("m1", "50", null),
+                          selector("dim1", "wat", null)
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .postAggregators(
+                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
+                      new ExpressionPostAggregator("p1", "'wat'", null, ExprMacroTable.nil())
+                  )
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+                  .build()
+        ),
         ImmutableList.of()
     );
   }
