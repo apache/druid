@@ -2,7 +2,7 @@
 id: kafka-supervisor-reference
 title: "Apache Kafka supervisor reference"
 sidebar_label: "Apache Kafka supervisor"
-description: "Refrence topic for Apache Kafka supervisors"
+description: "Reference topic for Apache Kafka supervisors"
 ---
 
 <!--
