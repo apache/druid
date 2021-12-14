@@ -32,7 +32,9 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionStatistics;
@@ -343,19 +345,37 @@ public class CompactSegments implements CoordinatorDuty
         snapshotBuilder.incrementSegmentCountCompacted(segmentsToCompact.size());
 
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
+
         // Create granularitySpec to send to compaction task
         ClientCompactionTaskGranularitySpec granularitySpec;
-        if (config.getGranularitySpec() != null) {
-          granularitySpec = new ClientCompactionTaskGranularitySpec(
-              config.getGranularitySpec().getSegmentGranularity(),
-              config.getGranularitySpec().getQueryGranularity(),
-              config.getGranularitySpec().isRollup()
-
-          );
+        Granularity segmentGranularityToUse = null;
+        if (config.getGranularitySpec() == null ||config.getGranularitySpec().getSegmentGranularity() == null) {
+          // Determines segmentGranularity from the segmentsToCompact
+          boolean allSegmentsOverlapped = true;
+          Interval union = null;
+          for (DataSegment segment : segmentsToCompact) {
+            if (union == null) {
+              union = segment.getInterval();
+            } else if (union.overlaps(segment.getInterval())) {
+              union = Intervals.utc(union.getStartMillis(), Math.max(union.getEndMillis(), segment.getInterval().getEndMillis()));
+            } else {
+              allSegmentsOverlapped = false;
+              break;
+            }
+          }
+          if (allSegmentsOverlapped && union != null) {
+            segmentGranularityToUse = GranularityType.fromPeriod(union.toPeriod()).getDefaultGranularity();
+          }
         } else {
-          granularitySpec = null;
-          xxx
+          segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
         }
+        granularitySpec = new ClientCompactionTaskGranularitySpec(
+            segmentGranularityToUse,
+            config.getGranularitySpec() != null ? config.getGranularitySpec().getQueryGranularity() : null,
+            config.getGranularitySpec() != null ? config.getGranularitySpec().isRollup() : null
+
+        );
+
         // Create dimensionsSpec to send to compaction task
         ClientCompactionTaskDimensionsSpec dimensionsSpec;
         if (config.getDimensionsSpec() != null) {
