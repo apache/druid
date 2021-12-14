@@ -301,6 +301,57 @@ public class DimensionRangeShardSpecTest
   }
 
   @Test
+  public void testPossibleInDomain_withNullStart()
+  {
+    setDimensions("planet", "country", "city");
+
+    final StringTuple start = null; // considered to be (-INF, -INF, -INF)
+    final StringTuple end = StringTuple.create("Saturn", "Foo", "Bar");
+
+    final RangeSet<String> universalSet = TreeRangeSet.create();
+    universalSet.add(Range.all());
+
+    ShardSpec shard = new DimensionRangeShardSpec(dimensions, start, end, 0, null);
+    Map<String, RangeSet<String>> domain = new HashMap<>();
+
+    // {Mars} * {Zoo, Zuu} * {Blah, Random}
+    // 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Mars")),
+                   getUnion(Range.singleton("Zoo"), Range.singleton("Zuu")),
+                   getUnion(Range.singleton("Blah"), Range.singleton("Random"))
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Saturn} * (-INF, INF) * (-INF, INF)
+    // 1.b, 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Saturn")),
+                   universalSet,
+                   universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Saturn} * {Zoo} * (-INF, INF)
+    // 1.b, 2 -> Prune
+    populateDomain(domain,
+                   getUnion(Range.singleton("Saturn")),
+                   getUnion(Range.singleton("Zoo")),
+                   universalSet
+    );
+    assertFalse(shard.possibleInDomain(domain));
+
+    // (Xeon) * (-INF, INF) * (-INF, INF)
+    // 2 -> Prune
+    populateDomain(domain,
+                   getUnion(Range.singleton("Xeon")),
+                   universalSet,
+                   universalSet
+    );
+    assertFalse(shard.possibleInDomain(domain));
+  }
+
+  @Test
   public void testPossibleInDomain_withNullValues()
   {
     setDimensions("planet", "country", "city");
@@ -347,6 +398,15 @@ public class DimensionRangeShardSpecTest
                    universalSet,
                    getUnion(Range.lessThan("France")),
                    universalSet
+    );
+    assertTrue(shard.possibleInDomain(domain));
+
+    // {Jupiter} * (Foo) * {Bar}
+    // 3 -> Accept
+    populateDomain(domain,
+                   getUnion(Range.singleton("Jupiter")),
+                   getUnion(Range.singleton("Foo")),
+                   getUnion(Range.singleton("Bar"))
     );
     assertTrue(shard.possibleInDomain(domain));
 

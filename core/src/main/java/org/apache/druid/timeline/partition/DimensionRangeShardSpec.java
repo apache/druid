@@ -186,7 +186,7 @@ public class DimensionRangeShardSpec implements ShardSpec
    * start = (3, 25, 10)
    * end = (5, 15, 30)
    * query domain = {4} * [0, 10] * {10, 20, 30, 40}
-   * EffectiveDomain[:1] == {4} (!= start[:1] && != {end[:1]}) -> ACCEPT
+   * EffectiveDomain[:1] == {4} (!= {} && != start[:1] && != {end[:1]}) -> ACCEPT
    *
    * III)
    * start = (3, 25, 10)
@@ -194,7 +194,7 @@ public class DimensionRangeShardSpec implements ShardSpec
    * query domain = {5} * [0, 10] * {10, 20, 30, 40}
    * EffectiveDomain[:1] == {5} == end[:1]
    * EffectiveDomain[:2] == {5} * ([0, 10] INTERSECTION (-INF, 15])
-   *                     == {5} * [0, 10] (!= {end[:2]}) -> ACCEPT
+   *                     == {5} * [0, 10] (! ={} && != {end[:2]}) -> ACCEPT
    *
    * IV)
    * start = (3, 25, 10)
