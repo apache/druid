@@ -28,13 +28,12 @@ sidebar_label: "Filters"
 > language. For information about aggregators available in SQL, refer to the
 > [SQL documentation](sql.md#scalar-functions).
 
-A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Apache Druid supports the following types of filters.
+A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL.
+Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [Filtered aggregator](./aggregations.md#filtered-aggregator) and [Having filters](./having.md).
 
-**Note**
+Apache Druid supports the following types of filters.
 
-Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [filtered-aggregator](./aggregations.md#filtered-aggregator) and [having-filters](./having.md).
-
-### Selector filter
+## Selector filter
 
 The simplest filter is a selector filter. The selector filter will match a specific dimension with a specific value. Selector filters can be used as the base filters for more complex Boolean expressions of filters.
 
@@ -48,7 +47,7 @@ This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'
 
 The selector filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-### Column Comparison filter
+## Column comparison filter
 
 The column comparison filter is similar to the selector filter, but instead compares dimensions to each other. For example:
 
@@ -60,7 +59,7 @@ This is the equivalent of `WHERE <dimension_a> = <dimension_b>`.
 
 `dimensions` is list of [DimensionSpecs](./dimensionspecs.md), making it possible to apply an extraction function if needed.
 
-### Regular expression filter
+## Regular expression filter
 
 The regular expression filter is similar to the selector filter, but using regular expressions. It matches the specified dimension with the given pattern. The pattern can be any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html).
 
@@ -71,9 +70,9 @@ The regular expression filter is similar to the selector filter, but using regul
 The regex filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 
-### Logical expression filters
+## Logical expression filters
 
-#### AND
+### AND
 
 The grammar for an AND filter is as follows:
 
@@ -83,7 +82,7 @@ The grammar for an AND filter is as follows:
 
 The filters in fields can be any other filter defined on this page.
 
-#### OR
+### OR
 
 The grammar for an OR filter is as follows:
 
@@ -93,7 +92,7 @@ The grammar for an OR filter is as follows:
 
 The filters in fields can be any other filter defined on this page.
 
-#### NOT
+### NOT
 
 The grammar for a NOT filter is as follows:
 
@@ -103,7 +102,7 @@ The grammar for a NOT filter is as follows:
 
 The filter specified at field can be any other filter defined on this page.
 
-### JavaScript filter
+## JavaScript filter
 
 The JavaScript filter matches a dimension against the specified JavaScript function predicate. The filter matches values for which the function returns true.
 
@@ -132,7 +131,7 @@ The JavaScript filter supports the use of extraction functions, see [Filtering w
 
 > JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 
-### Extraction filter
+## Extraction filter
 
 > The extraction filter is now deprecated. The selector filter with an extraction function specified
 > provides identical functionality and should be used instead.
@@ -165,7 +164,7 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
 }
 ```
 
-### Search filter
+## Search filter
 
 Search filters can be used to filter on partial string matches.
 
@@ -186,14 +185,14 @@ Search filters can be used to filter on partial string matches.
 |--------|-----------|---------|
 |type|This String should always be "search".|yes|
 |dimension|The dimension to perform the search over.|yes|
-|query|A JSON object for the type of search. See below for more information.|yes|
+|query|A JSON object for the type of search. See [search query spec](#search-query-spec) for more information.|yes|
 |extractionFn|[Extraction function](#filtering-with-extraction-functions) to apply to the dimension|no|
 
 The search filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-#### Search query spec
+### Search query spec
 
-##### Contains
+#### Contains
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -201,7 +200,7 @@ The search filter supports the use of extraction functions, see [Filtering with 
 |value|A String value to run the search over.|yes|
 |caseSensitive|Whether two string should be compared as case sensitive or not|no (default == false)|
 
-##### Insensitive Contains
+#### Insensitive Contains
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -211,7 +210,7 @@ The search filter supports the use of extraction functions, see [Filtering with 
 Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
 provided).
 
-##### Fragment
+#### Fragment
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -219,7 +218,7 @@ provided).
 |values|A JSON array of String values to run the search over.|yes|
 |caseSensitive|Whether strings should be compared as case sensitive or not. Default: false(insensitive)|no|
 
-### In filter
+## In filter
 
 In filter can be used to express the following SQL query:
 
@@ -243,7 +242,7 @@ If an empty `values` array is passed to the IN filter, it will simply return an 
 If the `dimension` is a multi-valued dimension, the IN filter will return true if one of the dimension values is
 in the `values` array.
 
-### Like filter
+## Like filter
 
 Like filters can be used for basic wildcard searches. They are equivalent to the SQL LIKE operator. Special characters
 supported are "%" (matches any number of characters) and "\_" (matches any one character).
@@ -268,7 +267,7 @@ This Like filter expresses the condition `last_name LIKE "D%"` (i.e. last_name s
 }
 ```
 
-### Bound filter
+## Bound filter
 
 Bound filters can be used to filter on ranges of dimension values. It can be used for comparison filtering like
 greater than, less than, greater than or equal to, less than or equal to, and "between" (if both "lower" and
@@ -348,7 +347,7 @@ Likewise, this filter expresses `age >= 18`
 ```
 
 
-### Interval Filter
+## Interval filter
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
@@ -406,7 +405,8 @@ The filter above is equivalent to the following OR of Bound filters:
 }
 ```
 
-### Filtering with Extraction Functions
+## Filtering with extraction functions
+
 All filters except the "spatial" filter support extraction functions.
 An extraction function is defined by setting the "extractionFn" field on a filter.
 See [Extraction function](./dimensionspecs.md#extraction-functions) for more details on extraction functions.
@@ -477,7 +477,7 @@ Filtering on a range of values, `10 <= myFloatColumn < 20`:
 }
 ```
 
-### Filtering on the Timestamp Column
+### Filtering on the timestamp column
 
 Query filters can also be applied to the timestamp column. The timestamp column has long millisecond values. To refer
 to the timestamp column, use the string `__time` as the dimension name. Like numeric dimensions, timestamp filters
@@ -524,7 +524,7 @@ Filtering on a set of ISO 8601 intervals:
 }
 ```
 
-### True Filter
+### True filter
 The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter.
 
 ```json
@@ -532,7 +532,7 @@ The true filter is a filter which matches all values.  It can be used to tempora
 { "type" : "true" }
 ```
 
-### Expression Filter
+### Expression filter
 The expression filter allows for the implementation of arbitrary conditions, leveraging the Druid expression system. 
 
 This filter allows for more flexibility, but it might be less performant than a combination of the other filters on this page due to the fact that not all filter optimizations are in place yet.
