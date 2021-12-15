@@ -45,14 +45,15 @@ public class ObjectOrErrorResponseHandlerTest
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
 
-    ClientResponse<Either<StringFullResponseHolder, InputStreamFullResponseHolder>> clientResp =
+    ClientResponse<Either<BytesFullResponseHolder, InputStreamFullResponseHolder>> intermediateResp =
         responseHandler.handleResponse(response, null);
 
     HttpContent chunk0 = new DefaultHttpContent(Unpooled.wrappedBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
     HttpContent chunk1 = new DefaultHttpContent(Unpooled.wrappedBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
-    clientResp = responseHandler.handleChunk(clientResp, chunk0, 0);
-    clientResp = responseHandler.handleChunk(clientResp, chunk1, 1);
-    clientResp = responseHandler.done(clientResp);
+    intermediateResp = responseHandler.handleChunk(intermediateResp, chunk0, 0);
+    intermediateResp = responseHandler.handleChunk(intermediateResp, chunk1, 1);
+    ClientResponse<Either<StringFullResponseHolder, InputStreamFullResponseHolder>> clientResp =
+        responseHandler.done(intermediateResp);
 
     Assert.assertTrue(clientResp.isFinished());
     Assert.assertEquals(
@@ -68,18 +69,18 @@ public class ObjectOrErrorResponseHandlerTest
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
 
-    ClientResponse<Either<StringFullResponseHolder, InputStreamFullResponseHolder>> clientResp =
+    ClientResponse<Either<BytesFullResponseHolder, InputStreamFullResponseHolder>> intermediateResp =
         responseHandler.handleResponse(response, null);
 
     Exception ex = new RuntimeException("dummy!");
-    responseHandler.exceptionCaught(clientResp, ex);
+    responseHandler.exceptionCaught(intermediateResp, ex);
 
     // Exception after HTTP OK still is handled by the "OK handler"
     // (The handler that starts the request gets to finish it.)
-    Assert.assertTrue(clientResp.isFinished());
-    Assert.assertTrue(clientResp.getObj().isValue());
+    Assert.assertTrue(intermediateResp.isFinished());
+    Assert.assertTrue(intermediateResp.getObj().isValue());
 
-    final InputStream responseStream = clientResp.getObj().valueOrThrow().getContent();
+    final InputStream responseStream = intermediateResp.getObj().valueOrThrow().getContent();
     final IOException e = Assert.assertThrows(
         IOException.class,
         () -> IOUtils.toString(responseStream, StandardCharsets.UTF_8)
@@ -95,15 +96,16 @@ public class ObjectOrErrorResponseHandlerTest
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
 
-    ClientResponse<Either<StringFullResponseHolder, InputStreamFullResponseHolder>> clientResp =
+    ClientResponse<Either<BytesFullResponseHolder, InputStreamFullResponseHolder>> intermediateResp =
         responseHandler.handleResponse(response, null);
 
     HttpContent chunk0 = new DefaultHttpContent(Unpooled.wrappedBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
     HttpContent chunk1 = new DefaultHttpContent(Unpooled.wrappedBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
 
-    clientResp = responseHandler.handleChunk(clientResp, chunk0, 0);
-    clientResp = responseHandler.handleChunk(clientResp, chunk1, 1);
-    clientResp = responseHandler.done(clientResp);
+    intermediateResp = responseHandler.handleChunk(intermediateResp, chunk0, 0);
+    intermediateResp = responseHandler.handleChunk(intermediateResp, chunk1, 1);
+    ClientResponse<Either<StringFullResponseHolder, InputStreamFullResponseHolder>> clientResp =
+        responseHandler.done(intermediateResp);
 
     // 5xx HTTP code is handled by the error handler.
     Assert.assertTrue(clientResp.isFinished());

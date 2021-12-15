@@ -207,11 +207,11 @@ public class WorkerHolderTest
     final Capture<Request> capturedRequest = EasyMock.newCapture();
     final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
     EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
-        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, new StringBuilder("not found")))
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, "not found"))
     ).once();
     EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(
-        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("ok")))
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, "ok"))
     ).once();
     EasyMock.replay(httpClient);
 
@@ -247,10 +247,10 @@ public class WorkerHolderTest
     final HttpClient httpClient = EasyMock.createMock(HttpClient.class);
     final Capture<Request> capturedRequest = EasyMock.newCapture();
     EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
-        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, new StringBuilder("not found")))
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.NOT_FOUND, "not found"))
     ).once();
     EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(
-        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("ok")))
+        Futures.immediateFuture(new StatusResponseHolder(HttpResponseStatus.OK, "ok"))
     ).once();
     EasyMock.replay(httpClient);
 

@@ -117,8 +117,9 @@ public class RemoteTaskActionClientTest
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk("testSubmitWithIllegalStatusCode");
+        response,
+        "testSubmitWithIllegalStatusCode"
+    );
 
     final Task task = NoopTask.create("id", 0);
     final LockListAction action = new LockListAction();
