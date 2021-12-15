@@ -385,7 +385,7 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  private static ComparableArray convertToArray(Object obj)
+  public static ComparableArray convertToArray(Object obj)
   {
     if (obj == null) {
       return null;
@@ -394,18 +394,18 @@ public final class DimensionHandlerUtils
       return (ComparableArray) obj;
     }
     if (obj instanceof String[]) {
-      return new ComparableArray((String[]) obj);
+      return ComparableArray.of((String[]) obj);
     }
     // Jackson converts the serialized array into a string. Converting it back to a string array
     if (obj instanceof List) {
-      return new ComparableArray((String[]) ((List) obj).toArray(new String[0]));
+      return ComparableArray.of((String[]) ((List) obj).toArray(new String[0]));
     }
     Objects[] objects = (Objects[]) obj;
     String[] delegate = new String[objects.length];
     for (int i = 0; i < objects.length; i++) {
       delegate[i] = convertObjectToString(objects[i]);
     }
-    return new ComparableArray(delegate);
+    return ComparableArray.of(delegate);
   }
 
   public static int compareObjectsAsType(

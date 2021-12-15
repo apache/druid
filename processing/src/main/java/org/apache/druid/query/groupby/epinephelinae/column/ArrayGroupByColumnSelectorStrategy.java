@@ -1,8 +1,8 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.groupby.ResultRow;
@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ArrayGroupByColumnSelectorStrategy
     implements GroupByColumnSelectorStrategy
@@ -26,14 +27,12 @@ public class ArrayGroupByColumnSelectorStrategy
 
   // contains string <-> id for each element of the multi value grouping column
   // for eg : [a,b,c] is the col value. dictionaryToInt will contain { a <-> 1, b <-> 2, c <-> 3}
-  private final BiMap<String, Integer> dictionaryToInt = HashBiMap.create();
+  private final BiMap<String, Integer> dictionaryToInt;
 
   // stores each row as a integer array where the int represents the value in dictionaryToInt
-  // for eg : [a,b,c] would be converted to [1,2,3]
-  private final List<int[]> indexedIntArrays = new ArrayList<>();
-
-  private final Object2IntOpenHashMap<int[]> reverseDictionary = new Object2IntOpenHashMap<>();
-
+  // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
+  // [1,2,3] <-> 1
+  private final BiMap<List<Integer>, Integer> intListToInt;
 
   @Override
   public int getGroupingKeySize()
@@ -43,7 +42,18 @@ public class ArrayGroupByColumnSelectorStrategy
 
   public ArrayGroupByColumnSelectorStrategy()
   {
-    reverseDictionary.defaultReturnValue(GROUP_BY_MISSING_VALUE);
+    dictionaryToInt = HashBiMap.create();
+    intListToInt = HashBiMap.create();
+  }
+
+  @VisibleForTesting
+  ArrayGroupByColumnSelectorStrategy(
+      BiMap<String, Integer> dictionaryToInt,
+      BiMap<List<Integer>, Integer> intListToInt
+  )
+  {
+    this.dictionaryToInt = dictionaryToInt;
+    this.intListToInt = intListToInt;
   }
 
   @Override
@@ -55,13 +65,12 @@ public class ArrayGroupByColumnSelectorStrategy
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows
     if (id != GROUP_BY_MISSING_VALUE) {
-      final int[] value = indexedIntArrays.get(id);
-      String[] rowValues = new String[value.length];
-      for (int i = 0; i < value.length; i++) {
-        rowValues[i] = dictionaryToInt.inverse().get(value[i]);
-
-      }
-      resultRow.set(selectorPlus.getResultRowPosition(), rowValues);
+      resultRow.set(selectorPlus.getResultRowPosition(), intListToInt.inverse()
+                                                                     .get(id)
+                                                                     .stream()
+                                                                     .map(a -> dictionaryToInt.inverse().get(a))
+                                                                     .collect(Collectors.toList())
+                                                                     .toArray(new String[0]));
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValues());
     }
@@ -112,23 +121,21 @@ public class ArrayGroupByColumnSelectorStrategy
       return GROUP_BY_MISSING_VALUE;
     }
 
-    final int[] intRepresentation = new int[rowSize];
+    final List<Integer> intRepresentation = new ArrayList<>(rowSize);
     //TODO(karan): remove intial check of null
     String firstValue = dimSelector.lookupName(indexedRow.get(0));
     if (firstValue == null && rowSize == 1) {
       return GROUP_BY_MISSING_VALUE;
     }
-    intRepresentation[0] = addToIndexedDictionary(firstValue);
+    intRepresentation.add(addToIndexedDictionary(firstValue));
     for (int i = 1; i < rowSize; i++) {
-      intRepresentation[i] = addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i)));
+      intRepresentation.add(addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i))));
     }
 
-
-    final int dictId = reverseDictionary.getInt(intRepresentation);
-    if (dictId < 0) {
-      final int dictionarySize = indexedIntArrays.size();
-      indexedIntArrays.add(intRepresentation);
-      reverseDictionary.put(intRepresentation, dictionarySize);
+    final int dictId = intListToInt.getOrDefault(intRepresentation, GROUP_BY_MISSING_VALUE);
+    if (dictId == GROUP_BY_MISSING_VALUE) {
+      final int dictionarySize = intListToInt.keySet().size();
+      intListToInt.put(intRepresentation, dictionarySize);
       return dictionarySize;
     } else {
       return dictId;
@@ -160,27 +167,27 @@ public class ArrayGroupByColumnSelectorStrategy
   {
     final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-      int[] lhs = indexedIntArrays.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
-      int[] rhs = indexedIntArrays.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+      List<Integer> lhs = intListToInt.inverse().get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
+      List<Integer> rhs = intListToInt.inverse().get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
 
-      int minLength = Math.min(lhs.length, rhs.length);
+      int minLength = Math.min(lhs.size(), rhs.size());
       //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
       } else {
         for (int i = 0; i < minLength; i++) {
           final int cmp = comparator.compare(
-              dictionaryToInt.inverse().get(lhs[i]),
-              dictionaryToInt.inverse().get(rhs[i])
+              dictionaryToInt.inverse().get(lhs.get(i)),
+              dictionaryToInt.inverse().get(rhs.get(i))
           );
           if (cmp == 0) {
             continue;
           }
           return cmp;
         }
-        if (lhs.length == rhs.length) {
+        if (lhs.size() == rhs.size()) {
           return 0;
-        } else if (lhs.length < rhs.length) {
+        } else if (lhs.size() < rhs.size()) {
           return -1;
         }
         return 1;

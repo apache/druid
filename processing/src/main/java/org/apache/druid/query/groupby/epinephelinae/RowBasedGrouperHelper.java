@@ -1019,6 +1019,12 @@ public class RowBasedGrouperHelper
               lhs != null ? ((Number) lhs).doubleValue() : null,
               rhs != null ? ((Number) rhs).doubleValue() : null
           );
+        } else if (fieldTypes.get(i - dimStart).equals(ColumnType.STRING_ARRAY)) {
+          final ComparableArray lhs = DimensionHandlerUtils.convertToArray(key1.getKey()[i]);
+          final ComparableArray rhs = DimensionHandlerUtils.convertToArray(key2.getKey()[i]);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(
+              lhs, rhs
+          );
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
               (Comparable) key1.getKey()[i],
