@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.concurrent.ConcurrentMap;
@@ -28,6 +30,8 @@ import java.util.concurrent.ConcurrentMap;
  * class as the SQL planner's view of Druid datasource schemas. If a non-default implementation is provided,
  * the segment metadata polling-based view of the Druid tables will not be built in DruidSchema.
  */
+@ExtensionPoint
+@UnstableApi
 public interface DruidSchemaManager
 {
   ConcurrentMap<String, DruidTable> getTables();
