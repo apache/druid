@@ -161,16 +161,16 @@ public class DimensionRangeShardSpec implements ShardSpec
    * Set[:i] is the cartesian product of Set[0],...,Set[i - 1]
    * EffectiveDomain[:i] is defined as QueryDomain[:i] INTERSECTION SegmentRange[:i]
    *
-   *        i = 1
-   * 1)     If EffectiveDomain[:i] == {start[:i]} || EffectiveDomain == {end[:i]}:
-   * 1.a)     if i == index.dimensions.size:
-   *            ACCEPT segment
-   * 1.b)     else:
-   *            Repeat (1) with i = i + 1
-   * 2)     else if EffectiveDomain[:i] == {}:
-   *          PRUNE segment
-   * 3)     else:
-   *          ACCEPT segment
+   * i = 1
+   * If EffectiveDomain[:i] == {start[:i]} || EffectiveDomain == {end[:i]}:
+   *  if i == index.dimensions.size:
+   *    ACCEPT segment
+   *  else:
+   *    REPEAT with i = i + 1
+   *else if EffectiveDomain[:i] == {}:
+   *  PRUNE segment
+   *else:
+   *  ACCEPT segment
    *
    *
    * Example: Index on (Hour, Minute, Second). Index.size is 3
