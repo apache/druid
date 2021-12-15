@@ -2249,6 +2249,15 @@ export function updateSchemaWithSample(
 // ------------------------
 
 export function upgradeSpec(spec: any): Partial<IngestionSpec> {
+  if (deepGet(spec, 'type') && deepGet(spec, 'dataSchema')) {
+    spec = {
+      type: spec.type,
+      spec: deepDelete(spec, 'type'),
+    };
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.parser')) return spec;
+
   if (deepGet(spec, 'spec.ioConfig.firehose')) {
     switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 'static-s3':
@@ -2262,51 +2271,22 @@ export function upgradeSpec(spec: any): Partial<IngestionSpec> {
     }
 
     spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-      'spec.dataSchema.timestampSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-      'spec.dataSchema.dimensionsSpec',
-    );
-    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-    spec = deepDelete(spec, 'spec.dataSchema.parser');
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
   }
-  return spec;
-}
 
-export function downgradeSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  if (deepGet(spec, 'spec.ioConfig.inputSource')) {
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.type', 'spec.ioConfig.inputFormat.format');
-    spec = deepSet(spec, 'spec.dataSchema.parser', { type: 'string' });
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat', 'spec.dataSchema.parser.parseSpec');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.dimensionsSpec',
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.timestampSpec',
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-    );
-    spec = deepMove(spec, 'spec.ioConfig.inputSource', 'spec.ioConfig.firehose');
+  spec = deepMove(
+    spec,
+    'spec.dataSchema.parser.parseSpec.timestampSpec',
+    'spec.dataSchema.timestampSpec',
+  );
+  spec = deepMove(
+    spec,
+    'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+    'spec.dataSchema.dimensionsSpec',
+  );
+  spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+  spec = deepDelete(spec, 'spec.dataSchema.parser');
+  spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
 
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 's3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-s3');
-        break;
-
-      case 'google':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-google-blobstore');
-        deepMove(spec, 'spec.ioConfig.firehose.objects', 'spec.ioConfig.firehose.blobs');
-        break;
-    }
-  }
   return spec;
 }
 
