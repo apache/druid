@@ -115,7 +115,17 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Nullable
-  private Object valueConversionFunction(JsonNode val)
+  private Object valueConversionFunction(Object val)
+  {
+    if (val instanceof JsonNode) {
+      return convertJsonNode((JsonNode) val);
+    } else {
+      return val;
+    }
+  }
+
+  @Nullable
+  private Object convertJsonNode(JsonNode val)
   {
     if (val == null || val.isNull()) {
       return null;

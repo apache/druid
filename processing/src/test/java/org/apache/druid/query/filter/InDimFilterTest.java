@@ -217,7 +217,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final RowBasedColumnSelectorFactory<MapBasedRow> columnSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         () -> new MapBasedRow(0, row),
-        () -> RowSignature.builder().add("dim", ColumnType.STRING).build(),
+        RowSignature.builder().add("dim", ColumnType.STRING).build(),
         true
     );
 

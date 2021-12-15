@@ -1,7 +1,7 @@
 ---
 id: query-context
 title: "Query context"
-sidebar_label: "Context parameters"
+sidebar_label: "Query context"
 ---
 
 <!--
@@ -23,8 +23,6 @@ sidebar_label: "Context parameters"
   ~ under the License.
   -->
 
-## General parameters
-
 The query context is used for various query configuration parameters. Query context parameters can be specified in
 the following ways:
 
@@ -34,6 +32,8 @@ HTTP POST API, or as properties to the JDBC connection.
 
 Note that setting query context will override both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}` (if set). 
+
+## General parameters
 
 Unless otherwise noted, the following parameters apply to all query types.
 
@@ -63,9 +63,9 @@ Unless otherwise noted, the following parameters apply to all query types.
 |enableJoinLeftTableScanDirect|`false`|This flag applies to queries which have joins. For joins, where left child is a simple scan with a filter,  by default, druid will run the scan as a query and the join the results to the right child on broker. Setting this flag to true overrides that behavior and druid will attempt to push the join to data servers instead. Please note that the flag could be applicable to queries even if there is no explicit join. since queries can internally translated into a join by the SQL planner.|
 |debug| `false` | Flag indicating whether to enable debugging outputs for the query. When set to false, no additional logs will be produced (logs produced will be entirely dependent on your logging level). When set to true, the following addition logs will be produced:<br />- Log the stack trace of the exception (if any) produced by the query |
 
-## Query-type-specific parameters
+## Parameters by query type
 
-In addition, some query types offer context parameters specific to that query type.
+Some query types offer context parameters specific to that query type.
 
 ### TopN
 
@@ -78,6 +78,15 @@ In addition, some query types offer context parameters specific to that query ty
 |property         |default              | description          |
 |-----------------|---------------------|----------------------|
 |skipEmptyBuckets | `false`             | Disable timeseries zero-filling behavior, so only buckets with results will be returned. |
+
+### Join filter
+
+|property         |default              | description          |
+|-----------------|---------------------|----------------------|
+|enableJoinFilterPushDown | `true` | Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
+|enableJoinFilterRewrite | `true` | Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
+|enableJoinFilterRewriteValueColumnFilters | `false` | Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
+|joinFilterRewriteMaxSize | `10000` | The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.| 
 
 ### GroupBy
 

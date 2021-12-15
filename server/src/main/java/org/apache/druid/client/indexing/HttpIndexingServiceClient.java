@@ -354,12 +354,17 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           )
       );
 
-      if (responseHolder.getContent().length() == 0 || responseHolder.getStatus() != HttpResponseStatus.OK) {
+      if (responseHolder.getContent().length() == 0 || !HttpResponseStatus.OK.equals(responseHolder.getStatus())) {
         if (responseHolder.getStatus() == HttpResponseStatus.NOT_FOUND) {
           log.info("Report not found for taskId [%s] because [%s]", taskId, responseHolder.getContent());
         } else {
           // also log other non-ok statuses:
-          log.info("Non OK response for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+          log.info(
+              "Non OK response status [%s] for taskId [%s] because [%s]",
+              responseHolder.getStatus(),
+              taskId,
+              responseHolder.getContent()
+          );
         }
         return null;
       }

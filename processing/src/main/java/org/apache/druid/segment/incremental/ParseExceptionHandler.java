@@ -20,9 +20,11 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
@@ -44,7 +46,7 @@ public class ParseExceptionHandler
   private final boolean logParseExceptions;
   private final int maxAllowedParseExceptions;
   @Nullable
-  private final CircularBuffer<ParseException> savedParseExceptions;
+  private final CircularBuffer<ParseExceptionReport> savedParseExceptionReports;
 
   public ParseExceptionHandler(
       RowIngestionMeters rowIngestionMeters,
@@ -57,9 +59,9 @@ public class ParseExceptionHandler
     this.logParseExceptions = logParseExceptions;
     this.maxAllowedParseExceptions = maxAllowedParseExceptions;
     if (maxSavedParseExceptions > 0) {
-      this.savedParseExceptions = new CircularBuffer<>(maxSavedParseExceptions);
+      this.savedParseExceptionReports = new CircularBuffer<>(maxSavedParseExceptions);
     } else {
-      this.savedParseExceptions = null;
+      this.savedParseExceptionReports = null;
     }
   }
 
@@ -68,6 +70,7 @@ public class ParseExceptionHandler
     if (e == null) {
       return;
     }
+
     if (e.isFromPartiallyValidRow()) {
       rowIngestionMeters.incrementProcessedWithError();
     } else {
@@ -78,8 +81,16 @@ public class ParseExceptionHandler
       LOG.error(e, "Encountered parse exception");
     }
 
-    if (savedParseExceptions != null) {
-      savedParseExceptions.add(e);
+    if (savedParseExceptionReports != null) {
+      ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
+          e.getInput(),
+          e.isFromPartiallyValidRow() ? "processedWithError" : "unparseable",
+          e.isFromPartiallyValidRow()
+          ? ((UnparseableColumnsParseException) e).getColumnExceptionMessages()
+          : ImmutableList.of(e.getMessage()),
+          e.getTimeOfExceptionMillis()
+      );
+      savedParseExceptionReports.add(parseExceptionReport);
     }
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError() > maxAllowedParseExceptions) {
@@ -88,8 +99,8 @@ public class ParseExceptionHandler
   }
 
   @Nullable
-  public CircularBuffer<ParseException> getSavedParseExceptions()
+  public CircularBuffer<ParseExceptionReport> getSavedParseExceptionReports()
   {
-    return savedParseExceptions;
+    return savedParseExceptionReports;
   }
 }
