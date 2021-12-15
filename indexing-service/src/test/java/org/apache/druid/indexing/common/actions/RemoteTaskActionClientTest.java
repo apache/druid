@@ -81,8 +81,9 @@ public class RemoteTaskActionClientTest
     EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk(strResult);
+        response,
+        strResult
+    );
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
