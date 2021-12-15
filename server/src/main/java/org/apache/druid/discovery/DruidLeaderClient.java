@@ -130,7 +130,7 @@ public class DruidLeaderClient
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
-  public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
+  public <T, I, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<I, H> responseHandler)
       throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));

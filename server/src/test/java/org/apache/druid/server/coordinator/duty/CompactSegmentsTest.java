@@ -2215,11 +2215,7 @@ public class CompactSegmentsTest
     private StringFullResponseHolder createStringFullResponseHolder(String content)
     {
       final HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      final StringFullResponseHolder holder = new StringFullResponseHolder(
-          httpResponse
-      );
-      holder.addChunk(content);
-      return holder;
+      return new StringFullResponseHolder(httpResponse, content);
     }
 
     private StringFullResponseHolder handleWorkers() throws JsonProcessingException

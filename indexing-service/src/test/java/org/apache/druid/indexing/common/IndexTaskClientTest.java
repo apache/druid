@@ -85,7 +85,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.value(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK), ""
                         )
                     )
                 )
@@ -113,8 +113,8 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                        ).addChunk("Error")
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR), "Error"
+                        )
                     )
                 )
             )
@@ -124,7 +124,7 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.value(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK), ""
                         )
                     )
                 )
@@ -161,9 +161,7 @@ public class IndexTaskClientTest
             .andReturn(
                 Futures.immediateFuture(
                     Either.error(
-                        new StringFullResponseHolder(
-                            incorrectResponse
-                        )
+                        new StringFullResponseHolder(incorrectResponse, "")
                     )
                 )
             )
@@ -172,9 +170,7 @@ public class IndexTaskClientTest
             .andReturn(
                 Futures.immediateFuture(
                     Either.value(
-                        new StringFullResponseHolder(
-                            correctResponse
-                        )
+                        new StringFullResponseHolder(correctResponse, "")
                     )
                 )
             )
@@ -202,8 +198,9 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)
-                        ).addChunk("Error")
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST),
+                            "Error"
+                        )
                     )
                 )
             )
@@ -233,8 +230,9 @@ public class IndexTaskClientTest
                 Futures.immediateFuture(
                     Either.error(
                         new StringFullResponseHolder(
-                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                        ).addChunk("Error")
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                            "Error"
+                        )
                     )
                 )
             )
@@ -266,7 +264,7 @@ public class IndexTaskClientTest
             .andReturn(
                 Futures.immediateFuture(
                     Either.error(
-                        new StringFullResponseHolder(response).addChunk("Error")
+                        new StringFullResponseHolder(response, "Error")
                     )
                 )
             )

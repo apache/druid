@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
  * errors (non-2xx response codes) as Strings. The return value is an {@link Either}.
  */
 public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
-    implements HttpResponseHandler<Either<StringFullResponseHolder, IntermediateType>, Either<StringFullResponseHolder, FinalType>>
+    implements HttpResponseHandler<Either<BytesFullResponseHolder, IntermediateType>, Either<StringFullResponseHolder, FinalType>>
 {
   private final HttpResponseHandler<IntermediateType, FinalType> okHandler;
   private final StringFullResponseHandler errorHandler;
@@ -42,7 +42,7 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
   }
 
   @Override
-  public ClientResponse<Either<StringFullResponseHolder, IntermediateType>> handleResponse(
+  public ClientResponse<Either<BytesFullResponseHolder, IntermediateType>> handleResponse(
       final HttpResponse response,
       final TrafficCop trafficCop
   )
@@ -56,7 +56,7 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
           Either.value(delegateResponse.getObj())
       );
     } else {
-      final ClientResponse<StringFullResponseHolder> delegateResponse =
+      final ClientResponse<BytesFullResponseHolder> delegateResponse =
           errorHandler.handleResponse(response, trafficCop);
 
       return new ClientResponse<>(
@@ -68,13 +68,13 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
   }
 
   @Override
-  public ClientResponse<Either<StringFullResponseHolder, IntermediateType>> handleChunk(
-      final ClientResponse<Either<StringFullResponseHolder, IntermediateType>> clientResponse,
+  public ClientResponse<Either<BytesFullResponseHolder, IntermediateType>> handleChunk(
+      final ClientResponse<Either<BytesFullResponseHolder, IntermediateType>> clientResponse,
       final HttpContent chunk,
       final long chunkNum
   )
   {
-    final Either<StringFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
+    final Either<BytesFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
 
     if (prevHolder.isValue()) {
       final ClientResponse<IntermediateType> delegateResponse = okHandler.handleChunk(
@@ -93,7 +93,7 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
           Either.value(delegateResponse.getObj())
       );
     } else {
-      final ClientResponse<StringFullResponseHolder> delegateResponse = errorHandler.handleChunk(
+      final ClientResponse<BytesFullResponseHolder> delegateResponse = errorHandler.handleChunk(
           new ClientResponse<>(
               clientResponse.isFinished(),
               clientResponse.isContinueReading(),
@@ -113,10 +113,10 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
 
   @Override
   public ClientResponse<Either<StringFullResponseHolder, FinalType>> done(
-      final ClientResponse<Either<StringFullResponseHolder, IntermediateType>> clientResponse
+      final ClientResponse<Either<BytesFullResponseHolder, IntermediateType>> clientResponse
   )
   {
-    final Either<StringFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
+    final Either<BytesFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
 
     if (prevHolder.isValue()) {
       final ClientResponse<FinalType> delegateResponse = okHandler.done(
@@ -151,11 +151,11 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
 
   @Override
   public void exceptionCaught(
-      final ClientResponse<Either<StringFullResponseHolder, IntermediateType>> clientResponse,
+      final ClientResponse<Either<BytesFullResponseHolder, IntermediateType>> clientResponse,
       final Throwable e
   )
   {
-    final Either<StringFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
+    final Either<BytesFullResponseHolder, IntermediateType> prevHolder = clientResponse.getObj();
 
     if (prevHolder.isValue()) {
       okHandler.exceptionCaught(

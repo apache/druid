@@ -114,8 +114,9 @@ public class RemoteTaskActionClientTest
     EasyMock.expect(response.status()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
     EasyMock.replay(response);
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk("testSubmitWithIllegalStatusCode");
+        response,
+        "testSubmitWithIllegalStatusCode"
+    );
 
     // set up mocks
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);

@@ -98,8 +98,9 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk(jsonMapper.writeValueAsString(samplerResponse));
+        response,
+        jsonMapper.writeValueAsString(samplerResponse)
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -148,9 +149,7 @@ public class HttpIndexingServiceClientTest
     EasyMock.expect(response.status()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).anyTimes();
     EasyMock.replay(response);
 
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk("");
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(response, "");
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -177,8 +176,9 @@ public class HttpIndexingServiceClientTest
     Map<String, Object> dummyResponse = ImmutableMap.of("test", "value");
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk(jsonMapper.writeValueAsString(dummyResponse));
+        response,
+        jsonMapper.writeValueAsString(dummyResponse)
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -209,8 +209,9 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk(errorMsg);
+        response,
+        errorMsg
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
@@ -239,8 +240,9 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        response
-    ).addChunk("");
+        response,
+        ""
+    );
 
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(responseHolder)
