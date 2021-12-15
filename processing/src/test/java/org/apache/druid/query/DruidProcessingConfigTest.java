@@ -134,6 +134,8 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
     props.setProperty("druid.processing.fifo", "true");
     props.setProperty("druid.processing.tmpDir", "/test/path");
+    props.setProperty("druid.processing.buffer.poolCacheInitialCount", "1");
+
 
     Injector injector = makeInjector(
         NUM_PROCESSORS,
@@ -151,6 +153,7 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(1, config.columnCacheSizeBytes());
     Assert.assertTrue(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
+    Assert.assertEquals(1, config.getNumInitalBuffersForIntermediatePool());
   }
 
   @Test
