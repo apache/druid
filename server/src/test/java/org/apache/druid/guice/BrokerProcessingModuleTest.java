@@ -85,6 +85,7 @@ public class BrokerProcessingModuleTest
     };
     DruidProcessingModule module = new DruidProcessingModule();
     module.getMergeProcessingPoolProvider(config);
+    config.getNumInitalBuffersForIntermediatePool();
   }
 
   @Test
