@@ -69,11 +69,6 @@ public class IncrementalIndexCreator implements Closeable
     JSON_MAPPER.registerSubtypes(new NamedType(c, name));
   }
 
-  static {
-    // The off-heap incremental-index is not registered for production, but we want to include it in the tests.
-    IncrementalIndexCreator.addIndexSpec(OffheapIncrementalIndexTestSpec.class, OffheapIncrementalIndexTestSpec.TYPE);
-  }
-
   /**
    * Fetch all the available incremental-index implementations.
    * It can be used to parametrize the test. If more parameters are needed, use indexTypeCartesianProduct().
@@ -99,7 +94,7 @@ public class IncrementalIndexCreator implements Closeable
      * @param args a list of arguments that are used to configure the builder
      * @return a new instance of an incremental-index
      */
-    IncrementalIndex<?> createIndex(AppendableIndexBuilder builder, Object... args);
+    IncrementalIndex createIndex(AppendableIndexBuilder builder, Object... args);
   }
 
   private final Closer closer = Closer.create();
@@ -152,7 +147,7 @@ public class IncrementalIndexCreator implements Closeable
    * @param args The arguments for the index-generator
    * @return An incremental-index instance
    */
-  public final IncrementalIndex<?> createIndex(Object... args)
+  public final IncrementalIndex createIndex(Object... args)
   {
     return createIndex(indexCreator, args);
   }
@@ -163,7 +158,7 @@ public class IncrementalIndexCreator implements Closeable
    * @param args The arguments for the index-generator
    * @return An incremental-index instance
    */
-  public final IncrementalIndex<?> createIndex(IndexCreator indexCreator, Object... args)
+  public final IncrementalIndex createIndex(IndexCreator indexCreator, Object... args)
   {
     return closer.register(indexCreator.createIndex(appendableIndexSpec.builder(), args));
   }

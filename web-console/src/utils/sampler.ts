@@ -286,6 +286,9 @@ export async function sampleForConnect(
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
+        granularitySpec: {
+          rollup: false,
+        },
       },
     } as any,
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -342,6 +345,9 @@ export async function sampleForParser(
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
         dimensionsSpec: {},
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -367,6 +373,9 @@ export async function sampleForTimestamp(
         dataSource: 'sample',
         dimensionsSpec: {},
         timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -395,6 +404,9 @@ export async function sampleForTimestamp(
         timestampSpec,
         transformSpec: {
           transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
+        },
+        granularitySpec: {
+          rollup: false,
         },
       },
     },
@@ -441,6 +453,9 @@ export async function sampleForTransform(
           dataSource: 'sample',
           timestampSpec,
           dimensionsSpec: {},
+          granularitySpec: {
+            rollup: false,
+          },
         },
       },
       samplerConfig: BASE_SAMPLER_CONFIG,
@@ -474,6 +489,9 @@ export async function sampleForTransform(
         transformSpec: {
           transforms,
         },
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -502,6 +520,9 @@ export async function sampleForFilter(
           dataSource: 'sample',
           timestampSpec,
           dimensionsSpec: {},
+          granularitySpec: {
+            rollup: false,
+          },
         },
       },
       samplerConfig: BASE_SAMPLER_CONFIG,
@@ -536,6 +557,9 @@ export async function sampleForFilter(
           transforms,
           filter,
         },
+        granularitySpec: {
+          rollup: false,
+        },
       },
     },
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -556,6 +580,7 @@ export async function sampleForSchema(
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =
     deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity') || 'NONE';
+  const rollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup') ?? true;
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -567,6 +592,7 @@ export async function sampleForSchema(
         transformSpec,
         granularitySpec: {
           queryGranularity,
+          rollup,
         },
         dimensionsSpec,
         metricsSpec,

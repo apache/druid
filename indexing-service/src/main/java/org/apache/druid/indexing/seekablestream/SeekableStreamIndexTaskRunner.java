@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -72,6 +73,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -436,13 +438,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
@@ -1091,8 +1100,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> buildSegmentsParseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
@@ -1576,8 +1585,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     return Response.ok(events).build();
   }

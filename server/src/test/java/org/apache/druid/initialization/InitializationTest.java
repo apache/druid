@@ -24,13 +24,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Binder;
+import com.google.inject.ConfigurationException;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
@@ -458,6 +465,167 @@ public class InitializationTest
     public void configure(Binder binder)
     {
       // Do nothing
+    }
+  }
+
+  @Test
+  public void testCreateInjectorWithNodeRoles()
+  {
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
+    Injector injector = Initialization.makeInjectorWithModules(
+        ImmutableSet.of(new NodeRole("role1"), new NodeRole("role2")),
+        startupInjector,
+        ImmutableList.of(
+            binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            )
+        )
+    );
+    Assert.assertNotNull(injector);
+    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+  }
+
+  @Test
+  public void testCreateInjectorWithNodeRoleFilter_moduleNotLoaded()
+  {
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
+    Injector injector = Initialization.makeInjectorWithModules(
+        ImmutableSet.of(new NodeRole("role1"), new NodeRole("role2")),
+        startupInjector,
+        ImmutableList.of(
+            (com.google.inject.Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            ),
+            new LoadOnAnnotationTestModule()
+        )
+    );
+    Assert.assertNotNull(injector);
+    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assert.assertThrows(
+        "Guice configuration errors",
+        ConfigurationException.class,
+        () -> injector.getInstance(Key.get(String.class, Names.named("emperor")))
+    );
+  }
+
+  @Test
+  public void testCreateInjectorWithNodeRoleFilterUsingAnnotation_moduleLoaded()
+  {
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = GuiceInjectors.makeStartupInjector();
+    Injector injector = Initialization.makeInjectorWithModules(
+        ImmutableSet.of(new NodeRole("role1"), new NodeRole("druid")),
+        startupInjector,
+        ImmutableList.of(
+            (com.google.inject.Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            ),
+            new LoadOnAnnotationTestModule()
+        )
+    );
+    Assert.assertNotNull(injector);
+    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assert.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
+  }
+
+  @LoadScope(roles = {"emperor", "druid"})
+  private static class LoadOnAnnotationTestModule implements com.google.inject.Module
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      binder.bind(String.class).annotatedWith(Names.named("emperor")).toInstance("I am Druid");
+    }
+  }
+
+  @Test
+  public void testCreateInjectorWithNodeRoleFilterUsingInject_moduleNotLoaded()
+  {
+    final Set<NodeRole> nodeRoles = ImmutableSet.of(new NodeRole("role1"), new NodeRole("role2"));
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> {
+              Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+              nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
+            }
+        )
+    );
+    Injector injector = Initialization.makeInjectorWithModules(
+        nodeRoles,
+        startupInjector,
+        ImmutableList.of(
+            (com.google.inject.Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            ),
+            new NodeRolesInjectTestModule()
+        )
+    );
+    Assert.assertNotNull(injector);
+    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assert.assertThrows(
+        "Guice configuration errors",
+        ConfigurationException.class,
+        () -> injector.getInstance(Key.get(String.class, Names.named("emperor")))
+    );
+  }
+
+  @Test
+  public void testCreateInjectorWithNodeRoleFilterUsingInject_moduleLoaded()
+  {
+    final Set<NodeRole> nodeRoles = ImmutableSet.of(new NodeRole("role1"), new NodeRole("druid"));
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> {
+              Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+              nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
+            }
+        )
+    );
+    Injector injector = Initialization.makeInjectorWithModules(
+        nodeRoles,
+        startupInjector,
+        ImmutableList.of(
+            (com.google.inject.Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            ),
+            new NodeRolesInjectTestModule()
+        )
+    );
+    Assert.assertNotNull(injector);
+    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assert.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
+  }
+
+  private static class NodeRolesInjectTestModule implements com.google.inject.Module
+  {
+    private Set<NodeRole> nodeRoles;
+
+    @Inject
+    public void init(@Self Set<NodeRole> nodeRoles)
+    {
+      this.nodeRoles = nodeRoles;
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+      if (nodeRoles.contains(new NodeRole("emperor")) || nodeRoles.contains(new NodeRole("druid"))) {
+        binder.bind(String.class).annotatedWith(Names.named("emperor")).toInstance("I am Druid");
+      }
     }
   }
 }

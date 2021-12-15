@@ -36,7 +36,7 @@ public class ColumnCapabilitiesImplTest
                                                 .setHasBitmapIndexes(true)
                                                 .setHasMultipleValues(true)
                                                 .setHasSpatialIndexes(true)
-                                                .setType(ValueType.COMPLEX)
+                                                .setType(ColumnType.UNKNOWN_COMPLEX)
                                                 .setHasNulls(true)
                                                 .setFilterable(true));
 
@@ -44,7 +44,7 @@ public class ColumnCapabilitiesImplTest
     
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
-    Assert.assertEquals(ValueType.COMPLEX, cc.getType());
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
     Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());
@@ -71,7 +71,7 @@ public class ColumnCapabilitiesImplTest
 
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
-    Assert.assertEquals(ValueType.COMPLEX, cc.getType());
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, cc.toColumnType());
     Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());

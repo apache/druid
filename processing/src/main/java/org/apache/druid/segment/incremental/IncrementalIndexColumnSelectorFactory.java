@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final IncrementalIndexStorageAdapter adapter;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
   private final boolean descending;
   private final IncrementalIndexRowHolder rowHolder;
@@ -85,7 +85,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       if (capabilities == null) {
         return DimensionSelector.constant(null, extractionFn);
       }
-      if (capabilities.getType().isNumeric()) {
+      if (capabilities.isNumeric()) {
         return ValueTypes.makeNumericWrappingDimensionSelector(
             capabilities.getType(),
             makeColumnValueSelector(dimension),

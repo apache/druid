@@ -23,10 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -356,7 +356,7 @@ public class CompressedLongsSerdeTest
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(indexed2);
+      CloseableUtils.closeAndWrapExceptions(indexed2);
     }
 
     if (failureHappened.get()) {

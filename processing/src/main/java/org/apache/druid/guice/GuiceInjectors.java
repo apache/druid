@@ -24,6 +24,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.math.expr.ExpressionProcessingModule;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +44,7 @@ public class GuiceInjectors
         new RuntimeInfoModule(),
         new ConfigModule(),
         new NullHandlingModule(),
+        new ExpressionProcessingModule(),
         binder -> {
           binder.bind(DruidSecondaryModule.class);
           JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);

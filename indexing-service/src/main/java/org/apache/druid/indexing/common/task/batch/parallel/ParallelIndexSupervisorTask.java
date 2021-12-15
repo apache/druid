@@ -39,9 +39,9 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskReport;
@@ -67,6 +67,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -383,7 +384,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
@@ -529,7 +531,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static boolean useRangePartitions(ParallelIndexTuningConfig tuningConfig)
   {
-    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof SingleDimensionPartitionsSpec;
+    return tuningConfig.getGivenOrDefaultPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
   private boolean isParallelMode()
@@ -900,8 +902,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     distributions.forEach(distributionMerger::merge);
     StringDistribution mergedDistribution = distributionMerger.getResult();
 
-    SingleDimensionPartitionsSpec partitionsSpec =
-        (SingleDimensionPartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
+    DimensionRangePartitionsSpec partitionsSpec =
+        (DimensionRangePartitionsSpec) ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec();
 
     final PartitionBoundaries partitions;
     Integer targetRowsPerSegment = partitionsSpec.getTargetRowsPerSegment();
@@ -1051,8 +1053,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
         storeCompactionState,
         toolbox,
-        ingestionSchema.getTuningConfig(),
-        ingestionSchema.getDataSchema().getGranularitySpec()
+        ingestionSchema
     );
 
     Set<DataSegment> segmentsFoundForDrop = null;
@@ -1460,7 +1461,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     long thrownAway = 0L;
     long unparseable = 0L;
 
-    List<String> unparseableEvents = new ArrayList<>();
+    List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
     // Get stats from completed tasks
     Map<String, PushedSegmentsReport> completedSubtaskReports = parallelSinglePhaseRunner.getReports();
@@ -1479,8 +1480,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
 
       if (includeUnparseable) {
-        List<String> taskUnparsebleEvents = (List<String>) reportData.getUnparseableEvents()
-                                                                     .get(RowIngestionMeters.BUILD_SEGMENTS);
+        List<ParseExceptionReport> taskUnparsebleEvents = (List<ParseExceptionReport>) reportData.getUnparseableEvents()
+                                                                                   .get(RowIngestionMeters.BUILD_SEGMENTS);
         unparseableEvents.addAll(taskUnparsebleEvents);
       }
 
@@ -1507,7 +1508,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         if (includeUnparseable) {
           Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-          List<String> buildSegmentsUnparseableEvents = (List<String>) taskUnparseableEvents.get(
+          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
               RowIngestionMeters.BUILD_SEGMENTS
           );
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);

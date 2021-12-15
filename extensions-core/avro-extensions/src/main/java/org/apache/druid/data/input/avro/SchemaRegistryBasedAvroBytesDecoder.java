@@ -128,7 +128,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   {
     int length = bytes.limit() - 1 - 4;
     if (length < 0) {
-      throw new ParseException("Failed to decode avro message, not enough bytes to decode (%s)", bytes.limit());
+      throw new ParseException(null, "Failed to decode avro message, not enough bytes to decode (%s)", bytes.limit());
     }
 
     bytes.get(); // ignore first \0 byte
@@ -151,7 +151,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode Avro message for schema: %s!", id);
+      throw new ParseException(null, e, "Fail to decode Avro message for schema: %s!", id);
     }
   }
 

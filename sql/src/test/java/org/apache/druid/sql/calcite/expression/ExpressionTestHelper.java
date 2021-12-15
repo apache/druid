@@ -71,8 +71,10 @@ import java.util.stream.Collectors;
 class ExpressionTestHelper
 {
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
+      "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
+      CalciteTests.getJsonMapper(),
       new PlannerConfig(),
       new DruidSchemaCatalog(
           EasyMock.createMock(SchemaPlus.class),

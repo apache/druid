@@ -312,10 +312,10 @@ public class WorkerTaskManager
     return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
   }
 
-  private void cleanupAndMakeTmpTaskDir()
+  private void cleanupAndMakeTmpTaskDir() throws IOException
   {
     File tmpDir = getTmpTaskDir();
-    tmpDir.mkdirs();
+    FileUtils.mkdirp(tmpDir);
     if (!tmpDir.isDirectory()) {
       throw new ISE("Tmp Tasks Dir [%s] does not exist/not-a-directory.", tmpDir);
     }
@@ -334,17 +334,13 @@ public class WorkerTaskManager
     return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
   }
 
-  private void initAssignedTasks()
+  private void initAssignedTasks() throws IOException
   {
     File assignedTaskDir = getAssignedTaskDir();
 
     log.debug("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
 
-    assignedTaskDir.mkdirs();
-
-    if (!assignedTaskDir.isDirectory()) {
-      throw new ISE("Assigned Tasks Dir [%s] does not exist/not-a-directory.", assignedTaskDir);
-    }
+    FileUtils.mkdirp(assignedTaskDir);
 
     for (File taskFile : assignedTaskDir.listFiles()) {
       try {
@@ -461,16 +457,12 @@ public class WorkerTaskManager
     }
   }
 
-  private void initCompletedTasks()
+  private void initCompletedTasks() throws IOException
   {
     File completedTaskDir = getCompletedTaskDir();
     log.debug("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
 
-    completedTaskDir.mkdirs();
-
-    if (!completedTaskDir.isDirectory()) {
-      throw new ISE("Completed Tasks Dir [%s] does not exist/not-a-directory.", completedTaskDir);
-    }
+    FileUtils.mkdirp(completedTaskDir);
 
     for (File taskFile : completedTaskDir.listFiles()) {
       try {

@@ -317,8 +317,10 @@ services:
       - ./environment-configs/router-custom-check-tls
 
 ### optional supporting infra
+
   druid-it-hadoop:
-    image: druid-it/hadoop:2.8.5
+    ## Giving fake version
+    image: druid-it/hadoop:9.9.9
     container_name: druid-it-hadoop
     ports:
       - 2049:2049

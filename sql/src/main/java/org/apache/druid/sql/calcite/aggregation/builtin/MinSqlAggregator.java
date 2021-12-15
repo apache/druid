@@ -22,15 +22,15 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class MinSqlAggregator extends SimpleSqlAggregator
 {
@@ -49,19 +49,19 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       final String expression
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
+    final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, expression, macroTable));
   }
 
   private static AggregatorFactory createMinAggregatorFactory(
-      final ValueType aggregationType,
+      final ColumnType aggregationType,
       final String name,
       final String fieldName,
       final String expression,
       final ExprMacroTable macroTable
   )
   {
-    switch (aggregationType) {
+    switch (aggregationType.getType()) {
       case LONG:
         return new LongMinAggregatorFactory(name, fieldName, expression, macroTable);
       case FLOAT:
@@ -69,7 +69,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMinAggregatorFactory(name, fieldName, expression, macroTable);
       default:
-        throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
+        throw new UnsupportedSQLQueryException("MIN aggregator is not supported for '%s' type", aggregationType);
     }
   }
 }

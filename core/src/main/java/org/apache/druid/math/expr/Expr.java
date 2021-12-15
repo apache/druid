@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -135,7 +136,7 @@ public interface Expr extends Cacheable
   BindingAnalysis analyzeInputs();
 
   /**
-   * Given an {@link InputBindingInspector}, compute what the output {@link ExprType} will be for this expression.
+   * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
    *
    * In the vectorized expression engine, if {@link #canVectorize(InputBindingInspector)} returns true, a return value
    * of null MUST ONLY indicate that the expression has all null inputs (non-existent columns) or null constants for
@@ -148,7 +149,7 @@ public interface Expr extends Cacheable
    * transform expressions at ingestion time
    */
   @Nullable
-  default ExprType getOutputType(InputBindingInspector inspector)
+  default ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return null;
   }
@@ -188,22 +189,28 @@ public interface Expr extends Cacheable
   interface InputBindingInspector
   {
     /**
-     * Get the {@link ExprType} from the backing store for a given identifier (this is likely a column, but could be other
-     * things depending on the backing adapter)
+     * Get the {@link ExpressionType} from the backing store for a given identifier (this is likely a column, but
+     * could be other things depending on the backing adapter)
      */
     @Nullable
-    ExprType getType(String name);
+    ExpressionType getType(String name);
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(List<Expr> args)
     {
       boolean numeric = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
@@ -213,9 +220,15 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isNumeric} with a value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isNumeric} with a value
+     * of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable numeric output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areNumeric(Expr... args)
     {
@@ -223,29 +236,77 @@ public interface Expr extends Cacheable
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
-     * value of true.
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(List<Expr> args)
+    {
+      ExpressionType currentType = null;
+      boolean allSame = true;
+      for (Expr arg : args) {
+        ExpressionType argType = arg.getOutputType(this);
+        if (argType == null) {
+          continue;
+        }
+        if (currentType == null) {
+          currentType = argType;
+        }
+        allSame &= Objects.equals(argType, currentType);
+      }
+      return allSame;
+    }
+
+    /**
+     * Check if all arguments are the same type (or null, which is not a type)
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
+     */
+    default boolean areSameTypes(Expr... args)
+    {
+      return areSameTypes(Arrays.asList(args));
+    }
+
+    /**
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(List<Expr> args)
     {
       boolean scalar = true;
       for (Expr arg : args) {
-        ExprType argType = arg.getOutputType(this);
+        ExpressionType argType = arg.getOutputType(this);
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isScalar();
+        scalar &= argType.isPrimitive();
       }
       return scalar;
     }
 
     /**
-     * Check if all provided {@link Expr} can infer the output type as {@link ExprType#isScalar()} (non-array) with a
-     * value of true.
+     * Check if all provided {@link Expr} can infer the output type as {@link ExpressionType#isPrimitive()}
+     * (non-array) with a value of true (or null, which is not a type)
      *
      * There must be at least one expression with a computable scalar output type for this method to return true.
+     *
+     * This method should only be used if {@link #getType} produces accurate information for all bindings (no null
+     * value for type unless the input binding does not exist and so the input is always null)
+     *
+     * @see #getOutputType(InputBindingInspector)
      */
     default boolean areScalar(Expr... args)
     {
@@ -284,7 +345,7 @@ public interface Expr extends Cacheable
   /**
    * Mechanism to supply values to back {@link IdentifierExpr} during expression evaluation
    */
-  interface ObjectBinding
+  interface ObjectBinding extends InputBindingInspector
   {
     /**
      * Get value binding for string identifier of {@link IdentifierExpr}
@@ -295,7 +356,7 @@ public interface Expr extends Cacheable
 
   /**
    * Mechanism to supply batches of input values to a {@link ExprVectorProcessor} for optimized processing. Mirrors
-   * the vectorized column selector interfaces, and includes {@link ExprType} information about all input bindings
+   * the vectorized column selector interfaces, and includes {@link ExpressionType} information about all input bindings
    * which exist
    */
   interface VectorInputBinding extends VectorInputBindingInspector
@@ -364,13 +425,15 @@ public interface Expr extends Cacheable
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
   {
+    public static final BindingAnalysis EMTPY = new BindingAnalysis();
+
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
     private final ImmutableSet<IdentifierExpr> arrayVariables;
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    BindingAnalysis()
+    public BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }

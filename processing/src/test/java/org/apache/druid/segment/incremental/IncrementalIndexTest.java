@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -102,7 +102,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensions() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -122,7 +122,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -135,7 +135,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void controlTest() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(
         new MapBasedInputRow(
             System.currentTimeMillis() - 1,
@@ -162,7 +162,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Test
   public void testUnparseableNumerics() throws IndexSizeExceededException
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
 
     IncrementalIndexAddResult result;
     result = index.add(
@@ -177,9 +177,13 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=asdj, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [asdj] to long]",
+        "{string=A, float=19.0, long=asdj, double=21.0}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [could not convert value [asdj] to long]",
         result.getParseException().getMessage()
     );
 
@@ -195,9 +199,13 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=aaa, long=20, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [aaa] to float]",
+        "{string=A, float=aaa, long=20, double=21.0}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [could not convert value [aaa] to float]",
         result.getParseException().getMessage()
     );
 
@@ -213,9 +221,13 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
     Assert.assertEquals(
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=20, double=}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [] to double]",
+        "{string=A, float=19.0, long=20, double=}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [could not convert value [] to double]",
         result.getParseException().getMessage()
     );
   }
@@ -228,7 +240,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         Lists.newArrayList("billy", "joe"),
         ImmutableMap.of("billy", "A", "joe", "B")
     );
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
     index.add(row);
     index.add(row);
     index.add(row);

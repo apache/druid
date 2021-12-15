@@ -35,7 +35,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.List;
 
@@ -52,11 +52,11 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   }
 
   @Override
-  public ValueType defaultType()
+  public ColumnType defaultType()
   {
     // Set default type to COMPLEX, so when the underlying type is unknown, we go into "makeComplexProcessor", which
     // uses per-row type detection.
-    return ValueType.COMPLEX;
+    return ColumnType.UNKNOWN_COMPLEX;
   }
 
   @Override

@@ -23,11 +23,13 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -45,17 +47,22 @@ import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -273,17 +280,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    *
    * @return whether the lock was acquired
    */
-  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals)
+  public boolean determineLockGranularityAndTryLock(TaskActionClient client, List<Interval> intervals, IndexIOConfig ioConfig)
       throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false);
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -292,7 +300,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
-        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
         return tryLockWithDetermineResult(client, result);
       } else {
         // This branch is the only one that will not initialize taskLockHelper.
@@ -320,9 +328,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
+    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, false);
+
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false);
+      taskLockHelper = new TaskLockHelper(false, useSharedLock);
       segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
@@ -330,7 +340,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
       segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
@@ -404,6 +414,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
+      if (lock.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
+      }
     }
     return true;
   }
@@ -475,14 +488,27 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
       boolean storeCompactionState,
       TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig,
-      GranularitySpec granularitySpec
+      IngestionSpec ingestionSpec
   )
   {
     if (storeCompactionState) {
-      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final Map<String, Object> granularitySpecMap = granularitySpec.asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap, granularitySpecMap);
+      TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
+      GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
+      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
+      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
+                                      ? null
+                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions(), null, null);
+      // We only need to store filter since that is the only field auto compaction support
+      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
+                                          ? null
+                                          : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(
+          tuningConfig.getPartitionsSpec(),
+          dimensionsSpec,
+          transformSpec,
+          tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
+          granularitySpec.asMap(toolbox.getJsonMapper())
+      );
       return segments -> segments
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))
@@ -649,6 +675,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
     finally {
       segmentAvailabilityWaitTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+      toolbox.getEmitter().emit(
+          new ServiceMetricEvent.Builder()
+              .setDimension("dataSource", getDataSource())
+              .setDimension("taskType", getType())
+              .setDimension("taskId", getId())
+              .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
+              .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
+      );
     }
   }
 

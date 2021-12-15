@@ -36,6 +36,7 @@ import java.util.List;
 public class SqlRowTransformer
 {
   private final DateTimeZone timeZone;
+  private final RelDataType rowType;
   private final List<String> fieldList;
 
   // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
@@ -45,6 +46,7 @@ public class SqlRowTransformer
   SqlRowTransformer(DateTimeZone timeZone, RelDataType rowType)
   {
     this.timeZone = timeZone;
+    this.rowType = rowType;
     this.fieldList = new ArrayList<>(rowType.getFieldCount());
     this.timeColumns = new boolean[rowType.getFieldCount()];
     this.dateColumns = new boolean[rowType.getFieldCount()];
@@ -54,6 +56,11 @@ public class SqlRowTransformer
       dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
       fieldList.add(rowType.getFieldList().get(i).getName());
     }
+  }
+
+  public RelDataType getRowType()
+  {
+    return rowType;
   }
 
   public List<String> getFieldList()

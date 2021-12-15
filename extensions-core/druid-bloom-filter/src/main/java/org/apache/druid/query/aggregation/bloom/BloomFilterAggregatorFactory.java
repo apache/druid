@@ -38,7 +38,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -49,15 +49,23 @@ import java.util.Objects;
 
 public class BloomFilterAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME);
   private static final int DEFAULT_NUM_ENTRIES = 1500;
 
-  private static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
+  public static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
     if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
       ByteBuffer buf1 = (ByteBuffer) o1;
       ByteBuffer buf2 = (ByteBuffer) o2;
       return Integer.compare(
           BloomKFilter.getNumSetBits(buf1, buf1.position()),
           BloomKFilter.getNumSetBits(buf2, buf2.position())
+      );
+    } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
+      BloomKFilter f1 = (BloomKFilter) o1;
+      BloomKFilter f2 = (BloomKFilter) o2;
+      return Integer.compare(
+          f1.getNumSetBits(),
+          f2.getNumSetBits()
       );
     } else {
       throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
@@ -178,25 +186,19 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(field.getDimension());
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME;
-  }
-
   /**
    * actual type is {@link ByteBuffer} containing {@link BloomKFilter}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
@@ -254,8 +256,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
 
     if (capabilities != null) {
-      ValueType type = capabilities.getType();
-      switch (type) {
+      switch (capabilities.getType()) {
         case STRING:
           return new StringBloomFilterAggregator(
               columnFactory.makeDimensionSelector(field),
@@ -291,7 +292,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
           throw new IAE(
               "Cannot create bloom filter %s for invalid column type [%s]",
               onHeap ? "aggregator" : "buffer aggregator",
-              type
+              capabilities.asTypeString()
           );
       }
     } else {
