@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
@@ -288,8 +289,13 @@ public class TaskQueue
           }
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-            final String errorMessage = "Failed while waiting for the task to be ready to run. "
-                                        + "See overlord logs for more details.";
+            final String errorMessage;
+            if (e instanceof MaxAllowedLocksExceededException) {
+              errorMessage = e.getMessage();
+            } else {
+              errorMessage = "Failed while waiting for the task to be ready to run. "
+                                          + "See overlord logs for more details.";
+            }
             notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
             continue;
           }

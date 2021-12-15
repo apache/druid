@@ -53,7 +53,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -77,6 +79,9 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -592,6 +597,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             null
         ),
         VALID_INPUT_SOURCE_FILTER
@@ -675,6 +681,127 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         .forSegments(afterAppendSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(afterAppendSegments), visibles);
+  }
+
+  @Test
+  public void testMaxLocksWith1MaxNumConcurrentSubTasks()
+  {
+    final Interval interval = Intervals.of("2017-12/P1M");
+    final boolean appendToExisting = false;
+    final ParallelIndexSupervisorTask task = newTask(
+        interval,
+        Granularities.DAY,
+        appendToExisting,
+        true,
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0
+        ),
+        VALID_INPUT_SOURCE_FILTER
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+
+    if (lockGranularity.equals(LockGranularity.TIME_CHUNK)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(
+          "Number of locks exceeded maxAllowedLockCount [0]"
+      );
+      getIndexingServiceClient().runAndWait(task);
+    } else {
+      Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+      Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
+      assertShardSpec(task, lockGranularity, appendToExisting, Collections.emptyList());
+    }
+  }
+
+
+  @Test
+  public void testMaxLocksWith2MaxNumConcurrentSubTasks()
+  {
+    final Interval interval = Intervals.of("2017-12/P1M");
+    final boolean appendToExisting = false;
+    final ParallelIndexSupervisorTask task = newTask(
+        interval,
+        Granularities.DAY,
+        appendToExisting,
+        true,
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0
+        ),
+        VALID_INPUT_SOURCE_FILTER
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+
+    if (lockGranularity.equals(LockGranularity.TIME_CHUNK)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(
+          "Number of locks exceeded maxAllowedLockCount [0]"
+      );
+      getIndexingServiceClient().runAndWait(task);
+    } else {
+      Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+      Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
+      assertShardSpec(task, lockGranularity, appendToExisting, Collections.emptyList());
+    }
   }
 
   private ParallelIndexSupervisorTask newTask(

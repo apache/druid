@@ -387,9 +387,15 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     }
 
     @Override
-    public void stopGracefully()
+    public void stopGracefully(String stopReason)
     {
 
+    }
+
+    @Override
+    public String getStopReason()
+    {
+      return null;
     }
 
     @Override
