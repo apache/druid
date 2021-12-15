@@ -1520,7 +1520,12 @@ druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
 enableParallelMerge
+enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
 floatSum
+joinFilterRewriteMaxSize
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
@@ -1537,7 +1542,6 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
-enableJoinLeftTableScanDirect
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
