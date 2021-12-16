@@ -53,7 +53,7 @@ The `"host"` field in the error message above indicates the IP address of the Hi
 In the Historical logs, you will see a raised exception indicating `Idle timeout expired`:
 
 ```text
-2021-09-14T19:52:27,685 ERROR [qtp475526834-85[scan_[test_async_downloads_test_large_table]_6eee73a6-a95f-4bdc-821d-981e99e39242]] org.apache.druid.server.QueryResource - Unable to send query response. (java.io.IOException: java.util.concurrent.TimeoutException: Idle timeout expired: 300000/300000 ms)
+2021-09-14T19:52:27,685 ERROR [qtp475526834-85[scan_[test_large_table]_6eee73a6-a95f-4bdc-821d-981e99e39242]] org.apache.druid.server.QueryResource - Unable to send query response. (java.io.IOException: java.util.concurrent.TimeoutException: Idle timeout expired: 300000/300000 ms)
 2021-09-14T19:52:27,685 ERROR [qtp475526834-85] org.apache.druid.server.QueryLifecycle - Exception while processing queryId [6eee73a6-a95f-4bdc-821d-981e99e39242] (java.io.IOException: java.util.concurrent.TimeoutException: Idle timeout expired: 300000/300000 ms)
 2021-09-14T19:52:27,686 WARN [qtp475526834-85] org.eclipse.jetty.server.HttpChannel - handleException /druid/v2/ java.io.IOException: java.util.concurrent.TimeoutException: Idle timeout expired: 300000/300000 ms
 ```
@@ -63,10 +63,6 @@ To mitigate query failure due to web server timeout:
 Set the max idle time in the `druid.server.http.maxIdleTime` property in the `historical/runtime.properties` file.
 You must restart the Druid cluster for this change to take effect.
 See [Configuration reference](../configuration/index.md) for more information on configuring the server. 
-* Set a buffer size for queued, unread data for the Broker.
-Set the buffer size in the `druid.broker.http.maxQueuedBytes` property in the `broker/runtime.properties` file.
-Define the maximum number of bytes as approximately **2 MiB** times the number of Historicals.
-See [Broker configuration](../configuration/index.md#client-configuration) for more information on `druid.broker.http.maxQueuedBytes` and [Basic cluster tuning](../operations/basic-cluster-tuning.md#broker-backpressure) for details on the recommended setting.
 * If the timeout occurs because the data servers have not pushed any results to the Broker, consider optimizing data server performance. Significant slowdown in the data servers may be a result of spilling too much data to disk in [groupBy v2 queries](groupbyquery.html#performance-tuning-for-groupby-v2), large [`IN` filters](filters.md#in-filter) in the query, or an under scaled cluster. Analyze your [Druid query metrics](../operations/metrics.md#query-metrics) to determine the bottleneck.
 * If the timeout is caused by Broker backpressure, consider optimizing Broker performance. Check whether the connection is fast enough between the Broker and deep storage.
 
