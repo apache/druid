@@ -574,7 +574,7 @@ public class OverlordResource
           authorizerMapper
       );
       if (!authResult.isAllowed()) {
-        throw new ForbiddenException(StringUtils.format(authResult.toString()));
+        throw new ForbiddenException(StringUtils.format("Access-Check-Result: %s", authResult.toString()));
       }
     }
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();

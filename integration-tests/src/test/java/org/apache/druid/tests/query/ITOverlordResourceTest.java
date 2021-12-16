@@ -130,7 +130,7 @@ public class ITOverlordResourceTest
     }
     catch (ResponseException e) {
       Assert.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), e.getResponse().getStatus().getCode());
-      ResponseException.ErrorContent content = e.responseBodyToObject(ResponseException.ErrorContent.class);
+      ResponseException.ErrorContent content = e.bodyToObject(ResponseException.ErrorContent.class);
       Assert.assertTrue(content.getError().contains(supervisorId));
       return;
     }

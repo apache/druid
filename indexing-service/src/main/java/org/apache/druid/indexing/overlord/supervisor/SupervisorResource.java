@@ -518,18 +518,14 @@ public class SupervisorResource
             return Response.ok(spec.get()).build();
           } else {
             Optional<SupervisorSpec> spec = manager.getSupervisorSpec(id);
-            Response.Status status;
-            String errMsg;
             if (spec.isPresent()) {
               return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                              StringUtils.format("[%s] is already %s", id, suspend ? "suspended" : "running"));
+                                                              "[%s] is already %s",
+                                                              id, suspend ? "suspended" : "running");
             } else {
-              status = Response.Status.NOT_FOUND;
-              errMsg = StringUtils.format("[%s] does not exist", id);
-              return Response.status(status)
-                           .type(MediaType.APPLICATION_JSON_TYPE)
-                           .entity(ImmutableMap.of("error", errMsg))
-                           .build();
+              return ResponseStatusExceptionMapper.toResponse(Response.Status.NOT_FOUND,
+                                                              "[%s] does not exist",
+                                                              id);
             }
           }
         }

@@ -22,7 +22,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -34,11 +33,16 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
  */
 public class ResponseException extends ISE
 {
+  private final ObjectMapper jsonMapper;
   private final StatusResponseHolder response;
 
-  public ResponseException(StatusResponseHolder response, String formatText, Object... arguments)
+  public ResponseException(ObjectMapper jsonMapper,
+                           StatusResponseHolder response,
+                           String formatText,
+                           Object... arguments)
   {
     super(formatText, arguments);
+    this.jsonMapper = jsonMapper;
     this.response = response;
   }
 
@@ -47,18 +51,20 @@ public class ResponseException extends ISE
     return response;
   }
 
-  public <T> T responseBodyToObject(Class<T> clazz)
+  /**
+   * Deserialize the response body content to an object.
+   *
+   * This requires the Content-Type header of response to be set as 'application/json'.
+   */
+  public <T> T bodyToObject(Class<T> clazz)
   {
     String type = response.getHeaders().get("Content-Type");
     if (!"application/json".equals(type)) {
       throw new ISE("Content-Type is [{%s], expected [application/json]", type);
     }
 
-    ObjectMapper om = new ObjectMapper();
-    om.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
-    om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     try {
-      return om.readValue(response.getContent(), clazz);
+      return jsonMapper.readValue(response.getContent(), clazz);
     }
     catch (JsonProcessingException e) {
       throw new ISE(e, "unable to deserialize content to object");

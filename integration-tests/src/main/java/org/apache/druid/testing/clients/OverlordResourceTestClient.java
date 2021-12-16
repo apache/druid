@@ -404,6 +404,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while shutting down supervisor, response [%s %s]",
             response.getStatus(),
@@ -436,6 +437,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while terminating supervisor, response [%s %s]",
             response.getStatus(),
@@ -468,6 +470,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while shutdown task, response [%s %s]",
             response.getStatus(),
@@ -500,6 +503,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while getting supervisor status, response [%s %s]",
             response.getStatus(),
@@ -542,6 +546,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while suspending supervisor, response [%s %s]",
             response.getStatus(),
@@ -574,6 +579,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while stats supervisor, response [%s %s]",
             response.getStatus(),
@@ -606,6 +612,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while get supervisor health, response [%s %s]",
             response.getStatus(),
@@ -638,6 +645,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while resuming supervisor, response [%s %s]",
             response.getStatus(),
@@ -670,6 +678,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while resetting supervisor, response [%s %s]",
             response.getStatus(),
@@ -702,6 +711,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ResponseException(
+            jsonMapper,
             response,
             "Error while getting supervisor status, response [%s %s]",
             response.getStatus(),
@@ -729,7 +739,8 @@ public class OverlordResourceTestClient
       StatusResponseHolder response = this.httpClient
           .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ResponseException(response,
+        throw new ResponseException(jsonMapper,
+                                    response,
                                     "Error while making request to indexer [%s %s]",
                                     response.getStatus(),
                                     response.getContent());

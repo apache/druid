@@ -1011,17 +1011,11 @@ public class OverlordResourceTest
         req,
         workerTaskRunnerQueryAdapter
     );
-    try {
-      overlordResource.getTasks("blah", "ds_test", null, null, null, req)
-                      .getEntity();
-      Assert.fail("Should throw BadRequestExceptoin");
-    }
-    catch (BadRequestException e) {
-      Assert.assertEquals(
-          "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
-          e.getMessage()
-      );
-    }
+
+    expectedException.expect(BadRequestException.class);
+    expectedException.expectMessage("Invalid state : blah, valid values are: [pending, waiting, running, complete]");
+    overlordResource.getTasks("blah", "ds_test", null, null, null, req)
+                    .getEntity();
   }
 
   @Test
@@ -1471,7 +1465,11 @@ public class OverlordResourceTest
 
     Assert.assertEquals(response.getStatus(), HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
-    Assert.assertTrue(((Map) response.getEntity()).containsKey("error"));
+
+    //noinspection unchecked
+    String errorMsg = ((Map<String, String>) response.getEntity()).get("error");
+    Assert.assertNotNull(errorMsg);
+    Assert.assertEquals("No TaskIds provided.", errorMsg);
   }
 
   private void expectAuthorizationTokenCheck()
