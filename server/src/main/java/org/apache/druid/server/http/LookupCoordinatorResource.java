@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
@@ -164,7 +164,7 @@ public class LookupCoordinatorResource
         });
       }
       catch (IOException e) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e);
+        return BadRequestException.toResponse(e);
       }
       if (lookupCoordinatorManager.updateLookups(map, new AuditInfo(author, comment, req.getRemoteAddr()))) {
         return Response.status(Response.Status.ACCEPTED).entity(map).build();
@@ -190,7 +190,7 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`tier` required");
+        return BadRequestException.toResponse("`tier` required");
       }
 
       if (lookupCoordinatorManager.deleteTier(tier, new AuditInfo(author, comment, req.getRemoteAddr()))) {
@@ -218,11 +218,11 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`tier` required");
+        return BadRequestException.toResponse("`tier` required");
       }
 
       if (Strings.isNullOrEmpty(lookup)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`lookup` required");
+        return BadRequestException.toResponse("`lookup` required");
       }
 
       if (lookupCoordinatorManager.deleteLookup(tier, lookup, new AuditInfo(author, comment, req.getRemoteAddr()))) {
@@ -251,11 +251,11 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`tier` required");
+        return BadRequestException.toResponse("`tier` required");
       }
 
       if (Strings.isNullOrEmpty(lookup)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`lookup` required");
+        return BadRequestException.toResponse("`lookup` required");
       }
       final boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(req.getContentType());
       final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
@@ -264,7 +264,7 @@ public class LookupCoordinatorResource
         lookupSpec = mapper.readValue(in, LookupExtractorFactoryMapContainer.class);
       }
       catch (IOException e) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e);
+        return BadRequestException.toResponse(e);
       }
       if (lookupCoordinatorManager.updateLookup(
           tier,
@@ -293,10 +293,10 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`tier` required");
+        return BadRequestException.toResponse("`tier` required");
       }
       if (Strings.isNullOrEmpty(lookup)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`lookup` required");
+        return BadRequestException.toResponse("`lookup` required");
       }
       final LookupExtractorFactoryMapContainer map = lookupCoordinatorManager.getLookup(tier, lookup);
       if (map == null) {
@@ -323,7 +323,7 @@ public class LookupCoordinatorResource
   {
     try {
       if (Strings.isNullOrEmpty(tier)) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "`tier` required");
+        return BadRequestException.toResponse("`tier` required");
       }
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> map = lookupCoordinatorManager.getKnownLookups();
       if (map == null) {

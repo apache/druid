@@ -19,44 +19,19 @@
 
 package org.apache.druid.server.initialization.jetty;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.utils.ServletResourceUtils;
-import org.apache.druid.java.util.common.StringUtils;
-
-import javax.annotation.Nullable;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * automatically maps a {@link ResponseStatusException} to a {@link Response} at jetty layer
+ */
 @Provider
 public class ResponseStatusExceptionMapper implements ExceptionMapper<ResponseStatusException>
 {
-  public static Response toResponse(Response.Status statusCode, @Nullable Throwable t)
-  {
-    return toResponse(statusCode, ServletResourceUtils.sanitizeExceptionMessage(t));
-  }
-
-  /**
-   * For Response.Status.BAD_REQUEST, it's suggested to use {@link BadRequestException#toResponse(String)} to simply the code.
-   * For Response.Status.NOT_FOUND, it's suggested to use {@link NotFoundException#toResponse(String)} to simply the code.
-   */
-  public static Response toResponse(Response.Status status, String messageFormat, Object... formatArgs)
-  {
-    return toResponse(status, StringUtils.format(messageFormat, formatArgs));
-  }
-
-  public static Response toResponse(Response.Status status, String message)
-  {
-    return Response.status(status.getStatusCode())
-                   .type(MediaType.APPLICATION_JSON)
-                   .entity(ImmutableMap.of("error", message))
-                   .build();
-  }
-
   @Override
   public Response toResponse(ResponseStatusException exception)
   {
-    return toResponse(exception.getStatusCode(), exception.getMessage());
+    return ResponseStatusException.toResponse(exception.getStatusCode(), exception.getMessage());
   }
 }

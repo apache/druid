@@ -77,7 +77,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
@@ -1225,7 +1225,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();
     }
     catch (IllegalArgumentException e) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, Throwables.getStackTraceAsString(e));
+      return BadRequestException.toResponse(Throwables.getStackTraceAsString(e));
     }
   }
 
@@ -1298,7 +1298,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         return Response.ok(runner.getName()).build();
       }
     } else {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "task is running in the sequential mode");
+      return BadRequestException.toResponse("task is running in the sequential mode");
     }
   }
 

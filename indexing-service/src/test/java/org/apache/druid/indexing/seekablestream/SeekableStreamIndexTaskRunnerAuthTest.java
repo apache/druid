@@ -190,7 +190,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("Request body must contain a map of { partition:endOffset }",
-                        ((Map)response.getEntity()).get("error"));
+                        ((Map) response.getEntity()).get("error"));
   }
 
   @Test
@@ -203,7 +203,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("Request contains partitions not being handled by this task, my partitions: [partition1]",
-                        ((Map)response.getEntity()).get("error"));
+                        ((Map) response.getEntity()).get("error"));
   }
 
   @Test

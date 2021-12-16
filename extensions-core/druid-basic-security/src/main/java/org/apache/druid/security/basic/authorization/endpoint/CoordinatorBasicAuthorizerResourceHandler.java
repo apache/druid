@@ -38,7 +38,7 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserF
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -436,12 +436,12 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
 
   private static Response makeResponseForAuthorizerNotFound(String authorizerName)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName));
+    return BadRequestException.toResponse(StringUtils.format("Basic authorizer with name [%s] does not exist.", authorizerName));
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, bsre.getMessage());
+    return BadRequestException.toResponse(bsre.getMessage());
   }
 
   private Response getUserSimple(String authorizerName, String userName)

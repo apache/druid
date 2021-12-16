@@ -29,7 +29,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -129,7 +129,7 @@ public class RulesResource
       return Response.ok(getRuleHistory(dataSourceName, interval, count)).build();
     }
     catch (IllegalArgumentException e) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e.getMessage());
+      return BadRequestException.toResponse(e.getMessage());
     }
   }
 
@@ -146,7 +146,7 @@ public class RulesResource
       return Response.ok(getRuleHistory(null, interval, count)).build();
     }
     catch (IllegalArgumentException e) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e.getMessage());
+      return BadRequestException.toResponse(e.getMessage());
     }
   }
 

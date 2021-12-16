@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
@@ -115,7 +115,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
       log.error(UNKNOWN_AUTHENTICATOR_MSG_FORMAT, authenticatorName);
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format(UNKNOWN_AUTHENTICATOR_MSG_FORMAT, authenticatorName));
+      return BadRequestException.toResponse(StringUtils.format(UNKNOWN_AUTHENTICATOR_MSG_FORMAT, authenticatorName));
     }
 
     cacheManager.handleAuthenticatorUserMapUpdate(authenticatorName, serializedUserMap);

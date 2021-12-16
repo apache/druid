@@ -41,7 +41,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.metrics.EventReceiverFirehoseMetric;
 import org.apache.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.druid.server.security.Access;
@@ -568,7 +568,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         return Response.ok().build();
       }
       catch (IllegalArgumentException e) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, e.getMessage());
+        return BadRequestException.toResponse(e.getMessage());
       }
     }
 
@@ -606,7 +606,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       final String sequenceValue = req.getHeader("X-Firehose-Producer-Seq");
 
       if (sequenceValue == null) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Producer sequence value is missing");
+        return BadRequestException.toResponse("Producer sequence value is missing");
       }
 
       Long producerSequence = producerSequences.computeIfAbsent(producerId, key -> Long.MIN_VALUE);
@@ -643,7 +643,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         throw new RuntimeException(ex);
       }
       catch (NumberFormatException ex) {
-        return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Producer sequence must be a number");
+        return BadRequestException.toResponse("Producer sequence must be a number");
       }
     }
   }

@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -198,7 +198,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       log.error(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName);
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
+      return BadRequestException.toResponse(StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
     }
 
     cacheManager.handleAuthorizerUserUpdate(authorizerName, serializedUserAndRoleMap);
@@ -211,7 +211,7 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       log.error(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName);
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
+      return BadRequestException.toResponse(StringUtils.format(UNKNOWN_AUTHORIZER_MSG_FORMAT, authorizerName));
     }
 
     cacheManager.handleAuthorizerGroupMappingUpdate(authorizerName, serializedGroupMappingAndRoleMap);

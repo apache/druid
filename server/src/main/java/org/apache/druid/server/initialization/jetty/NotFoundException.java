@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import org.apache.druid.java.util.common.StringUtils;
+
 import javax.ws.rs.core.Response;
 
 /**
@@ -35,6 +37,11 @@ public class NotFoundException extends ResponseStatusException
 
   public static Response toResponse(String message)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, message);
+    return toResponse(Response.Status.NOT_FOUND, message);
+  }
+
+  public static Response toResponse(String messageFormat, Object... formatArgs)
+  {
+    return toResponse(Response.Status.NOT_FOUND, StringUtils.format(messageFormat, formatArgs));
   }
 }

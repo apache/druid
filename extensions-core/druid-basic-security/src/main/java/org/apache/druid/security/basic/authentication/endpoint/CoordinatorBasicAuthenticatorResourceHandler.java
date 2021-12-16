@@ -29,7 +29,7 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
@@ -197,11 +197,11 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
 
   private static Response makeResponseForAuthenticatorNotFound(String authenticatorName)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, StringUtils.format("Basic authenticator with name [%s] does not exist.", authenticatorName));
+    return BadRequestException.toResponse(StringUtils.format("Basic authenticator with name [%s] does not exist.", authenticatorName));
   }
 
   private static Response makeResponseForBasicSecurityDBResourceException(BasicSecurityDBResourceException bsre)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, bsre.getMessage());
+    return BadRequestException.toResponse(bsre.getMessage());
   }
 }

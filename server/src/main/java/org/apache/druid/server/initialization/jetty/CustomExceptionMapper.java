@@ -32,6 +32,6 @@ public class CustomExceptionMapper implements ExceptionMapper<JsonMappingExcepti
   @Override
   public Response toResponse(JsonMappingException exception)
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
+    return BadRequestException.toResponse(exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
   }
 }

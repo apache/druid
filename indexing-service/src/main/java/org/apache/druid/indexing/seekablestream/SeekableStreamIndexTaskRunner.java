@@ -83,7 +83,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1599,11 +1599,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   ) throws InterruptedException
   {
     if (sequenceNumbers == null) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Request body must contain a map of { partition:endOffset }");
+      return BadRequestException.toResponse("Request body must contain a map of { partition:endOffset }");
     } else if (!endOffsets.keySet().containsAll(sequenceNumbers.keySet())) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                      StringUtils.format("Request contains partitions not being handled by this task, my partitions: %s",
-                                                                         endOffsets.keySet()));
+      return BadRequestException.toResponse("Request contains partitions not being handled by this task, my partitions: %s",
+                                            endOffsets.keySet());
     } else {
       try {
         pauseLock.lockInterruptibly();
@@ -1632,23 +1631,19 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
-          return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                          StringUtils.format(
-                             "Sequence [%s] has already endOffsets set, cannot set to [%s]",
-                             latestSequence,
-                             sequenceNumbers));
+          return BadRequestException.toResponse("Sequence [%s] has already endOffsets set, cannot set to [%s]",
+                                                latestSequence,
+                                                sequenceNumbers);
         } else if (!isPaused()) {
-          return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                          "Task must be paused before changing the end offsets");
+          return BadRequestException.toResponse("Task must be paused before changing the end offsets");
         }
 
         for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceNumbers.entrySet()) {
           if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
               < 0) {
-            return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                            StringUtils.format("End sequence must be >= current sequence for partition [%s] (current: %s)",
-                                                                               entry.getKey(),
-                                                                               currOffsets.get(entry.getKey())));
+            return BadRequestException.toResponse("End sequence must be >= current sequence for partition [%s] (current: %s)",
+                                                  entry.getKey(),
+                                                  currOffsets.get(entry.getKey()));
           }
         }
 
@@ -1757,8 +1752,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST,
-                                                      StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status));
+      return BadRequestException.toResponse("Can't pause, task is not in a pausable state (state: [%s])", status);
     }
 
     pauseLock.lockInterruptibly();

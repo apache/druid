@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord.sampler;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -39,6 +39,6 @@ public class SamplerExceptionMapper implements ExceptionMapper<SamplerException>
     // Logging the stack trace and returning the exception message in the response
     LOG.error(exception, message);
 
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, message);
+    return BadRequestException.toResponse(message);
   }
 }

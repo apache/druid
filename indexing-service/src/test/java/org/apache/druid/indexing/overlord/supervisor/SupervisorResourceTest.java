@@ -558,7 +558,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("[id1] is already running",
-                        ((Map)response.getEntity()).get("error"));
+                        ((Map) response.getEntity()).get("error"));
   }
 
   @Test
@@ -573,7 +573,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
     Assert.assertEquals("[id1] does not exist",
-                        ((Map)response.getEntity()).get("error"));
+                        ((Map) response.getEntity()).get("error"));
   }
 
   @Test

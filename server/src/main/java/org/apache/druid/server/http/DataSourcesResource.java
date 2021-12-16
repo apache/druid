@@ -55,7 +55,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -252,7 +252,7 @@ public class DataSourcesResource
   {
     if (payload == null || !payload.isValid()) {
       log.warn("Invalid request payload: [%s]", payload);
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Invalid request payload, either interval or segmentIds array must be specified");
+      return BadRequestException.toResponse("Invalid request payload, either interval or segmentIds array must be specified");
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
@@ -421,7 +421,7 @@ public class DataSourcesResource
   )
   {
     if (forceMetadataRefresh == null) {
-      return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Invalid request. forceMetadataRefresh must be specified");
+      return BadRequestException.toResponse("Invalid request. forceMetadataRefresh must be specified");
     }
     final Interval theInterval;
     if (interval == null) {

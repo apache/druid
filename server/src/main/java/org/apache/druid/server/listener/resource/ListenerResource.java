@@ -27,7 +27,7 @@ import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.initialization.jetty.ResponseStatusExceptionMapper;
+import org.apache.druid.server.initialization.jetty.BadRequestException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -193,6 +193,6 @@ public abstract class ListenerResource
 
   public static Response makeNullIdResponse()
   {
-    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, "Cannot have null or empty id");
+    return BadRequestException.toResponse("Cannot have null or empty id");
   }
 }
