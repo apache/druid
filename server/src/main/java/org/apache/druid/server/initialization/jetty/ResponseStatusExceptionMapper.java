@@ -20,8 +20,10 @@
 package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -35,9 +37,9 @@ public class ResponseStatusExceptionMapper implements ExceptionMapper<ResponseSt
    * it's suggested to throw exception {@link BadRequestException} or {@link NotFoundException} respectively
    * instead of returning a response object
    */
-  public static Response toResponse(Response.Status statusCode, Exception e)
+  public static Response toResponse(Response.Status statusCode, @Nullable Throwable t)
   {
-    return toResponse(statusCode, e == null ? "null" : (e.getMessage() == null ? e.toString() : e.getMessage()));
+    return toResponse(statusCode, ServletResourceUtils.sanitizeExceptionMessage(t));
   }
 
   /**

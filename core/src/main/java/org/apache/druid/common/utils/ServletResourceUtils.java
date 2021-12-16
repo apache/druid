@@ -27,6 +27,11 @@ import java.util.Map;
 
 public class ServletResourceUtils
 {
+  public static String sanitizeExceptionMessage(@Nullable Throwable t)
+  {
+    return t == null ? "null" : (t.getMessage() == null ? t.toString() : t.getMessage());
+  }
+
   /**
    * Sanitize the exception as a map of "error" to information about the exception.
    *
@@ -38,7 +43,7 @@ public class ServletResourceUtils
   {
     return ImmutableMap.of(
         "error",
-        t == null ? "null" : (t.getMessage() == null ? t.toString() : t.getMessage())
+        sanitizeExceptionMessage(t)
     );
   }
 
