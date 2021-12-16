@@ -60,6 +60,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.test.utils.ResponseTestUtils;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -75,7 +76,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.util.Arrays;
@@ -1466,11 +1466,11 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter
     );
 
-    Response response = this.overlordResource.getMultipleTaskStatuses(Collections.emptySet());
-
-    Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.getCode(), response.getStatus());
-    Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
-    Assert.assertEquals("No TaskIds provided.", ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(
+        this.overlordResource.getMultipleTaskStatuses(Collections.emptySet()),
+        Status.BAD_REQUEST,
+        "No TaskIds provided."
+    );
   }
 
   @Test
@@ -1490,11 +1490,11 @@ public class OverlordResourceTest
         auditManager
     );
 
-    Response response = this.overlordResource.getWorkerConfigHistory(null, count);
-
-    Assert.assertEquals(response.getStatus(), HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
-    Assert.assertEquals("Mocked Exception", ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(
+        this.overlordResource.getWorkerConfigHistory(null, count),
+        Status.BAD_REQUEST,
+        "Mocked Exception"
+    );
   }
 
   private void expectAuthorizationTokenCheck()

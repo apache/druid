@@ -34,6 +34,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.test.utils.ResponseTestUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -45,7 +46,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.Comparator;
@@ -554,11 +554,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.of(SPEC1));
     replayAll();
 
-    Response response = supervisorResource.specResume(SPEC1.id);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
-    Assert.assertEquals("[id1] is already running",
-                        ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(supervisorResource.specResume(SPEC1.id),
+                                          Response.Status.BAD_REQUEST,
+                                          "[id1] is already running");
   }
 
   @Test
@@ -569,11 +567,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.absent());
     replayAll();
 
-    Response response = supervisorResource.specResume(SPEC1.id);
-    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
-    Assert.assertEquals("[id1] does not exist",
-                        ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(supervisorResource.specResume(SPEC1.id),
+                                          Response.Status.NOT_FOUND,
+                                          "[id1] does not exist");
   }
 
   @Test

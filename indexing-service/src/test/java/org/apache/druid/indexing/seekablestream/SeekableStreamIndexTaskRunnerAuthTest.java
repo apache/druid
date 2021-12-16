@@ -46,8 +46,8 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.test.utils.ResponseTestUtils;
 import org.easymock.EasyMock;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,7 +56,6 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
@@ -186,11 +185,11 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
     replay(allowedRequest);
 
-    Response response = taskRunner.setEndOffsetsHTTP(null, true, allowedRequest);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
-    Assert.assertEquals("Request body must contain a map of { partition:endOffset }",
-                        ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(
+        taskRunner.setEndOffsetsHTTP(null, true, allowedRequest),
+        Response.Status.BAD_REQUEST,
+        "Request body must contain a map of { partition:endOffset }"
+    );
   }
 
   @Test
@@ -199,11 +198,11 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
     replay(allowedRequest);
 
-    Response response = taskRunner.setEndOffsetsHTTP(ImmutableMap.of("not_matched_partition", "10000"), true, allowedRequest);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
-    Assert.assertEquals("Request contains partitions not being handled by this task, my partitions: [partition1]",
-                        ((Map) response.getEntity()).get("error"));
+    ResponseTestUtils.assertErrorResponse(
+        taskRunner.setEndOffsetsHTTP(ImmutableMap.of("not_matched_partition", "10000"), true, allowedRequest),
+        Response.Status.BAD_REQUEST,
+        "Request contains partitions not being handled by this task, my partitions: [partition1]"
+    );
   }
 
   @Test

@@ -17,26 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.initialization.jetty;
+package org.apache.druid.test.utils;
 
+import org.junit.Assert;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
-
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
+import java.util.Map;
 
-@Provider
-public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
+public class ResponseTestUtils
 {
-  @Override
-  public Response toResponse(JsonMappingException exception)
+  public static void assertErrorResponse(Response response,
+                                         Response.Status expectedStatusCode,
+                                         String expectedErrorMessage)
   {
-    /*
-     * JsonMappingException#getMessage never returns null.
-     * If the underlying message is null, it returns a string 'N/A' instead
-     */
-    return BadRequestException.toResponse("N/A".equals(exception.getMessage()) ?
-                                          "unknown json mapping exception" : exception.getMessage());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals(expectedStatusCode.getStatusCode(), response.getStatus());
+    Assert.assertEquals(expectedErrorMessage, ((Map) response.getEntity()).get("error"));
   }
 }
