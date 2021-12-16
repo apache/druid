@@ -45,6 +45,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.Comparator;
@@ -543,6 +544,36 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
+  }
+
+  @Test
+  public void testResumeWithBadRequest()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.suspendOrResumeSupervisor(SPEC1.id, false)).andReturn(false).atLeastOnce();
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.of(SPEC1));
+    replayAll();
+
+    Response response = supervisorResource.specResume(SPEC1.id);
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("[id1] is already running",
+                        ((Map)response.getEntity()).get("error"));
+  }
+
+  @Test
+  public void testResumeWithNotFound()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.suspendOrResumeSupervisor(SPEC1.id, false)).andReturn(false).atLeastOnce();
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.absent());
+    replayAll();
+
+    Response response = supervisorResource.specResume(SPEC1.id);
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("[id1] does not exist",
+                        ((Map)response.getEntity()).get("error"));
   }
 
   @Test
