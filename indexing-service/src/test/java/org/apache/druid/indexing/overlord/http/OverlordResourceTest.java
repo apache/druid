@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -44,10 +45,12 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
+import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -90,6 +93,7 @@ public class OverlordResourceTest
   private HttpServletRequest req;
   private TaskRunner taskRunner;
   private WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
+  private AuditManager auditManager;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -103,6 +107,7 @@ public class OverlordResourceTest
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     workerTaskRunnerQueryAdapter = EasyMock.createStrictMock(WorkerTaskRunnerQueryAdapter.class);
+    auditManager = EasyMock.createStrictMock(SQLAuditManager.class);
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
@@ -147,7 +152,7 @@ public class OverlordResourceTest
         indexerMetadataStorageAdapter,
         null,
         null,
-        null,
+        auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter
     );
@@ -1463,13 +1468,33 @@ public class OverlordResourceTest
 
     Response response = this.overlordResource.getMultipleTaskStatuses(Collections.emptySet());
 
+    Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.getCode(), response.getStatus());
+    Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
+    Assert.assertEquals("No TaskIds provided.", ((Map) response.getEntity()).get("error"));
+  }
+
+  @Test
+  public void getFetchAuditHistoryBadRequest()
+  {
+    int count = 1;
+    EasyMock.expect(auditManager.fetchAuditHistory(WorkerBehaviorConfig.CONFIG_KEY,
+                                                   WorkerBehaviorConfig.CONFIG_KEY,
+                                                   count)).andThrow(new IllegalArgumentException("Mocked Exception"));
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        auditManager
+    );
+
+    Response response = this.overlordResource.getWorkerConfigHistory(null, count);
+
     Assert.assertEquals(response.getStatus(), HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(MediaType.valueOf(MediaType.APPLICATION_JSON), response.getMetadata().get("Content-Type").get(0));
-
-    //noinspection unchecked
-    String errorMsg = ((Map<String, String>) response.getEntity()).get("error");
-    Assert.assertNotNull(errorMsg);
-    Assert.assertEquals("No TaskIds provided.", errorMsg);
+    Assert.assertEquals("Mocked Exception", ((Map) response.getEntity()).get("error"));
   }
 
   private void expectAuthorizationTokenCheck()

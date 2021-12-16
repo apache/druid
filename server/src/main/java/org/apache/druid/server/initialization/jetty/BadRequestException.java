@@ -33,4 +33,9 @@ public class BadRequestException extends ResponseStatusException
   {
     super(Response.Status.BAD_REQUEST, msg);
   }
+
+  public static Response toResponse(String message)
+  {
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, message);
+  }
 }

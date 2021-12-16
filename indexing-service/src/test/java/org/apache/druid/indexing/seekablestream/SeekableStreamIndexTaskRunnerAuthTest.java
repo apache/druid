@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -46,6 +47,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,6 +56,8 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -174,6 +178,32 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   public void testGetEndOffsets()
   {
     verifyOnlyDatasourceReadUserCanAccess(taskRunner::getCurrentOffsets);
+  }
+
+  @Test
+  public void testSetEndOffsetsHttpWithNullSequenceNumbers() throws InterruptedException
+  {
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
+    replay(allowedRequest);
+
+    Response response = taskRunner.setEndOffsetsHTTP(null, true, allowedRequest);
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("Request body must contain a map of { partition:endOffset }",
+                        ((Map)response.getEntity()).get("error"));
+  }
+
+  @Test
+  public void testSetEndOffsetsHttpWithNotMatchedPartition() throws InterruptedException
+  {
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
+    replay(allowedRequest);
+
+    Response response = taskRunner.setEndOffsetsHTTP(ImmutableMap.of("not_matched_partition", "10000"), true, allowedRequest);
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMetadata().getFirst("Content-Type"));
+    Assert.assertEquals("Request contains partitions not being handled by this task, my partitions: [partition1]",
+                        ((Map)response.getEntity()).get("error"));
   }
 
   @Test
@@ -380,8 +410,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
       super(
           null,
           "someSequence",
-          new SeekableStreamStartSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap(), null),
-          new SeekableStreamEndSequenceNumbers<>("abc", "def", Collections.emptyMap(), Collections.emptyMap()),
+          new SeekableStreamStartSequenceNumbers<>("abc", "def", Collections.emptyMap(), ImmutableMap.of("partition1", "5000"), null),
+          new SeekableStreamEndSequenceNumbers<>("abc", "def", Collections.emptyMap(), ImmutableMap.of("partition1", "10000")),
           false,
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),

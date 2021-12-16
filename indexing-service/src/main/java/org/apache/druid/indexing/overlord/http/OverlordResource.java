@@ -459,7 +459,7 @@ public class OverlordResource
         return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
-        throw new BadRequestException(e.getMessage());
+        return BadRequestException.toResponse(e.getMessage());
       }
     }
     List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(

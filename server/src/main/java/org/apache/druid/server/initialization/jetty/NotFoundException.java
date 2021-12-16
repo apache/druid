@@ -32,4 +32,9 @@ public class NotFoundException extends ResponseStatusException
   {
     super(Response.Status.NOT_FOUND, msg);
   }
+
+  public static Response toResponse(String message)
+  {
+    return ResponseStatusExceptionMapper.toResponse(Response.Status.BAD_REQUEST, message);
+  }
 }
