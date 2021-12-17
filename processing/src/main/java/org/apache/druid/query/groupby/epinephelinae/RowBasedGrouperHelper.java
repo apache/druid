@@ -72,7 +72,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableArray;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
@@ -1020,8 +1020,8 @@ public class RowBasedGrouperHelper
               rhs != null ? ((Number) rhs).doubleValue() : null
           );
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.STRING_ARRAY)) {
-          final ComparableArray lhs = DimensionHandlerUtils.convertToArray(key1.getKey()[i]);
-          final ComparableArray rhs = DimensionHandlerUtils.convertToArray(key2.getKey()[i]);
+          final ComparableStringArray lhs = DimensionHandlerUtils.convertToArray(key1.getKey()[i]);
+          final ComparableStringArray rhs = DimensionHandlerUtils.convertToArray(key2.getKey()[i]);
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
               lhs, rhs
           );
@@ -1132,8 +1132,8 @@ public class RowBasedGrouperHelper
     private final List<String> dictionary;
     private final Object2IntMap<String> reverseDictionary;
 
-    private final List<ComparableArray> arrayDictionary;
-    private final Object2IntMap<ComparableArray> reverseArrayDictionary;
+    private final List<ComparableStringArray> arrayDictionary;
+    private final Object2IntMap<ComparableStringArray> reverseArrayDictionary;
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -1500,8 +1500,8 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        ComparableArray comparableArray = (ComparableArray) key.getKey()[idx];
-        final int id = addToArrayDictionary(comparableArray);
+        ComparableStringArray comparableStringArray = (ComparableStringArray) key.getKey()[idx];
+        final int id = addToArrayDictionary(comparableStringArray);
         if (id < 0) {
           return false;
         }
@@ -1521,7 +1521,7 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      private int addToArrayDictionary(final ComparableArray s)
+      private int addToArrayDictionary(final ComparableStringArray s)
       {
         int idx = reverseArrayDictionary.getInt(s);
         if (idx == UNKNOWN_DICTIONARY_ID) {

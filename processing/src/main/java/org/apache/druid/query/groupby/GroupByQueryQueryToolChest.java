@@ -20,10 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -34,7 +31,6 @@ import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
@@ -433,20 +429,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
     };
 
-    // Deserializer that can deserialize either array- or map-based rows.
-    final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
-    {
-      @Override
-      public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
-      {
-        if (jp.isExpectedStartObjectToken()) {
-          final Row row = jp.readValueAs(Row.class);
-          return ResultRow.fromLegacyRow(row, query);
-        } else {
-          return ResultRow.of(jp.readValueAs(Object[].class));
-        }
-      }
-    };
+    final ResultRowDeserializer deserializer = ResultRowDeserializer.fromQuery(query);
 
     class GroupByResultRowModule extends SimpleModule
     {
@@ -700,7 +683,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
    * as the final step of the query instead of on every event.
    *
    * @param query The query to check for optimizations
-   *
    * @return The set of dimensions (as offsets into {@code query.getDimensions()}) which can be extracted at the last
    * second upon query completion.
    */

@@ -39,7 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableArray;
+import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -157,9 +157,7 @@ public final class DimensionHandlerUtils
    * @param strategyFactory A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpec   column to generate a ColumnSelectorPlus object for
    * @param cursor          Used to create value selectors for columns.
-   *
    * @return A ColumnSelectorPlus object
-   *
    * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy> createColumnSelectorPlus(
@@ -175,10 +173,10 @@ public final class DimensionHandlerUtils
    * Creates an array of ColumnSelectorPlus objects, selectors that handle type-specific operations within
    * query processing engines, using a strategy factory provided by the query engine. One ColumnSelectorPlus
    * will be created for each column specified in dimensionSpecs.
-   *
+   * <p>
    * The ColumnSelectorPlus provides access to a type strategy (e.g., how to group on a float column)
    * and a value selector for a single column.
-   *
+   * <p>
    * A caller should define a strategy factory that provides an interface for type-specific operations
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
@@ -186,9 +184,7 @@ public final class DimensionHandlerUtils
    * @param strategyFactory       A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpecs        The set of columns to generate ColumnSelectorPlus objects for
    * @param columnSelectorFactory Used to create value selectors for columns.
-   *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
-   *
    * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy>[] createColumnSelectorPluses(
@@ -385,27 +381,27 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static ComparableArray convertToArray(Object obj)
+  public static ComparableStringArray convertToArray(Object obj)
   {
     if (obj == null) {
       return null;
     }
-    if (obj instanceof ComparableArray) {
-      return (ComparableArray) obj;
+    if (obj instanceof ComparableStringArray) {
+      return (ComparableStringArray) obj;
     }
     if (obj instanceof String[]) {
-      return ComparableArray.of((String[]) obj);
+      return ComparableStringArray.of((String[]) obj);
     }
     // Jackson converts the serialized array into a string. Converting it back to a string array
     if (obj instanceof List) {
-      return ComparableArray.of((String[]) ((List) obj).toArray(new String[0]));
+      return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
     }
     Objects[] objects = (Objects[]) obj;
     String[] delegate = new String[objects.length];
     for (int i = 0; i < objects.length; i++) {
       delegate[i] = convertObjectToString(objects[i]);
     }
-    return ComparableArray.of(delegate);
+    return ComparableStringArray.of(delegate);
   }
 
   public static int compareObjectsAsType(
@@ -470,12 +466,11 @@ public final class DimensionHandlerUtils
 
   /**
    * Convert a string representing a decimal value to a long.
-   *
+   * <p>
    * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
    * is too large to be contained within a long, this function returns null.
    *
    * @param decimalStr string representing a decimal value
-   *
    * @return long equivalent of decimalStr, returns null for non-integral decimals and integral decimal values outside
    * of the values representable by longs
    */

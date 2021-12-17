@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -11,13 +30,12 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.data.ComparableIntArray;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class ArrayGroupByColumnSelectorStrategy
     implements GroupByColumnSelectorStrategy
@@ -32,7 +50,7 @@ public class ArrayGroupByColumnSelectorStrategy
   // stores each row as a integer array where the int represents the value in dictionaryToInt
   // for eg : [a,b,c] would be converted to [1,2,3] and assigned a integer value 1.
   // [1,2,3] <-> 1
-  private final BiMap<List<Integer>, Integer> intListToInt;
+  private final BiMap<ComparableIntArray, Integer> intListToInt;
 
   @Override
   public int getGroupingKeySize()
@@ -49,65 +67,78 @@ public class ArrayGroupByColumnSelectorStrategy
   @VisibleForTesting
   ArrayGroupByColumnSelectorStrategy(
       BiMap<String, Integer> dictionaryToInt,
-      BiMap<List<Integer>, Integer> intListToInt
+      BiMap<ComparableIntArray, Integer> intArrayToInt
   )
   {
     this.dictionaryToInt = dictionaryToInt;
-    this.intListToInt = intListToInt;
+    this.intListToInt = intArrayToInt;
   }
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, ResultRow resultRow, int keyBufferPosition
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      ResultRow resultRow,
+      int keyBufferPosition
   )
   {
     final int id = key.getInt(keyBufferPosition);
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows
     if (id != GROUP_BY_MISSING_VALUE) {
-      resultRow.set(selectorPlus.getResultRowPosition(), intListToInt.inverse()
-                                                                     .get(id)
-                                                                     .stream()
-                                                                     .map(a -> dictionaryToInt.inverse().get(a))
-                                                                     .collect(Collectors.toList())
-                                                                     .toArray(new String[0]));
+      final int[] intRepresentation = intListToInt.inverse()
+                                                  .get(id).getDelegate();
+      final String[] stringRepresentaion = new String[intRepresentation.length];
+      for (int i = 0; i < intRepresentation.length; i++) {
+        stringRepresentaion[i] = dictionaryToInt.inverse().get(intRepresentation[i]);
+      }
+      resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(stringRepresentaion));
     } else {
-      resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValues());
+      resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(NullHandling.defaultStringValues()));
     }
 
   }
 
   @Override
   public void initColumnValues(
-      ColumnValueSelector selector, int columnIndex, Object[] valuess
+      ColumnValueSelector selector,
+      int columnIndex,
+      Object[] valuess
   )
   {
-    throw new UOE(String.format(
+    throw new UOE(
         "%s does not implement initColumnValues()",
         ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    ));
+    );
   }
 
   @Override
   public void initGroupingKeyColumnValue(
-      int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
   )
   {
-    throw new UOE(String.format(
+    throw new UOE(
         "%s does not implement initGroupingKeyColumnValue()",
         ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    ));
+    );
   }
 
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
-      int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
   )
   {
-    throw new UOE(String.format(
+    throw new UOE(
         "%s does not implement checkRowIndexAndAddValueToGroupingKey()",
         ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    ));
+    );
   }
 
   @Override
@@ -121,21 +152,21 @@ public class ArrayGroupByColumnSelectorStrategy
       return GROUP_BY_MISSING_VALUE;
     }
 
-    final List<Integer> intRepresentation = new ArrayList<>(rowSize);
+    final int[] intRepresentation = new int[rowSize];
     //TODO(karan): remove intial check of null
     String firstValue = dimSelector.lookupName(indexedRow.get(0));
     if (firstValue == null && rowSize == 1) {
       return GROUP_BY_MISSING_VALUE;
     }
-    intRepresentation.add(addToIndexedDictionary(firstValue));
+    intRepresentation[0] = (addToIndexedDictionary(firstValue));
     for (int i = 1; i < rowSize; i++) {
-      intRepresentation.add(addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i))));
+      intRepresentation[i] = addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i)));
     }
-
-    final int dictId = intListToInt.getOrDefault(intRepresentation, GROUP_BY_MISSING_VALUE);
+    final ComparableIntArray comparableIntArray = ComparableIntArray.of(intRepresentation);
+    final int dictId = intListToInt.getOrDefault(comparableIntArray, GROUP_BY_MISSING_VALUE);
     if (dictId == GROUP_BY_MISSING_VALUE) {
       final int dictionarySize = intListToInt.keySet().size();
-      intListToInt.put(intRepresentation, dictionarySize);
+      intListToInt.put(comparableIntArray, dictionarySize);
       return dictionarySize;
     } else {
       return dictId;
@@ -161,33 +192,31 @@ public class ArrayGroupByColumnSelectorStrategy
   }
 
   @Override
-  public Grouper.BufferComparator bufferComparator(
-      int keyBufferPosition, @Nullable StringComparator stringComparator
-  )
+  public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
     final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-      List<Integer> lhs = intListToInt.inverse().get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
-      List<Integer> rhs = intListToInt.inverse().get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
+      int[] lhs = intListToInt.inverse().get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)).getDelegate();
+      int[] rhs = intListToInt.inverse().get(rhsBuffer.getInt(rhsPosition + keyBufferPosition)).getDelegate();
 
-      int minLength = Math.min(lhs.size(), rhs.size());
+      int minLength = Math.min(lhs.length, rhs.length);
       //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
       } else {
         for (int i = 0; i < minLength; i++) {
           final int cmp = comparator.compare(
-              dictionaryToInt.inverse().get(lhs.get(i)),
-              dictionaryToInt.inverse().get(rhs.get(i))
+              dictionaryToInt.inverse().get(lhs[i]),
+              dictionaryToInt.inverse().get(rhs[i])
           );
           if (cmp == 0) {
             continue;
           }
           return cmp;
         }
-        if (lhs.size() == rhs.size()) {
+        if (lhs.length == rhs.length) {
           return 0;
-        } else if (lhs.size() < rhs.size()) {
+        } else if (lhs.length < rhs.length) {
           return -1;
         }
         return 1;

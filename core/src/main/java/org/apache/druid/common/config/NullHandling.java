@@ -119,7 +119,10 @@ public class NullHandling
     return replaceWithDefault() ? ZERO_DOUBLE : null;
   }
 
-  public static String[] defaultStringValues() { return NULL_STRING_ARRAY; }
+  public static String[] defaultStringValues()
+  {
+    return NULL_STRING_ARRAY;
+  }
 
   /**
    * Returns the default value for an object of the provided class. Will be null in SQL-compatible null handling mode.

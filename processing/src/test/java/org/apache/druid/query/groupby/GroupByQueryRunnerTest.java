@@ -129,7 +129,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.ComparableArray;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -1326,14 +1326,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("a","preferred"), "rows", 2L, "idx", 282L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("b","preferred"), "rows", 2L, "idx", 230L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("e","preferred"), "rows", 2L, "idx", 324L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("h","preferred"), "rows", 2L, "idx", 233L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("m","preferred"), "rows", 6L, "idx", 5317L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("n","preferred"), "rows", 2L, "idx", 235L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("p","preferred"), "rows", 6L, "idx", 5405L),
-        makeRow(query, "2011-04-01", "alias", ComparableArray.of("preferred","t"), "rows", 4L, "idx", 420L)
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("a", "preferred"), "rows", 2L, "idx", 282L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("b", "preferred"), "rows", 2L, "idx", 230L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("e", "preferred"), "rows", 2L, "idx", 324L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("h", "preferred"), "rows", 2L, "idx", 233L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("m", "preferred"), "rows", 6L, "idx", 5317L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("n", "preferred"), "rows", 2L, "idx", 235L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("p", "preferred"), "rows", 6L, "idx", 5405L),
+        makeRow(query, "2011-04-01", "alias", ComparableStringArray.of("preferred", "t"), "rows", 4L, "idx", 420L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

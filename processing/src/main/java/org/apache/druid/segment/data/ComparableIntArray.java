@@ -23,43 +23,35 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.hash.Hashing;
 
-import java.io.Serializable;
 import java.util.Arrays;
 
-public class ComparableArray implements Comparable<ComparableArray>, Serializable
+public class ComparableIntArray implements Comparable<ComparableIntArray>
 {
-  private static final ComparableArray EMPTY_ARRAY = new ComparableArray(new String[0]);
-  final String[] delegate;
+  public static final ComparableIntArray EMPTY_ARRAY = new ComparableIntArray(new int[0]);
 
+  final int[] delegate;
   private int hashCode;
   private boolean hashCodeComputed;
 
-  private ComparableArray(String[] array)
+  private ComparableIntArray(int[] array)
   {
     delegate = array;
   }
 
   @JsonCreator
-  public static ComparableArray of(String... array)
+  public static ComparableIntArray of(int... array)
   {
     if (array.length == 0) {
       return EMPTY_ARRAY;
     } else {
-      return new ComparableArray(array);
+      return new ComparableIntArray(array);
     }
   }
 
-  // We only want to set the delegate arrray as part of the serialization
   @JsonValue
-  public String[] getDelegate()
+  public int[] getDelegate()
   {
     return delegate;
-  }
-
-  @Override
-  public String toString()
-  {
-    return Arrays.toString(delegate);
   }
 
   @Override
@@ -86,11 +78,11 @@ public class ComparableArray implements Comparable<ComparableArray>, Serializabl
       return false;
     }
 
-    return Arrays.equals(delegate, ((ComparableArray) obj).getDelegate());
+    return Arrays.equals(delegate, ((ComparableIntArray) obj).getDelegate());
   }
 
   @Override
-  public int compareTo(ComparableArray rhs)
+  public int compareTo(ComparableIntArray rhs)
   {
     //noinspection ArrayEquality
     if (this.delegate == rhs.getDelegate()) {
@@ -101,7 +93,7 @@ public class ComparableArray implements Comparable<ComparableArray>, Serializabl
       return -1;
     } else {
       for (int i = 0; i < delegate.length; i++) {
-        final int cmp = delegate[i].compareTo(rhs.getDelegate()[i]);
+        final int cmp = Integer.compare(delegate[i], rhs.getDelegate()[i]);
         if (cmp == 0) {
           continue;
         }

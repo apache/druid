@@ -27,6 +27,8 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.apache.druid.segment.data.ComparableIntArray;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,9 +38,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ArrayGroupByColumnSelectorStrategyTest
@@ -47,20 +47,26 @@ public class ArrayGroupByColumnSelectorStrategyTest
   // The dictionary has been constructed such that the values are not sorted lexicographically
   // so we can tell when the comparator uses a lexicographic comparison and when it uses the indexes.
   private final BiMap<String, Integer> DICTIONARY_INT = HashBiMap.create(new HashMap<String, Integer>()
-  {{
-    put("a", 1);
-    put("b", 2);
-    put("bd", 3);
-    put("d", 4);
-    put("e", 5);
-  }});
+  {
+    {
+      put("a", 1);
+      put("b", 2);
+      put("bd", 3);
+      put("d", 4);
+      put("e", 5);
+    }
+  });
 
-  private final BiMap<List<Integer>, Integer> INDEXED_INTARRAYS = HashBiMap.create(new HashMap<List<Integer>, Integer>()
-  {{
-    put(Arrays.asList(1, 2), 0);
-    put(Arrays.asList(3, 5), 1);
-    put(Arrays.asList(1, 3), 2);
-  }});
+  private final BiMap<ComparableIntArray, Integer> INDEXED_INTARRAYS = HashBiMap.create(
+      new HashMap<ComparableIntArray, Integer>()
+      {
+        {
+          put(ComparableIntArray.of(1, 2), 0);
+          put(ComparableIntArray.of(3, 5), 1);
+          put(ComparableIntArray.of(1, 3), 2);
+        }
+      }
+  );
 
 
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
@@ -141,7 +147,7 @@ public class ArrayGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertArrayEquals(new String[]{"a", "b"}, (Object[]) row.get(0));
+    Assert.assertEquals(ComparableStringArray.of(new String[]{"a", "b"}), row.get(0));
   }
 
 
