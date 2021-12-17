@@ -90,7 +90,7 @@ class DruidDataSourceReader(
       readSchema()
     }
     val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
-    val filter = FilterUtils.mapFilters(filters, schema.get)
+    val filter = FilterUtils.mapFilters(filters, schema.get).map(_.optimize())
     val useSparkConfForDeepStorage = readerConf.getBoolean(DruidConfigurationKeys.useSparkConfForDeepStorageDefaultKey)
     val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
     val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
@@ -135,6 +135,13 @@ class DruidDataSourceReader(
     schema = Option(structType)
   }
 
+  /**
+    * Given an array of Spark filters FILTERS, adds the filters this reader can push down to this.filters and returns
+    * an array containing the filters in FILTERS this reader cannot support.
+    *
+    * @param filters An array of filters to evaluate for predicate pushdown support.
+    * @return The filters in FILTERS this reader does not support.
+    */
   override def pushFilters(filters: Array[Filter]): Array[Filter] = {
     readSchema()
     val useSqlCompatibleNullHandling = !conf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
@@ -147,7 +154,7 @@ class DruidDataSourceReader(
 
   override def pushedFilters(): Array[Filter] = filters
 
-  private[v2] def getSegments: Seq[DataSegment] = {
+  private[reader] def getSegments: Seq[DataSegment] = {
     require(conf.isPresent(DruidConfigurationKeys.tableKey),
       s"Must set ${DruidConfigurationKeys.tableKey}!")
 
@@ -168,7 +175,7 @@ class DruidDataSourceReader(
       readSchema()
     }
     val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
-    val filter = FilterUtils.mapFilters(filters, schema.get)
+    val filter = FilterUtils.mapFilters(filters, schema.get).map(_.optimize())
     val useSparkConfForDeepStorage = readerConf.getBoolean(DruidConfigurationKeys.useSparkConfForDeepStorageDefaultKey)
     val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
     val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)

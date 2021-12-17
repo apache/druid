@@ -32,6 +32,7 @@ import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheMa
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.common.utils.Exit;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
@@ -76,6 +77,16 @@ public class KafkaLookupExtractorFactoryTest
   private final NamespaceExtractionCacheManager cacheManager = PowerMock.createStrictMock(
       NamespaceExtractionCacheManager.class);
   private final CacheHandler cacheHandler = PowerMock.createStrictMock(CacheHandler.class);
+
+  static {
+    // See https://stackoverflow.com/a/62518400 - cleaning up one unit test on travis sometimes wipes out directories
+    // needed by the embedded Kafka running in other unit tests, causing them to fail
+    Exit.setHaltProcedure((statusCode, message) -> {
+      if (statusCode != 1) {
+        Runtime.getRuntime().halt(statusCode);
+      }
+    });
+  }
 
 
   @Rule

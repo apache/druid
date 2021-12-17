@@ -25,12 +25,11 @@ import org.apache.druid.query.ordering.StringComparators
 import org.apache.spark.sql.sources.{And, EqualNullSafe, EqualTo, GreaterThan, GreaterThanOrEqual,
   In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains, StringEndsWith,
   StringStartsWith, Filter => SparkFilter}
-import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{BinaryType, LongType, StringType, StructField, StructType}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import scala.collection.JavaConverters.{asScalaSetConverter, seqAsJavaListConverter,
-  setAsJavaSetConverter}
+import scala.collection.JavaConverters.{asScalaSetConverter, seqAsJavaListConverter, setAsJavaSetConverter}
 
 class FilterUtilsSuite extends AnyFunSuite with Matchers {
   private val testSchema = StructType(Seq[StructField](
@@ -256,6 +255,18 @@ class FilterUtilsSuite extends AnyFunSuite with Matchers {
     FilterUtils.isSupportedFilter(EqualNullSafe("name", null), testSchema, true) shouldBe true
     FilterUtils.isSupportedFilter(EqualTo("name", null), testSchema, true) shouldBe true
     // scalastyle:on
+  }
+
+  test("isSupportedFilter should correctly identify filters that are unsupported due to the data type of " +
+    "the column they're filtering") {
+    val schema = StructType(Seq[StructField](
+      StructField("count", LongType),
+      StructField("name", StringType),
+      StructField("complex_field", BinaryType)
+    ))
+
+    FilterUtils.isSupportedFilter(GreaterThan("complex_field", 5), schema) shouldBe false
+    FilterUtils.isSupportedFilter(StringStartsWith("count", "any"), schema) shouldBe false
   }
 
   test("getTimeFilterBounds should handle upper and lower bounds") {

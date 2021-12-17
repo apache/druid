@@ -57,11 +57,9 @@ class DruidColumnarInputPartitionReader(
     useDefaultNullHandling
   ) with InputPartitionReader[ColumnarBatch] with Logging {
 
-  private val adapter = segment.asStorageAdapter()
-
-  private val cursor: VectorCursor = adapter.makeVectorCursor(
+  private val cursor: VectorCursor = segment.asStorageAdapter().makeVectorCursor(
     filter.map(_.toOptimizedFilter).orNull,
-    adapter.getInterval,
+    segment.getDataInterval,
     VirtualColumns.EMPTY,
     false,
     batchSize,

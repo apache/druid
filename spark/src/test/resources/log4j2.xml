@@ -39,5 +39,9 @@
         <Logger level="error" name="org.apache.druid.collections.StupidPool" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
+        <!-- Suppressing default registration methods during local tests -->
+        <Logger level="warn" name="org.apache.druid.spark.registries.ComplexTypeRegistry" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
     </Loggers>
 </Configuration>
