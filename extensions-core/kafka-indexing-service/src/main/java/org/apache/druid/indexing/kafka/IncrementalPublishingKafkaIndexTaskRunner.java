@@ -145,16 +145,15 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         }
 
         if (outOfRangeOffset < earliestAvailableOffset) {
-          //
-          // In this case, it's probably because partition expires before the Druid could read from next offset
-          // so the messages in [outOfRangeOffset, earliestAvailableOffset) is lost.
-          // These lost messages could not be restored even a manual reset is performed
-          // So, it's reasonable to reset the offset the earliest available position
-          //
+          //In this case, it's probably because the messages are no longer in the Kafka cluster
+          // i.e. the messages in [outOfRangeOffset, earliestAvailableOffset) are lost.
+          // Since these lost messages can no longer be recovered,
+          // it's reasonable to reset the offset to the earliest available position to help ingestion resume.
+          log.warn("Automatically seeking Kafka offset to the earliest offset [%d]", earliestAvailableOffset);
           recordSupplier.seek(streamPartition, earliestAvailableOffset);
-          newOffsetInMetadata.put(topicPartition, outOfRangeOffset);
+
+          newOffsetInMetadata.put(topicPartition, earliestAvailableOffset);
         } else {
-          //
           // There are two cases in theory here
           // 1. outOfRangeOffset is in the range of [earliestAvailableOffset, latestAvailableOffset]
           // 2. outOfRangeOffset is larger than latestAvailableOffset
@@ -169,12 +168,16 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
           // For such case,
           // offsets stored in meta should be cleared when submitting the supervisor spec,
           // so the problem won't be left to manual reset or auto reset. Thus, we don't need to handle this complicated case here
-          //
+          log.warn("Offset [%d] is out of range of the available offsets for partition [%s]. It is likely that a manual offset reset of the supervisor is needed.",
+                   outOfRangeOffset,
+                   topicPartition);
         }
       }
     }
 
     if (!newOffsetInMetadata.isEmpty()) {
+      log.warn("Automatcally resetting offset in metadata to [%s]", newOffsetInMetadata.toString());
+
       sendResetRequestAndWait(CollectionUtils.mapKeys(newOffsetInMetadata, streamPartition -> StreamPartition.of(
           streamPartition.topic(),
           streamPartition.partition()
