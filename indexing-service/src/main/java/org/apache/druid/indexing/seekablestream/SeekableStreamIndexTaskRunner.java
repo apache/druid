@@ -1351,10 +1351,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         );
 
     if (result) {
-      log.makeAlert("Offsets were reset automatically, potential data duplication or loss")
+      log.makeAlert("Offsets were reset automatically, potential data loss")
          .addData("task", task.getId())
          .addData("dataSource", task.getDataSource())
          .addData("partitions", partitionOffsetMap.keySet())
+         .addData("offsets", partitionOffsetMap.values())
          .emit();
 
       requestPause();
@@ -1363,6 +1364,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
          .addData("task", task.getId())
          .addData("dataSource", task.getDataSource())
          .addData("partitions", ImmutableSet.copyOf(partitionOffsetMap.keySet()))
+         .addData("offsets", partitionOffsetMap.values())
          .emit();
     }
   }
