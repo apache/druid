@@ -19,7 +19,9 @@
 
 package org.apache.druid.indexing.common.tasklogs;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.config.AppenderRef;
@@ -37,13 +39,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * This class enforces console logging on a user defined configuration.
+ * This class enforces console logging based on a user defined configuration.
  * <p>
- * If log appender in user defined configuration is not configured to {@link ConsoleAppender},
- * this classes will replace appenders of all loggers to this {@link ConsoleAppender}.
+ * For all loggers, this class ensure that only {@link ConsoleAppender} is applied for each of them.
  * <p>
- * The reason why the configuration is still based on user's configuration is that
- * user can still configure different logging levels for different loggers in the configuration file.
+ * The reason why this configuration is still based on a user's configuration is that
+ * user can still configure different logging levels for different loggers in that file.
  */
 public class ConsoleLoggingEnforcementConfigurationFactory extends ConfigurationFactory
 {
@@ -51,19 +52,6 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
    * Valid file extensions for XML files.
    */
   public static final String[] SUFFIXES = new String[]{".xml", "*"};
-
-  private static void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
-  {
-    // TODO: how about appenders is empty?
-    AppenderRef appenderRef = logger.getAppenderRefs().get(0);
-
-    // clear all appenders first
-    List<String> appendRefs = logger.getAppenderRefs().stream().map(AppenderRef::getRef).collect(Collectors.toList());
-    appendRefs.forEach(logger::removeAppender);
-
-    // add ConsoleAppender to this logger
-    logger.addAppender(consoleAppender, appenderRef.getLevel(), appenderRef.getFilter());
-  }
 
   @Override
   public String[] getSupportedTypes()
@@ -77,7 +65,10 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
     return new OverrideConfiguration(loggerContext, source);
   }
 
-  public static class OverrideConfiguration extends XmlConfiguration
+  /**
+   * override the original configuration source to ensure only console appender is applied
+   */
+  static class OverrideConfiguration extends XmlConfiguration
   {
     public OverrideConfiguration(final LoggerContext loggerContext, final ConfigurationSource configSource)
     {
@@ -109,7 +100,7 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       // If not, replace it's appender to ConsoleAppender.
       //
       for (LoggerConfig logger : loggerConfigList) {
-        if (!hasConsoleAppender(logger, consoleAppender.getName())) {
+        if (!hasConsoleAppenderRef(logger, consoleAppender.getName())) {
           applyConsoleAppender(logger, consoleAppender);
         }
       }
@@ -127,7 +118,7 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       return null;
     }
 
-    private boolean hasConsoleAppender(LoggerConfig logger, String consoleAppenderName)
+    private boolean hasConsoleAppenderRef(LoggerConfig logger, String consoleAppenderName)
     {
       for (AppenderRef ref : logger.getAppenderRefs()) {
         if (consoleAppenderName.equals(ref.getRef())) {
@@ -135,6 +126,33 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
         }
       }
       return false;
+    }
+
+    /**
+     * remove all appenders from a logger and append a console appender to it
+     */
+    private void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
+    {
+      Level level = Level.INFO;
+      Filter filter = null;
+
+      if (!logger.getAppenderRefs().isEmpty()) {
+        AppenderRef appenderRef = logger.getAppenderRefs().get(0);
+
+        // clear all appenders first
+        List<String> appendRefs = logger.getAppenderRefs()
+                                        .stream()
+                                        .map(AppenderRef::getRef)
+                                        .collect(Collectors.toList());
+        appendRefs.forEach(logger::removeAppender);
+
+        // use the first appender's definition
+        level = appenderRef.getLevel();
+        filter = appenderRef.getFilter();
+      }
+
+      // add ConsoleAppender to this logger
+      logger.addAppender(consoleAppender, level, filter);
     }
   }
 }
