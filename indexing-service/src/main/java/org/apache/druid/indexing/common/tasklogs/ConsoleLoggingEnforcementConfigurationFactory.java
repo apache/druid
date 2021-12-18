@@ -100,9 +100,7 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       // If not, replace it's appender to ConsoleAppender.
       //
       for (LoggerConfig logger : loggerConfigList) {
-        if (!hasConsoleAppenderRef(logger, consoleAppender.getName())) {
-          applyConsoleAppender(logger, consoleAppender);
-        }
+        applyConsoleAppender(logger, consoleAppender);
       }
     }
 
@@ -118,21 +116,17 @@ public class ConsoleLoggingEnforcementConfigurationFactory extends Configuration
       return null;
     }
 
-    private boolean hasConsoleAppenderRef(LoggerConfig logger, String consoleAppenderName)
-    {
-      for (AppenderRef ref : logger.getAppenderRefs()) {
-        if (consoleAppenderName.equals(ref.getRef())) {
-          return true;
-        }
-      }
-      return false;
-    }
-
     /**
      * remove all appenders from a logger and append a console appender to it
      */
     private void applyConsoleAppender(LoggerConfig logger, Appender consoleAppender)
     {
+      if (logger.getAppenderRefs().size() == 1
+          && logger.getAppenderRefs().get(0).getRef().equals(consoleAppender.getName())) {
+        // this logger has only one appender and its the console appender
+        return;
+      }
+
       Level level = Level.INFO;
       Filter filter = null;
 
