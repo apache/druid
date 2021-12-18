@@ -120,7 +120,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -130,7 +130,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(2).put((byte) 0).put(1, (byte) 1);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -145,7 +145,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
   }
 
   @Test(expected = RE.class)
@@ -156,7 +156,18 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+  }
+
+  @Test(expected = ParseException.class)
+  public void testParseWrongSchemaTypeThrowParseException() throws Exception
+  {
+    // Given
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(Mockito.mock(ParsedSchema.class));
+    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
+    bb.rewind();
+    // When
+    new SchemaRegistryBasedAvroBytesDecoder(registry, false).parse(bb);
   }
 
   @Test(expected = RE.class)
@@ -167,7 +178,18 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+  }
+
+  @Test(expected = ParseException.class)
+  public void testParseWrongIdThrowParseException() throws Exception
+  {
+    // Given
+    Mockito.when(registry.getSchemaById(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
+    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
+    bb.rewind();
+    // When
+    new SchemaRegistryBasedAvroBytesDecoder(registry, false).parse(bb);
   }
 
   private byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
