@@ -25,15 +25,16 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -93,24 +94,35 @@ public class DruidLogicalValuesRule extends RelOptRule
    *
    * @throws IllegalArgumentException for unsupported types
    */
+  @Nullable
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
+        // RexLiteral.stringValue(literal) was causing some issue during tests
         return literal.getValueAs(String.class);
       case FLOAT:
-        return literal.getValueAs(Float.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).floatValue();
       case DOUBLE:
       case REAL:
       case DECIMAL:
-        return literal.getValueAs(Double.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).doubleValue();
       case TINYINT:
       case SMALLINT:
       case INTEGER:
       case BIGINT:
-        return literal.getValueAs(Long.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:
@@ -120,7 +132,7 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new IAE("Unsupported type[%s]", literal.getTypeName());
+        throw new UnsupportedSQLQueryException("%s type is not supported", literal.getType().getSqlTypeName());
     }
   }
 }

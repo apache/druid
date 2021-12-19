@@ -221,7 +221,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return index.getCapabilities(column);
+    return index.getColumnCapabilities(column);
   }
 
   @Override

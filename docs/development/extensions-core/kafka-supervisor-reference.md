@@ -2,7 +2,7 @@
 id: kafka-supervisor-reference
 title: "Apache Kafka supervisor reference"
 sidebar_label: "Apache Kafka supervisor"
-description: "Refrence topic for Apache Kafka supervisors"
+description: "Reference topic for Apache Kafka supervisors"
 ---
 
 <!--
@@ -166,6 +166,7 @@ Supported `inputFormat`s include:
 - `json`
 - `kafka`
 - `avro_stream`
+- `avro_ocf`
 - `protobuf`
 
 For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.

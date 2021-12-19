@@ -362,7 +362,21 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
       waitForAllTasksToCompleteForDataSource(datasourceName);
     }
-
   }
 
+  @Test
+  public void testJsonFunctions() throws Exception
+  {
+    final String taskSpec = getResourceAsString("/indexer/json_path_index_task.json");
+
+    submitTaskAndWait(
+        taskSpec,
+        "json_path_index_test",
+        false,
+        true,
+        new Pair<>(false, false)
+    );
+
+    doTestQuery("json_path_index_test", "/indexer/json_path_index_queries.json");
+  }
 }

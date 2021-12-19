@@ -270,7 +270,7 @@ If you are only using [Hadoop-based batch ingestion](../ingestion/hadoop.md) wit
 
 ###### Parallel native ingestion
 
-If you are using [parallel native batch ingestion](../ingestion/native-batch.md#parallel-task), allocating more available task slots is a good idea and will allow greater ingestion concurrency.
+If you are using [parallel native batch ingestion](../ingestion/native-batch.md), allocating more available task slots is a good idea and will allow greater ingestion concurrency.
 
 ### Coordinator
 

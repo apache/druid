@@ -90,7 +90,11 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
     /**
      * Call this to resume reading after you have suspended it.
      *
-     * @param chunkNum chunk number corresponding to the handleChunk() or handleResponse() call from which you
+     * This method will do nothing if reading is not currently suspended.
+     *
+     * @param chunkNum chunk number corresponding to the handleChunk() or handleResponse() call from which you returned
+     *                 a ClientResponse where {@link ClientResponse#isContinueReading()} was true.
+     *
      * @return time that backpressure was applied (channel was closed for reads)
      */
     long resume(long chunkNum);

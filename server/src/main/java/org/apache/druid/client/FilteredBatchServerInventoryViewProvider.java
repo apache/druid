@@ -48,7 +48,8 @@ public class FilteredBatchServerInventoryViewProvider implements FilteredServerI
         zkPaths,
         curator,
         jsonMapper,
-        Predicates.alwaysFalse()
+        Predicates.alwaysFalse(),
+        "FilteredBatchServerInventoryView"
     );
   }
 }

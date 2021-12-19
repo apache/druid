@@ -30,6 +30,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -69,6 +70,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   protected final Map<String, Object> context;
   protected final LockGranularity lockGranularityToUse;
+  protected final TaskLockType lockTypeToUse;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
@@ -103,6 +105,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
+    this.lockTypeToUse = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
@@ -222,7 +225,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                 previousSegmentId,
                 skipSegmentLineageCheck,
                 NumberedPartialShardSpec.instance(),
-                lockGranularityToUse
+                lockGranularityToUse,
+                lockTypeToUse
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

@@ -1247,7 +1247,13 @@ ORDER BY 1`;
               width: 100,
               Cell: ({ value }) => {
                 if (isNumberLikeNaN(value)) return '-';
-                return <BracedText text={formatTotalRows(value)} braces={totalRowsValues} />;
+                return (
+                  <BracedText
+                    text={formatTotalRows(value)}
+                    braces={totalRowsValues}
+                    unselectableThousandsSeparator
+                  />
+                );
               },
             },
             {
@@ -1258,7 +1264,13 @@ ORDER BY 1`;
               width: 100,
               Cell: ({ value }) => {
                 if (isNumberLikeNaN(value)) return '-';
-                return <BracedText text={formatAvgRowSize(value)} braces={avgRowSizeValues} />;
+                return (
+                  <BracedText
+                    text={formatAvgRowSize(value)}
+                    braces={avgRowSizeValues}
+                    unselectableThousandsSeparator
+                  />
+                );
               },
             },
             {

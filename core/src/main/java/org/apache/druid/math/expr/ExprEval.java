@@ -331,9 +331,15 @@ public abstract class ExprEval<T>
 
   /**
    * Convert a boolean back into native expression type
+   *
+   * Do not use this method unless {@link ExpressionProcessing#useStrictBooleans()} is set to false.
+   * {@link ExpressionType#LONG} is the Druid boolean unless this mode is enabled, so use {@link #ofLongBoolean}
+   * instead.
    */
+  @Deprecated
   public static ExprEval ofBoolean(boolean value, ExprType type)
   {
+    assert !ExpressionProcessing.useStrictBooleans();
     switch (type) {
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
@@ -570,21 +576,21 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * Get the primtive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * Get the primitive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
    * otherwise it may improperly return placeholder a value (typically zero, which is expected if
    * {@link NullHandling#sqlCompatible()} is false)
    */
   public abstract int asInt();
 
   /**
-   * Get the primtive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * Get the primitive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
    * otherwise it may improperly return a placeholder value (typically zero, which is expected if
    * {@link NullHandling#sqlCompatible()} is false)
    */
   public abstract long asLong();
 
   /**
-   * Get the primtive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
+   * Get the primitive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
    * otherwise it may improperly return a placeholder value (typically zero, which is expected if
    * {@link NullHandling#sqlCompatible()} is false)
    */

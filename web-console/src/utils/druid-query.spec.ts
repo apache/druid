@@ -16,15 +16,9 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit/build/test-utils';
+import { sane } from 'druid-query-toolkit';
 
-import {
-  DruidError,
-  getDruidErrorMessage,
-  parseHtmlError,
-  parseQueryPlan,
-  trimSemicolon,
-} from './druid-query';
+import { DruidError, getDruidErrorMessage, parseHtmlError, trimSemicolon } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -226,10 +220,6 @@ describe('DruidQuery', () => {
 
     it('parseHtmlError', () => {
       expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-    });
-
-    it('parseQueryPlan', () => {
-      expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
     });
   });
 
