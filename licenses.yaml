@@ -4543,7 +4543,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.7.2
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
