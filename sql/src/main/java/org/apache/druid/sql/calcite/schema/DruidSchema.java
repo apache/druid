@@ -876,7 +876,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   private static RowSignature analysisToRowSignature(final SegmentAnalysis analysis)
-  { //TODO: Karan:  add string array no ?
+  {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
       if (entry.getValue().isError()) {

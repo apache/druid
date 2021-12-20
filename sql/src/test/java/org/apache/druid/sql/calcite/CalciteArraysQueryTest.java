@@ -25,6 +25,7 @@ import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -921,6 +923,104 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"c", 1L}
         )
     );
+  }
+
+
+  @Test
+  public void testArrayGroupAsArray() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY[dim3], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(), 3L},
+            new Object[]{ImmutableList.of("a", "b"), 1L},
+            new Object[]{ImmutableList.of("b", "c"), 1L},
+            new Object[]{ImmutableList.of("d"), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testArrayGroupAsArrayWithFunction() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY[ARRAY_ORDINAL(dim3, 2)], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array_ordinal(\"dim3\",2)",
+                            ColumnType.STRING
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(), 4L},
+            new Object[]{ImmutableList.of("b"), 1L},
+            new Object[]{ImmutableList.of("c"), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testArrayGroupAsArrayWithLiteral()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    Assert.assertThrows(UOE.class, () -> testQuery(
+        "SELECT ARRAY['3'], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(),
+        ImmutableList.of()
+    ));
   }
 
   @Test

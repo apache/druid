@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -382,7 +383,7 @@ public class DruidQuery
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry
   )
-  {  //TODO: Karan: Check for column hasMultipleValues()
+  {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("d", rowSignature.getColumnNames());
@@ -402,7 +403,17 @@ public class DruidQuery
       }
 
       final RelDataType dataType = rexNode.getType();
-      final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      final ColumnType outputType;
+      if (plannerContext.getQueryContext()
+                        .getOrDefault(
+                            QueryContexts.ENABLE_UNNESTED_ARRAYS_KEY,
+                            QueryContexts.DEFAULT_ENABLE_UNNESTED_ARRAYS
+                        ).equals(Boolean.FALSE)) {
+        outputType = Calcites.getValueTypeForRelDataTypeFull(dataType);
+      } else {
+        outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      }
+
       if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
         throw new CannotBuildQueryException(aggregate, rexNode);

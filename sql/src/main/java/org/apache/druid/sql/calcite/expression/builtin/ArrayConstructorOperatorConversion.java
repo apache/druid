@@ -19,14 +19,22 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.base.Preconditions;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+
+import java.util.List;
 
 public class ArrayConstructorOperatorConversion implements SqlOperatorConversion
 {
@@ -45,6 +53,22 @@ public class ArrayConstructorOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
+    // Check if array needs to be unnested
+    if (plannerContext.getQueryContext()
+                      .getOrDefault(
+                          QueryContexts.ENABLE_UNNESTED_ARRAYS_KEY,
+                          QueryContexts.DEFAULT_ENABLE_UNNESTED_ARRAYS
+                      ).equals(Boolean.FALSE)) {
+      List<RexNode> nodes = ((RexCall) rexNode).getOperands();
+      Preconditions.checkArgument(
+          nodes == null || nodes.size() != 1,
+          "ARRAY[] should have exactly one argument"
+      );
+      if (nodes.get(0).getKind() == SqlKind.LITERAL) {
+        throw new UOE("ARRAY[] support for literals not implemented");
+      }
+      return Expressions.toDruidExpression(plannerContext, rowSignature, nodes.get(0));
+    }
     return OperatorConversions.convertCall(
         plannerContext,
         rowSignature,

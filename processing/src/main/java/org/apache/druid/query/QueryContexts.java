@@ -68,9 +68,10 @@ public class QueryContexts
   public static final String ENABLE_DEBUG = "debug";
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
+  public static final boolean DEFAULT_POPULATE_CACHE = true;
+  public static final String ENABLE_UNNESTED_ARRAYS_KEY = "enableUnnestedArrays";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
-  public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
@@ -90,6 +91,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
+  public static final boolean DEFAULT_ENABLE_UNNESTED_ARRAYS = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

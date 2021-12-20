@@ -46,6 +46,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
@@ -340,6 +341,8 @@ public class NativeQueryMaker implements QueryMaker
           coercedValue = Arrays.asList((Double[]) value);
         } else if (value instanceof Object[]) {
           coercedValue = Arrays.asList((Object[]) value);
+        } else if (value instanceof ComparableStringArray) {
+          coercedValue = Arrays.asList(((ComparableStringArray) value).getDelegate());
         } else {
           throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }
