@@ -297,6 +297,8 @@ public class NettyHttpClient extends AbstractHttpClient
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
+            // TODO: figure out if this is required
+            channel.read();
             channelResourceContainer.returnResource();
           }
 
