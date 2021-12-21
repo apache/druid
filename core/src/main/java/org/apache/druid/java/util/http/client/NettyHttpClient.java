@@ -297,8 +297,6 @@ public class NettyHttpClient extends AbstractHttpClient
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
-            // TODO: figure out if this is required
-            channel.read();
             channelResourceContainer.returnResource();
           }
 
@@ -343,7 +341,7 @@ public class NettyHttpClient extends AbstractHttpClient
               log.debug("[%s] Channel disconnected", requestDesc);
             }
             // response is non-null if we received initial chunk and then exception occurs
-            if (response != null) {
+            if (response != null && response.isContinueReading()) {
               handler.exceptionCaught(response, new ChannelException("Channel disconnected"));
             }
             channel.close();
