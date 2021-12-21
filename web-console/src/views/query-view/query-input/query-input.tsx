@@ -19,7 +19,6 @@
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
 import ace, { Ace } from 'ace-builds';
-import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
 
@@ -34,11 +33,18 @@ import { RowColumn, uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './query-input.scss';
+import Completion = Ace.Completion;
 
 const langTools = ace.require('ace/ext/language_tools');
 
+const COMPLETER = {
+  insertMatch: (editor: any, data: Completion) => {
+    editor.completer.insertMatch({ value: data.name });
+  },
+};
+
 interface ItemDescription {
-  value: string;
+  name: string;
   syntax: string;
   description: string;
 }
@@ -102,19 +108,17 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = SQL_FUNCTIONS.map(([name, args, description]) => {
-      return {
-        value: name,
+    const functionList: any[] = Object.keys(SQL_FUNCTIONS).flatMap(name => {
+      const versions = SQL_FUNCTIONS[name];
+      return versions.map(([args, description]) => ({
+        name: name,
+        value: versions.length > 1 ? `${name}(${args})` : name,
         score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
         meta: 'function',
         syntax: `${name}(${args})`,
         description,
-        completer: {
-          insertMatch: (editor: any, data: any) => {
-            editor.completer.insertMatch({ value: data.caption });
-          },
-        },
-      };
+        completer: COMPLETER,
+      }));
     });
 
     langTools.addCompleter({
@@ -131,9 +135,9 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
 
   static makeDocHtml(item: ItemDescription) {
     return `
-<div class="doc-name">${escape(item.value)}</div>
+<div class="doc-name">${item.name}</div>
 <div class="doc-syntax">${item.syntax}</div>
-<div class="doc-description">${escape(item.description)}</div>`;
+<div class="doc-description">${item.description}</div>`;
   }
 
   static getDerivedStateFromProps(props: QueryInputProps, state: QueryInputState) {
