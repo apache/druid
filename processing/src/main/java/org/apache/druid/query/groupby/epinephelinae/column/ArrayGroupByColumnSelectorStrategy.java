@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
@@ -106,10 +105,8 @@ public class ArrayGroupByColumnSelectorStrategy
       Object[] valuess
   )
   {
-    throw new UOE(
-        "%s does not implement initColumnValues()",
-        ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    );
+    final int groupingKey = (int) getOnlyValue(selector);
+    valuess[columnIndex] = groupingKey;
   }
 
   @Override
@@ -121,10 +118,13 @@ public class ArrayGroupByColumnSelectorStrategy
       int[] stack
   )
   {
-    throw new UOE(
-        "%s does not implement initGroupingKeyColumnValue()",
-        ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    );
+    final int groupingKey = (int) rowObj;
+    writeToKeyBuffer(keyBufferPosition, groupingKey, keyBuffer);
+    if (groupingKey == GROUP_BY_MISSING_VALUE) {
+      stack[columnIndex] = 0;
+    } else {
+      stack[columnIndex] = 1;
+    }
   }
 
   @Override
@@ -135,10 +135,7 @@ public class ArrayGroupByColumnSelectorStrategy
       ByteBuffer keyBuffer
   )
   {
-    throw new UOE(
-        "%s does not implement checkRowIndexAndAddValueToGroupingKey()",
-        ArrayGroupByColumnSelectorStrategy.class.getSimpleName()
-    );
+    return false;
   }
 
   @Override

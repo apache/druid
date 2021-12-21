@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
@@ -87,15 +86,6 @@ public class ArrayGroupByColumnSelectorStrategyTest
   }
 
   @Test
-  public void testUnsupportedOperations()
-  {
-
-    Assert.assertThrows(UOE.class, () -> strategy.initColumnValues(null, 0, null));
-    Assert.assertThrows(UOE.class, () -> strategy.initGroupingKeyColumnValue(0, 0, null, null, null));
-    Assert.assertThrows(UOE.class, () -> strategy.checkRowIndexAndAddValueToGroupingKey(0, null, 0, null));
-  }
-
-  @Test
   public void writeKeyTest()
   {
     strategy.writeToKeyBuffer(0, 1, buffer1);
@@ -147,7 +137,7 @@ public class ArrayGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of(new String[]{"a", "b"}), row.get(0));
+    Assert.assertEquals(ComparableStringArray.of("a", "b"), row.get(0));
   }
 
 
