@@ -27,23 +27,33 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Set;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MySQLFirehoseDatabaseConnectorTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final JdbcAccessSecurityConfig INJECTED_CONF = newSecurityConfigEnforcingAllowList(ImmutableSet.of());
 
-  static {
-    MAPPER.registerModules(new MySQLMetadataStorageModule().getJacksonModules());
-    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF));
+  @Mock
+  private MySQLConnectorDriverConfig mySQLConnectorDriverConfig;
+
+  @Before
+  public void setup()
+  {
+    Mockito.doReturn("com.mysql.jdbc.Driver").when(mySQLConnectorDriverConfig).getDriverClassName();
   }
 
   @Rule
@@ -52,6 +62,13 @@ public class MySQLFirehoseDatabaseConnectorTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerModules(new MySQLMetadataStorageModule().getJacksonModules());
+    mapper.setInjectableValues(new InjectableValues.Std().addValue(JdbcAccessSecurityConfig.class, INJECTED_CONF)
+                                                         .addValue(
+                                                             MySQLConnectorDriverConfig.class,
+                                                             mySQLConnectorDriverConfig
+                                                         ));
     MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
     {
       @Override
@@ -63,18 +80,23 @@ public class MySQLFirehoseDatabaseConnectorTest
     MySQLFirehoseDatabaseConnector connector = new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        INJECTED_CONF
+        INJECTED_CONF,
+        mySQLConnectorDriverConfig
     );
-    MySQLFirehoseDatabaseConnector andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    MySQLFirehoseDatabaseConnector andBack = mapper.readValue(
+        mapper.writeValueAsString(connector),
+        MySQLFirehoseDatabaseConnector.class
+    );
     Assert.assertEquals(connector, andBack);
 
     // test again with classname
     connector = new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         "some.class.name.Driver",
-        INJECTED_CONF
+        INJECTED_CONF,
+        mySQLConnectorDriverConfig
     );
-    andBack = MAPPER.readValue(MAPPER.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
+    andBack = mapper.readValue(mapper.writeValueAsString(connector), MySQLFirehoseDatabaseConnector.class);
     Assert.assertEquals(connector, andBack);
   }
 
@@ -105,7 +127,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -126,7 +149,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -150,7 +174,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -173,7 +198,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -196,10 +222,10 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
-
 
 
   @Test
@@ -222,7 +248,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -246,7 +273,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -270,7 +298,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -304,7 +333,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        securityConfig
+        securityConfig,
+        mySQLConnectorDriverConfig
     );
   }
 
@@ -326,7 +356,8 @@ public class MySQLFirehoseDatabaseConnectorTest
     new MySQLFirehoseDatabaseConnector(
         connectorConfig,
         null,
-        new JdbcAccessSecurityConfig()
+        new JdbcAccessSecurityConfig(),
+        mySQLConnectorDriverConfig
     );
   }
 

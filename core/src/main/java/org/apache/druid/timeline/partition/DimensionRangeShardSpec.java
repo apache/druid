@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.ISE;
@@ -48,9 +49,6 @@ public class DimensionRangeShardSpec implements ShardSpec
   private final StringTuple end;
   private final int partitionNum;
   private final int numCorePartitions;
-
-  private final String firstDimStart;
-  private final String firstDimEnd;
 
   /**
    * @param dimensions   partition dimensions
@@ -78,8 +76,6 @@ public class DimensionRangeShardSpec implements ShardSpec
     this.end = end;
     this.partitionNum = partitionNum;
     this.numCorePartitions = numCorePartitions == null ? UNKNOWN_NUM_CORE_PARTITIONS : numCorePartitions;
-    this.firstDimStart = getFirstValueOrNull(start);
-    this.firstDimEnd = getFirstValueOrNull(end);
   }
 
   @JsonProperty("dimensions")
@@ -145,29 +141,132 @@ public class DimensionRangeShardSpec implements ShardSpec
     return Collections.unmodifiableList(dimensions);
   }
 
-  private Range<String> getFirstDimRange()
+  /**
+   * Check if a given domain of Strings is a singleton set containing the given value
+   * @param rangeSet Domain of Strings
+   * @param val Value of String
+   * @return rangeSet == {val}
+   */
+  private boolean isRangeSetSingletonWithVal(RangeSet<String> rangeSet, String val)
   {
-    Range<String> range;
-    if (firstDimStart == null && firstDimEnd == null) {
-      range = Range.all();
-    } else if (firstDimStart == null) {
-      range = Range.atMost(firstDimEnd);
-    } else if (firstDimEnd == null) {
-      range = Range.atLeast(firstDimStart);
-    } else {
-      range = Range.closed(firstDimStart, firstDimEnd);
+    if (val == null) {
+      return false;
     }
-    return range;
+    return rangeSet.asRanges().equals(
+        Collections.singleton(Range.singleton(val))
+    );
   }
 
+  /**
+   * Set[:i] is the cartesian product of Set[0],...,Set[i - 1]
+   * EffectiveDomain[:i] is defined as QueryDomain[:i] INTERSECTION SegmentRange[:i]
+   *
+   * i = 1
+   * If EffectiveDomain[:i] == {start[:i]} || EffectiveDomain == {end[:i]}:
+   *  if i == index.dimensions.size:
+   *    ACCEPT segment
+   *  else:
+   *    REPEAT with i = i + 1
+   *else if EffectiveDomain[:i] == {}:
+   *  PRUNE segment
+   *else:
+   *  ACCEPT segment
+   *
+   *
+   * Example: Index on (Hour, Minute, Second). Index.size is 3
+   * I)
+   * start = (3, 25, 10)
+   * end = (5, 10, 30)
+   * query domain = {3} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {3} == start[:1]
+   * EffectiveDomain[:2] == {3} * ([0, 10] INTERSECTION [25, INF))
+   *                     == {} -> PRUNE
+   *
+   * II)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {4} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {4} (!= {} && != start[:1] && != {end[:1]}) -> ACCEPT
+   *
+   * III)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [0, 10] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([0, 10] INTERSECTION (-INF, 15])
+   *                     == {5} * [0, 10] (! ={} && != {end[:2]}) -> ACCEPT
+   *
+   * IV)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [15, 40] * {10, 20, 30, 40}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([15, 40] INTERSECTION (-INF, 15])
+   *                     == {5} * {15} == {end[:2]}
+   * EffectiveDomain[:3] == {5} * {15} * ({10, 20, 30, 40} * (-INF, 30])
+   *                     == {5} * {15} * {10, 20, 30} != {}  -> ACCEPT
+   *
+   * V)
+   * start = (3, 25, 10)
+   * end = (5, 15, 30)
+   * query domain = {5} * [15, 40] * {50}
+   * EffectiveDomain[:1] == {5} == end[:1]
+   * EffectiveDomain[:2] == {5} * ([15, 40] INTERSECTION (-INF, 15])
+   *                     == {5} * {15} == {end[:2]}
+   * EffectiveDomain[:3] == {5} * {15} * ({40} * (-INF, 30])
+   *                     == {5} * {15} * {}
+   *                     == {} -> PRUNE
+   *
+   * @param domain The domain inferred from the query. Assumed to be non-emtpy
+   * @return true if segment needs to be considered for query, false if it can be pruned
+   */
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    RangeSet<String> rangeSet = domain.get(dimensions.get(0));
-    if (rangeSet == null) {
-      return true;
+    final StringTuple segmentStart = start == null ? new StringTuple(new String[dimensions.size()]) : start;
+    final StringTuple segmentEnd = end == null ? new StringTuple(new String[dimensions.size()]) : end;
+
+    // Indicates if the effective domain is equivalent to {start} till the previous dimension
+    boolean effectiveDomainIsStart = true;
+    // Indicates if the effective domain is equivalent to {end} till the previous dimension
+    boolean effectiveDomainIsEnd = true;
+
+    for (int i = 0; i < dimensions.size(); i++) {
+      String dimension = dimensions.get(i);
+      RangeSet<String> queryDomainForDimension = domain.get(dimension);
+      if (queryDomainForDimension == null) {
+        queryDomainForDimension = TreeRangeSet.create();
+        queryDomainForDimension.add(Range.all());
+      }
+
+      // Compute the segment's range for given dimension based on its start, end and boundary conditions
+      Range<String> rangeTillSegmentBoundary = Range.all();
+      if (effectiveDomainIsStart && segmentStart.get(i) != null) {
+        rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atLeast(segmentStart.get(i)));
+      }
+      if (effectiveDomainIsEnd && segmentEnd.get(i) != null) {
+        rangeTillSegmentBoundary = rangeTillSegmentBoundary.intersection(Range.atMost(segmentEnd.get(i)));
+      }
+
+      // EffectiveDomain[i] = QueryDomain[i] INTERSECTION SegmentRange[i]
+      RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
+      // Prune segment because query domain is out of segment range
+      if (effectiveDomainForDimension.isEmpty()) {
+        return false;
+      }
+
+      // EffectiveDomain is singleton and lies only on the boundaries -> consider next dimensions
+      effectiveDomainIsStart = effectiveDomainIsStart
+                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
+      effectiveDomainIsEnd = effectiveDomainIsEnd
+                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
+
+      // EffectiveDomain lies within the boundaries as well -> cannot prune based on next dimensions
+      if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {
+        return true;
+      }
     }
-    return !rangeSet.subRangeSet(getFirstDimRange()).isEmpty();
+    return true;
   }
 
   @Override
@@ -205,11 +304,6 @@ public class DimensionRangeShardSpec implements ShardSpec
 
     return (inputVsStart >= 0 || start == null)
            && (inputVsEnd < 0 || end == null);
-  }
-
-  private static String getFirstValueOrNull(StringTuple values)
-  {
-    return values != null && values.size() > 0 ? values.get(0) : null;
   }
 
   @Override

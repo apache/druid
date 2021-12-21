@@ -56,8 +56,8 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
-  // This flag control whether a sql join query with left scan should be attempted to be run as direct table access
-  // instead of being wrapped inside a query. With direct table access enabled, druid can push down the join operation to
+  // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
+  // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";

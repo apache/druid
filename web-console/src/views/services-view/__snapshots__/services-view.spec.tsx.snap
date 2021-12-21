@@ -183,7 +183,7 @@ exports[`ServicesView renders data 1`] = `
           "filterable": false,
           "id": "usage",
           "show": true,
-          "width": 100,
+          "width": 140,
         },
         Object {
           "Aggregated": [Function],

@@ -195,7 +195,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
+    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -1271,7 +1271,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          null
       );
 
       Preconditions.checkArgument(

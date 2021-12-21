@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
@@ -168,19 +169,37 @@ class UnaryNotExpr extends UnaryExpr
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);
     }
-    // conforming to other boolean-returning binary operators
-    ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
-    return ExprEval.ofBoolean(!ret.asBoolean(), retType.getType());
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      // conforming to other boolean-returning binary operators
+      ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
+      return ExprEval.ofBoolean(!ret.asBoolean(), retType.getType());
+    }
+    return ExprEval.ofLongBoolean(!ret.asBoolean());
   }
 
   @Nullable
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (Types.is(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
+    if (!ExpressionProcessing.useStrictBooleans()) {
+      ExpressionType implicitCast = super.getOutputType(inspector);
+      if (Types.is(implicitCast, ExprType.STRING)) {
+        return ExpressionType.LONG;
+      }
+      return implicitCast;
     }
-    return implicitCast;
+    return ExpressionType.LONG;
+  }
+
+  @Override
+  public boolean canVectorize(InputBindingInspector inspector)
+  {
+    return expr.canVectorize(inspector);
+  }
+
+  @Override
+  public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.not(inspector, expr);
   }
 }

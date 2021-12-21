@@ -404,7 +404,7 @@ public class RowBasedGrouperHelper
     return RowBasedColumnSelectorFactory.create(
         adapter,
         supplier::get,
-        () -> decoratedSignature,
+        decoratedSignature,
         false
     );
   }

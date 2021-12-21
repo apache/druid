@@ -209,6 +209,15 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
           },
           Object {
             "defined": [Function],
+            "info": <p>
+              The dimensions to partition on.
+            </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
             "info": <React.Fragment>
               <p>
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
@@ -567,6 +576,15 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on.
+            </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
           },
           Object {
             "defined": [Function],
@@ -931,6 +949,15 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           },
           Object {
             "defined": [Function],
+            "info": <p>
+              The dimensions to partition on.
+            </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
+          },
+          Object {
+            "defined": [Function],
             "info": <React.Fragment>
               <p>
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
@@ -1289,6 +1316,15 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "name": "tuningConfig.partitionsSpec.partitionDimension",
             "required": true,
             "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "info": <p>
+              The dimensions to partition on.
+            </p>,
+            "name": "tuningConfig.partitionsSpec.partitionDimensions",
+            "required": true,
+            "type": "string-array",
           },
           Object {
             "defined": [Function],

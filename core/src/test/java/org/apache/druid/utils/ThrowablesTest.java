@@ -19,30 +19,42 @@
 
 package org.apache.druid.utils;
 
+import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class ThrowablesTest
 {
   @Test
-  public void testIsThrowableItself()
+  public void testGetCauseOfType_Itself()
   {
-    Assert.assertTrue(Throwables.isThrowable(new NoClassDefFoundError(), NoClassDefFoundError.class));
+    Throwable th = new NoClassDefFoundError();
+    Assert.assertSame(th, Throwables.getCauseOfType(th, NoClassDefFoundError.class));
   }
 
   @Test
-  public void testIsThrowableNestedThrowable()
+  public void testGetCauseOfType_NestedThrowable()
   {
-    Assert.assertTrue(
-        Throwables.isThrowable(new RuntimeException(new NoClassDefFoundError()), NoClassDefFoundError.class)
+    Throwable th = new NoClassDefFoundError();
+    Assert.assertSame(th,
+        Throwables.getCauseOfType(new RuntimeException(th), NoClassDefFoundError.class)
     );
   }
 
   @Test
-  public void testIsThrowableNonTarget()
+  public void testGetCauseOfType_NestedThrowableSubclass()
   {
-    Assert.assertFalse(
-        Throwables.isThrowable(new RuntimeException(new ClassNotFoundException()), NoClassDefFoundError.class)
+    Throwable th = new ISE("something");
+    Assert.assertSame(th,
+        Throwables.getCauseOfType(new RuntimeException(th), IllegalStateException.class)
+    );
+  }
+
+  @Test
+  public void testGetCauseOfType_NonTarget()
+  {
+    Assert.assertNull(
+        Throwables.getCauseOfType(new RuntimeException(new ClassNotFoundException()), NoClassDefFoundError.class)
     );
   }
 }
