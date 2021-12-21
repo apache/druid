@@ -126,7 +126,7 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
     checkSegmentStates(2, SegmentState.PUSHED_AND_DROPPED);
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(
@@ -160,7 +160,7 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
     }
 
     final SegmentsAndCommitMetadata published =
-        driver.publishAll(null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
+        driver.publishAll(null, null, null, makeOkPublisher(), Function.identity()).get(TIMEOUT, TimeUnit.MILLISECONDS);
 
     Assert.assertEquals(
         ImmutableSet.of(

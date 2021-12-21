@@ -199,6 +199,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
       @Nullable final Set<DataSegment> segmentsToBeDropped,
+      @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
@@ -211,6 +212,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     return publishInBackground(
         segmentsToBeOverwritten,
         segmentsToBeDropped,
+        tombstones,
         new SegmentsAndCommitMetadata(
             snapshot
                 .values()

@@ -282,6 +282,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
             null,
             null,
+            null,
             sam,
             publisher,
             java.util.function.Function.identity()

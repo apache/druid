@@ -53,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -560,6 +561,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @Nullable Set<DataSegment> segmentsToBeDropped,
+      @Nullable Set<DataSegment> tombstones,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
@@ -589,10 +591,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
 
+    Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+    if (tombstones != null) {
+      pushedAndTombstones.addAll(tombstones);
+    }
+
     return executor.submit(
         () -> {
           try {
-            final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(segmentsAndCommitMetadata.getSegments());
+            final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
                 segmentsToBeDropped,

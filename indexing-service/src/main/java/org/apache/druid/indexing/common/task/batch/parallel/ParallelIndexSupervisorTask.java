@@ -1072,9 +1072,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema
     );
 
-    Set<DataSegment> segmentsFoundForDrop = null;
+    Set<DataSegment> tombStones;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
-      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(newSegments,
+                                                            ingestionSchema,
+                                                            toolbox.getTaskActionClient());
+      tombStones = tombstoneHelper.computeTombstones();
+      newSegments.addAll(tombStones);
+      LOG.debugSegments(tombStones, "To publish tombstones");
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
@@ -1083,7 +1088,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, segmentsFoundForDrop, newSegments, annotateFunction, null).isSuccess();
+        || publisher.publishSegments(oldSegments,
+                                     Collections.emptySet(),
+                                     newSegments, annotateFunction,
+                                     null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

@@ -51,4 +51,12 @@ public interface QueryableIndex extends ColumnSelector, Closeable
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
+
+  /**
+   * @return true if this index was created from a tombstone or false otherwise
+   */
+  default boolean isFromTombstone()
+  {
+    return false;
+  }
 }

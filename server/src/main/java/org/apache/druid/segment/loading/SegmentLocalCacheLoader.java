@@ -20,20 +20,35 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
-
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 public class SegmentLocalCacheLoader implements SegmentLoader
 {
+  private static final EmittingLogger log = new EmittingLogger(SegmentLocalCacheLoader.class);
+
   private final SegmentCacheManager cacheManager;
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
@@ -49,23 +64,138 @@ public class SegmentLocalCacheLoader implements SegmentLoader
   @Override
   public ReferenceCountingSegment getSegment(DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
   {
-    final File segmentFiles = cacheManager.getSegmentFiles(segment);
-    File factoryJson = new File(segmentFiles, "factory.json");
-    final SegmentizerFactory factory;
+    Segment segmentObject;
+    if (segment.isTombstone()) {
 
-    if (factoryJson.exists()) {
-      try {
-        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
-      }
+      log.debug("Segment [%s] is a tombstone!", segment);
+
+      // Create a no-op queryable index that indicates that it was created from a tombstone...then the
+      // server manager will use the information to short-circuit and create a no-op query runner for
+      // it since it has no data:
+      final QueryableIndex queryableIndex =
+          new QueryableIndex()
+          {
+            @Override
+            public Interval getDataInterval()
+            {
+              return segment.getInterval();
+            }
+
+            @Override
+            public int getNumRows()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Indexed<String> getAvailableDimensions()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public BitmapFactory getBitmapFactoryForDimensions()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Nullable
+            @Override
+            public Metadata getMetadata()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Map<String, DimensionHandler> getDimensionHandlers()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void close()
+            {
+
+            }
+
+            @Override
+            public List<String> getColumnNames()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Nullable
+            @Override
+            public ColumnHolder getColumnHolder(String columnName)
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            // mark this index to indicate that it comes from a tombstone:
+            @Override
+            public boolean isFromTombstone()
+            {
+              return true;
+            }
+          };
+
+      final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+
+      segmentObject = new Segment()
+      {
+        @Override
+        public SegmentId getId()
+        {
+          return segment.getId();
+        }
+
+        @Override
+        public Interval getDataInterval()
+        {
+          return asQueryableIndex().getDataInterval();
+        }
+
+        @Nullable
+        @Override
+        public QueryableIndex asQueryableIndex()
+        {
+          return queryableIndex;
+        }
+
+        @Override
+        public StorageAdapter asStorageAdapter()
+        {
+          return storageAdapter;
+        }
+
+        @Override
+        public void close()
+        {
+
+        }
+      };
+
     } else {
-      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+      final File segmentFiles = cacheManager.getSegmentFiles(segment);
+      File factoryJson = new File(segmentFiles, "factory.json");
+      final SegmentizerFactory factory;
+
+      if (factoryJson.exists()) {
+        try {
+          factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+        }
+        catch (IOException e) {
+          throw new SegmentLoadingException(e, "%s", e.getMessage());
+        }
+      } else {
+        factory = new MMappedQueryableSegmentizerFactory(indexIO);
+      }
+
+      segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
     }
 
-    Segment segmentObject = factory.factorize(segment, segmentFiles, lazy, loadFailed);
     return ReferenceCountingSegment.wrapSegment(segmentObject, segment.getShardSpec());
+
   }
 
   @Override
@@ -73,4 +203,5 @@ public class SegmentLocalCacheLoader implements SegmentLoader
   {
     cacheManager.cleanup(segment);
   }
+
 }

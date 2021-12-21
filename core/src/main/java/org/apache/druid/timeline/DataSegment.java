@@ -56,6 +56,9 @@ import java.util.stream.Collectors;
 @PublicApi
 public class DataSegment implements Comparable<DataSegment>, Overshadowable<DataSegment>
 {
+
+  public static final String TOMBSTONE_LOADSPEC_TYPE = "tombstone";
+
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
    * metadata only, while org.apache.druid.segment.Segment represents the actual body of segment data, queryable.
@@ -96,6 +99,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final List<String> dimensions;
   private final List<String> metrics;
   private final ShardSpec shardSpec;
+  private final boolean isTombstone;
 
   /**
    * Stores some configurations of the compaction task which created this segment.
@@ -211,6 +215,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
+    // compute tombstone flag before loadspec being potentially pruned...
+    isTombstone = computeTombstoneFlag(loadSpec);
+    // prune loadspec if needed
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
     // dataSource
@@ -341,6 +348,25 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public SegmentId getId()
   {
     return id;
+  }
+
+  public boolean isTombstone()
+  {
+    return isTombstone;
+  }
+
+  private boolean computeTombstoneFlag(Map<String, Object> loadSpec)
+  {
+    boolean isTombstone = false;
+    if (loadSpec != null) {
+      Object loadSpecType = loadSpec.get("type");
+      if (loadSpecType != null) {
+        if (loadSpecType instanceof String && TOMBSTONE_LOADSPEC_TYPE.equals(loadSpecType)) {
+          isTombstone = true;
+        }
+      }
+    }
+    return isTombstone;
   }
 
   @Override

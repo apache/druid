@@ -362,6 +362,49 @@ public class DataSegmentTest
     Assert.assertEquals(segment1, segment2.withLastCompactionState(compactionState));
   }
 
+  @Test
+  public void testTombstoneType()
+  {
+
+    final DataSegment segment1 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .loadSpec(Collections.singletonMap(
+                                                "type",
+                                                DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                            ))
+                                            .size(0)
+                                            .build();
+    Assert.assertTrue(segment1.isTombstone());
+
+    final DataSegment segment2 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .loadSpec(Collections.singletonMap(
+                                                "type",
+                                                "foo"
+                                            ))
+                                            .size(0)
+                                            .build();
+
+    Assert.assertFalse(segment2.isTombstone());
+
+    final DataSegment segment3 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .build();
+
+    Assert.assertFalse(segment3.isTombstone());
+
+  }
+
   private DataSegment makeDataSegment(String dataSource, String interval, String version)
   {
     return DataSegment.builder()
