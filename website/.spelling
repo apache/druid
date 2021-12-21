@@ -1542,6 +1542,11 @@ skipEmptyBuckets
 useCache
 useResultLevelCache
 vectorSize
+enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
+joinFilterRewriteMaxSize
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata
