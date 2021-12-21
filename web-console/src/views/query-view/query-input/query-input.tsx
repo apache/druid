@@ -37,6 +37,12 @@ import './query-input.scss';
 
 const langTools = ace.require('ace/ext/language_tools');
 
+interface ItemDescription {
+  value: string;
+  syntax: string;
+  description: string;
+}
+
 export interface QueryInputProps {
   queryString: string;
   onQueryStringChange: (newQueryString: string) => void;
@@ -123,7 +129,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     });
   }
 
-  static makeDocHtml(item: any) {
+  static makeDocHtml(item: ItemDescription) {
     return `
 <div class="doc-name">${escape(item.value)}</div>
 <div class="doc-syntax">${item.syntax}</div>
