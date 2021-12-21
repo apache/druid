@@ -442,7 +442,6 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | urls | Array<String> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
 | config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 | headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
-| failOnGetSchemaErrors | Boolean | If true, errors when getting the schema from the registry for a message are treated as fatal errors that will fail a task. If false, a parse exception that can be logged will be thrown instead. Defaults to true. | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -488,6 +487,12 @@ Multiple Instances:
 }
 ...
 ```
+
+###### Parse exceptions
+
+The following errors when reading records will be considered parse exceptions, which can be limited and logged with ingestion task configurations such as `maxParseExceptions` and `maxSavedParseExceptions`:
+- Failure to retrieve a schema due to misconfiguration or corrupt records (invalid schema IDs)
+- Failure to decode an Avro message
 
 ### Avro OCF
 

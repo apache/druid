@@ -35,7 +35,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 
@@ -55,7 +54,6 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
   private final Map<String, Object> config;
   private final Map<String, Object> headers;
   private final ObjectMapper jsonMapper;
-  private final Boolean failOnGetSchemaErrors;
   public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
@@ -65,7 +63,6 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       @JsonProperty("urls") @Nullable List<String> urls,
       @JsonProperty("config") @Nullable Map<String, Object> config,
       @JsonProperty("headers") @Nullable Map<String, Object> headers,
-      @JsonProperty("failOnGetSchemaErrors") @Nullable Boolean failOnGetSchemaErrors,
       @JacksonInject @Json ObjectMapper jsonMapper
   )
   {
@@ -74,7 +71,6 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     this.urls = urls;
     this.config = config;
     this.headers = headers;
-    this.failOnGetSchemaErrors = failOnGetSchemaErrors == null || failOnGetSchemaErrors;
     this.jsonMapper = jsonMapper;
     if (url != null && !url.isEmpty()) {
       this.registry = new CachedSchemaRegistryClient(this.url, this.capacity, DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
@@ -113,22 +109,15 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     return headers;
   }
 
-  @JsonProperty
-  public Boolean getFailOnGetSchemaErrors()
-  {
-    return failOnGetSchemaErrors;
-  }
-
   //For UT only
   @VisibleForTesting
-  SchemaRegistryBasedAvroBytesDecoder(SchemaRegistryClient registry, boolean failOnGetSchemaErrors)
+  SchemaRegistryBasedAvroBytesDecoder(SchemaRegistryClient registry)
   {
     this.url = null;
     this.capacity = Integer.MAX_VALUE;
     this.urls = null;
     this.config = null;
     this.headers = null;
-    this.failOnGetSchemaErrors = failOnGetSchemaErrors;
     this.registry = registry;
     this.jsonMapper = new ObjectMapper();
   }
@@ -151,18 +140,10 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException | RestClientException ex) {
-      if (failOnGetSchemaErrors) {
-        throw new RE(ex, "Failed to get Avro schema: %s", id);
-      } else {
-        throw new ParseException(null, "Failed to get Avro schema: %s", id);
-      }
+      throw new ParseException(null, "Failed to get Avro schema: %s", id);
     }
     if (schema == null) {
-      if (failOnGetSchemaErrors) {
-        throw new RE("Failed to find Avro schema: %s", id);
-      } else {
-        throw new ParseException(null, "Failed to find Avro schema: %s", id);
-      }
+      throw new ParseException(null, "Failed to find Avro schema: %s", id);
     }
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
     try {
@@ -184,18 +165,15 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
     }
     SchemaRegistryBasedAvroBytesDecoder that = (SchemaRegistryBasedAvroBytesDecoder) o;
     return capacity == that.capacity
-           && Objects.equals(registry, that.registry)
            && Objects.equals(url, that.url)
            && Objects.equals(urls, that.urls)
            && Objects.equals(config, that.config)
-           && Objects.equals(headers, that.headers)
-           && Objects.equals(jsonMapper, that.jsonMapper)
-           && Objects.equals(failOnGetSchemaErrors, that.failOnGetSchemaErrors);
+           && Objects.equals(headers, that.headers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(registry, url, capacity, urls, config, headers, jsonMapper, failOnGetSchemaErrors);
+    return Objects.hash(registry, url, capacity, urls, config, headers, jsonMapper);
   }
 }

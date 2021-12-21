@@ -155,7 +155,7 @@ public class AvroStreamInputFormatTest
   {
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
-        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null, null, null),
+        new SchemaRegistryBasedAvroBytesDecoder("http://test:8081", 100, null, null, null, null),
         false,
         false
     );

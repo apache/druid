@@ -33,7 +33,6 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.junit.Assert;
@@ -120,7 +119,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 5).put((byte) 0).putInt(1234).put(bytes);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -130,7 +129,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(2).put((byte) 0).put(1, (byte) 1);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
@@ -145,10 +144,10 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(4 + 5).put((byte) 0).putInt(1234).put(bytes, 5, 4);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  @Test(expected = RE.class)
+  @Test(expected = ParseException.class)
   public void testParseWrongSchemaType() throws Exception
   {
     // Given
@@ -156,21 +155,10 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   @Test(expected = ParseException.class)
-  public void testParseWrongSchemaTypeThrowParseException() throws Exception
-  {
-    // Given
-    Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(Mockito.mock(ParsedSchema.class));
-    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
-    bb.rewind();
-    // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, false).parse(bb);
-  }
-
-  @Test(expected = RE.class)
   public void testParseWrongId() throws Exception
   {
     // Given
@@ -178,18 +166,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, true).parse(bb);
-  }
-
-  @Test(expected = ParseException.class)
-  public void testParseWrongIdThrowParseException() throws Exception
-  {
-    // Given
-    Mockito.when(registry.getSchemaById(ArgumentMatchers.anyInt())).thenThrow(new IOException("no pasaran"));
-    ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
-    bb.rewind();
-    // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry, false).parse(bb);
+    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
   private byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException
