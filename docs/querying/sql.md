@@ -448,7 +448,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
-|`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
+|`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If the `needle` is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of `expr` starting at index, with a max length, both measured in UTF-16 code units.|
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
