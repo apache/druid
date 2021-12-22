@@ -49,6 +49,7 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
+[ FILTER ( WHERE condition ) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
@@ -75,6 +76,11 @@ FROM clause, metadata tables are not considered datasources. They exist only in 
 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
+
+### FILTER
+
+The FILTER clause limits an aggregation query to execute only on the rows for which a condition evaluates to true.
+Druid translates the FILTER clause to a native [filtered aggregator](aggregations.md#filtered-aggregator).
 
 ### WHERE
 
