@@ -79,7 +79,7 @@ documentation.
 
 ### FILTER
 
-The FILTER clause limits an aggregation query to execute only on the rows for which a condition evaluates to true.
+The FILTER clause limits an aggregation query to only the rows for which a condition evaluates to true.
 Druid translates the FILTER clause to a native [filtered aggregator](aggregations.md#filtered-aggregator).
 
 ### WHERE
