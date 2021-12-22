@@ -297,7 +297,7 @@ In the default value mode (`true`), Druid treats NULLs and empty strings interch
 standard. In this mode Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and
 `col = ''` are equivalent, and both will evaluate to true if `col` contains an empty string. Similarly, the expression
 `COALESCE(col1, col2)` will return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows,
-the `COUNT(expr)` aggregator will count the number of rows where expr is neither null nor the empty string. Numeric
+the `COUNT(expr)` aggregator will count the number of rows where `expr` is neither null nor the empty string. Numeric
 columns in this mode are not nullable; any null or missing values will be treated as zeroes.
 
 In SQL compatible mode (`false`), NULLs are treated more closely to the SQL standard. The property affects both storage
@@ -328,13 +328,13 @@ Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT k
 |Function|Notes|Default|
 |--------|-----|-------|
 |`COUNT(*)`|Counts the number of rows.|`0`|
-|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for `APPROX_COUNT_DISTINCT`. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can use strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, expr must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for `APPROX_COUNT_DISTINCT`. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can use strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, `expr` must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
 |`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
 |`AVG(expr)`|Averages numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
-|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr using an approximate algorithm. The expr can be a regular column or a prebuilt sketch column.<br><br>The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). By default, this is `APPROX_COUNT_DISTINCT_BUILTIN`. If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be set to `APPROX_COUNT_DISTINCT_DS_HLL` or `APPROX_COUNT_DISTINCT_DS_THETA`.<br><br>When run on prebuilt sketch columns, the sketch column type must match the implementation of this function. For example: when `druid.sql.approxCountDistinct.function` is set to `APPROX_COUNT_DISTINCT_BUILTIN`, this function will be able to run on prebuilt hyperUnique columns, but not on prebuilt HLLSketchBuild columns.|
-|`APPROX_COUNT_DISTINCT_BUILTIN(expr)`|_Usage note:_ consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.<br/><br/>Counts distinct values of expr using Druid's built-in "cardinality" or "hyperUnique" aggregators, which implement a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). The expr can be a string, number, or prebuilt hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct".|
+|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of `expr` using an approximate algorithm. The `expr` can be a regular column or a prebuilt sketch column.<br><br>The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). By default, this is `APPROX_COUNT_DISTINCT_BUILTIN`. If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be set to `APPROX_COUNT_DISTINCT_DS_HLL` or `APPROX_COUNT_DISTINCT_DS_THETA`.<br><br>When run on prebuilt sketch columns, the sketch column type must match the implementation of this function. For example: when `druid.sql.approxCountDistinct.function` is set to `APPROX_COUNT_DISTINCT_BUILTIN`, this function will be able to run on prebuilt hyperUnique columns, but not on prebuilt HLLSketchBuild columns.|
+|`APPROX_COUNT_DISTINCT_BUILTIN(expr)`|_Usage note:_ consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.<br/><br/>Counts distinct values of `expr` using Druid's built-in "cardinality" or "hyperUnique" aggregators, which implement a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). The `expr` can be a string, number, or prebuilt hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct".|
 |`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context). The `lgK` and `tgtHllType` parameters here are, like the equivalents in the [aggregator](../development/extensions-core/datasketches-hll.md#aggregators), described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.   See also `COUNT(DISTINCT expr)`.  |`0`|
 |`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.md) column. Results are always approximate, regardless of the value of [`useApproximateCountDistinct`](#connection-context).  The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function. See also `COUNT(DISTINCT expr)`. |`0`|
 |`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.md) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use this function.|`'0'` (STRING)|
@@ -386,13 +386,13 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`PI`|Constant Pi.|
 |`ABS(expr)`|Absolute value.|
 |`CEIL(expr)`|Ceiling.|
-|`EXP(expr)`|e to the power of expr.|
+|`EXP(expr)`|e to the power of `expr`.|
 |`FLOOR(expr)`|Floor.|
 |`LN(expr)`|Logarithm (base e).|
 |`LOG10(expr)`|Logarithm (base 10).|
-|`POWER(expr, power)`|expr to a power.|
+|`POWER(expr, power)`|`expr` raised to the power of `power`.|
 |`SQRT(expr)`|Square root.|
-|`TRUNCATE(expr, [digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
+|`TRUNCATE(expr, [digits])`|Truncate `expr` to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
 |`TRUNC(expr, [digits])`|Synonym for `TRUNCATE`.|
 |`ROUND(expr, [digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
 |`x + y`|Addition.|
@@ -400,13 +400,13 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
 |`MOD(x, y)`|Modulo (remainder of x divided by y).|
-|`SIN(expr)`|Trigonometric sine of an angle expr.|
-|`COS(expr)`|Trigonometric cosine of an angle expr.|
-|`TAN(expr)`|Trigonometric tangent of an angle expr.|
-|`COT(expr)`|Trigonometric cotangent of an angle expr.|
-|`ASIN(expr)`|Arc sine of expr.|
-|`ACOS(expr)`|Arc cosine of expr.|
-|`ATAN(expr)`|Arc tangent of expr.|
+|`SIN(expr)`|Trigonometric sine of an angle `expr`.|
+|`COS(expr)`|Trigonometric cosine of an angle `expr`.|
+|`TAN(expr)`|Trigonometric tangent of an angle `expr`.|
+|`COT(expr)`|Trigonometric cotangent of an angle `expr`.|
+|`ASIN(expr)`|Arc sine of `expr`.|
+|`ACOS(expr)`|Arc cosine of `expr`.|
+|`ATAN(expr)`|Arc tangent of `expr`.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
 |`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees|
 |`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians|
@@ -418,11 +418,11 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`BITWISE_SHIFT_LEFT(expr1, expr2)`|Returns the result of `expr1 << expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_SHIFT_RIGHT(expr1, expr2)`|Returns the result of `expr1 >> expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_XOR(expr1, expr2)`|Returns the result of `expr1 ^ expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
-|`DIV(x,y)`|Returns the result of integer division of x by y |
+|`DIV(x, y)`|Returns the result of integer division of x by y |
 |`HUMAN_READABLE_BINARY_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of `[0, 3]` (default: 2). |
 |`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of `[0, 3]` (default: 2). `precision` must be in the range of `[0, 3]` (default: 2). |
 |`HUMAN_READABLE_DECIMAL_FORMAT(value, [precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of `[0, 3]` (default: 2). |
-|`SAFE_DIVIDE(x,y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
+|`SAFE_DIVIDE(x, y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
 
 
 ### String functions
@@ -431,16 +431,16 @@ String functions accept strings, and return a type appropriate to the function.
 
 |Function|Notes|
 |--------|-----|
-|<code>x &#124;&#124; y</code>|Concat strings x and y.|
+|<code>x &#124;&#124; y</code>|Concat strings `x` and `y`.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
-|`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
+|`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
 |`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
-|`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
-|`LOWER(expr)`|Returns expr in all lowercase.|
+|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
+|`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
@@ -609,8 +609,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
-|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in a Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
+|`NVL(expr, expr-for-null)`|Returns `expr-for-null` if `expr` is null (or empty string for string type).|
+|`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## Multi-value string functions
 
@@ -619,16 +619,16 @@ All 'array' references in the multi-value string function documentation can refe
 
 |Function|Notes|
 |--------|-----|
-|`ARRAY[expr1,expr ...]`|Constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type.|
+|`ARRAY[expr1, expr2, ...]`|Constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type.|
 |`MV_FILTER_ONLY(expr, arr)`|Filters multi-value `expr` to include only values contained in array `arr`.|
 |`MV_FILTER_NONE(expr, arr)`|Filters multi-value `expr` to include no values contained in array `arr`.|
 |`MV_LENGTH(arr)`|Returns length of array expression.|
 |`MV_OFFSET(arr, long)`|Returns the array element at the 0 based index supplied, or null for an out of range index.|
 |`MV_ORDINAL(arr, long)`|Returns the array element at the 1 based index supplied, or null for an out of range index.|
-|`MV_CONTAINS(arr, expr)`|Returns 1 if the array contains the element specified by expr, or contains all elements specified by `expr` if expr is an array, else 0.|
+|`MV_CONTAINS(arr, expr)`|Returns 1 if the array contains the element specified by expr, or contains all elements specified by `expr` if `expr` is an array, else 0.|
 |`MV_OVERLAP(arr1, arr2)`|Returns 1 if arr1 and arr2 have any elements in common, else 0|
-|`MV_OFFSET_OF(arr, expr)`|Returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
-|`MV_ORDINAL_OF(arr, expr)`|Returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
+|`MV_OFFSET_OF(arr, expr)`|Returns the 0 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
+|`MV_ORDINAL_OF(arr, expr)`|Returns the 1 based index of the first occurrence of `expr` in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
 |`MV_PREPEND(expr, arr)`|Adds `expr` to `arr` at the beginning, the resulting array type determined by the type of the array.|
 |`MV_APPEND(arr1, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of the first array.|
 |`MV_CONCAT(arr1, arr2)`|Concatenates 2 arrays, the resulting array type determined by the type of the first array.|
