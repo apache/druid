@@ -115,7 +115,18 @@ exports[`HistoryDialog matches snapshot 1`] = `
                 >
                   <div
                     class="bp3-button-group right-buttons"
-                  />
+                  >
+                    <button
+                      class="bp3-button bp3-minimal"
+                      type="button"
+                    >
+                      <span
+                        class="bp3-button-text"
+                      >
+                        Diff with previous
+                      </span>
+                    </button>
+                  </div>
                 </div>
                 <div
                   class="main-area"
