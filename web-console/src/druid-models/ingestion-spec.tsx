@@ -22,6 +22,7 @@ import React from 'react';
 import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import {
+  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
@@ -32,7 +33,6 @@ import {
   filterMap,
   oneOf,
   typeIs,
-  whitelistKeys,
 } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
@@ -327,7 +327,7 @@ export function cleanSpec(
   spec: Partial<IngestionSpec>,
   allowSuspended?: boolean,
 ): Partial<IngestionSpec> {
-  return whitelistKeys(
+  return allowKeys(
     spec,
     ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
   ) as IngestionSpec;
