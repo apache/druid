@@ -5848,6 +5848,16 @@ license_file_path: licenses/bin/lodash.debounce.MIT
 
 ---
 
+name: "lodash.escape"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: John-David Dalton
+version: 4.0.1
+license_file_path: licenses/bin/lodash.escape.MIT
+
+---
+
 name: "lodash.get"
 license_category: binary
 module: web-console

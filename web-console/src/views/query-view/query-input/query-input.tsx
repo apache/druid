@@ -19,6 +19,7 @@
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
 import ace, { Ace } from 'ace-builds';
+import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
 
@@ -134,9 +135,10 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   }
 
   static makeDocHtml(item: ItemDescription) {
+    console.log(item.syntax, escape(item.syntax));
     return `
 <div class="doc-name">${item.name}</div>
-<div class="doc-syntax">${item.syntax}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
 <div class="doc-description">${item.description}</div>`;
   }
 

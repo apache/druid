@@ -86,6 +86,7 @@
     "hjson": "^3.2.1",
     "json-bigint-native": "^1.1.0",
     "lodash.debounce": "^4.0.8",
+    "lodash.escape": "^4.0.1",
     "memoize-one": "^5.1.1",
     "numeral": "^2.0.6",
     "react": "^16.14.0",

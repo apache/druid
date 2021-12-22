@@ -27,15 +27,26 @@ const writefile = 'lib/sql-docs.js';
 const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
-function deleteBackticks(str) {
-  return str.replace(/`/g, '');
+function hasHtmlTags(str) {
+  return /<(a|br|span|div|p|code)\/?>/.test(str);
+}
+
+function sanitizeArguments(str) {
+  str = str.replace(/`<code>&#124;<\/code>`/g, '|'); // convert the hack to get | in a table to a normal pipe
+
+  // Ensure there are no more html tags other than the <code> we just removed
+  if (hasHtmlTags(str)) {
+    throw new Error(`Arguments contain HTML: ${str}`);
+  }
+
+  return str;
 }
 
 function convertMarkdownToHtml(markdown) {
   markdown = markdown.replace(/<br\/?>/g, '\n'); // Convert inline <br> to newlines
 
   // Ensure there are no more html tags other than the <br> we just removed
-  if (/<(a|br|span|div|p)\/?>/.test(markdown)) {
+  if (hasHtmlTags(markdown)) {
     throw new Error(`Markdown contains HTML: ${markdown}`);
   }
 
@@ -57,8 +68,8 @@ const readDoc = async () => {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
       const functionName = functionMatch[1];
-      const args = deleteBackticks(functionMatch[2]);
-      let description = convertMarkdownToHtml(functionMatch[3]);
+      const args = sanitizeArguments(functionMatch[2]);
+      const description = convertMarkdownToHtml(functionMatch[3]);
 
       functionDocs[functionName] = functionDocs[functionName] || [];
       functionDocs[functionName].push([args, description]);
