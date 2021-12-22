@@ -20,9 +20,10 @@ import { Button, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { ShowValue } from '../../components/show-value/show-value';
+import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './history-dialog.scss';
 
@@ -54,6 +55,8 @@ interface HistoryDialogProps {
 export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDialogProps) {
   const { className, title, historyRecords, onBack } = props;
 
+  const [diffIndex, setDiffIndex] = useState(-1);
+
   let content: JSX.Element;
   if (historyRecords.length === 0) {
     content = <div className="no-record">No history records available</div>;
@@ -67,13 +70,35 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
               id={i}
               key={i}
               title={`${auditInfo.comment || 'Change'} @ ${formattedTime}`}
-              panel={<ShowValue jsonValue={normalizePayload(payload)} />}
+              panel={
+                <ShowValue
+                  jsonValue={normalizePayload(payload)}
+                  onDiffWithPrevious={
+                    i < historyRecords.length - 1 ? () => setDiffIndex(i) : undefined
+                  }
+                />
+              }
               panelClassName="panel"
             />
           );
         })}
         <Tabs.Expander />
       </Tabs>
+    );
+  }
+
+  if (diffIndex !== -1) {
+    return (
+      <DiffDialog
+        title="Supervisor spec diff"
+        versions={historyRecords.map(({ auditInfo, auditTime, payload }) => ({
+          label: auditInfo.comment || auditTime,
+          value: normalizePayload(payload),
+        }))}
+        initLeftIndex={diffIndex + 1}
+        initRightIndex={diffIndex}
+        onClose={() => setDiffIndex(-1)}
+      />
     );
   }
 
