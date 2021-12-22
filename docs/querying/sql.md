@@ -328,7 +328,7 @@ Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT k
 |Function|Notes|Default|
 |--------|-----|-------|
 |`COUNT(*)`|Counts the number of rows.|`0`|
-|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for APPROX_COUNT_DISTINCT. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can could strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, expr must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr.<br><br>When "useApproximateCountDistinct" is set to "true" (the default), this is an alias for `APPROX_COUNT_DISTINCT`. The specific algorithm that will be used depends on the value of [`druid.sql.approxCountDistinct.function`](../configuration/index.md#sql). In this mode, you can use strings, numbers, or prebuilt sketches. If counting prebuilt sketches, the prebuilt sketch type must match the selected algorithm.<br><br>When "useApproximateCountDistinct" is set to "false", the computation will be exact. In this case, expr must be string or numeric, since exact counts are not possible using prebuilt sketches. In exact mode, only one distinct count per query is permitted unless "useGroupingSetForExactDistinct" is enabled.|
 |`SUM(expr)`|Sums numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `0`|
 |`MIN(expr)`|Takes the minimum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `9223372036854775807` (maximum LONG value)|
 |`MAX(expr)`|Takes the maximum of numbers.|`null` if `druid.generic.useDefaultValueForNull=false`, otherwise `-9223372036854775808` (minimum LONG value)|
@@ -392,9 +392,9 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`LOG10(expr)`|Logarithm (base 10).|
 |`POWER(expr, power)`|expr to a power.|
 |`SQRT(expr)`|Square root.|
-|`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
-|`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
-|`ROUND(expr[, digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
+|`TRUNCATE(expr, [digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
+|`TRUNC(expr, [digits])`|Synonym for `TRUNCATE`.|
+|`ROUND(expr, [digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
@@ -419,9 +419,9 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`BITWISE_SHIFT_RIGHT(expr1, expr2)`|Returns the result of `expr1 >> expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_XOR(expr1, expr2)`|Returns the result of `expr1 ^ expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`DIV(x,y)`|Returns the result of integer division of x by y |
-|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of [0,3] (default: 2). |
-|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of [0,3] (default: 2). `precision` must be in the range of [0,3] (default: 2). |
-|`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of [0,3] (default: 2). |
+|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of `[0, 3]` (default: 2). |
+|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of `[0, 3]` (default: 2). `precision` must be in the range of `[0, 3]` (default: 2). |
+|`HUMAN_READABLE_DECIMAL_FORMAT(value, [precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of `[0, 3]` (default: 2). |
 |`SAFE_DIVIDE(x,y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
 
 
@@ -434,34 +434,34 @@ String functions accept strings, and return a type appropriate to the function.
 |<code>x &#124;&#124; y</code>|Concat strings x and y.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
 |`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
-|`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
-|`LENGTH(expr)`|Length of expr in UTF-16 code units.|
+|`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
-|`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
+|`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](#comparison-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
-|`CONTAINS_STRING(<expr>, str)`|Returns true if the `str` is a substring of `expr`.|
-|`ICONTAINS_STRING(<expr>, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
-|`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
+|`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
+|`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
+|`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
 |`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
-|`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
-|`RIGHT(expr, [length])`|Returns the rightmost length characters from expr.|
-|`LEFT(expr, [length])`|Returns the leftmost length characters from expr.|
+|`SUBSTRING(expr, index, [length])`|Returns a substring of `expr` starting at index, with a max length, both measured in UTF-16 code units.|
+|`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
+|`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
-|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
-|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>)`.|
-|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>)`.|
-|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>)`.|
-|`UPPER(expr)`|Returns expr in all uppercase.|
-|`REVERSE(expr)`|Reverses expr.|
-|`REPEAT(expr, [N])`|Repeats expr N times|
-|`LPAD(expr, length[, chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
-|`RPAD(expr, length[, chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`BTRIM(expr, [chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>)`.|
+|`LTRIM(expr, [chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>)`.|
+|`RTRIM(expr, [chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>)`.|
+|`UPPER(expr)`|Returns `expr` in all uppercase.|
+|`REVERSE(expr)`|Reverses `expr`.|
+|`REPEAT(expr, [N])`|Repeats `expr` N times|
+|`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 
 ### Time functions
@@ -482,21 +482,21 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
-|`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
-|`TIME_CEIL(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
-|`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `<origin>` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
-|`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
-|`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
-|`TIME_PARSE(<string_expr>, [<pattern>, [<timezone>]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
-|`TIME_FORMAT(<timestamp_expr>, [<pattern>, [<timezone>]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
+|`DATE_TRUNC(unit, timestamp_expr)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
+|`TIME_CEIL(timestamp_expr, period, [origin, [timezone]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
+|`TIME_FLOOR(timestamp_expr, period, [origin, [timezone]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
+|`TIME_SHIFT(timestamp_expr, period, <step>, [timezone])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
+|`TIME_EXTRACT(timestamp_expr, [unit, [timezone]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
+|`TIME_PARSE(string_expr, [pattern, [timezone]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
+|`TIME_FORMAT(timestamp_expr, [pattern, [timezone]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
 |`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
-|`EXTRACT(<unit> FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
-|`FLOOR(timestamp_expr TO <unit>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`CEIL(timestamp_expr TO <unit>)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
-|`TIMESTAMPDIFF(<unit>, <timestamp1>, <timestamp2>)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|<code>timestamp_expr { + &#124; - } <interval_expr><code>|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
+|`EXTRACT(unit FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
+|`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`CEIL(timestamp_expr TO unit)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPADD(unit, count, timestamp)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
+|`TIMESTAMPDIFF(unit, timestamp1, timestamp2)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|<code>timestamp_expr { + &#124; - } interval_expr<code>|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
 
 
 ### Reduction functions
@@ -619,22 +619,22 @@ All 'array' references in the multi-value string function documentation can refe
 
 |Function|Notes|
 |--------|-----|
-| `ARRAY[expr1,expr ...]` | constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type |
-| `MV_FILTER_ONLY(expr, arr)` | filters multi-value `expr` to include only values contained in array `arr` |
-| `MV_FILTER_NONE(expr, arr)` | filters multi-value `expr` to include no values contained in array `arr` |
-| `MV_LENGTH(arr)` | returns length of array expression |
-| `MV_OFFSET(arr,long)` | returns the array element at the 0 based index supplied, or null for an out of range index|
-| `MV_ORDINAL(arr,long)` | returns the array element at the 1 based index supplied, or null for an out of range index |
-| `MV_CONTAINS(arr,expr)` | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
-| `MV_OVERLAP(arr1,arr2)` | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| `MV_OFFSET_OF(arr,expr)` | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
-| `MV_ORDINAL_OF(arr,expr)` | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
-| `MV_PREPEND(expr,arr)` | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
-| `MV_APPEND(arr1,expr)` | appends expr to arr, the resulting array type determined by the type of the first array |
-| `MV_CONCAT(arr1,arr2)` | concatenates 2 arrays, the resulting array type determined by the type of the first array |
-| `MV_SLICE(arr,start,end)` | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
-| `MV_TO_STRING(arr,str)` | joins all elements of arr by the delimiter specified by str |
-| `STRING_TO_MV(str1,str2)` | splits str1 into an array on the delimiter specified by str2 |
+|`ARRAY[expr1,expr ...]`|Constructs a SQL ARRAY literal from the expression arguments, using the type of the first argument as the output array type.|
+|`MV_FILTER_ONLY(expr, arr)`|Filters multi-value `expr` to include only values contained in array `arr`.|
+|`MV_FILTER_NONE(expr, arr)`|Filters multi-value `expr` to include no values contained in array `arr`.|
+|`MV_LENGTH(arr)`|Returns length of array expression.|
+|`MV_OFFSET(arr, long)`|Returns the array element at the 0 based index supplied, or null for an out of range index.|
+|`MV_ORDINAL(arr, long)`|Returns the array element at the 1 based index supplied, or null for an out of range index.|
+|`MV_CONTAINS(arr, expr)`|Returns 1 if the array contains the element specified by expr, or contains all elements specified by `expr` if expr is an array, else 0.|
+|`MV_OVERLAP(arr1, arr2)`|Returns 1 if arr1 and arr2 have any elements in common, else 0|
+|`MV_OFFSET_OF(arr, expr)`|Returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
+|`MV_ORDINAL_OF(arr, expr)`|Returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array.|
+|`MV_PREPEND(expr, arr)`|Adds `expr` to `arr` at the beginning, the resulting array type determined by the type of the array.|
+|`MV_APPEND(arr1, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of the first array.|
+|`MV_CONCAT(arr1, arr2)`|Concatenates 2 arrays, the resulting array type determined by the type of the first array.|
+|`MV_SLICE(arr, start, end)`|Return the subarray of `arr` from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end.|
+|`MV_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
+|`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
 
 ## Query translation
 
@@ -750,7 +750,7 @@ Druid SQL uses four different native query types.
 
 - [Scan](scan-query.md) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
 
-- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO <unit>)` or `TIME_FLOOR(__time,
+- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time,
 period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
