@@ -45,11 +45,11 @@ export const ColumnRenameInput = React.memo(function ColumnRenameInput(
       onChange={(e: any) => setNewName(e.target.value)}
       onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
         switch (e.key) {
-          case 'enter': // Enter
+          case 'Enter':
             maybeDone();
             break;
 
-          case 'esc': // Esc
+          case 'Escape':
             onDone();
             break;
         }
