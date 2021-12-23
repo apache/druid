@@ -52,7 +52,7 @@ FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [ FILTER ( WHERE condition ) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
-[ HAVING expr ]
+[ HAVING expr [ FILTER ( WHERE expr ) ] ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
 [ OFFSET offset ]
