@@ -18,7 +18,7 @@
 
 import { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
-import ace, { Editor } from 'brace';
+import ace, { Ace } from 'ace-builds';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -34,8 +34,21 @@ import { RowColumn, uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './query-input.scss';
+import Completion = Ace.Completion;
 
-const langTools = ace.acequire('ace/ext/language_tools');
+const langTools = ace.require('ace/ext/language_tools');
+
+const COMPLETER = {
+  insertMatch: (editor: any, data: Completion) => {
+    editor.completer.insertMatch({ value: data.name });
+  },
+};
+
+interface ItemDescription {
+  name: string;
+  syntax: string;
+  description: string;
+}
 
 export interface QueryInputProps {
   queryString: string;
@@ -57,7 +70,7 @@ export interface QueryInputState {
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
-  private aceEditor: Editor | undefined;
+  private aceEditor: Ace.Editor | undefined;
 
   static replaceDefaultAutoCompleter(): void {
     if (!langTools) return;
@@ -96,19 +109,17 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   static addFunctionAutoCompleter(): void {
     if (!langTools) return;
 
-    const functionList: any[] = SQL_FUNCTIONS.map(([name, args, description]) => {
-      return {
-        value: name,
-        score: 80,
+    const functionList: any[] = Object.keys(SQL_FUNCTIONS).flatMap(name => {
+      const versions = SQL_FUNCTIONS[name];
+      return versions.map(([args, description]) => ({
+        name: name,
+        value: versions.length > 1 ? `${name}(${args})` : name,
+        score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
         meta: 'function',
         syntax: `${name}(${args})`,
         description,
-        completer: {
-          insertMatch: (editor: any, data: any) => {
-            editor.completer.insertMatch({ value: data.caption });
-          },
-        },
-      };
+        completer: COMPLETER,
+      }));
     });
 
     langTools.addCompleter({
@@ -123,11 +134,12 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     });
   }
 
-  static makeDocHtml(item: any) {
+  static makeDocHtml(item: ItemDescription) {
+    console.log(item.syntax, escape(item.syntax));
     return `
-<div class="doc-name">${escape(item.caption)}</div>
-<div class="doc-syntax">${item.syntax}</div>
-<div class="doc-description">${escape(item.description)}</div>`;
+<div class="doc-name">${item.name}</div>
+<div class="doc-syntax">${escape(item.syntax)}</div>
+<div class="doc-description">${item.description}</div>`;
   }
 
   static getDerivedStateFromProps(props: QueryInputProps, state: QueryInputState) {
@@ -234,6 +246,7 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
             <AceEditor
               mode={runeMode ? 'hjson' : 'dsql'}
               theme="solarized_dark"
+              className="no-background placeholder-padding"
               name="ace-editor"
               onChange={this.handleChange}
               focus
@@ -253,9 +266,9 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               }}
               style={{}}
               placeholder="SELECT * FROM ..."
-              onLoad={(editor: any) => {
+              onLoad={editor => {
                 editor.renderer.setPadding(10);
-                editor.renderer.setScrollMargin(10);
+                editor.renderer.setScrollMargin(10, 10, 0, 0);
                 this.aceEditor = editor;
               }}
             />
