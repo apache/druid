@@ -24,6 +24,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-metadata-storage
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
 

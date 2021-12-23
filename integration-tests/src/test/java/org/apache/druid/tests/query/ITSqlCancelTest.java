@@ -101,7 +101,7 @@ public class ITSqlCancelTest
         1000
     );
     if (!responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
-      throw new RE("Failed to cancel query [%s]", queryId);
+      throw new RE("Failed to cancel query [%s]. Response code was [%s]", queryId, responseStatus);
     }
 
     for (Future<StatusResponseHolder> queryResponseFuture : queryResponseFutures) {
@@ -141,7 +141,7 @@ public class ITSqlCancelTest
 
     final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
     if (!queryResponse.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE("Query is not canceled after cancel request");
+      throw new ISE("Cancel request failed with status[%s] and content[%s]", queryResponse.getStatus(), queryResponse.getContent());
     }
   }
 }
