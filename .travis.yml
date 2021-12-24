@@ -551,7 +551,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -560,7 +560,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -569,7 +569,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -578,7 +578,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -587,7 +587,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -642,12 +642,12 @@ jobs:
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk8) leadership and high availability integration tests"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test (mariaDB)"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+      env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
@@ -675,27 +675,27 @@ jobs:
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_error
       name: "(Compile=openjdk8, Run=openjdk11) query error integration test for missing segments"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_security
       name: "(Compile=openjdk8, Run=openjdk11) security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_ldap_security
       name: "(Compile=openjdk8, Run=openjdk11) ldap security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"
@@ -720,12 +720,12 @@ jobs:
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11) leadership and high availability integration tests"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test (mariaDB)"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 

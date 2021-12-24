@@ -90,12 +90,6 @@ setupData()
     find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid \
       && /etc/init.d/mysql stop
-
-    # Setting s3 credentials and region to use pre-populated data for testing.
-    # This will override user-provided configurations no matter how they are passed.
-    setKey $DRUID_SERVICE druid.s3.accessKey AKIAT2GGLKKJQCMG64V4
-    setKey $DRUID_SERVICE druid.s3.secretKey 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
-    export AWS_REGION=us-east-1
   fi
 
   if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
