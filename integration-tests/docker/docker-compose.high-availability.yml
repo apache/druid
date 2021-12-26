@@ -138,6 +138,7 @@ services:
       - druid_server_https_crlPath=/tls/revocations.crl
     env_file:
       - ./environment-configs/common
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-coordinator
