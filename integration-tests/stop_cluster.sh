@@ -38,7 +38,7 @@ fi
 # bring down using the same compose args we started with
 if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
 then
-  docker-compose $(getComposeArgs) down
+  OVERRIDE_ENV=environment-configs/empty-config docker-compose $(getComposeArgs) down
 else
   OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) down
 fi

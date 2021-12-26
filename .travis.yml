@@ -578,7 +578,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -587,7 +587,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
+      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -690,12 +690,12 @@ jobs:
     - <<: *integration_security
       name: "(Compile=openjdk8, Run=openjdk11) security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_ldap_security
       name: "(Compile=openjdk8, Run=openjdk11) ldap security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
+      env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
 
     - <<: *integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk11) realtime index integration test"

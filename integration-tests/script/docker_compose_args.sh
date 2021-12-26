@@ -79,7 +79,8 @@ getComposeArgs()
       # default + with override config + schema registry container
       echo "-f ${DOCKERDIR}/docker-compose.override-env.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
     else
-    # with override config
+      # with override config
+      # TODO: delete this file if everything runs fine with the new docker-compose.yml
       echo "-f ${DOCKERDIR}/docker-compose.override-env.yml"
     fi
   fi
