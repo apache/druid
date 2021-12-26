@@ -29,13 +29,14 @@ mkdir -p $SHARED_DIR
 cp -R docker $SHARED_DIR/docker
 
 pushd ../
+rm -rf apache-druid-$DRUID_VERSION
 mvn -DskipTests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Ddruid.console.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pdist
 tar xzf distribution/target/apache-druid-$DRUID_VERSION-bin.tar.gz
 mv apache-druid-$DRUID_VERSION/lib $SHARED_DIR/docker/lib
 mv apache-druid-$DRUID_VERSION/extensions $SHARED_DIR/docker/extensions
 popd
 
-# Make directories if they dont exist
+# Make directoriess if they dont exist
 mkdir -p $SHARED_DIR/hadoop_xml
 mkdir -p $SHARED_DIR/hadoop-dependencies
 mkdir -p $SHARED_DIR/logs

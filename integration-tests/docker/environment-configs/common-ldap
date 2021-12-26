@@ -81,5 +81,5 @@ druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies
 druid_request_logging_type=slf4j
 
 # Setting s3 credentials and region to use pre-populated data for testing.
-druid_s3_accessKey AKIAT2GGLKKJQCMG64V4
-druid_s3_secretKey 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
+druid_s3_accessKey=AKIAT2GGLKKJQCMG64V4
+druid_s3_secretKey=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

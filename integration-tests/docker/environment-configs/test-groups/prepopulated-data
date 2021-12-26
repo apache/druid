@@ -22,5 +22,5 @@ AWS_REGION=us-east-1
 druid_extensions_loadList=["mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-integration-tests"]
 
 # Setting s3 credentials and region to use pre-populated data for testing.
-druid_s3_accessKey AKIAT2GGLKKJQCMG64V4
-druid_s3_secretKey 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
+druid_s3_accessKey=AKIAT2GGLKKJQCMG64V4
+druid_s3_secretKey=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

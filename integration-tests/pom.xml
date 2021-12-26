@@ -619,6 +619,7 @@
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
+                                        <DRUID_VERSION>${parent.version}</DRUID_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>
