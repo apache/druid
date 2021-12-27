@@ -48,6 +48,7 @@ fi
   then
     # Start Druid cluster
     echo "Starting cluster with empty config"
+    echo "OVERRIDE_ENV=environment-configs/empty-config docker-compose $(getComposeArgs) up -d"
     OVERRIDE_ENV=environment-configs/empty-config docker-compose $(getComposeArgs) up -d
   else
     # run druid cluster with override config
