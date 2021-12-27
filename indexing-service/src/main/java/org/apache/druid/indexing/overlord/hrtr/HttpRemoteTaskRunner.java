@@ -583,7 +583,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
             if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
               Worker w = e.getValue().getWorker();
-              if (w != null && w.getHost().equals(worker.getHost())) {
+              if (w != null && w.getHost().equals(worker.getHost()) && e.getValue().getTask() != null) {
                 expectedAnnouncements.add(
                     TaskAnnouncement.create(
                         e.getValue().getTask(),
