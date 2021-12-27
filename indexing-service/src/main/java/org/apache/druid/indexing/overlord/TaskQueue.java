@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -80,7 +81,9 @@ public class TaskQueue
 {
   private final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
 
+  @GuardedBy("giant")
   private final List<Task> tasks = new ArrayList<>();
+  @GuardedBy("giant")
   private final Map<String, ListenableFuture<TaskStatus>> taskFutures = new HashMap<>();
 
   private final TaskLockConfig lockConfig;
@@ -111,7 +114,9 @@ public class TaskQueue
 
   private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  @GuardedBy("totalSuccessfulTaskCount")
   private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  @GuardedBy("totalFailedTaskCount")
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   public TaskQueue(
@@ -267,6 +272,7 @@ public class TaskQueue
   }
 
   @VisibleForTesting
+  @GuardedBy("giant")
   void manageInternal()
   {
     // Task futures available from the taskRunner
@@ -392,6 +398,7 @@ public class TaskQueue
   }
 
   // Should always be called after taking giantLock
+  @GuardedBy("giant")
   private void addTaskInternal(final Task task)
   {
     tasks.add(task);
@@ -399,6 +406,7 @@ public class TaskQueue
   }
 
   // Should always be called after taking giantLock
+  @GuardedBy("giant")
   private void removeTaskInternal(final Task task)
   {
     taskLockbox.remove(task);
@@ -684,22 +692,37 @@ public class TaskQueue
   public Map<String, Long> getSuccessfulTaskCount()
   {
     Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
-    Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
-    prevTotalSuccessfulTaskCount = total;
-    return delta;
+    synchronized (totalSuccessfulTaskCount) {
+      Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+      prevTotalSuccessfulTaskCount = total;
+      return delta;
+    }
   }
 
   public Map<String, Long> getFailedTaskCount()
   {
     Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
-    Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
-    prevTotalFailedTaskCount = total;
-    return delta;
+    synchronized (totalFailedTaskCount) {
+      Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+      prevTotalFailedTaskCount = total;
+      return delta;
+    }
+  }
+
+  Map<String, String> getCurrentTaskDatasources()
+  {
+    giant.lock();
+    try {
+      return tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    }
+    finally {
+      giant.unlock();
+    }
   }
 
   public Map<String, Long> getRunningTaskCount()
   {
-    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    Map<String, String> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getRunningTasks()
                      .stream()
                      .collect(Collectors.toMap(
@@ -711,7 +734,7 @@ public class TaskQueue
 
   public Map<String, Long> getPendingTaskCount()
   {
-    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    Map<String, String> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getPendingTasks()
                      .stream()
                      .collect(Collectors.toMap(
@@ -727,13 +750,26 @@ public class TaskQueue
                                                .stream()
                                                .map(TaskRunnerWorkItem::getTaskId)
                                                .collect(Collectors.toSet());
-    return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
-                .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+
+    giant.lock();
+    try {
+      return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
+                  .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+    }
+    finally {
+      giant.unlock();
+    }
   }
 
   @VisibleForTesting
   List<Task> getTasks()
   {
-    return tasks;
+    giant.lock();
+    try {
+      return new ArrayList<Task>(tasks);
+    }
+    finally {
+      giant.unlock();
+    }
   }
 }

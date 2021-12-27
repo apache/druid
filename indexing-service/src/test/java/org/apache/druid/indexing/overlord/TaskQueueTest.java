@@ -75,6 +75,7 @@ public class TaskQueueTest extends IngestionTestBase
    * APIs.
    */
   @Test
+  @SuppressWarnings("GuardedBy")
   public void testManageInternalReleaseLockWhenTaskIsNotReady() throws Exception
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
@@ -315,6 +316,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
+  @SuppressWarnings("GuardedBy")
   public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
