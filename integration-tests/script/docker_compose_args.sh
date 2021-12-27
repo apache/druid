@@ -20,8 +20,8 @@ set -e
 # for a given test group
 getComposeArgs()
 {
-  if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
-  then
+#  if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
+#  then
     # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
     if [ "$DRUID_INTEGRATION_TEST_INDEXER" != "indexer" ] && [ "$DRUID_INTEGRATION_TEST_INDEXER" != "middleManager" ]
     then
@@ -69,19 +69,19 @@ getComposeArgs()
     then
       # default + schema registry container
       echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
+    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]
+        then
+          # default + with override config + schema registry container
+          echo "-f ${DOCKERDIR}/docker-compose.override-env.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
     else
       # default
       echo "-f ${DOCKERDIR}/docker-compose.yml"
     fi
-  else
-    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]
-    then
-      # default + with override config + schema registry container
-      echo "-f ${DOCKERDIR}/docker-compose.override-env.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
-    else
+#  else
+#    else
       # with override config
       # TODO: delete this file if everything runs fine with the new docker-compose.yml
-      echo "-f ${DOCKERDIR}/docker-compose.override-env.yml"
-    fi
-  fi
+#      echo "-f ${DOCKERDIR}/docker-compose.override-env.yml"
+#    fi
+#  fi
 }
