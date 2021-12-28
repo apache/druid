@@ -253,7 +253,8 @@ public class SystemSchemaTest extends CalciteTestBase
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        null
     );
     druidSchema.start();
     druidSchema.awaitInitialization();

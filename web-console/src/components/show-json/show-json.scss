@@ -30,7 +30,10 @@
   }
 
   .main-area {
-    height: calc(100% - 40px);
+    position: absolute;
+    width: 100%;
+    top: 40px;
+    bottom: 0;
 
     textarea {
       height: 100%;

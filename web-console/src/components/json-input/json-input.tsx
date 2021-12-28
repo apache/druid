@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Editor } from 'brace';
+import { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
@@ -82,7 +82,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
-  const aceEditor = useRef<Editor | undefined>();
+  const aceEditor = useRef<Ace.Editor | undefined>();
 
   useEffect(() => {
     if (deepEqual(value, internalValue.value)) return;
@@ -150,7 +150,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           tabSize: 2,
         }}
         style={{}}
-        onLoad={(editor: any) => {
+        onLoad={editor => {
           aceEditor.current = editor;
         }}
       />

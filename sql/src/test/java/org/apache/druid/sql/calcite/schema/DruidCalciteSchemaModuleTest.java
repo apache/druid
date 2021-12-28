@@ -119,6 +119,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .annotatedWith(IndexingService.class)
                 .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
+          binder.bind(DruidSchemaManager.class).toInstance(new NoopDruidSchemaManager());
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);

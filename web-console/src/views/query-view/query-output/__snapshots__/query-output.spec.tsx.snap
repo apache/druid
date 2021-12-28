@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`query output matches snapshot 1`] = `
+exports[`QueryOutput matches snapshot 1`] = `
 <div
   class="query-output"
 >

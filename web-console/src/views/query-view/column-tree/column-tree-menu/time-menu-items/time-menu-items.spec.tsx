@@ -22,7 +22,7 @@ import React from 'react';
 
 import { TimeMenuItems } from './time-menu-items';
 
-describe('time menu', () => {
+describe('TimeMenuItems', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const timeMenu = (
       <TimeMenuItems
