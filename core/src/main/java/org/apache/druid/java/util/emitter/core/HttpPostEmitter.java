@@ -698,10 +698,39 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       catch (Exception e) {
         if (e == timeoutLessThanMinimumException) {
           log.debug(e, "Failed to send events to url[%s] with timeout less than minimum", config.getRecipientBaseUrl());
+          sendBackoffDelay();
         } else {
           log.error(e, "Failed to send events to url[%s]", config.getRecipientBaseUrl());
         }
         return false;
+      }
+    }
+
+    /**
+     * Back-off the sender for a period of time.
+     *
+     * Call only from the send() loop thread when it sees a timeout.
+     */
+    void sendBackoffDelay()
+    {
+      // The backoff delay is quite simple in favour of something more complicated.
+
+      // This is called when the send() call hits a timeoutLessThanMinimumException
+      // condition. Ideally, what we should do is delay until either the timeout increases
+      // to above the minHttpTimeout, and so the send() will be issued, or, until a Batch
+      // wants to flush based on the configured timeout.
+
+      // Making this technically correct, across all possible Batches, including large events,
+      // etc is complicated in this codebase, since batch flush timing is not tracked here,
+      // so rather than introduce new bugs, let's keep it simple.
+
+      final long backoffCheckDelayMillis = config.getMinHttpTimeoutMillis() / 5;
+
+      try {
+        Thread.sleep(backoffCheckDelayMillis);
+      }
+      catch (InterruptedException e) {
+        return;
       }
     }
 
