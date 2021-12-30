@@ -22,7 +22,7 @@ import React from 'react';
 
 import { QueryOutput } from './query-output';
 
-describe('query output', () => {
+describe('QueryOutput', () => {
   it('matches snapshot', () => {
     const parsedQuery = SqlQuery.parse(sane`
       SELECT
