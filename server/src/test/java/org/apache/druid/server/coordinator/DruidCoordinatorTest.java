@@ -76,6 +76,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -86,8 +87,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.druid.server.coordinator.DruidCoordinator.MISCONFIGURED_THREAD_POOL_SIZE_MSG;
-import static org.junit.Assert.assertThrows;
 
 /**
  */
@@ -220,13 +219,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Nonnull
-  private DruidCoordinator createCoordinator() {
+  private DruidCoordinator createCoordinator()
+  {
     return new DruidCoordinator(
             druidCoordinatorConfig,
             new ZkPathsConfig() {
 
               @Override
-              public String getBase() {
+              public String getBase()
+              {
                 return "druid";
               }
             },
@@ -241,13 +242,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
             null,
             new NoopServiceAnnouncer() {
               @Override
-              public void announce(DruidNode node) {
+              public void announce(DruidNode node)
+              {
                 // count down when this coordinator becomes the leader
                 leaderAnnouncerLatch.countDown();
               }
 
               @Override
-              public void unannounce(DruidNode node) {
+              public void unannounce(DruidNode node)
+              {
                 leaderUnannouncerLatch.countDown();
               }
             },
@@ -939,7 +942,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
-  public void testSeparateLoaderConfig() {
+  public void testSeparateLoaderConfig()
+  {
     if (this.loadPrimaryReplicantSeparately) {
       druidCoordinatorConfig = new TestDruidCoordinatorConfig(
               new Duration(COORDINATOR_START_DELAY),
@@ -965,8 +969,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
               1
       );
       coordinator = createCoordinator();
-      assertThrows(
-              MISCONFIGURED_THREAD_POOL_SIZE_MSG,
+      Assert.assertThrows(
+              DruidCoordinator.MISCONFIGURED_THREAD_POOL_SIZE_MSG,
               ISE.class,
               () -> {
                 this.coordinator.start();

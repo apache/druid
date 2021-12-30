@@ -295,7 +295,8 @@ public class DruidCoordinator
     this.compactSegments = compactSegments;
   }
 
-  private void validateConfiguration(DruidCoordinatorConfig config) {
+  private void validateConfiguration(DruidCoordinatorConfig config)
+  {
     if (null != config && config.isLoadPrimaryReplicantSeparately()) {
       if (config.getDutiesRunnableExecutorThreadPoolSize() < 2) {
         throw new ISE(MISCONFIGURED_THREAD_POOL_SIZE_MSG);
