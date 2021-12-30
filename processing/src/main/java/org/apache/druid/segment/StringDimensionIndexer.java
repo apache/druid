@@ -154,8 +154,10 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
     // more buffer to be safe
     long estimatedSize = key.length * Integer.BYTES;
-    for (int element : key) {
-      String val = dimLookup.getValue(element);
+
+    String[] vals = new String[key.length];
+    dimLookup.getValuesInto(key, vals);
+    for (String val : vals) {
       if (val != null) {
         // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
         // String has the following memory usuage...

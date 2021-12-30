@@ -86,6 +86,19 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
+  public void getValuesInto(int[] ids, T[] values)
+  {
+    lock.readLock().lock();
+    try {
+      for (int i = 0; i < ids.length; i++) {
+        values[i] = (ids[i] == idForNull) ? null : idToValue.get(ids[i]);
+      }
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
   public int size()
   {
     lock.readLock().lock();
