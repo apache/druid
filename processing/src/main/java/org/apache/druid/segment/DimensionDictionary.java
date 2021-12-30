@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -88,6 +90,8 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public void getValuesInto(int[] ids, T[] values)
   {
+    Preconditions.checkArgument(ids.length == values.length, "ids.length == values.length");
+
     lock.readLock().lock();
     try {
       for (int i = 0; i < ids.length; i++) {
