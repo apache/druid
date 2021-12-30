@@ -155,8 +155,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     // more buffer to be safe
     long estimatedSize = keys.length * Integer.BYTES;
 
-    String[] vals = new String[keys.length];
-    dimLookup.getValuesInto(keys, vals);
+    String[] vals = dimLookup.getValues(keys);
     for (String val : vals) {
       if (val != null) {
         // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
