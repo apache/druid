@@ -694,6 +694,7 @@ public class DruidCoordinator
       final int startingLeaderCounter = coordLeaderSelector.localTerm();
 
       final List<Pair<? extends DutiesRunnable, Duration>> dutiesRunnables = new ArrayList<>();
+      // By default, the historical management duties runnable will handle all segment loading, regardless of primary/non-primary replicant status. However, if the operator enables primary replicant loading, this will flip to only load non-primary replicants since all primary replicants will be loaded by the dedicated duties runnable instantiated below.
       LoadRule.LoadRuleMode historicalManagementDutiesLoadRuleMode = LoadRule.LoadRuleMode.ALL;
       if (config.isLoadPrimaryReplicantSeparately()) {
         dutiesRunnables.add(
