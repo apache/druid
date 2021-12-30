@@ -89,6 +89,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class DruidCoordinatorTest extends CuratorTestBase
@@ -218,52 +219,54 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator = createCoordinator();
   }
 
+  @SuppressWarnings("checkstyle:Indentation")
   @Nonnull
   private DruidCoordinator createCoordinator()
   {
     return new DruidCoordinator(
-            druidCoordinatorConfig,
-            new ZkPathsConfig() {
+      druidCoordinatorConfig,
+      new ZkPathsConfig()
+      {
+        @Override
+        public String getBase()
+        {
+          return "druid";
+        }
+      },
+      configManager,
+      segmentsMetadataManager,
+      serverInventoryView,
+      metadataRuleManager,
+        () -> curator,
+      serviceEmitter,
+      scheduledExecutorFactory,
+      null,
+      null,
+      new NoopServiceAnnouncer()
+      {
+        @Override
+        public void announce(DruidNode node)
+        {
+          // count down when this coordinator becomes the leader
+          leaderAnnouncerLatch.countDown();
+        }
 
-              @Override
-              public String getBase()
-              {
-                return "druid";
-              }
-            },
-            configManager,
-            segmentsMetadataManager,
-            serverInventoryView,
-            metadataRuleManager,
-            () -> curator,
-            serviceEmitter,
-            scheduledExecutorFactory,
-            null,
-            null,
-            new NoopServiceAnnouncer() {
-              @Override
-              public void announce(DruidNode node)
-              {
-                // count down when this coordinator becomes the leader
-                leaderAnnouncerLatch.countDown();
-              }
-
-              @Override
-              public void unannounce(DruidNode node)
-              {
-                leaderUnannouncerLatch.countDown();
-              }
-            },
-            druidNode,
-            loadManagementPeons,
-            null,
-            new HashSet<>(),
-            new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-            new CostBalancerStrategyFactory(),
-            EasyMock.createNiceMock(LookupCoordinatorManager.class),
-            new TestDruidLeaderSelector(),
-            null,
-            ZkEnablementConfig.ENABLED
+        @Override
+        public void unannounce(DruidNode node)
+        {
+          leaderUnannouncerLatch.countDown();
+        }
+      },
+      druidNode,
+      loadManagementPeons,
+      null,
+      new HashSet<>(),
+      new CoordinatorCustomDutyGroups(ImmutableSet.of()),
+      new CostBalancerStrategyFactory(),
+      EasyMock.createNiceMock(LookupCoordinatorManager.class),
+      new TestDruidLeaderSelector(),
+      null,
+      ZkEnablementConfig.ENABLED
     );
   }
 
@@ -547,8 +550,18 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
-    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(2, pathChildrenCache, dataSegments, hotServer);
-    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(1, pathChildrenCacheCold, dataSegments, coldServer);
+    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        2,
+        pathChildrenCache,
+        dataSegments,
+        hotServer
+    );
+    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        1,
+        pathChildrenCacheCold,
+        dataSegments,
+        coldServer
+    );
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
 
@@ -567,8 +580,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource)
+    );
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource)
+    );
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -674,7 +693,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
                                                "cold", loadQueuePeonCold,
                                                "broker1", loadQueuePeonBroker1,
                                                "broker2", loadQueuePeonBroker2,
-                                               "peon", loadQueuePeonPoenServer));
+                                               "peon", loadQueuePeonPoenServer
+    ));
 
     loadQueuePeonCold.start();
     loadQueuePeonBroker1.start();
@@ -706,11 +726,36 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
-    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCache, dataSegments, hotServer);
-    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheCold, dataSegments, coldServer);
-    final CountDownLatch assignSegmentLatchBroker1 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheBroker1, dataSegments, brokerServer1);
-    final CountDownLatch assignSegmentLatchBroker2 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheBroker2, dataSegments, brokerServer2);
-    final CountDownLatch assignSegmentLatchPeon = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCachePeon, dataSegments, peonServer);
+    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        3,
+        pathChildrenCache,
+        dataSegments,
+        hotServer
+    );
+    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        3,
+        pathChildrenCacheCold,
+        dataSegments,
+        coldServer
+    );
+    final CountDownLatch assignSegmentLatchBroker1 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        3,
+        pathChildrenCacheBroker1,
+        dataSegments,
+        brokerServer1
+    );
+    final CountDownLatch assignSegmentLatchBroker2 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        3,
+        pathChildrenCacheBroker2,
+        dataSegments,
+        brokerServer2
+    );
+    final CountDownLatch assignSegmentLatchPeon = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        3,
+        pathChildrenCachePeon,
+        dataSegments,
+        peonServer
+    );
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
     assignSegmentLatchBroker1.await();
@@ -734,10 +779,22 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
     Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource)
+    );
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource)
+    );
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource)
+    );
+    Assert.assertEquals(
+        0L,
+        underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource)
+    );
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -865,7 +922,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // Create CoordinatorCustomDutyGroups
     // We will have two groups and each group has one duty
     CountDownLatch latch1 = new CountDownLatch(1);
-    CoordinatorCustomDuty duty1 = new CoordinatorCustomDuty() {
+    CoordinatorCustomDuty duty1 = new CoordinatorCustomDuty()
+    {
       @Override
       public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
       {
@@ -873,10 +931,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
         return params;
       }
     };
-    CoordinatorCustomDutyGroup group1 = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(duty1));
+    CoordinatorCustomDutyGroup group1 = new CoordinatorCustomDutyGroup(
+        "group1",
+        Duration.standardSeconds(1),
+        ImmutableList.of(duty1)
+    );
 
     CountDownLatch latch2 = new CountDownLatch(1);
-    CoordinatorCustomDuty duty2 = new CoordinatorCustomDuty() {
+    CoordinatorCustomDuty duty2 = new CoordinatorCustomDuty()
+    {
       @Override
       public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
       {
@@ -884,7 +947,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
         return params;
       }
     };
-    CoordinatorCustomDutyGroup group2 = new CoordinatorCustomDutyGroup("group2", Duration.standardSeconds(1), ImmutableList.of(duty2));
+    CoordinatorCustomDutyGroup group2 = new CoordinatorCustomDutyGroup(
+        "group2",
+        Duration.standardSeconds(1),
+        ImmutableList.of(duty2)
+    );
     CoordinatorCustomDutyGroups groups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group1, group2));
 
     coordinator = new DruidCoordinator(
@@ -946,45 +1013,47 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     if (this.loadPrimaryReplicantSeparately) {
       druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-              new Duration(COORDINATOR_START_DELAY),
-              new Duration(COORDINATOR_PERIOD),
-              null,
-              null,
-              null,
-              new Duration(COORDINATOR_PERIOD),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              10,
-              new Duration("PT0s"),
-              new Duration("PT1S"),
-              loadPrimaryReplicantSeparately,
-              1
+          new Duration(COORDINATOR_START_DELAY),
+          new Duration(COORDINATOR_PERIOD),
+          null,
+          null,
+          null,
+          new Duration(COORDINATOR_PERIOD),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          10,
+          new Duration("PT0s"),
+          new Duration("PT1S"),
+          loadPrimaryReplicantSeparately,
+          1
       );
       coordinator = createCoordinator();
       Assert.assertThrows(
-              DruidCoordinator.MISCONFIGURED_THREAD_POOL_SIZE_MSG,
-              ISE.class,
-              () -> {
-                this.coordinator.start();
-                // Wait for this coordinator to become leader
-                leaderAnnouncerLatch.await();
-              }
+          DruidCoordinator.MISCONFIGURED_THREAD_POOL_SIZE_MSG,
+          ISE.class,
+          () -> {
+            this.coordinator.start();
+            // Wait for this coordinator to become leader
+            leaderAnnouncerLatch.await();
+          }
       );
     }
   }
 
-  private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,
-                                                                                      PathChildrenCache pathChildrenCache,
-                                                                                      Map<String, DataSegment> segments,
-                                                                                      DruidServer server)
+  private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+      int latchCount,
+      PathChildrenCache pathChildrenCache,
+      Map<String, DataSegment> segments,
+      DruidServer server
+  )
   {
     final CountDownLatch countDownLatch = new CountDownLatch(latchCount);
     pathChildrenCache.getListenable().addListener(
