@@ -130,6 +130,12 @@ public class SegmentReplicantLookup
     return retVal;
   }
 
+  /**
+   * Gets a map of (tier, count), where count is the number of replicants of the given segment currently loading for
+   * the given tier.
+   * @param segmentId id of segment to be queried; not null.
+   * @return the map as described above, which may be empty.
+   */
   public Map<String, Integer> getLoadingTiers(SegmentId segmentId)
   {
     Map<String, Integer> retVal = loadingSegments.row(segmentId);

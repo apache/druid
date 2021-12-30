@@ -133,6 +133,9 @@ public class DruidCoordinator
 
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
   private static final long DEFAULT_RATE_MS = 1_000L;
+  static final String MISCONFIGURED_THREAD_POOL_SIZE_MSG =
+          "Misconfiguration: druid.coordinator.dutiesRunnableExecutor.threadPoolSize " +
+                  "must be > 1 when druid.coordinator.loadPrimaryReplicantSeparately is true";
 
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
@@ -290,6 +293,14 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
 
     this.compactSegments = compactSegments;
+  }
+
+  private void validateConfiguration(DruidCoordinatorConfig config) {
+    if (null != config && config.isLoadPrimaryReplicantSeparately()) {
+      if (config.getDutiesRunnableExecutorThreadPoolSize() < 2) {
+        throw new ISE(MISCONFIGURED_THREAD_POOL_SIZE_MSG);
+      }
+    }
   }
 
   public boolean isLeader()
@@ -669,6 +680,7 @@ public class DruidCoordinator
         return;
       }
 
+      validateConfiguration(config);
       log.info(
           "I am the leader of the coordinators, all must bow! Starting coordination in [%s].",
           config.getCoordinatorStartDelay()

@@ -42,6 +42,7 @@ import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -73,6 +74,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,6 +85,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.druid.server.coordinator.DruidCoordinator.MISCONFIGURED_THREAD_POOL_SIZE_MSG;
+import static org.junit.Assert.assertThrows;
 
 /**
  */
@@ -112,6 +117,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
   private boolean loadPrimaryReplicantSeparately;
+  private JacksonConfigManager configManager;
 
   public DruidCoordinatorTest(boolean loadPrimaryReplicantSeparately)
   {
@@ -138,7 +144,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
-    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
@@ -180,7 +186,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new Duration("PT0s"),
         new Duration("PT1S"),
         loadPrimaryReplicantSeparately,
-        1
+        loadPrimaryReplicantSeparately ? 2 : 1
     );
     pathChildrenCache = new PathChildrenCache(
         curator,
@@ -210,51 +216,51 @@ public class DruidCoordinatorTest extends CuratorTestBase
     };
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
-    coordinator = new DruidCoordinator(
-        druidCoordinatorConfig,
-        new ZkPathsConfig()
-        {
+    coordinator = createCoordinator();
+  }
 
-          @Override
-          public String getBase()
-          {
-            return "druid";
-          }
-        },
-        configManager,
-        segmentsMetadataManager,
-        serverInventoryView,
-        metadataRuleManager,
-        () -> curator,
-        serviceEmitter,
-        scheduledExecutorFactory,
-        null,
-        null,
-        new NoopServiceAnnouncer()
-        {
-          @Override
-          public void announce(DruidNode node)
-          {
-            // count down when this coordinator becomes the leader
-            leaderAnnouncerLatch.countDown();
-          }
+  @Nonnull
+  private DruidCoordinator createCoordinator() {
+    return new DruidCoordinator(
+            druidCoordinatorConfig,
+            new ZkPathsConfig() {
 
-          @Override
-          public void unannounce(DruidNode node)
-          {
-            leaderUnannouncerLatch.countDown();
-          }
-        },
-        druidNode,
-        loadManagementPeons,
-        null,
-        new HashSet<>(),
-        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        new CostBalancerStrategyFactory(),
-        EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector(),
-        null,
-        ZkEnablementConfig.ENABLED
+              @Override
+              public String getBase() {
+                return "druid";
+              }
+            },
+            configManager,
+            segmentsMetadataManager,
+            serverInventoryView,
+            metadataRuleManager,
+            () -> curator,
+            serviceEmitter,
+            scheduledExecutorFactory,
+            null,
+            null,
+            new NoopServiceAnnouncer() {
+              @Override
+              public void announce(DruidNode node) {
+                // count down when this coordinator becomes the leader
+                leaderAnnouncerLatch.countDown();
+              }
+
+              @Override
+              public void unannounce(DruidNode node) {
+                leaderUnannouncerLatch.countDown();
+              }
+            },
+            druidNode,
+            loadManagementPeons,
+            null,
+            new HashSet<>(),
+            new CoordinatorCustomDutyGroups(ImmutableSet.of()),
+            new CostBalancerStrategyFactory(),
+            EasyMock.createNiceMock(LookupCoordinatorManager.class),
+            new TestDruidLeaderSelector(),
+            null,
+            ZkEnablementConfig.ENABLED
     );
   }
 
@@ -930,6 +936,45 @@ public class DruidCoordinatorTest extends CuratorTestBase
     latch1.await();
     // Wait until group 2 duty ran for latch2 to countdown
     latch2.await();
+  }
+
+  @Test
+  public void testSeparateLoaderConfig() {
+    if (this.loadPrimaryReplicantSeparately) {
+      druidCoordinatorConfig = new TestDruidCoordinatorConfig(
+              new Duration(COORDINATOR_START_DELAY),
+              new Duration(COORDINATOR_PERIOD),
+              null,
+              null,
+              null,
+              new Duration(COORDINATOR_PERIOD),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              10,
+              new Duration("PT0s"),
+              new Duration("PT1S"),
+              loadPrimaryReplicantSeparately,
+              1
+      );
+      coordinator = createCoordinator();
+      assertThrows(
+              MISCONFIGURED_THREAD_POOL_SIZE_MSG,
+              ISE.class,
+              () -> {
+                this.coordinator.start();
+                // Wait for this coordinator to become leader
+                leaderAnnouncerLatch.await();
+              }
+      );
+    }
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,
