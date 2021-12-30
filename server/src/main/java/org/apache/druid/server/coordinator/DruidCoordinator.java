@@ -767,8 +767,13 @@ public class DruidCoordinator
       }
 
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
-        // Note that caution should be taken if setting config.getCoordinatorIndexingPeriod() lower than the default
-        // value.
+        // CompactSegmentsDuty can take a non-trival amount of time to complete.
+        // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
+        // config.getCoordinatorIndexingPeriod() period.  Note that caution should be taken if setting
+        // config.getCoordinatorIndexingPeriod() lower than the default value.
+        //
+        // Don't use ScheduledExecutors.scheduleAtFixedRate() here, as that does not offer the guarantee against
+        // concurrent executions of the same Runnable that the jvm version does.
         exec.scheduleAtFixedRate(
             () -> {
               if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()
@@ -808,6 +813,11 @@ public class DruidCoordinator
     }
   }
 
+  /**
+   * Creates a list of duties for a Runnable that only loads the primary replicant of each segment.  See the
+   * description of the `druid.coordinator.loadPrimaryReplicantSeparately` property for details.
+   * @return a list of duties, not null or empty.
+   */
   private List<CoordinatorDuty> makePrimaryReplicantManagementDuties()
   {
     return ImmutableList.of(
@@ -1025,7 +1035,7 @@ public class DruidCoordinator
           );
         }
 
-        log.info("Duties group %s starting", dutiesRunnableAlias);
+        log.debug("Duties group %s starting", dutiesRunnableAlias);
         for (CoordinatorDuty duty : duties) {
           // Don't read state and run state in the same duty otherwise racy conditions may exist
           if (!coordinationPaused
@@ -1051,7 +1061,7 @@ public class DruidCoordinator
                 .setDimension(DruidMetrics.DUTY_GROUP, dutiesRunnableAlias)
                 .build("coordinator/global/time", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - globalStart))
         );
-        log.info("Duties group %s complete", dutiesRunnableAlias);
+        log.debug("Duties group %s complete", dutiesRunnableAlias);
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
@@ -1151,6 +1161,7 @@ public class DruidCoordinator
       }
       for (String name : disappeared) {
         LoadQueuePeon peon = loadManagementPeons.remove(name);
+        // check for null here, as another thread may have removed this peon, in which case remove() returns null
         if (null != peon) {
           log.debug("Removing listener for server[%s] which is no longer there.", name);
           peon.stop();
