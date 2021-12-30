@@ -96,27 +96,34 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
-  public int add(@Nullable T originalValue)
+  public AddResult add(@Nullable T originalValue)
   {
     lock.writeLock().lock();
     try {
+      // null needs a little special handling
       if (originalValue == null) {
         if (idForNull == ABSENT_VALUE_ID) {
           idForNull = idToValue.size();
           idToValue.add(null);
+          return AddResult.addedAt(idForNull);
+        } else {
+          return AddResult.existingAt(idForNull);
         }
-        return idForNull;
       }
+
+      // check for existing
       int prev = valueToId.getInt(originalValue);
       if (prev >= 0) {
-        return prev;
+        return AddResult.existingAt(prev);
       }
+
+      // otherwise, add it
       final int index = idToValue.size();
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
-      return index;
+      return AddResult.addedAt(index);
     }
     finally {
       lock.writeLock().unlock();
@@ -160,4 +167,37 @@ public class DimensionDictionary<T extends Comparable<T>>
       lock.readLock().unlock();
     }
   }
+
+  public static class AddResult
+  {
+    final int index;
+    final boolean wasAdded;
+
+    AddResult(final int index, final boolean wasAdded)
+    {
+      this.index = index;
+      this.wasAdded = wasAdded;
+    }
+
+    static AddResult existingAt(final int index)
+    {
+      return new AddResult(index, false);
+    }
+
+    static AddResult addedAt(final int index)
+    {
+      return new AddResult(index, true);
+    }
+
+    boolean wasAdded()
+    {
+      return wasAdded;
+    }
+
+    int getIndex()
+    {
+      return index;
+    }
+  }
+
 }
