@@ -76,26 +76,18 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     final int[] encodedDimensionValues;
     boolean didAddNew = false;
 
-    if (dimValues == null) {
-      final int nullId = dimLookup.getId(null);
-      if (nullId == DimensionDictionary.ABSENT_VALUE_ID) {
-        AddResult result = dimLookup.add(null);
-        encodedDimensionValues = new int[]{result.getIndex()};
-        didAddNew = true;
-      } else {
-        encodedDimensionValues = new int[]{nullId};
-        didAddNew = false;
-      }
-    } else if (dimValues instanceof List) {
+    if (dimValues instanceof List) {
       List<Object> dimValuesList = (List<Object>) dimValues;
       if (dimValuesList.isEmpty()) {
         AddResult result = dimLookup.add(null);
         didAddNew = result.wasAdded();
         encodedDimensionValues = IntArrays.EMPTY_ARRAY;
+
       } else if (dimValuesList.size() == 1) {
         AddResult result = dimLookup.add(emptyToNullIfNeeded(dimValuesList.get(0)));
         didAddNew = result.wasAdded();
         encodedDimensionValues = new int[]{result.getIndex()};
+
       } else {
         hasMultipleValues = true;
         final String[] dimensionValues = new String[dimValuesList.size()];
@@ -112,14 +104,12 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
         int prevId = -1;
         int pos = 0;
         for (String dimensionValue : dimensionValues) {
+          AddResult result = dimLookup.add(dimensionValue);
+          didAddNew |= result.wasAdded();
           if (multiValueHandling != MultiValueHandling.SORTED_SET) {
-            AddResult result = dimLookup.add(dimensionValue);
-            didAddNew |= result.wasAdded();
             retVal[pos++] = result.getIndex();
             continue;
           }
-          AddResult result = dimLookup.add(dimensionValue);
-          didAddNew |= result.wasAdded();
           if (result.getIndex() != prevId) {
             prevId = retVal[pos++] = result.getIndex();
           }
