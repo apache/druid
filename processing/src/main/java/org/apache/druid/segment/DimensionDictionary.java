@@ -25,7 +25,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 
 /**
  * Buildable dictionary for some comparable type. Values are unsorted, or rather sorted in the order which they are
@@ -47,17 +47,17 @@ public class DimensionDictionary<T extends Comparable<T>>
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
-  private final ReentrantReadWriteLock lock;
+  private final StampedLock lock;
 
   public DimensionDictionary()
   {
-    this.lock = new ReentrantReadWriteLock();
+    this.lock = new StampedLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
   }
 
   public int getId(@Nullable T value)
   {
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
       if (value == null) {
         return idForNull;
@@ -65,14 +65,14 @@ public class DimensionDictionary<T extends Comparable<T>>
       return valueToId.getInt(value);
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   @Nullable
   public T getValue(int id)
   {
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
       if (id == idForNull) {
         return null;
@@ -80,38 +80,44 @@ public class DimensionDictionary<T extends Comparable<T>>
       return idToValue.get(id);
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   public int size()
   {
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
       // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
       return idToValue.size();
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   public AddResult add(@Nullable T originalValue)
   {
-    lock.writeLock().lock();
-    try {
-      // null needs a little special handling
-      if (originalValue == null) {
-        if (idForNull == ABSENT_VALUE_ID) {
-          idForNull = idToValue.size();
-          idToValue.add(null);
-          return AddResult.addedAt(idForNull);
-        } else {
-          return AddResult.existingAt(idForNull);
-        }
-      }
+    if (originalValue == null) {
+      return addNull();
+    }
 
-      // check for existing
+    // attempt a read for existing value
+    long stamp = lock.readLock();
+    try {
+      int prev = valueToId.getInt(originalValue);
+      if (prev >= 0) {
+        return AddResult.existingAt(prev);
+      }
+    }
+    finally {
+      lock.unlockRead(stamp);
+    }
+
+    // could not get an existing value, send a write
+    stamp = lock.writeLock();
+    try {
+      // check again for existing, in case
       int prev = valueToId.getInt(originalValue);
       if (prev >= 0) {
         return AddResult.existingAt(prev);
@@ -126,30 +132,69 @@ public class DimensionDictionary<T extends Comparable<T>>
       return AddResult.addedAt(index);
     }
     finally {
-      lock.writeLock().unlock();
+      lock.unlockWrite(stamp);
+    }
+  }
+
+  /**
+   * Add the null value.
+   *
+   * @return
+   */
+  protected AddResult addNull()
+  {
+    long stamp = 0;
+    AddResult result = null;
+
+    // try until we can complete an optimistic read
+    do {
+      stamp = lock.tryOptimisticRead();
+      result = (idForNull == ABSENT_VALUE_ID) ? null : AddResult.existingAt(idForNull);
+    } while (!lock.validate(stamp));
+
+    // optimistic read found an ID
+    if (result != null) {
+      return result;
+    }
+
+    // optimistic read found no ID, set it up
+    stamp = lock.writeLock();
+    try {
+      if (idForNull == ABSENT_VALUE_ID) {
+        idForNull = idToValue.size();
+        idToValue.add(null);
+        return AddResult.addedAt(idForNull);
+      } else {
+        return AddResult.existingAt(idForNull);
+      }
+    }
+    finally {
+      lock.unlockWrite(stamp);
     }
   }
 
   public T getMinValue()
   {
-    lock.readLock().lock();
-    try {
-      return minValue;
-    }
-    finally {
-      lock.readLock().unlock();
-    }
+    long stamp = 0;
+    T result;
+    do {
+      stamp = lock.tryOptimisticRead();
+      result = minValue;
+    } while (!lock.validate(stamp));
+
+    return result;
   }
 
   public T getMaxValue()
   {
-    lock.readLock().lock();
-    try {
-      return maxValue;
-    }
-    finally {
-      lock.readLock().unlock();
-    }
+    long stamp = 0;
+    T result;
+    do {
+      stamp = lock.tryOptimisticRead();
+      result = maxValue;
+    } while (!lock.validate(stamp));
+
+    return result;
   }
 
   public int getIdForNull()
@@ -159,12 +204,12 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public SortedDimensionDictionary<T> sort()
   {
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
       return new SortedDimensionDictionary<T>(idToValue, idToValue.size());
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
