@@ -781,7 +781,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.NONE, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
-    // Create WEEK segment with 2013-08-26 to 2013-09-20
+    // Create WEEK segment with 2013-08-26 to 2013-09-02
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.NONE, false, ImmutableList.of(new Interval("2013-09-01/2013-09-02", chrono))));
     // Create MONTH segment with 2013-09-01 to 2013-10-01
