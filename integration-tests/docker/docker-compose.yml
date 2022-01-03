@@ -29,28 +29,24 @@ services:
     depends_on:
       - druid-zookeeper-kafka
 
-  druid-overlord:
+  druid-coordinator:
     extends:
       file: docker-compose.base.yml
-      service: druid-overlord
-    env_file:
-      - ${OVERRIDE_ENV}
+      service: druid-coordinator
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-coordinator:
+  druid-overlord:
     extends:
       file: docker-compose.base.yml
-      service: druid-coordinator
-    env_file:
-      - ${OVERRIDE_ENV}
+      service: druid-overlord
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-overlord
+      - druid-coordinator
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
@@ -58,8 +54,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-historical
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
@@ -69,8 +63,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-middlemanager
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
@@ -81,11 +73,10 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-broker
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
+      - druid-coordinator
       - druid-zookeeper-kafka
       - druid-middlemanager
       - druid-historical
@@ -94,14 +85,13 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
       - druid-coordinator
       - druid-broker
+      - druid-overlord
 
 networks:
   druid-it-net:
