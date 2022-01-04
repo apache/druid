@@ -35,7 +35,7 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
   {
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "%s %s %s %s %s",
+          "%s %s %s %s %d",
           request.getRemoteAddr(),
           request.getMethod(),
           request.getHttpURI().toString(),
