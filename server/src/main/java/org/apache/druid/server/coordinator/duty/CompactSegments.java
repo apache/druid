@@ -31,6 +31,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -354,9 +355,16 @@ public class CompactSegments implements CoordinatorDuty
           // segmentGranularity is not set in the compaction config
           Interval interval = segmentsToCompact.get(0).getInterval();
           if (segmentsToCompact.stream().allMatch(segment -> interval.overlaps(segment.getInterval()))) {
-            segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
+            try {
+              segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
+            }
+            catch (IAE iae) {
+              // This case can happen if the existing segment interval result in complicated periods.
+              // Fall back to setting segmentGranularity as null
+              LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);
+            }
           } else {
-            LOG.warn("segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity");
+            LOG.warn("segmentsToCompact does not have the same interval. Fallback to not setting segmentGranularity for auto compaction task");
           }
         } else {
           segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
