@@ -123,6 +123,7 @@ import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
 import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -131,6 +132,7 @@ import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
+import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
@@ -1164,7 +1166,7 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(conglomerate, walker, plannerConfig, null, authorizerMapper);
+    return createMockRootSchema(conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
   }
 
   public static DruidSchemaCatalog createMockRootSchema(
@@ -1172,10 +1174,11 @@ public class CalciteTests
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
+      final DruidSchemaManager druidSchemaManager,
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, druidSchemaManager);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
@@ -1216,7 +1219,8 @@ public class CalciteTests
   private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final DruidSchemaManager druidSchemaManager
   )
   {
     final DruidSchema schema = new DruidSchema(
@@ -1233,7 +1237,8 @@ public class CalciteTests
         createDefaultJoinableFactory(),
         plannerConfig,
         TEST_AUTHENTICATOR_ESCALATOR,
-        new BrokerInternalQueryConfig()
+        new BrokerInternalQueryConfig(),
+        druidSchemaManager
     );
 
     try {

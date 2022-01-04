@@ -55,7 +55,7 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
       <AceEditor
         mode="hjson"
         theme="solarized_dark"
-        className="spec-dialog-textarea"
+        className="spec-dialog-textarea placeholder-padding"
         onChange={setSpec}
         fontSize={12}
         showPrintMargin={false}
@@ -69,6 +69,10 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
         }}
         style={{}}
         placeholder="{ JSON spec... }"
+        onLoad={editor => {
+          editor.renderer.setPadding(10);
+          editor.renderer.setScrollMargin(10, 10, 0, 0);
+        }}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

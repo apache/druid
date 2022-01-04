@@ -107,6 +107,7 @@ public class DruidSchema extends AbstractSchema
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
+  private final DruidSchemaManager druidSchemaManager;
 
   /**
    * Map of DataSource -> DruidTable.
@@ -212,7 +213,8 @@ public class DruidSchema extends AbstractSchema
       final JoinableFactory joinableFactory,
       final PlannerConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig
+      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final DruidSchemaManager druidSchemaManager
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -224,7 +226,15 @@ public class DruidSchema extends AbstractSchema
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.druidSchemaManager = druidSchemaManager;
 
+    if (druidSchemaManager == null || druidSchemaManager instanceof NoopDruidSchemaManager) {
+      initServerViewTimelineCallback(serverView);
+    }
+  }
+
+  private void initServerViewTimelineCallback(final TimelineServerView serverView)
+  {
     serverView.registerTimelineCallback(
         callbackExec,
         new TimelineServerView.TimelineCallback()
@@ -267,8 +277,7 @@ public class DruidSchema extends AbstractSchema
     );
   }
 
-  @LifecycleStart
-  public void start() throws InterruptedException
+  private void startCacheExec()
   {
     cacheExec.submit(
         () -> {
@@ -361,6 +370,16 @@ public class DruidSchema extends AbstractSchema
           }
         }
     );
+  }
+
+  @LifecycleStart
+  public void start() throws InterruptedException
+  {
+    if (druidSchemaManager == null || druidSchemaManager instanceof NoopDruidSchemaManager) {
+      startCacheExec();
+    } else {
+      initialized.countDown();
+    }
 
     if (config.isAwaitInitializationOnStart()) {
       final long startNanos = System.nanoTime();
@@ -414,7 +433,11 @@ public class DruidSchema extends AbstractSchema
   @Override
   protected Map<String, Table> getTableMap()
   {
-    return ImmutableMap.copyOf(tables);
+    if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
+      return ImmutableMap.copyOf(druidSchemaManager.getTables());
+    } else {
+      return ImmutableMap.copyOf(tables);
+    }
   }
 
   @VisibleForTesting

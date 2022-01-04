@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`tasks card matches snapshot 1`] = `
+exports[`TasksCard matches snapshot 1`] = `
 <a
   class="home-view-card tasks-card"
   href="#ingestion"
