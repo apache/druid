@@ -88,8 +88,8 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/historical-for-query-error-test
-    environment:
       - ${OVERRIDE_ENV}
+    environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
