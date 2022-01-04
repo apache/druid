@@ -37,6 +37,7 @@ public class JettyRequestLogTest
   {
     Request request = Mockito.mock(Request.class);
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+    Mockito.when(request.getMethod()).thenReturn("GET");
     Mockito.when(request.getHttpURI()).thenReturn("http://whatever");
     Mockito.when(request.getProtocol()).thenReturn("http");
     
