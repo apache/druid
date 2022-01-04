@@ -147,7 +147,7 @@ public class Transformer
     private final Map<String, RowFunction> transforms;
 
     // cached column, because it will be read frequently
-    private final long timestamp;
+    private final DateTime timestamp;
 
     public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms)
     {
@@ -163,27 +163,29 @@ public class Transformer
       return row.getDimensions();
     }
 
-    static long readTimestampFromRow(final InputRow row, final Map<String, RowFunction> transforms)
+    static DateTime readTimestampFromRow(final InputRow row, final Map<String, RowFunction> transforms)
     {
       final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
+      final long ts;
       if (transform != null) {
         //noinspection ConstantConditions time column is never null
-        return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
+        ts = Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
       } else {
-        return row.getTimestampFromEpoch();
+        ts = row.getTimestampFromEpoch();
       }
+      return DateTimes.utc(ts);
     }
 
     @Override
     public long getTimestampFromEpoch()
     {
-      return timestamp;
+      return timestamp.getMillis();
     }
 
     @Override
     public DateTime getTimestamp()
     {
-      return DateTimes.utc(getTimestampFromEpoch());
+      return timestamp;
     }
 
     @Override
