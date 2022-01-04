@@ -20,7 +20,7 @@ branches:
 
 language: java
 
-dist: focal
+dist: bionic
 
 jdk:
   - openjdk8
