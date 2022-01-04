@@ -169,4 +169,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     print("No applicable changes detected, can skip test suite '{}'".format(suite_name))
-    sys.exit(0)
+    sys.exit(1)
