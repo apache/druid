@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -56,13 +57,16 @@ public class ObjectFlatteners
 
       switch (fieldSpec.getType()) {
         case ROOT:
-          extractor = obj -> flattenerMaker.getRootField(obj, fieldSpec.getExpr());
+          extractor = flattenerMaker.makeJsonTreeExtractor(Collections.singletonList(fieldSpec.getExpr()));
           break;
         case PATH:
           extractor = flattenerMaker.makeJsonPathExtractor(fieldSpec.getExpr());
           break;
         case JQ:
           extractor = flattenerMaker.makeJsonQueryExtractor(fieldSpec.getExpr());
+          break;
+        case TREE:
+          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getExprs());
           break;
         default:
           throw new UOE("Unsupported field type[%s]", fieldSpec.getType());
@@ -230,6 +234,11 @@ public class ObjectFlatteners
      * Create a "field" extractor for 'jq' expressions
      */
     Function<T, Object> makeJsonQueryExtractor(String expr);
+
+    /**
+     * Create a "field" extractor for nested json expressions
+     */
+    Function<T, Object> makeJsonTreeExtractor(List<String> exprs);
 
     /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to

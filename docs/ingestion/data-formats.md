@@ -623,9 +623,10 @@ Each entry in the `fields` list can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Options are as follows:<br /><br /><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
+| type | Options are as follows:<br /><br /><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li><li>`tree`, referring to a nested field from the root level of the record. Useful and more efficient than `path` or `jq` if a simple hierarchical fetch is required. Only supported for the `json` format.</li></ul> | none (required) |
 | name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
+| exprs | For `tree` only. Multiple-expression field for accessing the field while flattening, representing the hierarchy of field names to read. For other types, this parameter must not be provided. | none (required for type `tree`) |
 
 #### Notes on flattening
 
