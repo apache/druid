@@ -21,7 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
-import org.apache.druid.java.util.common.logger.Logger
+import org.apache.druid.java.util.common.logger.Logger;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -32,6 +32,8 @@ import java.util.List;
 
 public class JettyRequestLogTest
 {
+  private static final Logger logger = new Logger("org.apache.druid.jetty.RequestLog");
+
   @Test
   public void testLog()
   {
@@ -45,9 +47,8 @@ public class JettyRequestLogTest
     Mockito.when(response.getStatus()).thenReturn(200);
 
     JettyRequestLog jettyRequestLog = new JettyRequestLog(request, response);
-    private static final Logger logger = new Logger("org.apache.druid.jetty.RequestLog");
 
-    jettyRequestLog.log()
+    jettyRequestLog.log();
     verify(Logger, times(1)).debug(
         "%s %s %s %s %d",
         request.getRemoteAddr(),
@@ -55,6 +56,6 @@ public class JettyRequestLogTest
         request.getHttpURI().toString(),
         request.getProtocol(),
         response.getStatus()
-    )
+    );
   }
 }
