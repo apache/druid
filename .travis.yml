@@ -20,7 +20,7 @@ branches:
 
 language: java
 
-dist: xenial
+dist: focal
 
 jdk:
   - openjdk8
