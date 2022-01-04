@@ -76,6 +76,7 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
+      - druid-coordinator
       - druid-zookeeper-kafka
       - druid-middlemanager
       - druid-historical
@@ -90,6 +91,7 @@ services:
       - druid-zookeeper-kafka
       - druid-coordinator
       - druid-broker
+      - druid-overlord
 
 networks:
   druid-it-net:
