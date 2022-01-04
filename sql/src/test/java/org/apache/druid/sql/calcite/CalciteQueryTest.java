@@ -291,6 +291,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testtest() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM druid.foo SET CONTEXT (artist='blondie', song='maria')",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+
+//    testQuery(
+//        "VALUES ( )",
+//        ImmutableList.of(),
+//        ImmutableList.of()
+//    );
+
+  }
+
+  @Test
   public void testInformationSchemaColumnsOnForbiddenTable() throws Exception
   {
     testQuery(
@@ -391,7 +408,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
 
   @Test
@@ -2268,7 +2284,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SUBSTRING(dim1, 2)\n"
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
-        + "ORDER BY CHARACTER_LENGTH(dim1) DESC, dim1",
+        + "ORDER BY CHARACTER_LENGTH(dim1) DESC, dim1 SET CONTEXT ('x'='11', 'y'='234')",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -2607,7 +2623,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
         "Possible error: SQL requires union between inputs that are not simple table scans and involve a " +
-            "filter or aliasing. Or column types of tables being unioned are not of same type.");
+        "filter or aliasing. Or column types of tables being unioned are not of same type."
+    );
   }
 
   @Test
@@ -2622,7 +2639,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
         "Possible error: SQL requires union between two tables " +
-            "and column names queried for each table are different Left: [dim1], Right: [dim2]."
+        "and column names queried for each table are different Left: [dim1], Right: [dim2]."
     );
   }
 
@@ -2649,7 +2666,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
         "Possible error: SQL requires union between inputs that are not simple table scans and involve " +
-            "a filter or aliasing. Or column types of tables being unioned are not of same type."
+        "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 
@@ -5437,7 +5454,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
     assertQueryIsUnplannable(
         "SELECT COUNT(*) FROM druid.foo\n"
-            + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
+        + "WHERE __time >= 'z2000-01-01 00:00:00' AND __time < '2001-01-01 00:00:00'\n",
         "Possible error: Illegal TIMESTAMP constant: CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL"
     );
   }
@@ -7728,7 +7745,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
 
   @Test
@@ -12361,7 +12377,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
 
-
   @Test
   public void testRoundFuc() throws Exception
   {
@@ -12799,7 +12814,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
 
 
   @Test

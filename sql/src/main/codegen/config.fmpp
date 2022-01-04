@@ -41,12 +41,14 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
+      "org.apache.calcite.sql.SqlSelect"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
       "TEST"
+      "CONTEXT"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -366,6 +368,7 @@ data: {
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
       "Test()"
+      "DruidSqlSelect()"
     ]
 
     # List of methods for parsing custom literals.
@@ -415,7 +418,8 @@ data: {
     # given as part of "statementParserMethods", "literalParserMethods" or
     # "dataTypeParserMethods".
     implementationFiles: [
-      "test.ftl"
+      "test.ftl",
+      "select.ftl"
     ]
 
     includePosixOperators: false

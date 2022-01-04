@@ -263,7 +263,6 @@
         <version>2.1</version>
         <executions>
           <execution>
-<!--            <?m2e execute onConfiguration?>-->
             <!-- Extract parser grammar template from Apache Calcite and put
               it under ${project.build.directory} where all freemarker templates are. -->
             <id>unpack-parser-template</id>
@@ -310,7 +309,6 @@
         </dependencies>
         <executions>
           <execution>
-            <!--            <?m2e execute onConfiguration?>-->
             <id>generate-fmpp-sources</id>
             <phase>generate-sources</phase>
             <goals>
@@ -332,7 +330,6 @@
         <version>2.4</version>
         <executions>
           <execution>
-<!--            <?m2e execute onConfiguration?>-->
             <phase>generate-sources</phase>
             <id>javacc</id>
             <goals>
