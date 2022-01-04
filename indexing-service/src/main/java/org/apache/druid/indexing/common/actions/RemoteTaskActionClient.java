@@ -39,12 +39,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RemoteTaskActionClient implements TaskActionClient
 {
+  private static final Logger log = new Logger(RemoteTaskActionClient.class);
+
   private final Task task;
   private final RetryPolicyFactory retryPolicyFactory;
   private final ObjectMapper jsonMapper;
   private final DruidLeaderClient druidLeaderClient;
-
-  private static final Logger log = new Logger(RemoteTaskActionClient.class);
 
   public RemoteTaskActionClient(
       Task task,

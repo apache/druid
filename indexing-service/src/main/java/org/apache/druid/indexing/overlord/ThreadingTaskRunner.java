@@ -72,7 +72,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * TaskRunner implemention for the CliIndexer task execution service, which runs all tasks in a single process.
+ * TaskRunner implementation for the CliIndexer task execution service, which runs all tasks in a single process.
  *
  * Two thread pools are used:
  * - A task execution pool, sized to number of worker slots. This is used to setup and execute the Task run() methods.
@@ -98,7 +98,7 @@ public class ThreadingTaskRunner
   private final ListeningExecutorService controlThreadExecutor;
   private final WorkerConfig workerConfig;
 
-  private volatile boolean stopping = false;
+  private volatile boolean stopping;
 
   @Inject
   public ThreadingTaskRunner(

@@ -340,7 +340,7 @@ public class CliPeon extends GuiceRunnable
     }
   }
 
-  static void bindRowIngestionMeters(Binder binder)
+  public static void bindRowIngestionMeters(Binder binder)
   {
     PolyBind.createChoice(
         binder,

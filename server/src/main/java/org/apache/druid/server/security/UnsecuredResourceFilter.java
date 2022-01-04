@@ -36,7 +36,6 @@ public class UnsecuredResourceFilter implements Filter
   @Override
   public void init(FilterConfig filterConfig)
   {
-
   }
 
   @Override
@@ -63,6 +62,5 @@ public class UnsecuredResourceFilter implements Filter
   @Override
   public void destroy()
   {
-
   }
 }

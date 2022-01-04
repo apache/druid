@@ -34,7 +34,6 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authenticator;
@@ -50,7 +49,6 @@ import java.util.Set;
 public class AuthenticatorMapperModule implements DruidModule
 {
   private static final String AUTHENTICATOR_PROPERTIES_FORMAT_STRING = "druid.auth.authenticator.%s";
-  private static Logger log = new Logger(AuthenticatorMapperModule.class);
 
   @Override
   public void configure(Binder binder)

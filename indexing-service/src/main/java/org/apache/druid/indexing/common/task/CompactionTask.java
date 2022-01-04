@@ -1160,12 +1160,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   /**
-   * Compcation Task Tuning Config.
+   * Compaction Task Tuning Config.
    *
    * An extension of ParallelIndexTuningConfig. As of now, all this TuningConfig
    * does is fail if the TuningConfig contains
    * `awaitSegmentAvailabilityTimeoutMillis` that is != 0 since it is not
-   * supported for Compcation Tasks.
+   * supported for Compaction Tasks.
    */
   public static class CompactionTuningConfig extends ParallelIndexTuningConfig
   {

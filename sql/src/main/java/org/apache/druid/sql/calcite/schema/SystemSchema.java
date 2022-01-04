@@ -58,6 +58,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
@@ -89,7 +90,6 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -211,13 +211,20 @@ public class SystemSchema extends AbstractSchema
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      final @Global Set<NodeRole> allNodeRoles,
       final ObjectMapper jsonMapper
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
+        SERVERS_TABLE, new ServersTable(
+            druidNodeDiscoveryProvider,
+            serverInventoryView,
+            authorizerMapper,
+            overlordDruidLeaderClient,
+            coordinatorDruidLeaderClient,
+            allNodeRoles),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
         SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
@@ -483,13 +490,15 @@ public class SystemSchema extends AbstractSchema
     private final InventoryView serverInventoryView;
     private final DruidLeaderClient overlordLeaderClient;
     private final DruidLeaderClient coordinatorLeaderClient;
+    private final Set<NodeRole> allNodeRoles;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         InventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         DruidLeaderClient overlordLeaderClient,
-        DruidLeaderClient coordinatorLeaderClient
+        DruidLeaderClient coordinatorLeaderClient,
+        Set<NodeRole> allNodeRoles
     )
     {
       this.authorizerMapper = authorizerMapper;
@@ -497,6 +506,7 @@ public class SystemSchema extends AbstractSchema
       this.serverInventoryView = serverInventoryView;
       this.overlordLeaderClient = overlordLeaderClient;
       this.coordinatorLeaderClient = coordinatorLeaderClient;
+      this.allNodeRoles = allNodeRoles;
     }
 
     @Override
@@ -674,9 +684,9 @@ public class SystemSchema extends AbstractSchema
       }
     }
 
-    private static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
+    private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
     {
-      return Arrays.stream(NodeRole.values())
+      return allNodeRoles.stream()
                    .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
                    .collect(Collectors.toList())
                    .iterator();

@@ -95,7 +95,7 @@ public class TaskStatus
   private final TaskLocation location;
 
   @JsonCreator
-  protected TaskStatus(
+  public TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,

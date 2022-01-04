@@ -73,7 +73,6 @@ public class AllowAllAuthenticator implements Authenticator
       @Override
       public void init(FilterConfig filterConfig)
       {
-
       }
 
       @Override

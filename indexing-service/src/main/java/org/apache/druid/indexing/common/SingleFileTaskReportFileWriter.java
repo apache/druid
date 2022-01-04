@@ -53,7 +53,6 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
     }
   }
 
-
   @Override
   public void setObjectMapper(ObjectMapper objectMapper)
   {

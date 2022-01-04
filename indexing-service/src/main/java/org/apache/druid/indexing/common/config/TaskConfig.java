@@ -38,10 +38,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
+ * Configurations for ingestion tasks. These configurations can be applied per MiddleManager, Indexer, or Overlord.
  *
  * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
- * to all tasks submitted to the overlord.
+ * to all tasks submitted to the Overlord.
  */
 public class TaskConfig
 {

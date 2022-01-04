@@ -49,6 +49,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.discovery.NodeRoles;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -270,6 +271,7 @@ public class SystemSchemaTest extends CalciteTestBase
         client,
         client,
         druidNodeDiscoveryProvider,
+        NodeRoles.knownRoles(),
         mapper
     );
   }
@@ -729,7 +731,8 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          serverInventoryView,
                                                          authMapper,
                                                          overlordClient,
-                                                         coordinatorClient
+                                                         coordinatorClient,
+                                                         NodeRoles.knownRoles()
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
