@@ -400,9 +400,7 @@ public class GroupByQueryEngineV2
       switch (capabilities.getType()) {
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
-          if (dimensionSpec.getOutputType().equals(ColumnType.STRING_ARRAY)) {
-            return new ArrayGroupByColumnSelectorStrategy();
-          } else if (dimSelector.getValueCardinality() >= 0) {
+          if (dimSelector.getValueCardinality() >= 0) {
             return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
@@ -413,6 +411,8 @@ public class GroupByQueryEngineV2
           return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
           return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
+        case ARRAY:
+          return new ArrayGroupByColumnSelectorStrategy();
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }

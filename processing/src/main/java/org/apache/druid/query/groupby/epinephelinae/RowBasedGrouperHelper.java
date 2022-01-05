@@ -1466,8 +1466,20 @@ public class RowBasedGrouperHelper
                                             : stringComparator;
         this.keyBufferPosition = keyBufferPosition;
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          String[] lhs = arrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)).getDelegate();
-          String[] rhs = arrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition)).getDelegate();
+          final ComparableStringArray lhsComparableArray = arrayDictionary.get(lhsBuffer.getInt(lhsPosition
+                                                                                                + keyBufferPosition));
+          final ComparableStringArray rhsComparableArray = arrayDictionary.get(rhsBuffer.getInt(rhsPosition
+                                                                                                + keyBufferPosition));
+          if (lhsComparableArray == null && rhsComparableArray == null) {
+            return 0;
+          } else if (lhsComparableArray == null) {
+            return -1;
+          } else if (rhsComparableArray == null) {
+            return 1;
+          }
+
+          String[] lhs = lhsComparableArray.getDelegate();
+          String[] rhs = rhsComparableArray.getDelegate();
 
           int minLength = Math.min(lhs.length, rhs.length);
 

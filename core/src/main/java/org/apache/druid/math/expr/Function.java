@@ -2994,8 +2994,14 @@ public interface Function
       Object[] out = new Object[length];
 
       ExpressionType arrayType = null;
+
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
+        // short circuit the case where you have one input argument whose input type is array. So array function has
+        // nothing to do.
+        if (i == 0 && length == 1 && evaluated.isArray()) {
+          return evaluated;
+        }
         arrayType = setArrayOutput(arrayType, out, i, evaluated);
       }
 
@@ -3005,13 +3011,18 @@ public interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      return ImmutableSet.copyOf(args);
+      return Collections.emptySet();
     }
 
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      return Collections.emptySet();
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs(){
+      return true;
     }
 
     @Override

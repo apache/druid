@@ -22,19 +22,18 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.ComparableIntArray;
 import org.apache.druid.segment.data.ComparableStringArray;
-import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class ArrayGroupByColumnSelectorStrategy
     implements GroupByColumnSelectorStrategy
@@ -93,7 +92,7 @@ public class ArrayGroupByColumnSelectorStrategy
       }
       resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(stringRepresentaion));
     } else {
-      resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(NullHandling.defaultStringValues()));
+      resultRow.set(selectorPlus.getResultRowPosition(), null);
     }
 
   }
@@ -141,24 +140,29 @@ public class ArrayGroupByColumnSelectorStrategy
   @Override
   public Object getOnlyValue(ColumnValueSelector selector)
   {
-    final DimensionSelector dimSelector = (DimensionSelector) selector;
-    final IndexedInts indexedRow = dimSelector.getRow();
-
-    final int rowSize = indexedRow.size();
-    if (rowSize == 0) {
+    final int[] intRepresentation;
+    Object object = selector.getObject();
+    if (object == null) {
       return GROUP_BY_MISSING_VALUE;
+    } else if (object instanceof String) {
+      intRepresentation = new int[1];
+      intRepresentation[0] = addToIndexedDictionary((String) object);
+    } else if (object instanceof List) {
+      final int size = ((List<?>) object).size();
+      intRepresentation = new int[size];
+      for (int i = 0; i < size; i++) {
+        intRepresentation[i] = addToIndexedDictionary((String) ((List<?>) object).get(i));
+      }
+    } else if (object instanceof String[]) {
+      final int size = ((String[]) object).length;
+      intRepresentation = new int[size];
+      for (int i = 0; i < size; i++) {
+        intRepresentation[i] = addToIndexedDictionary(((String[]) object)[i]);
+      }
+    } else {
+      throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
     }
 
-    final int[] intRepresentation = new int[rowSize];
-    //TODO(karan): remove intial check of null
-    String firstValue = dimSelector.lookupName(indexedRow.get(0));
-    if (firstValue == null && rowSize == 1) {
-      return GROUP_BY_MISSING_VALUE;
-    }
-    intRepresentation[0] = (addToIndexedDictionary(firstValue));
-    for (int i = 1; i < rowSize; i++) {
-      intRepresentation[i] = addToIndexedDictionary(dimSelector.lookupName(indexedRow.get(i)));
-    }
     final ComparableIntArray comparableIntArray = ComparableIntArray.of(intRepresentation);
     final int dictId = intListToInt.getOrDefault(comparableIntArray, GROUP_BY_MISSING_VALUE);
     if (dictId == GROUP_BY_MISSING_VALUE) {

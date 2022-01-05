@@ -138,9 +138,10 @@ public class Calcites
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
   {
     ColumnType valueType = getValueTypeForRelDataTypeFull(type);
-    if (valueType != null && valueType.isArray()) {
-      return ColumnType.STRING;
-    }
+    //TODO: Karan add flag ?
+//    if (valueType != null && valueType.isArray()) {
+//      return ColumnType.STRING;
+//    }
     return valueType;
   }
 

@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -1320,7 +1321,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("placementish", "alias", ColumnType.STRING_ARRAY))
+        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+                                                       ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
@@ -1353,8 +1358,150 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+                                                       ExprMacroTable.nil()
+        ))
         .setDimensions(
-            new DefaultDimensionSpec("placementish", "alias", ColumnType.STRING_ARRAY),
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY),
+            new DefaultDimensionSpec("quality", "quality")
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("a", "preferred"),
+            "quality",
+            "automotive",
+            "rows",
+            2L,
+            "idx",
+            282L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("b", "preferred"),
+            "quality",
+            "business",
+            "rows",
+            2L,
+            "idx",
+            230L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("e", "preferred"),
+            "quality",
+            "entertainment",
+            "rows",
+            2L,
+            "idx",
+            324L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("h", "preferred"),
+            "quality",
+            "health",
+            "rows",
+            2L,
+            "idx",
+            233L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("m", "preferred"),
+            "quality",
+            "mezzanine",
+            "rows",
+            6L,
+            "idx",
+            5317L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("n", "preferred"),
+            "quality",
+            "news",
+            "rows",
+            2L,
+            "idx",
+            235L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("p", "preferred"),
+            "quality",
+            "premium",
+            "rows",
+            6L,
+            "idx",
+            5405L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("preferred", "t"),
+            "quality",
+            "technology",
+            "rows",
+            2L,
+            "idx",
+            175L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias",
+            ComparableStringArray.of("preferred", "t"),
+            "quality",
+            "travel",
+            "rows",
+            2L,
+            "idx",
+            245L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dims-groupby-arrays");
+  }
+
+  @Test
+  public void testMultiValueDimensionAsArrayWithVirtualDim()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      return;
+    }
+
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+                                                       ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY),
             new DefaultDimensionSpec("quality", "quality")
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))

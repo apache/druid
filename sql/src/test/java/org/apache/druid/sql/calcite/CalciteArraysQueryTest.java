@@ -25,8 +25,8 @@ import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -41,6 +41,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -48,14 +49,16 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.topn.DimensionTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -76,7 +79,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ColumnType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ColumnType.LONG_ARRAY))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -95,6 +98,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT CASE WHEN dim4 = 'a' THEN ARRAY['foo','bar','baz'] END as mv_value, count(1) from numfoo GROUP BY 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -102,9 +106,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)",
-                            ColumnType.STRING
+                            ColumnType.STRING_ARRAY
                         ))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0"))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -112,9 +116,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{null, 3L},
-            new Object[]{"bar", 3L},
-            new Object[]{"baz", 3L},
-            new Object[]{"foo", 3L}
+            new Object[]{ImmutableList.of("foo", "bar", "baz"), 3L}
         )
     );
   }
@@ -128,7 +130,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ColumnType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ColumnType.STRING_ARRAY))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -148,11 +150,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonConstantArrayExpressionFromTableForMultival() throws Exception
   {
+    //TODO: Karan fix test case
     final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
     final Query<?> scanQuery = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim3\",'word'),'up')", ColumnType.STRING))
+        .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim3\",'word'),'up')", ColumnType.STRING_ARRAY))
         .columns("dim1", "v0")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .limit(5)
@@ -290,21 +293,21 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     // these report as strings even though they are not, someday this will not be so
-                    expressionVirtualColumn("v0", "array('a','b','c')", ColumnType.STRING),
-                    expressionVirtualColumn("v1", "array(1,2,3)", ColumnType.STRING),
-                    expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v11", "array_concat(array(\"d1\"),array(\"d2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v12", "array_offset(array(\"l1\"),0)", ColumnType.STRING),
-                    expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.STRING),
-                    expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.STRING),
-                    expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.STRING),
-                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.STRING),
+                    expressionVirtualColumn("v0", "array('a','b','c')", ColumnType.STRING_ARRAY),
+                    expressionVirtualColumn("v1", "array(1,2,3)", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v11", "array_concat(array(\"d1\"),array(\"d2\"))", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v12", "array_offset(array(\"l1\"),0)", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING),
-                    expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.STRING),
-                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.STRING),
+                    expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING_ARRAY),
+                    expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING)
                 )
                 .columns(
@@ -417,17 +420,17 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     // these report as strings even though they are not, someday this will not be so
-                    expressionVirtualColumn("v0", "array('a','b','c')", ColumnType.STRING),
-                    expressionVirtualColumn("v1", "array(1,2,3)", ColumnType.STRING),
-                    expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v11", "array_concat(array(\"d1\"),array(\"d2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.STRING),
+                    expressionVirtualColumn("v0", "array('a','b','c')", ColumnType.STRING_ARRAY),
+                    expressionVirtualColumn("v1", "array(1,2,3)", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v11", "array_concat(array(\"d1\"),array(\"d2\"))", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING),
-                    expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING),
-                    expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.STRING),
-                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.STRING),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.STRING),
+                    expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING_ARRAY),
+                    expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.LONG_ARRAY),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING)
                 )
                 .columns(
@@ -939,9 +942,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"dim3\")",
+                            ColumnType.STRING_ARRAY
+                        ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -957,7 +965,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{ImmutableList.of(), 3L},
+            new Object[]{new ArrayList<String>(){{add(null);}}, 3L},
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
@@ -981,8 +989,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
-                            "array_ordinal(\"dim3\",2)",
-                            ColumnType.STRING
+                            "array(array_ordinal(\"dim3\",2))",
+                            ColumnType.STRING_ARRAY
                         ))
                         .setDimensions(
                             dimensions(
@@ -1002,7 +1010,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{ImmutableList.of(), 4L},
+            new Object[]{new ArrayList<String>(){{add(null);}}, 4L},
             new Object[]{ImmutableList.of("b"), 1L},
             new Object[]{ImmutableList.of("c"), 1L}
         )
@@ -1011,16 +1019,40 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testArrayGroupAsArrayWithLiteral()
+  public void testArrayGroupAsArrayWithLiteral() throws Exception
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
-    Assert.assertThrows(UOE.class, () -> testQuery(
+    testQuery(
         "SELECT ARRAY['3'], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
-        ImmutableList.of(),
-        ImmutableList.of()
-    ));
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn("v0", "array('3')", ColumnType.STRING_ARRAY))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of("3"), 6L}
+        )
+    );
   }
 
   @Test
@@ -1213,11 +1245,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"d", 7L},
-          new Object[]{null, 3L},
-          new Object[]{"b", 2L},
-          new Object[]{"a", 1L},
-          new Object[]{"c", 1L}
+          new Object[]{ImmutableList.of("", "d"), 3L},
+          new Object[]{ImmutableList.of("a", "b", "d"), 1L},
+          new Object[]{ImmutableList.of("b", "c", "d"), 1L},
+          new Object[]{ImmutableList.of("d", "d"), 1L}
       );
     } else {
       results = ImmutableList.of(
@@ -1231,6 +1262,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     }
     testQuery(
         "SELECT STRING_TO_ARRAY(CONCAT(ARRAY_TO_STRING(dim3, ','), ',d'), ','), SUM(cnt) FROM druid.numfoo WHERE ARRAY_LENGTH(dim3) > 0 GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1241,13 +1273,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v1",
                                 "string_to_array(concat(array_to_string(\"dim3\",','),',d'),',')",
-                                ColumnType.STRING
+                                ColumnType.STRING_ARRAY
                             )
                         )
                         .setDimFilter(bound("v0", "0", null, true, false, null, StringComparators.NUMERIC))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v1", "_d0", ColumnType.STRING)
+                                new DefaultDimensionSpec("v1", "_d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1740,13 +1772,58 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggGroupByArrayAggFromSubquery() throws Exception
   {
     cannotVectorize();
-    // yo, can't group on array types right now so expect failure
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
+
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
-        ImmutableList.of(),
-        ImmutableList.of()
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new TopNQuery(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            null,
+                            new DefaultDimensionSpec(
+                                "dim2",
+                                "d0",
+                                ColumnType.STRING
+                            ),
+                            new DimensionTopNMetricSpec(
+                                null,
+                                StringComparators.LEXICOGRAPHIC
+                            ), 5,
+                            querySegmentSpec(Filtration.eternity()),
+                            new NotDimFilter(new SelectorDimFilter("dim1", null, null)),
+                            Granularities.ALL,
+                            aggregators(new ExpressionLambdaAggregatorFactory(
+                                "a0",
+                                ImmutableSet.of("dim1"),
+                                "__acc",
+                                "[]",
+                                "[]",
+                                true,
+                                "array_set_add(\"__acc\", \"dim1\")",
+                                "array_set_add_all(\"__acc\", \"a0\")",
+                                null,
+                                null,
+                                new HumanReadableBytes(1024),
+                                ExprMacroTable.nil()
+                            )),
+                            null,
+                            QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(null).setGranularity(Granularities.ALL).setDimensions(dimensions(
+                new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING),
+                new DefaultDimensionSpec("a0", "_d1", ColumnType.STRING_ARRAY)
+            ))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("_a0")))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS).build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", ImmutableList.of("2", "abc", "10.1"), 1L},
+            new Object[]{"a", ImmutableList.of("1"), 1L},
+            new Object[]{"abc", ImmutableList.of("def"), 1L}
+        )
     );
   }
 

@@ -93,7 +93,7 @@ public class ComparableStringArray implements Comparable<ComparableStringArray>
       return -1;
     } else {
       for (int i = 0; i < delegate.length; i++) {
-        final int cmp = delegate[i].compareTo(rhs.getDelegate()[i]);
+        final int cmp = delegate[i] != null ? delegate[i].compareTo(rhs.getDelegate()[i]) : -1;
         if (cmp == 0) {
           continue;
         }
