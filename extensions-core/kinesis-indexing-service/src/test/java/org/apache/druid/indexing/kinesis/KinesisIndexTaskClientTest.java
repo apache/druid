@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IndexTaskClient;
+import org.apache.druid.indexing.common.TaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -164,7 +164,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testTaskNotRunnableException()
   {
-    expectedException.expect(IndexTaskClient.TaskNotRunnableException.class);
+    expectedException.expect(TaskClient.TaskNotRunnableException.class);
     expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
 
     EasyMock.reset(taskInfoProvider);

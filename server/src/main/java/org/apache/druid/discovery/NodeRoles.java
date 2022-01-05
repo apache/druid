@@ -24,6 +24,7 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -38,9 +39,7 @@ public class NodeRoles
   public static Set<NodeRole> knownRoles()
   {
     Set<NodeRole> nodeRoles = new HashSet<>();
-    for (NodeRole role : NodeRole.values()) {
-      nodeRoles.add(role);
-    }
+    nodeRoles.addAll(Arrays.asList(NodeRole.values()));
     return nodeRoles;
   }
 
