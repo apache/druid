@@ -29,11 +29,10 @@ mkdir -p $SHARED_DIR
 cp -R docker $SHARED_DIR/docker
 
 pushd ../
-rm -rf apache-druid-$DRUID_VERSION
-mvn -DskipTests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Ddruid.console.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pdist
-tar xzf distribution/target/apache-druid-$DRUID_VERSION-bin.tar.gz
-mv apache-druid-$DRUID_VERSION/lib $SHARED_DIR/docker/lib
-mv apache-druid-$DRUID_VERSION/extensions $SHARED_DIR/docker/extensions
+rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
+mvn -DskipTests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Ddruid.console.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pintegration-test
+mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
+mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
 popd
 
 # Make directoriess if they dont exist
@@ -47,12 +46,8 @@ mkdir -p $SHARED_DIR/docker/credentials
 # install logging config
 cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
 
-# Pull extensions for testing
-java -cp "$SHARED_DIR/docker/lib/*" \
-   -Ddruid.extensions.directory=$SHARED_DIR/docker/extensions \
-   org.apache.druid.cli.Main tools pull-deps \
-   -c org.apache.druid:druid-integration-tests:$DRUID_VERSION \
-   -c org.apache.druid.extensions:druid-testing-tools:$DRUID_VERSION
+# Extensions for testing are pulled while creating a binary.
+# See the 'integration-test' profile in $ROOT/distribution/pom.xml.
 
 # Pull Hadoop dependency if needed
 if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
