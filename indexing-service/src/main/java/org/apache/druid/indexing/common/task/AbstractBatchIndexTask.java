@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.ClientCompactionTaskMetricsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
@@ -515,9 +516,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null
                                           : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
+      List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
+                                 ? null
+                                 : new ClientCompactionTaskMetricsSpec(ingestionSpec.getDataSchema().getAggregators()).asMap(toolbox.getJsonMapper());
+
       final CompactionState compactionState = new CompactionState(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
+          metricsSpec,
           transformSpec,
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())

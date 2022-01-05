@@ -84,6 +84,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable ClientCompactionTaskMetricsSpec metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
@@ -108,6 +109,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        metricsSpec == null ? null : metricsSpec.getMetricsSpec(),
         transformSpec,
         context
     );

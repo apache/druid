@@ -396,12 +396,12 @@ public class CompactSegmentsTest
         DataSegment afterNoon = createSegment(dataSourceName, j, false, k);
         if (j == 3) {
           // Make two intervals on this day compacted (two compacted intervals back-to-back)
-          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          beforeNoon = beforeNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         if (j == 1) {
           // Make one interval on this day compacted
-          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, ImmutableMap.of(), ImmutableMap.of()));
+          afterNoon = afterNoon.withLastCompactionState(new CompactionState(partitionsSpec, null, null, null, ImmutableMap.of(), ImmutableMap.of()));
         }
         segments.add(beforeNoon);
         segments.add(afterNoon);
@@ -682,6 +682,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -695,6 +696,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -743,6 +745,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             new UserCompactionTaskIOConfig(true),
             null
         )
@@ -753,6 +756,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -800,6 +804,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -809,6 +814,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -856,6 +862,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -869,6 +876,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -920,6 +928,7 @@ public class CompactSegmentsTest
             new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
             null,
             null,
+            null,
             null
         )
     );
@@ -933,6 +942,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         dimensionsSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
@@ -979,6 +989,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -992,6 +1003,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         dimensionsSpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
@@ -1037,6 +1049,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1050,6 +1063,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1097,6 +1111,7 @@ public class CompactSegmentsTest
             new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
             null,
             null,
+            null,
             null
         )
     );
@@ -1135,6 +1150,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1153,6 +1169,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1256,6 +1273,7 @@ public class CompactSegmentsTest
             ),
             null,
             null,
+            null,
             new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
             null,
             null
@@ -1268,6 +1286,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1317,6 +1336,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1327,6 +1347,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(),
         ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1461,6 +1482,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1474,6 +1496,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1555,6 +1578,7 @@ public class CompactSegmentsTest
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1568,6 +1592,7 @@ public class CompactSegmentsTest
         ArgumentMatchers.anyInt(),
         ArgumentMatchers.any(),
         granularitySpecArgumentCaptor.capture(),
+        ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
         ArgumentMatchers.any(),
@@ -1862,6 +1887,7 @@ public class CompactSegmentsTest
               null,
               null,
               null,
+              null,
               null
           )
       );
@@ -2041,6 +2067,7 @@ public class CompactSegmentsTest
                     null,
                     null
                 ),
+                null,
                 transformSpec,
                 ImmutableMap.of(
                     "bitmap",

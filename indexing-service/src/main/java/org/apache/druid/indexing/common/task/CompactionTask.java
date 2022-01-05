@@ -754,7 +754,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                : dimensionsSpec;
     final AggregatorFactory[] finalMetricsSpec = metricsSpec == null
                                                  ? createMetricsSpec(queryableIndexAndSegments)
-                                                 : convertToCombiningFactories(metricsSpec);
+                                                 : metricsSpec;
 
     return new DataSchema(
         dataSource,

@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
+import org.apache.druid.client.indexing.ClientCompactionTaskMetricsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -58,6 +60,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -487,6 +490,21 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           );
           return true;
         }
+      }
+    }
+
+    if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
+      final ClientCompactionTaskMetricsSpec existingMetricsSpec = lastCompactionState.getMetricsSpec() != null ?
+                                                                  objectMapper.convertValue(lastCompactionState.getMetricsSpec(), ClientCompactionTaskMetricsSpec.class) :
+                                                                  null;
+      // Checks for aggre
+      if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec.getMetricsSpec())) {
+        log.info(
+            "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
+            config.getMetricsSpec(),
+            existingMetricsSpec
+        );
+        return true;
       }
     }
 

@@ -22,7 +22,10 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.server.coordinator.UserCompactionTaskMetricsConfig;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -40,6 +43,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final ClientCompactionTaskQueryTuningConfig tuningConfig;
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   private final ClientCompactionTaskDimensionsSpec dimensionsSpec;
+  private final ClientCompactionTaskMetricsSpec metricsSpec;
   private final ClientCompactionTaskTransformSpec transformSpec;
   private final Map<String, Object> context;
 
@@ -51,6 +55,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("dimensionsSpec") ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
       @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -61,6 +66,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.tuningConfig = tuningConfig;
     this.granularitySpec = granularitySpec;
     this.dimensionsSpec = dimensionsSpec;
+    this.metricsSpec = metrics == null ? null : new ClientCompactionTaskMetricsSpec(metrics);
     this.transformSpec = transformSpec;
     this.context = context;
   }
@@ -111,6 +117,13 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
+  @Nullable
+  public AggregatorFactory[] getMetricsSpec()
+  {
+    return metricsSpec == null ? null : metricsSpec.getMetricsSpec();
+  }
+
+  @JsonProperty
   public ClientCompactionTaskTransformSpec getTransformSpec()
   {
     return transformSpec;
@@ -138,6 +151,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
+           Objects.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(context, that.context);
   }
@@ -152,6 +166,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        metricsSpec,
         transformSpec,
         context
     );
@@ -167,6 +182,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", tuningConfig=" + tuningConfig +
            ", granularitySpec=" + granularitySpec +
            ", dimensionsSpec=" + dimensionsSpec +
+           ", metricsSpec=" + metricsSpec +
            ", transformSpec=" + transformSpec +
            ", context=" + context +
            '}';
