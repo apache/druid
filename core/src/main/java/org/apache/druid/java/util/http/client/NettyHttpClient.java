@@ -181,10 +181,10 @@ public class NettyHttpClient extends AbstractHttpClient
           @Override
           public void channelRead(ChannelHandlerContext ctx, Object msg)
           {
-            if (log.isDebugEnabled()) {
-              log.debug("[%s] messageReceived: %s", requestDesc, msg);
-            }
             try {
+              if (log.isDebugEnabled()) {
+                log.debug("[%s] messageReceived: %s", requestDesc, msg);
+              }
               if (msg instanceof HttpObject) {
                 HttpObject httpObject = (HttpObject) msg;
                 final DecoderResult decoderResult = httpObject.decoderResult();
