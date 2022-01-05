@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 /**
  *
@@ -337,13 +338,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     return () -> Iterators.transform(
         facts.iterator(descending),
         incrementalIndexRow -> {
-          Aggregator[] aggs = getAggsForRow(incrementalIndexRow.getRowIndex());
+          final Aggregator[] aggs = getAggsForRow(incrementalIndexRow.getRowIndex());
           return getMapBasedRowWithPostAggregations(
-              incrementalIndexRow.getTimestamp(),
-              incrementalIndexRow.getDimsLength(),
-              incrementalIndexRow::getDim,
-              aggs.length,
-              i -> aggs[i].get(),
+              incrementalIndexRow,
+              Stream.of(aggs).map(Aggregator::get),
               postAggs
           );
         }

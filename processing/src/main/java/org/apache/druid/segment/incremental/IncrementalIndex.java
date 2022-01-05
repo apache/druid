@@ -942,19 +942,23 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       boolean descending
   );
 
+  /**
+   * Apply post aggregation on a row.
+   * @param row the row to apply on
+   * @param values a stream of the row's values
+   * @param postAggs the post aggregators
+   * @return a new row
+   */
   public MapBasedRow getMapBasedRowWithPostAggregations(
-      long timeStamp,
-      int dimsLength,
-      Function<Integer, Object> getDim,
-      int aggsLength,
-      Function<Integer, Object> getAgg,
+      IncrementalIndexRow row,
+      Stream<Object> values,
       @Nullable final List<PostAggregator> postAggs
   )
   {
     Map<String, Object> theVals = Maps.newLinkedHashMap();
 
-    for (int i = 0; i < dimsLength; ++i) {
-      Object dim = getDim.apply(i);
+    for (int i = 0; i < row.getDimsLength(); ++i) {
+      Object dim = row.getDim(i);
       DimensionDesc dimensionDesc = dimensionDescsList.get(i);
       if (dimensionDesc == null) {
         continue;
@@ -970,8 +974,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       theVals.put(dimensionName, rowVals);
     }
 
-    for (int i = 0; i < aggsLength; ++i) {
-      theVals.put(metrics[i].getName(), getAgg.apply(i));
+    int i = 0;
+    for (Iterator<Object> it = values.iterator(); it.hasNext() && i < metrics.length; i++) {
+      theVals.put(metrics[i].getName(), it.next());
     }
 
     if (postAggs != null) {
@@ -980,7 +985,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       }
     }
 
-    return new MapBasedRow(timeStamp, theVals);
+    return new MapBasedRow(row.getTimestamp(), theVals);
   }
 
   public DateTime getMaxIngestedEventTime()

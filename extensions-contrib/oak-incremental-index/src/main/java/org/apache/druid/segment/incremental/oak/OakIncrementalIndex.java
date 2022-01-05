@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 
 /**
@@ -232,31 +233,28 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
     return aggregators[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
+  private OakIncrementalIndexRow rowFromMapEntry(Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer> entry) {
+    return new OakIncrementalIndexRow(
+        entry.getKey(), dimensionDescsList, entry.getValue()
+    );
+  }
+
   @Override
   public Iterable<Row> iterableWithPostAggregations(
       @Nullable final List<PostAggregator> postAggs,
       final boolean descending
   )
   {
-    // It might be possible to rewrite this function to return a serialized row.
-    Function<Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer>, Row> transformer = entry -> {
-      OakUnsafeDirectBuffer keyOakBuff = (OakUnsafeDirectBuffer) entry.getKey();
-      OakUnsafeDirectBuffer valueOakBuff = (OakUnsafeDirectBuffer) entry.getValue();
-      final long serializedKeyAddress = keyOakBuff.getAddress();
-      final ByteBuffer valueBuff = valueOakBuff.getByteBuffer();
-      final int valueOffset = valueOakBuff.getOffset();
-
+    return () -> transformIterator(descending, entry -> {
+      OakIncrementalIndexRow row = rowFromMapEntry(entry);
       return getMapBasedRowWithPostAggregations(
-          OakKey.getTimestamp(serializedKeyAddress),
-          OakKey.getDimsLength(serializedKeyAddress),
-          i -> OakKey.getDim(serializedKeyAddress, i),
-          aggregators.length,
-          i -> aggregators[i].get(valueBuff, valueOffset + aggregatorOffsetInBuffer[i]),
+          row,
+          IntStream.range(0, aggregators.length).mapToObj(
+              i -> getMetricObjectValue(row, i)
+          ),
           postAggs
       );
-    };
-
-    return () -> transformIterator(descending, transformer);
+    });
   }
 
   // Aggregator management: initialization and aggregation
@@ -360,8 +358,7 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
   private Iterator<IncrementalIndexRow> transformNonStreamIterator(
       Iterator<Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer>> iterator)
   {
-    return Iterators.transform(iterator, entry ->
-        new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue()));
+    return Iterators.transform(iterator, this::rowFromMapEntry);
   }
 
   /**
@@ -376,7 +373,7 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
 
     return Iterators.transform(iterator, entry -> {
       if (rowHolder[0] == null) {
-        rowHolder[0] = new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue());
+        rowHolder[0] = rowFromMapEntry(entry);
       } else {
         rowHolder[0].reset();
       }
