@@ -162,6 +162,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
           null,
+          null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -204,6 +205,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           new HashedPartitionsSpec(null, 3, null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
           null,
+          null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -245,6 +247,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+          null,
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -291,6 +294,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
           null,
+          null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(
@@ -332,6 +336,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+          null,
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -377,6 +382,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+          null,
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(
@@ -451,6 +457,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+          null,
           getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
           getObjectMapper().readValue(

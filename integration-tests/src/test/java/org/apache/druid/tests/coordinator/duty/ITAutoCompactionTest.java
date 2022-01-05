@@ -947,6 +947,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         ),
         granularitySpec,
         dimensionsSpec,
+        null,
         transformSpec,
         !dropExisting ? null : new UserCompactionTaskIOConfig(true),
         null

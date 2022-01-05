@@ -22,10 +22,12 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.vavr.collection.Array;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,7 +51,7 @@ public class DataSourceCompactionConfig
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final UserCompactionTaskGranularityConfig granularitySpec;
   private final UserCompactionTaskDimensionsConfig dimensionsSpec;
-  private final UserCompactionTaskMetricsConfig metricsSpec;
+  private final AggregatorFactory[] metricsSpec;
   private final UserCompactionTaskTransformConfig transformSpec;
   private final UserCompactionTaskIOConfig ioConfig;
   private final Map<String, Object> taskContext;
@@ -64,7 +66,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
-      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metrics,
+      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
@@ -82,7 +84,7 @@ public class DataSourceCompactionConfig
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
     this.granularitySpec = granularitySpec;
-    this.metricsSpec = metrics == null ? null : new UserCompactionTaskMetricsConfig(metrics);
+    this.metricsSpec = metricsSpec;
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.taskContext = taskContext;
@@ -159,7 +161,7 @@ public class DataSourceCompactionConfig
   @Nullable
   public AggregatorFactory[] getMetricsSpec()
   {
-    return metricsSpec == null ? null : metricsSpec.getMetricsSpec();
+    return metricsSpec;
   }
 
   @JsonProperty
@@ -187,7 +189,7 @@ public class DataSourceCompactionConfig
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
-           Objects.equals(metricsSpec, that.metricsSpec) &&
+           Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(ioConfig, that.ioConfig) &&
            Objects.equals(taskContext, that.taskContext);
@@ -196,7 +198,7 @@ public class DataSourceCompactionConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(
+    int result = Objects.hash(
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
@@ -205,10 +207,11 @@ public class DataSourceCompactionConfig
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
-        metricsSpec,
         transformSpec,
         ioConfig,
         taskContext
     );
+    result = 31 * result + Arrays.hashCode(metricsSpec);
+    return result;
   }
 }

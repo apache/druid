@@ -840,13 +840,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     return mergedAggregators;
   }
 
-  private static AggregatorFactory[] convertToCombiningFactories(AggregatorFactory[] metricsSpec)
-  {
-    return Arrays.stream(metricsSpec)
-                 .map(AggregatorFactory::getCombiningFactory)
-                 .toArray(AggregatorFactory[]::new);
-  }
-
   private static DimensionsSpec createDimensionsSpec(List<NonnullPair<QueryableIndex, DataSegment>> queryableIndices)
   {
     final BiMap<String, Integer> uniqueDims = HashBiMap.create();

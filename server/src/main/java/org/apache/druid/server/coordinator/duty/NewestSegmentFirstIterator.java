@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.client.indexing.ClientCompactionTaskMetricsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -40,6 +39,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
@@ -494,11 +494,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
-      final ClientCompactionTaskMetricsSpec existingMetricsSpec = lastCompactionState.getMetricsSpec() != null ?
-                                                                  objectMapper.convertValue(lastCompactionState.getMetricsSpec(), ClientCompactionTaskMetricsSpec.class) :
-                                                                  null;
-      // Checks for aggre
-      if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec.getMetricsSpec())) {
+      final AggregatorFactory[] existingMetricsSpec = lastCompactionState.getMetricsSpec() != null ?
+                                                      objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class) :
+                                                      null;
+      if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {
         log.info(
             "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
             config.getMetricsSpec(),

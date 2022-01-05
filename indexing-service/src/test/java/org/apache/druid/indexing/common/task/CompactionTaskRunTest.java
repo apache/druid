@@ -198,6 +198,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
       null,
+      null,
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
       mapper.readValue(
           mapper.writeValueAsString(
@@ -344,6 +345,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+            null,
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
@@ -631,6 +633,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        null,
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
         mapper.readValue(
