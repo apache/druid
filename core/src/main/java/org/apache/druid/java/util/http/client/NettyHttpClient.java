@@ -273,7 +273,7 @@ public class NettyHttpClient extends AbstractHttpClient
                 suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
                 if (suspendWatermark > resumeWatermark) {
                   backPressureStartTimeNs = System.nanoTime();
-                  log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
+                  log.debug("[%s] Delaying reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
                 } else {
                   channel.read();
                 }
