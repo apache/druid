@@ -40,4 +40,9 @@ public interface QueryCountStatsProvider
    * Returns the number of timed out queries during the emission period.
    */
   long getTimedOutQueryCount();
+
+  /**
+   * Returns the number of long queries during the emission period.
+   */
+  long getLongQueryCount();
 }

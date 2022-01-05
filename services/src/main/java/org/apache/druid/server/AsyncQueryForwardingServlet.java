@@ -532,6 +532,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return 0L;
   }
 
+  @Override
+  public long getLongQueryCount()
+  {
+    // Query long metric is not relevant here and this metric is already being tracked in the Broker and the
+    // data nodes using QueryResource
+    return 0;
+  }
+
   @VisibleForTesting
   static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
@@ -703,6 +711,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onComplete(result);
     }
 
+    @SuppressWarnings("checkstyle:Indentation")
     @Override
     public void onFailure(Response response, Throwable failure)
     {
