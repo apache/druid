@@ -38,9 +38,7 @@ public class NodeRoles
    */
   public static Set<NodeRole> knownRoles()
   {
-    Set<NodeRole> nodeRoles = new HashSet<>();
-    nodeRoles.addAll(Arrays.asList(NodeRole.values()));
-    return nodeRoles;
+    return new HashSet<>(Arrays.asList(NodeRole.values()));
   }
 
   public static void addKnownRoles(Binder binder)
