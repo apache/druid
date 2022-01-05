@@ -46,8 +46,6 @@ public class HttpClientInit
   public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
   {
     try {
-      // We need to use the full constructor in order to set a ThreadNameDeterminer. The other parameters are taken
-      // from the defaults in HashedWheelTimer's other constructors.
       return lifecycle.addMaybeStartManagedInstance(
           new NettyHttpClient(
               new ResourcePool<>(
