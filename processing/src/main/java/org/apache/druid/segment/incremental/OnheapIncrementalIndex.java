@@ -29,11 +29,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -141,10 +137,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new CachingColumnSelectorFactory(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
-              concurrentEventAdd
-          )
+          makeCachedColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, concurrentEventAdd)
       );
     }
     return selectors;
@@ -380,57 +373,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     closeAggregators();
     aggregators.clear();
     facts.clear();
-  }
-
-  /**
-   * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
-   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
-   */
-  public static class CachingColumnSelectorFactory implements ColumnSelectorFactory
-  {
-    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
-    private final ColumnSelectorFactory delegate;
-
-    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
-    {
-      this.delegate = delegate;
-
-      if (concurrentEventAdd) {
-        columnSelectorMap = new ConcurrentHashMap<>();
-      } else {
-        columnSelectorMap = new HashMap<>();
-      }
-    }
-
-    @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
-    {
-      return delegate.makeDimensionSelector(dimensionSpec);
-    }
-
-    @Override
-    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
-    {
-      ColumnValueSelector existing = columnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      }
-
-      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
-      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
-      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
-      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
-      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
-      return existing != null ? existing : columnValueSelector;
-    }
-
-    @Nullable
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String columnName)
-    {
-      return delegate.getColumnCapabilities(columnName);
-    }
   }
 
   public static class Builder extends AppendableIndexBuilder

@@ -126,16 +126,18 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
   }
 
   @Override
-  protected Map<String, ColumnSelectorFactory> generateSelectors(AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics, boolean concurrentEventAdd)
+  protected Map<String, ColumnSelectorFactory> generateSelectors(
+      AggregatorFactory[] metrics,
+      Supplier<InputRow> rowSupplier,
+      boolean deserializeComplexMetrics,
+      boolean concurrentEventAdd
+  )
   {
     Map<String, ColumnSelectorFactory> selectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.CachingColumnSelectorFactory(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
-              concurrentEventAdd
-          )
+          makeCachedColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, concurrentEventAdd)
       );
     }
     return selectors;

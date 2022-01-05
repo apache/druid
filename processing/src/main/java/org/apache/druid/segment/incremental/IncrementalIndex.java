@@ -1093,6 +1093,19 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return makeColumnSelectorFactory(this, virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
+  protected ColumnSelectorFactory makeCachedColumnSelectorFactory(
+      final AggregatorFactory agg,
+      final Supplier<InputRow> in,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
+  )
+  {
+    return new CachingColumnSelectorFactory(
+        makeColumnSelectorFactory(agg, in, deserializeComplexMetrics),
+        concurrentEventAdd
+    );
+  }
+
   protected final Comparator<IncrementalIndexRow> dimsComparator()
   {
     return new IncrementalIndexRowComparator(dimensionDescsList);
@@ -1545,6 +1558,57 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("index", IncrementalIndex.this);
+    }
+  }
+
+  /**
+   * Caches references to selector objects for each column instead of creating a new object each time in order to save
+   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
+   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   */
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final ColumnSelectorFactory delegate;
+
+    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
+    {
+      this.delegate = delegate;
+
+      if (concurrentEventAdd) {
+        columnSelectorMap = new ConcurrentHashMap<>();
+      } else {
+        columnSelectorMap = new HashMap<>();
+      }
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return delegate.makeDimensionSelector(dimensionSpec);
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      ColumnValueSelector<?> existing = columnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+
+      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
+      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
+      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
+      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
+      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
+      return existing != null ? existing : columnValueSelector;
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return delegate.getColumnCapabilities(columnName);
     }
   }
 }
