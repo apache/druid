@@ -24,6 +24,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -31,8 +32,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
@@ -130,10 +130,11 @@ public class NettyHttpClient extends AbstractHttpClient
       channel = channelFuture.channel();
     }
     final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
-    final HttpRequest httpRequest = new DefaultHttpRequest(
+    final HttpRequest httpRequest = new DefaultFullHttpRequest(
         HttpVersion.HTTP_1_1,
         method,
-        urlFile.isEmpty() ? "/" : urlFile
+        urlFile.isEmpty() ? "/" : urlFile,
+        request.hasContent() ? request.getContent() : Unpooled.EMPTY_BUFFER
     );
 
     if (!headers.containsKey(HttpHeaderNames.HOST.toString())) {
@@ -370,11 +371,7 @@ public class NettyHttpClient extends AbstractHttpClient
         }
     );
 
-    channel.write(httpRequest);
-    if (request.hasContent()) {
-      channel.write(new DefaultHttpContent(request.getContent()));
-    }
-    channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(
+    channel.writeAndFlush(httpRequest).addListener(
         (ChannelFutureListener) future -> {
           if (future.isSuccess()) {
             channel.read();
