@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,7 +45,8 @@ public class ProcFsReaderTest
         procDir,
         "sys/kernel/random"
     );
-    Assert.assertTrue(kernelDir.mkdirs());
+
+    FileUtils.mkdirp(kernelDir);
     TestUtils.copyResource("/cpuinfo", new File(procDir, "cpuinfo"));
     TestUtils.copyResource("/boot_id", new File(kernelDir, "boot_id"));
   }

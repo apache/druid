@@ -40,7 +40,7 @@ public abstract class AbstractBatchSubtask extends AbstractBatchIndexTask
       @Nullable Map<String, Object> context
   )
   {
-    super(id, groupId, taskResource, dataSource, context);
+    super(id, groupId, taskResource, dataSource, context, -1);
   }
 
   /**

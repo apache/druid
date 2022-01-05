@@ -27,6 +27,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -248,7 +249,7 @@ public class SpatialFilterBonusTest
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
     tmpFile.deleteOnExit();
 
     indexMerger.persist(theIndex, tmpFile, indexSpec, null);
@@ -433,13 +434,13 @@ public class SpatialFilterBonusTest
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
       firstFile.deleteOnExit();
-      secondFile.mkdirs();
       secondFile.deleteOnExit();
-      thirdFile.mkdirs();
       thirdFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       indexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);

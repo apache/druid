@@ -178,7 +178,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          new DoubleFirstAggregatorFactory("first", "index")
+                                          new DoubleFirstAggregatorFactory("first", "index", null)
 
                                       )
                                   )
@@ -1957,8 +1957,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new DoubleFirstAggregatorFactory("first", "index"),
-                                          new DoubleLastAggregatorFactory("last", "index")
+                                          new DoubleFirstAggregatorFactory("first", "index", null),
+                                          new DoubleLastAggregatorFactory("last", "index", null)
                                       )
                                   )
                                   .descending(descending)

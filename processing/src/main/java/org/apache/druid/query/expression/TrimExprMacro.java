@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -97,7 +98,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     } else {
       final Expr charsArg = args.get(1);
       if (charsArg.isLiteral()) {
-        final String charsString = charsArg.eval(ExprUtils.nilBindings()).asString();
+        final String charsString = charsArg.eval(InputBindings.nilBindings()).asString();
         final char[] chars = charsString == null ? EMPTY_CHARS : charsString.toCharArray();
         return new TrimStaticCharsExpr(mode, args.get(0), chars, charsArg);
       } else {

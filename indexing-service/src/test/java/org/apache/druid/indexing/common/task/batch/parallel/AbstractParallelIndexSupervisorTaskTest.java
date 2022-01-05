@@ -179,6 +179,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           5,
           null,
+          null,
           null
       );
 
@@ -288,6 +289,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
         null,
         null,
         null,
@@ -777,7 +779,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       );
       final File unzippedDir = new File(partitionDir, StringUtils.format("unzipped_%s", location.getSubTaskId()));
       try {
-        org.apache.commons.io.FileUtils.forceMkdir(unzippedDir);
+        FileUtils.mkdirp(unzippedDir);
         CompressionUtils.unzip(fetchedFile, unzippedDir);
       }
       finally {

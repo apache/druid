@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TableActionDialog } from './table-action-dialog';
 
-describe('table action dialog', () => {
+describe('TableActionDialog', () => {
   it('matches snapshot', () => {
     const tableActionDialog = (
       <TableActionDialog

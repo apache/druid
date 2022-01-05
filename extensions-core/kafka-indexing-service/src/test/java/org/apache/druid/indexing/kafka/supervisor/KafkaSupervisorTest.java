@@ -80,6 +80,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -3116,6 +3117,75 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetCurrentParseErrors()
+  {
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition(0),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition(1),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    ParseExceptionReport exception1 = new ParseExceptionReport(
+        "testInput1",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        1000L
+    );
+
+    ParseExceptionReport exception2 = new ParseExceptionReport(
+        "testInput2",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        2000L
+    );
+
+    ParseExceptionReport exception3 = new ParseExceptionReport(
+        "testInput3",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        3000L
+    );
+
+    ParseExceptionReport exception4 = new ParseExceptionReport(
+        "testInput4",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        4000L
+    );
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task1")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception1,
+        exception2
+    ))).times(1);
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task2")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception3,
+        exception4
+    ))).times(1);
+
+    replayAll();
+
+    List<ParseExceptionReport> errors = supervisor.getParseErrors();
+
+    verifyAll();
+
+    Assert.assertEquals(ImmutableList.of(exception4, exception3, exception2, exception1), errors);
+  }
+
+  @Test
   public void testDoNotKillCompatibleTasks()
       throws Exception
   {
@@ -3628,7 +3698,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        10
     );
 
     return new TestableKafkaSupervisor(

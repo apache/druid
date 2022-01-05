@@ -45,7 +45,7 @@ the Overlord APIs.
 
 A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
-The reporting feature is supported by the [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+The reporting feature is supported by the [simple native batch task](../ingestion/native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
 
 ### Completion report
 
@@ -184,7 +184,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The non-parallel [simple native batch task](../ingestion/native-batch.md#simple-task), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The non-parallel [simple native batch task](./native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -381,7 +381,7 @@ Task logs on the Druid web console are retrieved via an [API](../operations/api-
 If you don't see the log file in long-term storage, it means either:
 
 1. the middleManager / indexer failed to push the log file to deep storage or
-2. the task failed before the Step 5 in the above flow.
+2. the task did not complete.
 
 You can check the middleManager / indexer logs locally to see if there was a push failure.  If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
@@ -396,11 +396,11 @@ You can configure retention periods for logs in milliseconds by setting `druid.i
 
 ### `index`
 
-See [Native batch ingestion (simple task)](native-batch.md#simple-task).
+See [Native batch ingestion (simple task)](./native-batch-simple-task.md).
 
 ### `index_parallel`
 
-See [Native batch ingestion (parallel task)](native-batch.md#parallel-task).
+See [Native batch ingestion (parallel task)](native-batch.md).
 
 ### `index_sub`
 

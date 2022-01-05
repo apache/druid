@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-import 'brace'; // Import Ace editor and all the sub components used in the app
-import 'brace/ext/language_tools';
-import 'brace/theme/solarized_dark';
+import 'ace-builds/src-noconflict/ace'; // Import Ace editor and all the sub components used in the app
+import 'ace-builds/src-noconflict/ext-language_tools';
+import 'ace-builds/src-noconflict/theme-solarized_dark';
 import '../ace-modes/dsql';
 import '../ace-modes/hjson';
+
+import './ace.scss';

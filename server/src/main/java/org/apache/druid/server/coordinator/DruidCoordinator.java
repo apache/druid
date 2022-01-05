@@ -420,7 +420,7 @@ public class DruidCoordinator
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.debug("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
+    segmentsMetadataManager.markSegmentAsUnused(segment.getId());
   }
 
   public String getCurrentLeader()

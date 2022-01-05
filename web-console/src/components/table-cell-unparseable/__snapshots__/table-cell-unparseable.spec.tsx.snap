@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`table cell unparseable matches snapshot not timestamp 1`] = `
+exports[`TableCellUnparseable matches snapshot not timestamp 1`] = `
 <div
   class="table-cell-unparseable"
 >
@@ -8,7 +8,7 @@ exports[`table cell unparseable matches snapshot not timestamp 1`] = `
 </div>
 `;
 
-exports[`table cell unparseable matches snapshot timestamp 1`] = `
+exports[`TableCellUnparseable matches snapshot timestamp 1`] = `
 <div
   class="table-cell-unparseable"
 >

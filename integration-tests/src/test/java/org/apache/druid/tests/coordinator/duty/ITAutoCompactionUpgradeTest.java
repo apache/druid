@@ -97,6 +97,8 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
             1
         ),
         new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+        null,
+        null,
         new UserCompactionTaskIOConfig(true),
         null
     );

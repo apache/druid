@@ -23,7 +23,7 @@ import { Capabilities } from '../../utils';
 
 import { DatasourcesView } from './datasource-view';
 
-describe('data source view', () => {
+describe('DatasourcesView', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView

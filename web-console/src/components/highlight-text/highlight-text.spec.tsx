@@ -21,7 +21,7 @@ import React from 'react';
 
 import { HighlightText } from './highlight-text';
 
-describe('highlight text', () => {
+describe('HighlightText', () => {
   it('matches snapshot', () => {
     const highlightText = shallow(<HighlightText text="Hello world" find="ello" replace="woot" />);
 

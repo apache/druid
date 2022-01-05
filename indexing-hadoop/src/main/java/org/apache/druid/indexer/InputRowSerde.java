@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -330,7 +331,7 @@ public class InputRowSerde
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
+            IncrementalIndex.makeColumnSelectorFactory(RowSignature.empty(), VirtualColumns.EMPTY, aggFactory, supplier, true)
         )) {
           try {
             agg.aggregate();
@@ -341,7 +342,7 @@ public class InputRowSerde
             parseExceptionMessages.add(e.getMessage());
           }
 
-          final ColumnType type = aggFactory.getType();
+          final ColumnType type = aggFactory.getIntermediateType();
 
           if (agg.isNull()) {
             out.writeByte(NullHandling.IS_NULL_BYTE);
@@ -472,7 +473,7 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         final String metric = readString(in);
         final AggregatorFactory agg = getAggregator(metric, aggs, i);
-        final ColumnType type = agg.getType();
+        final ColumnType type = agg.getIntermediateType();
         final byte metricNullability = in.readByte();
 
         if (metricNullability == NullHandling.IS_NULL_BYTE) {
@@ -486,7 +487,7 @@ public class InputRowSerde
         } else if (type.is(ValueType.DOUBLE)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(agg.getType().getComplexTypeName());
+          ComplexMetricSerde serde = getComplexMetricSerde(agg.getIntermediateType().getComplexTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }

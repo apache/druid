@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl.prefetch;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.io.CountingOutputStream;
+import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.druid.common.config.NullHandling;
@@ -152,6 +153,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     Assert.assertEquals(expectedNumFiles, files.length);
   }
 
+  @SuppressForbidden(reason = "Files#createTempDirectory")
   private static File createFirehoseTmpDir(String dirPrefix) throws IOException
   {
     return Files.createTempDirectory(tempDir.getRoot().toPath(), dirPrefix).toFile();

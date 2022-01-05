@@ -26,7 +26,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -58,7 +60,21 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
       .put("d2", ExpressionType.DOUBLE)
       .put("s1", ExpressionType.STRING)
       .put("s2", ExpressionType.STRING)
+      .put("boolString1", ExpressionType.STRING)
+      .put("boolString2", ExpressionType.STRING)
       .build();
+
+  @BeforeClass
+  public static void setupTests()
+  {
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
+  }
+
+  @AfterClass
+  public static void teardownTests()
+  {
+    ExpressionProcessing.initializeForTests(null);
+  }
 
   @Test
   public void testUnaryOperators()
@@ -100,6 +116,22 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testUnaryLogicOperators()
+  {
+    final String[] functions = new String[]{"!"};
+    final String[] templates = new String[]{"%sd1", "%sl1", "%sboolString1"};
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testBinaryLogicOperators()
+  {
+    final String[] functions = new String[]{"&&", "||"};
+    final String[] templates = new String[]{"d1 %s d2", "l1 %s l2", "boolString1 %s boolString2"};
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
   public void testBinaryOperatorTrees()
   {
     final String[] columns = new String[]{"d1", "l1", "1", "1.0", "nonexistent", "null"};
@@ -117,7 +149,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testUnivariateFunctions()
   {
-    final String[] functions = new String[]{"parse_long"};
+    final String[] functions = new String[]{"parse_long", "isNull", "notNull"};
     final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)", "%s(null)"};
     testFunctions(types, templates, functions);
   }
@@ -188,6 +220,23 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "%s(l1, l2)",
         "%s(nonexistent, l1)",
         "%s(nonexistent, d1)"
+    };
+    testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testSymmetricalBivariateFunctions()
+  {
+    final String[] functions = new String[]{
+        "nvl",
+    };
+    final String[] templates = new String[]{
+        "%s(d1, d2)",
+        "%s(l1, l2)",
+        "%s(s1, s2)",
+        "%s(nonexistent, l1)",
+        "%s(nonexistent, d1)",
+        "%s(nonexistent, s1)"
     };
     testFunctions(types, templates, functions);
   }
@@ -385,7 +434,11 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
           String[] strings = new String[vectorSize];
           for (int i = 0; i < vectorSize; i++) {
             nulls[i] = hasNulls && nullsFn.getAsBoolean();
-            strings[i] = nulls[i] ? null : String.valueOf(stringFn.get());
+            if (!nulls[i] && entry.getKey().startsWith("boolString")) {
+              strings[i] = String.valueOf(nullsFn.getAsBoolean());
+            } else {
+              strings[i] = nulls[i] ? null : String.valueOf(stringFn.get());
+            }
             if (objectBindings[i] == null) {
               objectBindings[i] = new SettableObjectBinding();
             }

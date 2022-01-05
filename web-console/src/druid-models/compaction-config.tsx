@@ -85,6 +85,15 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           A target row count for each partition. Each partition will have a row count close to the
           target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
         </p>
+        <p>
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
+          properties.
+        </p>
       </>
     ),
   },
@@ -103,8 +112,16 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           of 500MB~1GB.
         </p>
         <p>
-          <Code>maxRowsPerSegment</Code> is an alias for <Code>targetRowsPerSegment</Code>. Only one
-          of these properties can be used.
+          <Code>maxRowsPerSegment</Code> renamed to <Code>targetRowsPerSegment</Code>
+        </p>
+        <p>
+          If <Code>numShards</Code> is left unspecified, the Parallel task will determine{' '}
+          <Code>numShards</Code> automatically by <Code>targetRowsPerSegment</Code>.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows and find the best partitioning. Leave blank to show all
+          properties.
         </p>
       </>
     ),
@@ -128,6 +145,11 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
           &apos;intervals&apos; is specified in the granularitySpec, the index task can skip the
           determine intervals/partitions pass through the data.
         </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>numShards</Code> will be used
+          to evenly distribute rows across partitions and find the best partitioning. Leave blank to
+          show all properties.
+        </p>
       </>
     ),
   },
@@ -138,7 +160,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'hashed',
     info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
   },
-  // partitionsSpec type: single_dim
+  // partitionsSpec type: single_dim, range
   {
     name: 'tuningConfig.partitionsSpec.partitionDimension',
     type: 'string',
@@ -147,20 +169,33 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     info: <p>The dimension to partition on.</p>,
   },
   {
+    name: 'tuningConfig.partitionsSpec.partitionDimensions',
+    type: 'string-array',
+    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'range',
+    required: true,
+    info: <p>The dimensions to partition on.</p>,
+  },
+  {
     name: 'tuningConfig.partitionsSpec.targetRowsPerSegment',
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
     info: (
-      <p>
-        Target number of rows to include in a partition, should be a number that targets segments of
-        500MB~1GB.
-      </p>
+      <>
+        <p>
+          Target number of rows to include in a partition, should be a number that targets segments
+          of 500MB~1GB.
+        </p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
+        </p>
+      </>
     ),
   },
   {
@@ -168,18 +203,26 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     zeroMeansUndefined: true,
     defined: t =>
-      deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim' &&
+      oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment'),
     required: (t: CompactionConfig) =>
       !deepGet(t, 'tuningConfig.partitionsSpec.targetRowsPerSegment') &&
       !deepGet(t, 'tuningConfig.partitionsSpec.maxRowsPerSegment'),
-    info: <p>Maximum number of rows to include in a partition.</p>,
+    info: (
+      <>
+        <p>Maximum number of rows to include in a partition.</p>
+        <p>
+          Note that either <Code>targetRowsPerSegment</Code> or <Code>maxRowsPerSegment</Code> will
+          be used to find the best partitioning. Leave blank to show all properties.
+        </p>
+      </>
+    ),
   },
   {
     name: 'tuningConfig.partitionsSpec.assumeGrouped',
     type: 'boolean',
     defaultValue: false,
-    defined: t => deepGet(t, 'tuningConfig.partitionsSpec.type') === 'single_dim',
+    defined: t => oneOf(deepGet(t, 'tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
     info: (
       <p>
         Assume that input data has already been grouped on time and dimensions. Ingestion will run
