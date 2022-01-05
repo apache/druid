@@ -266,8 +266,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       private int[] nullIdIntArray;
 
       /**
-       * Tries to fetch the IndexedInts from the row using getStringDim() if possible.
-       * Otherwise, it will fetch the int array using getDim() and will convert it to IndexedInts.
+       * Tries to fetch the int array using getDim() and convert it to IndexedInts.
        * If the dim is null or with zero length, the value is considered null.
        * It may be null or empty due to currEntry's rowIndex being smaller than the row's rowIndex in which this
        * dim first appears.

@@ -130,6 +130,27 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   @Override
+  protected Map<String, ColumnSelectorFactory> generateSelectors(
+      final AggregatorFactory[] metrics,
+      final Supplier<InputRow> rowSupplier,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
+  )
+  {
+    Map<String, ColumnSelectorFactory> selectors = new HashMap<>();
+    for (AggregatorFactory agg : metrics) {
+      selectors.put(
+          agg.getName(),
+          new CachingColumnSelectorFactory(
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
+              concurrentEventAdd
+          )
+      );
+    }
+    return selectors;
+  }
+
+  @Override
   public int size()
   {
     return numEntries.get();
@@ -366,7 +387,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
    * use concurrent hash map instead of vanilla hash map for thread-safe operations.
    */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  public static class CachingColumnSelectorFactory implements ColumnSelectorFactory
   {
     private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
     private final ColumnSelectorFactory delegate;

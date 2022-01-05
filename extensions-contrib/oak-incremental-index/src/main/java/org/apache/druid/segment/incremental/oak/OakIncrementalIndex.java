@@ -38,14 +38,17 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +123,22 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
   public FactsHolder getFacts()
   {
     return this;
+  }
+
+  @Override
+  protected Map<String, ColumnSelectorFactory> generateSelectors(AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics, boolean concurrentEventAdd)
+  {
+    Map<String, ColumnSelectorFactory> selectors = new HashMap<>();
+    for (AggregatorFactory agg : metrics) {
+      selectors.put(
+          agg.getName(),
+          new OnheapIncrementalIndex.CachingColumnSelectorFactory(
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
+              concurrentEventAdd
+          )
+      );
+    }
+    return selectors;
   }
 
   @Override
@@ -233,7 +252,8 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
     return aggregators[aggIndex].isNull(oakRow.getAggregationsBuffer(), getOffsetInBuffer(oakRow, aggIndex));
   }
 
-  private OakIncrementalIndexRow rowFromMapEntry(Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer> entry) {
+  private OakIncrementalIndexRow rowFromMapEntry(Map.Entry<OakUnscopedBuffer, OakUnscopedBuffer> entry)
+  {
     return new OakIncrementalIndexRow(
         entry.getKey(), dimensionDescsList, entry.getValue()
     );

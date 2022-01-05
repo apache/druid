@@ -292,16 +292,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         this.rollup
     );
 
-    selectors = new HashMap<>();
-    for (AggregatorFactory agg : metrics) {
-      selectors.put(
-          agg.getName(),
-          new OnheapIncrementalIndex.CachingColumnSelectorFactory(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
-              concurrentEventAdd
-          )
-      );
-    }
+    this.selectors = generateSelectors(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
@@ -354,7 +345,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     final boolean countCheck = size() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
     final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory() < maxBytesInMemory;
-    final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {
       outOfRowsReason = StringUtils.format(
           "Maximum number of rows [%d] and maximum size in bytes [%d] reached",
@@ -366,8 +356,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     } else if (!sizeCheck) {
       outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
     }
-
-    return canAdd;
+    return countCheck && sizeCheck;
   }
 
   @Nullable
@@ -375,6 +364,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   {
     return outOfRowsReason;
   }
+
+  protected abstract Map<String, ColumnSelectorFactory> generateSelectors(
+      AggregatorFactory[] metrics,
+      Supplier<InputRow> rowSupplier,
+      boolean deserializeComplexMetrics,
+      boolean concurrentEventAdd
+  );
 
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(

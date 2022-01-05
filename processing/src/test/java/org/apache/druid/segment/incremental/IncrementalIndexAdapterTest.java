@@ -130,9 +130,9 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     // facts.keySet() return the rows in the order they are stored internally.
-    // In plain mode, OnheapInrementalIndex and OffheapIncrementalIndex sort their rows internally by timestamp then by
+    // In plain mode, OnheapInrementalIndex sort its rows internally by timestamp then by
     // index (the order they were inserted).
-    // But facts.keySet() does not require this order. Other implementations, e.g. OakIncrementalIndex, might sort their
+    // But facts.keySet() does not require this order. Other implementations, might sort their
     // rows in their native order (as it would be expected by facts.persistIterable()).
     // To mitigate this, we validate the row index without expecting a specific order.
     HashMap<Integer, Integer> dim1Vals = new HashMap<>();
