@@ -84,7 +84,7 @@ public class IncrementalIndexReadBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"onheap", "offheap"})
+  @Param({"onheap"})
   private String indexType;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);

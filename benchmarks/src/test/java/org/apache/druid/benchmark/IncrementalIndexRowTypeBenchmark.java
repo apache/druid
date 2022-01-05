@@ -59,7 +59,7 @@ public class IncrementalIndexRowTypeBenchmark
   @Param({"250000"})
   private int rowsPerSegment;
 
-  @Param({"onheap", "offheap"})
+  @Param({"onheap"})
   private String indexType;
 
   private AppendableIndexSpec appendableIndexSpec;

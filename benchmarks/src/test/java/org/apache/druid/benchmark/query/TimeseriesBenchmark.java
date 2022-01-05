@@ -276,7 +276,7 @@ public class TimeseriesBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;

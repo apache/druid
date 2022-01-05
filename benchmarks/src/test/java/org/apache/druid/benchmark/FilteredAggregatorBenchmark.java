@@ -204,7 +204,7 @@ public class FilteredAggregatorBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;
@@ -234,7 +234,7 @@ public class FilteredAggregatorBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexIngestState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;

@@ -68,7 +68,7 @@ public class IndexIngestionBenchmark
   @Param({"none", "moderate", "high"})
   private String rollupOpportunity;
 
-  @Param({"onheap", "offheap"})
+  @Param({"onheap"})
   private String indexType;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
