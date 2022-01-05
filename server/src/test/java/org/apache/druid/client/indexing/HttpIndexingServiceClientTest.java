@@ -278,14 +278,13 @@ public class HttpIndexingServiceClientTest
     );
     Capture captureTask = EasyMock.newCapture();
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(
         response,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa")));
+        jsonMapper.writeValueAsString(ImmutableMap.of("task", "aaa"))
+    );
 
     EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task"))
             .andReturn(new Request(HttpMethod.POST, new URL("http://localhost:8090/druid/indexer/v1/task")))
