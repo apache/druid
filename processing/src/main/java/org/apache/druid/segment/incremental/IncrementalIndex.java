@@ -34,6 +34,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -41,6 +42,7 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
@@ -97,7 +99,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable, ColumnInspector
@@ -219,6 +220,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final long minTimestamp;
   private final Granularity gran;
   private final boolean rollup;
+  protected final int maxRowCount;
+  protected final long maxBytesInMemory;
+
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] metrics;
@@ -228,17 +232,22 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final Map<String, MetricDesc> metricDescs;
 
   private final Map<String, DimensionDesc> dimensionDescs;
-  private final List<DimensionDesc> dimensionDescsList;
+  protected final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
-  private final AtomicInteger numEntries = new AtomicInteger();
-  private final AtomicLong bytesInMemory = new AtomicLong();
+  protected final Map<String, ColumnSelectorFactory> selectors;
+
+  protected final AtomicInteger indexIncrement = new AtomicInteger(0);
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
 
-  private volatile DateTime maxIngestedEventTime;
+  @Nullable
+  private volatile DateTime maxIngestedEventTime = null;
+
+  @Nullable
+  private String outOfRowsReason = null;
 
 
   /**
@@ -256,7 +265,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final int maxRowCount,
+      final long maxBytesInMemory
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -266,6 +277,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+
+    this.maxRowCount = maxRowCount;
+    this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -278,7 +292,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         this.rollup
     );
 
-    initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
+    this.selectors = generateSelectors(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
@@ -326,11 +340,32 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   public abstract FactsHolder getFacts();
 
-  public abstract boolean canAppendRow();
+  public boolean canAppendRow()
+  {
+    final boolean countCheck = size() < maxRowCount;
+    // if maxBytesInMemory = -1, then ignore sizeCheck
+    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory() < maxBytesInMemory;
+    if (!countCheck && !sizeCheck) {
+      outOfRowsReason = StringUtils.format(
+          "Maximum number of rows [%d] and maximum size in bytes [%d] reached",
+          maxRowCount,
+          maxBytesInMemory
+      );
+    } else if (!countCheck) {
+      outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
+    } else if (!sizeCheck) {
+      outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
+    }
+    return countCheck && sizeCheck;
+  }
 
-  public abstract String getOutOfRowsReason();
+  @Nullable
+  public String getOutOfRowsReason()
+  {
+    return outOfRowsReason;
+  }
 
-  protected abstract void initAggs(
+  protected abstract Map<String, ColumnSelectorFactory> generateSelectors(
       AggregatorFactory[] metrics,
       Supplier<InputRow> rowSupplier,
       boolean deserializeComplexMetrics,
@@ -348,15 +383,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   public abstract int getLastRowIndex();
 
-  protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
+  protected abstract float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
+  protected abstract long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
+  protected abstract Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+  protected abstract double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract boolean isNull(int rowOffset, int aggOffset);
+  protected abstract boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
   static class IncrementalIndexRowResult
   {
@@ -380,7 +415,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     }
   }
 
-  static class AddToFactsResult
+  public static class AddToFactsResult
   {
     private final int rowCount;
     private final long bytesInMemory;
@@ -421,6 +456,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   @Override
   public void close()
   {
+    selectors.clear();
   }
 
   public InputRow formatRow(InputRow row)
@@ -689,32 +725,21 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   public boolean isEmpty()
   {
-    return numEntries.get() == 0;
+    return size() == 0;
   }
 
-  public int size()
-  {
-    return numEntries.get();
-  }
+  public abstract int size();
+
+  public abstract long getBytesInMemory();
 
   boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
   }
 
-  AtomicInteger getNumEntries()
-  {
-    return numEntries;
-  }
-
   AggregatorFactory[] getMetrics()
   {
     return metrics;
-  }
-
-  public AtomicLong getBytesInMemory()
-  {
-    return bytesInMemory;
   }
 
   private long getMinTimeMillis()
@@ -913,6 +938,52 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       boolean descending
   );
 
+  /**
+   * Apply post aggregation on a row.
+   * @param row the row to apply on
+   * @param values a stream of the row's values
+   * @param postAggs the post aggregators
+   * @return a new row
+   */
+  public MapBasedRow getMapBasedRowWithPostAggregations(
+      IncrementalIndexRow row,
+      Stream<Object> values,
+      @Nullable final List<PostAggregator> postAggs
+  )
+  {
+    Map<String, Object> theVals = Maps.newLinkedHashMap();
+
+    for (int i = 0; i < row.getDimsLength(); ++i) {
+      Object dim = row.getDim(i);
+      DimensionDesc dimensionDesc = dimensionDescsList.get(i);
+      if (dimensionDesc == null) {
+        continue;
+      }
+      String dimensionName = dimensionDesc.getName();
+      DimensionHandler handler = dimensionDesc.getHandler();
+      if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
+        theVals.put(dimensionName, null);
+        continue;
+      }
+      final DimensionIndexer indexer = dimensionDesc.getIndexer();
+      Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
+      theVals.put(dimensionName, rowVals);
+    }
+
+    int i = 0;
+    for (Iterator<Object> it = values.iterator(); it.hasNext() && i < metrics.length; i++) {
+      theVals.put(metrics[i].getName(), it.next());
+    }
+
+    if (postAggs != null) {
+      for (PostAggregator postAgg : postAggs) {
+        theVals.put(postAgg.getName(), postAgg.compute(theVals));
+      }
+    }
+
+    return new MapBasedRow(row.getTimestamp(), theVals);
+  }
+
   public DateTime getMaxIngestedEventTime()
   {
     return maxIngestedEventTime;
@@ -1022,6 +1093,19 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return makeColumnSelectorFactory(this, virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
+  protected ColumnSelectorFactory makeCachedColumnSelectorFactory(
+      final AggregatorFactory agg,
+      final Supplier<InputRow> in,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
+  )
+  {
+    return new CachingColumnSelectorFactory(
+        makeColumnSelectorFactory(agg, in, deserializeComplexMetrics),
+        concurrentEventAdd
+    );
+  }
+
   protected final Comparator<IncrementalIndexRow> dimsComparator()
   {
     return new IncrementalIndexRowComparator(dimensionDescsList);
@@ -1088,7 +1172,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return true;
   }
 
-  interface FactsHolder
+  public interface FactsHolder
   {
     /**
      * @return the previous rowIndex associated with the specified key, or
@@ -1362,7 +1446,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricLongValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricLongValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1374,7 +1458,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1399,7 +1483,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     @Override
     public Object getObject()
     {
-      return getMetricObjectValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricObjectValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1430,7 +1514,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     public float getFloat()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricFloatValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricFloatValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1442,7 +1526,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1461,19 +1545,70 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     public double getDouble()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricDoubleValue(currEntry.get(), metricIndex);
     }
 
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
 
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("index", IncrementalIndex.this);
+    }
+  }
+
+  /**
+   * Caches references to selector objects for each column instead of creating a new object each time in order to save
+   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
+   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   */
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final ColumnSelectorFactory delegate;
+
+    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
+    {
+      this.delegate = delegate;
+
+      if (concurrentEventAdd) {
+        columnSelectorMap = new ConcurrentHashMap<>();
+      } else {
+        columnSelectorMap = new HashMap<>();
+      }
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return delegate.makeDimensionSelector(dimensionSpec);
+    }
+
+    @Override
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
+    {
+      ColumnValueSelector<?> existing = columnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      }
+
+      // We cannot use columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector)
+      // here since makeColumnValueSelector may modify the columnSelectorMap itself through
+      // virtual column references, triggering a ConcurrentModificationException in JDK 9 and above.
+      ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
+      existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
+      return existing != null ? existing : columnValueSelector;
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return delegate.getColumnCapabilities(columnName);
     }
   }
 }

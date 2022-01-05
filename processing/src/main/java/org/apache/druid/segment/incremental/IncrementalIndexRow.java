@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class IncrementalIndexRow
+public class IncrementalIndexRow
 {
   public static final int EMPTY_ROW_INDEX = -1;
 
@@ -56,7 +56,7 @@ public final class IncrementalIndexRow
     this(timestamp, dims, dimensionDescsList, EMPTY_ROW_INDEX);
   }
 
-  IncrementalIndexRow(
+  public IncrementalIndexRow(
       long timestamp,
       Object[] dims,
       List<IncrementalIndex.DimensionDesc> dimensionDescsList,
@@ -97,9 +97,23 @@ public final class IncrementalIndexRow
     return timestamp;
   }
 
-  public Object[] getDims()
+  @Nullable
+  public Object getDim(int index)
   {
-    return dims;
+    if (index >= dims.length) {
+      return null;
+    }
+    return dims[index];
+  }
+
+  public int getDimsLength()
+  {
+    return dims.length;
+  }
+
+  public boolean isDimNull(int index)
+  {
+    return (index >= dims.length) || (dims[index] == null);
   }
 
   public int getRowIndex()
@@ -107,7 +121,7 @@ public final class IncrementalIndexRow
     return rowIndex;
   }
 
-  void setRowIndex(int rowIndex)
+  public void setRowIndex(int rowIndex)
   {
     this.rowIndex = rowIndex;
   }

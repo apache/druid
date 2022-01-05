@@ -265,51 +265,60 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @MonotonicNonNull
       private int[] nullIdIntArray;
 
-      @Override
-      public IndexedInts getRow()
+      /**
+       * Tries to fetch the int array using getDim() and convert it to IndexedInts.
+       * If the dim is null or with zero length, the value is considered null.
+       * It may be null or empty due to currEntry's rowIndex being smaller than the row's rowIndex in which this
+       * dim first appears.
+       *
+       * @return IndexedInts instance, or null if the dim is null.
+       */
+      @Nullable
+      private IndexedInts getRowOrNull()
       {
-        final Object[] dims = currEntry.get().getDims();
+        IncrementalIndexRow key = currEntry.get();
 
-        int[] indices;
-        if (dimIndex < dims.length) {
-          indices = (int[]) dims[dimIndex];
-        } else {
-          indices = null;
+        if (key.isDimNull(dimIndex)) {
+          return null;
         }
 
-        int[] row = null;
-        int rowSize = 0;
+        int[] indices = (int[]) key.getDim(dimIndex);
 
-        // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
         if (indices == null || indices.length == 0) {
-          if (hasMultipleValues) {
-            row = IntArrays.EMPTY_ARRAY;
-            rowSize = 0;
-          } else {
-            final int nullId = getEncodedValue(null, false);
-            if (nullId >= 0 && nullId < maxId) {
-              // null was added to the dictionary before this selector was created; return its ID.
-              if (nullIdIntArray == null) {
-                nullIdIntArray = new int[]{nullId};
-              }
-              row = nullIdIntArray;
-              rowSize = 1;
-            } else {
-              // null doesn't exist in the dictionary; return an empty array.
-              // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
-              row = IntArrays.EMPTY_ARRAY;
-              rowSize = 0;
+          return null;
+        }
+
+        indexedInts.setValues(indices, indices.length);
+        return indexedInts;
+      }
+
+      private IndexedInts getDefaultIndexedInts()
+      {
+        if (hasMultipleValues) {
+          indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
+        } else {
+          final int nullId = getEncodedValue(null, false);
+          if (nullId >= 0 && nullId < maxId) {
+            // null was added to the dictionary before this selector was created; return its ID.
+            if (nullIdIntArray == null) {
+              nullIdIntArray = new int[]{nullId};
             }
+            indexedInts.setValues(nullIdIntArray, 1);
+          } else {
+            // null doesn't exist in the dictionary; return an empty array.
+            // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
+            indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
           }
         }
 
-        if (row == null && indices != null && indices.length > 0) {
-          row = indices;
-          rowSize = indices.length;
-        }
-
-        indexedInts.setValues(row, rowSize);
         return indexedInts;
+      }
+
+      @Override
+      public IndexedInts getRow()
+      {
+        IndexedInts ret = getRowOrNull();
+        return ret != null ? ret : getDefaultIndexedInts();
       }
 
       @Override
@@ -323,18 +332,14 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
               @Override
               public boolean matches()
               {
-                Object[] dims = currEntry.get().getDims();
-                if (dimIndex >= dims.length) {
+                IndexedInts dimsInt = getRowOrNull();
+                if (dimsInt == null) {
                   return value == null;
                 }
 
-                int[] dimsInt = (int[]) dims[dimIndex];
-                if (dimsInt == null || dimsInt.length == 0) {
-                  return value == null;
-                }
-
-                for (int id : dimsInt) {
-                  if (id == valueId) {
+                int size = dimsInt.size();
+                for (int i = 0; i < size; i++) {
+                  if (dimsInt.get(i) == valueId) {
                     return true;
                   }
                 }
@@ -369,17 +374,14 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
           @Override
           public boolean matches()
           {
-            Object[] dims = currEntry.get().getDims();
-            if (dimIndex >= dims.length) {
+            IndexedInts dimsInt = getRowOrNull();
+            if (dimsInt == null) {
               return matchNull;
             }
 
-            int[] dimsInt = (int[]) dims[dimIndex];
-            if (dimsInt == null || dimsInt.length == 0) {
-              return matchNull;
-            }
-
-            for (int id : dimsInt) {
+            int size = dimsInt.size();
+            for (int i = 0; i < size; i++) {
+              int id = dimsInt.get(i);
               if (checkedIds.get(id)) {
                 if (matchingIds.get(id)) {
                   return true;
@@ -464,12 +466,12 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
           return null;
         }
 
-        Object[] dims = key.getDims();
-        if (dimIndex >= dims.length) {
+        Object dim = key.getDim(dimIndex);
+        if (dim == null) {
           return null;
         }
 
-        return convertUnsortedEncodedKeyComponentToActualList((int[]) dims[dimIndex]);
+        return convertUnsortedEncodedKeyComponentToActualList((int[]) dim);
       }
 
       @SuppressWarnings("deprecation")
