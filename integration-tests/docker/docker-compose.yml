@@ -36,6 +36,7 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
+      - druid-overlord
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
@@ -46,7 +47,6 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-coordinator
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
