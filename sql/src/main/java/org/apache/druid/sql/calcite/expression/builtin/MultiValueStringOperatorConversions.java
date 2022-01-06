@@ -32,6 +32,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
@@ -352,7 +354,7 @@ public class MultiValueStringOperatorConversions
              .append(")");
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
-        return DruidExpression.forVirtualColumn(
+        DruidExpression druidExpression = DruidExpression.forVirtualColumn(
             builder.toString(),
             (name, outputType, macroTable) -> new ListFilteredVirtualColumn(
                 name,
@@ -361,6 +363,17 @@ public class MultiValueStringOperatorConversions
                 isAllowList()
             )
         );
+
+        if (plannerContext.getVirtualColumnRegistry() != null) {
+          VirtualColumn vc = plannerContext.getVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
+              plannerContext,
+              druidExpression,
+              ColumnType.STRING
+          );
+          return DruidExpression.fromColumn(vc.getOutputName());
+        }
+
+        return druidExpression;
       }
 
       return DruidExpression.fromExpression(builder.toString());
