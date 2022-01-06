@@ -501,8 +501,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {
         log.info(
             "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
-            config.getMetricsSpec(),
-            existingMetricsSpec
+            Arrays.toString(config.getMetricsSpec()),
+            Arrays.toString(existingMetricsSpec)
         );
         return true;
       }
