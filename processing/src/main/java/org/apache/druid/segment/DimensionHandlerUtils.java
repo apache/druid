@@ -377,9 +377,9 @@ public final class DimensionHandlerUtils
       case ARRAY:
         switch (type.getElementType().getType()) {
           case STRING:
-            return convertToArray(obj);
+            return convertToComparableStringArray(obj);
           default:
-            return convertToLongArray(obj);
+            return convertToList(obj);
         }
 
       default:
@@ -387,7 +387,7 @@ public final class DimensionHandlerUtils
     }
   }
 
-  private static ComparableList convertToLongArray(Object obj)
+  private static ComparableList convertToList(Object obj)
   {
     if (obj == null) {
       return null;
@@ -403,7 +403,7 @@ public final class DimensionHandlerUtils
 
 
   @Nullable
-  public static ComparableStringArray convertToArray(Object obj)
+  public static ComparableStringArray convertToComparableStringArray(Object obj)
   {
     if (obj == null) {
       return null;
