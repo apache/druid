@@ -436,9 +436,9 @@ String functions accept strings, and return a type appropriate to the function.
 |`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
 |`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
-|`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
-|`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
-|`STRLEN(expr)`|Synonym for `LENGTH`.|
+|`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
+|`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
+|`STRLEN(expr)`|Alias for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
