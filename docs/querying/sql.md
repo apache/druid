@@ -393,7 +393,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`POWER(expr, power)`|`expr` raised to the power of `power`.|
 |`SQRT(expr)`|Square root.|
 |`TRUNCATE(expr, [digits])`|Truncate `expr` to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
-|`TRUNC(expr, [digits])`|Synonym for `TRUNCATE`.|
+|`TRUNC(expr, [digits])`|Alias for `TRUNCATE`.|
 |`ROUND(expr, [digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
