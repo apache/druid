@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -497,9 +495,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
-      final AggregatorFactory[] existingMetricsSpec = lastCompactionState.getMetricsSpec() != null ?
-                                                      objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class) :
-                                                      null;
+      final AggregatorFactory[] existingMetricsSpec = CollectionUtils.isEmpty(lastCompactionState.getMetricsSpec()) ?
+                                                      null :
+                                                      objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class);
       if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {
         log.info(
             "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
