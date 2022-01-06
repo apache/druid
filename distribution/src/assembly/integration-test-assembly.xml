@@ -63,7 +63,7 @@
         <fileSet>
             <directory>../examples/quickstart/tutorial</directory>
             <includes>
-                <include>*</include>
+                <include>wikiticker-2015-09-12-sampled.json.gz</include>
             </includes>
             <outputDirectory>quickstart/tutorial</outputDirectory>
         </fileSet>
