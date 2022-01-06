@@ -535,25 +535,4 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       bitmapIndexes[dimValIdx].add(rowNum);
     }
   }
-
-  public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      IndexedInts key,
-      int rowNum,
-      MutableBitmap[] bitmapIndexes,
-      BitmapFactory factory
-  )
-  {
-    if (!hasBitmapIndexes) {
-      throw new UnsupportedOperationException("This column does not include bitmap indexes");
-    }
-
-    final int size = key.size();
-    for (int i = 0; i < size; i++) {
-      int dimValIdx = key.get(i);
-      if (bitmapIndexes[dimValIdx] == null) {
-        bitmapIndexes[dimValIdx] = factory.makeEmptyMutableBitmap();
-      }
-      bitmapIndexes[dimValIdx].add(rowNum);
-    }
-  }
 }
