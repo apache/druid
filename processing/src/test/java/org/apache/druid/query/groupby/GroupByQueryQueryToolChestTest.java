@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -572,7 +573,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(Collections.singletonList(DefaultDimensionSpec.of("test")))
         .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
-        .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10.0)))
+        .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
@@ -588,7 +589,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
     );
 
-    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100L, 10.0};
+    final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
     final ResultRow resultRow = ResultRow.of(rowObjects);
 
 
@@ -600,37 +601,36 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
+    TestHelper.assertRow("",
+        resultRow,
+                         arraysObjectMapper.readValue(
+            StringUtils.format(
+                "{\"version\":\"v1\","
+                + "\"timestamp\":\"%s\","
+                + "\"event\":"
+                + "  {\"test\":\"foo\", \"rows\":100, \"post\":10.0}"
+                + "}",
+                DateTimes.of("2000")
+            ),
+            ResultRow.class
+        )
+    );
 
-//    TestHelper.assertRow("",
-//        resultRow,
-//                         arraysObjectMapper.readValue(
-//            StringUtils.format(
-//                "{\"version\":\"v1\","
-//                + "\"timestamp\":\"%s\","
-//                + "\"event\":"
-//                + "  {\"test\":\"foo\", \"rows\":100, \"post\":10.0}"
-//                + "}",
-//                DateTimes.of("2000")
-//            ),
-//            ResultRow.class
-//        )
-//    );
+    Assert.assertArrayEquals(
+        rowObjects,
+        objectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            Object[].class
+        )
+    );
 
-//    Assert.assertArrayEquals(
-//        rowObjects,
-//        objectMapper.readValue(
-//            arraysObjectMapper.writeValueAsBytes(resultRow),
-//            Object[].class
-//        )
-//    );
-
-//    Assert.assertEquals(
-//        resultRow.toMapBasedRow(query),
-//        objectMapper.readValue(
-//            mapsObjectMapper.writeValueAsBytes(resultRow),
-//            Row.class
-//        )
-//    );
+    Assert.assertEquals(
+        resultRow.toMapBasedRow(query),
+        objectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            Row.class
+        )
+    );
 
     Assert.assertEquals(
         "arrays read arrays",
@@ -641,32 +641,32 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-//    Assert.assertEquals(
-//        "arrays read maps",
-//        resultRow,
-//        arraysObjectMapper.readValue(
-//            mapsObjectMapper.writeValueAsBytes(resultRow),
-//            ResultRow.class
-//        )
-//    );
+    Assert.assertEquals(
+        "arrays read maps",
+        resultRow,
+        arraysObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
 
-//    Assert.assertEquals(
-//        "maps read arrays",
-//        resultRow,
-//        mapsObjectMapper.readValue(
-//            arraysObjectMapper.writeValueAsBytes(resultRow),
-//            ResultRow.class
-//        )
-//    );
+    Assert.assertEquals(
+        "maps read arrays",
+        resultRow,
+        mapsObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
 
-//    Assert.assertEquals(
-//        "maps read maps",
-//        resultRow,
-//        mapsObjectMapper.readValue(
-//            mapsObjectMapper.writeValueAsBytes(resultRow),
-//            ResultRow.class
-//        )
-//    );
+    Assert.assertEquals(
+        "maps read maps",
+        resultRow,
+        mapsObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
   }
 
   @Test

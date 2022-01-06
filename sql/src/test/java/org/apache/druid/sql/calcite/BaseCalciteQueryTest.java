@@ -109,7 +109,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -214,10 +213,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
       DEFAULT_QUERY_CONTEXT_BUILDER.put(PlannerContext.CTX_SQL_STRINGIFY_ARRAYS, false)
-                                   .build();
-
-  public static final Map<String, Object> QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS =
-      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.ENABLE_UNNESTED_ARRAYS_KEY, false)
                                    .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(

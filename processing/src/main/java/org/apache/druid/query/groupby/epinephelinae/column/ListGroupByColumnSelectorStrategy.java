@@ -39,7 +39,8 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
   protected final List<List<T>> dictionary = new ArrayList<>();
   protected final Object2IntOpenHashMap<List<T>> reverseDictionary = new Object2IntOpenHashMap<>();
 
-  public ListGroupByColumnSelectorStrategy(){
+  public ListGroupByColumnSelectorStrategy()
+  {
     reverseDictionary.defaultReturnValue(-1);
   }
 
@@ -51,7 +52,10 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, ResultRow resultRow, int keyBufferPosition
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      ResultRow resultRow,
+      int keyBufferPosition
   )
   {
     final int id = key.getInt(keyBufferPosition);
@@ -66,9 +70,7 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
   }
 
   @Override
-  public void initColumnValues(
-      ColumnValueSelector selector, int columnIndex, Object[] valuess
-  )
+  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     final int groupingKey = (int) getOnlyValue(selector);
     valuess[columnIndex] = groupingKey;
@@ -76,7 +78,11 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
 
   @Override
   public void initGroupingKeyColumnValue(
-      int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
   )
   {
     final int groupingKey = (int) rowObj;
@@ -91,7 +97,10 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
 
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
-      int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
   )
   {
     return false;
@@ -118,10 +127,9 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
     }
     return dictId;
   }
+
   @Override
-  public Grouper.BufferComparator bufferComparator(
-      int keyBufferPosition, @Nullable StringComparator stringComparator
-  )
+  public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
     final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {

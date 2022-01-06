@@ -24,12 +24,9 @@ import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -144,55 +141,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"1word\",\"up\"]", "1"},
             new Object[]{"[\"defword\",\"up\"]", "def"}
         )
-    );
-  }
-
-  @Test
-  public void testSelectNonConstantArrayExpressionFromTableForMultival() throws Exception
-  {
-    //TODO: Karan fix test case
-    final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
-    final Query<?> scanQuery = newScanQueryBuilder()
-        .dataSource(CalciteTests.DATASOURCE1)
-        .intervals(querySegmentSpec(Filtration.eternity()))
-        .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim3\",'word'),'up')", ColumnType.STRING_ARRAY))
-        .columns("dim1", "v0")
-        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-        .limit(5)
-        .context(QUERY_CONTEXT_DEFAULT)
-        .build();
-
-
-    ExpressionProcessing.initializeForTests(true);
-    // if nested arrays are allowed, dim3 is a multi-valued string column, so the automatic translation will turn this
-    // expression into
-    //
-    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
-    //
-    // this works, but we still translate the output into a string since that is the current output type
-    // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
-
-    testQuery(
-        sql,
-        ImmutableList.of(scanQuery),
-        ImmutableList.of(
-            new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
-            new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
-            new Object[]{"[[\"dword\",\"up\"]]", "2"},
-            new Object[]{"[[\"word\",\"up\"]]", "1"},
-            useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
-        )
-    );
-
-    ExpressionProcessing.initializeForTests(null);
-
-    // if nested arrays are not enabled, this doesn't work
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true");
-    testQuery(
-        sql,
-        ImmutableList.of(scanQuery),
-        ImmutableList.of()
     );
   }
 
@@ -936,7 +884,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[dim3], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -961,7 +909,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -980,7 +928,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[l1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1005,7 +953,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -1024,7 +972,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1049,7 +997,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -1067,7 +1015,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[f1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1092,7 +1040,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -1110,7 +1058,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[ARRAY_ORDINAL(dim3, 2)], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1135,7 +1083,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -1154,7 +1102,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "SELECT ARRAY['3'], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -1175,7 +1123,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             )),
                             Integer.MAX_VALUE
                         ))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
@@ -1904,7 +1852,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
-        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(new TopNQuery(
@@ -1937,7 +1885,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                 ExprMacroTable.nil()
                             )),
                             null,
-                            QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS
+                            QUERY_CONTEXT_NO_STRINGIFY_ARRAY
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
@@ -1946,7 +1894,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 new DefaultDimensionSpec("a0", "_d1", ColumnType.STRING_ARRAY)
             ))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("_a0")))
-                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS).build()
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY).build()
         ),
         ImmutableList.of(
             new Object[]{"", ImmutableList.of("2", "abc", "10.1"), 1L},

@@ -375,7 +375,7 @@ public final class DimensionHandlerUtils
       case STRING:
         return convertObjectToString(obj);
       case ARRAY:
-        switch (type.getElementType().getType()){
+        switch (type.getElementType().getType()) {
           case STRING:
             return convertToArray(obj);
           default:

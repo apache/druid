@@ -128,28 +128,10 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
-   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
-   *
-   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
-   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}}.
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
-  {
-    ColumnType valueType = getValueTypeForRelDataTypeFull(type);
-    //TODO: Karan add flag ?
-//    if (valueType != null && valueType.isArray()) {
-//      return ColumnType.STRING;
-//    }
-    return valueType;
-  }
-
-  /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
-   */
-  @Nullable
-  public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {

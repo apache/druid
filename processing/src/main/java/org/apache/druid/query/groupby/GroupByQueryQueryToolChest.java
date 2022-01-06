@@ -432,7 +432,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         }
       }
     };
-
+    // Deserializer that can deserialize either array- or map-based rows.
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {
       @Override
@@ -699,6 +699,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
    * as the final step of the query instead of on every event.
    *
    * @param query The query to check for optimizations
+   *
    * @return The set of dimensions (as offsets into {@code query.getDimensions()}) which can be extracted at the last
    * second upon query completion.
    */

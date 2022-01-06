@@ -414,8 +414,7 @@ public class TestHelper
             ((ComparableStringArray) expectedValue).getDelegate(),
             ExprEval.coerceListToArray((List) actualValue, true).rhs
         );
-      }else
-       {
+      } else {
         Assert.assertEquals(
             message,
             expectedValue,

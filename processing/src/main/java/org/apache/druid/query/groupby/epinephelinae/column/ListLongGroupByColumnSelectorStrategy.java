@@ -35,11 +35,11 @@ public class ListLongGroupByColumnSelectorStrategy extends ListGroupByColumnSele
     if (object == null) {
       return GROUP_BY_MISSING_VALUE;
     } else if (object instanceof Long) {
-      return addToIndexedDictionary(ImmutableList.of((Long)object));
+      return addToIndexedDictionary(ImmutableList.of((Long) object));
     } else if (object instanceof List) {
       return addToIndexedDictionary((List<Long>) object);
     } else if (object instanceof Long[]) {
-      return addToIndexedDictionary(Arrays.asList((Long[])object));
+      return addToIndexedDictionary(Arrays.asList((Long[]) object));
     } else {
       throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
     }

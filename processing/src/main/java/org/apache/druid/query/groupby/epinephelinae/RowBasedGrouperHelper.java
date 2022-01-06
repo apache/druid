@@ -1022,9 +1022,7 @@ public class RowBasedGrouperHelper
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.STRING_ARRAY)) {
           final ComparableStringArray lhs = DimensionHandlerUtils.convertToArray(key1.getKey()[i]);
           final ComparableStringArray rhs = DimensionHandlerUtils.convertToArray(key2.getKey()[i]);
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(
-              lhs, rhs
-          );
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
               (Comparable) key1.getKey()[i],

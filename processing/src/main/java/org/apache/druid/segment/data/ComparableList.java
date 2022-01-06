@@ -29,8 +29,9 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
 
   private final List<T> delegate;
 
-  public ComparableList(List<T> input){
-    delegate=input;
+  public ComparableList(List<T> input)
+  {
+    delegate = input;
   }
 
   @JsonValue
@@ -42,9 +43,6 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
   @Override
   public int hashCode()
   {
-    // Check is not thread-safe, but that's fine. Even if used by multiple threads, it's ok to write these primitive
-    // fields more than once.
-
     return delegate.hashCode();
   }
 

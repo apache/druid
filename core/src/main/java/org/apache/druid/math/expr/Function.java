@@ -3021,7 +3021,8 @@ public interface Function
     }
 
     @Override
-    public boolean hasArrayInputs(){
+    public boolean hasArrayInputs()
+    {
       return true;
     }
 

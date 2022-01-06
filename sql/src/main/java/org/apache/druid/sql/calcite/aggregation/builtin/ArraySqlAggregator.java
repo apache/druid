@@ -53,7 +53,6 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -113,7 +112,7 @@ public class ArraySqlAggregator implements SqlAggregator
 
     final String fieldName;
     final String initialvalue;
-    final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
+    final ColumnType druidType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     final ColumnType elementType;
     if (druidType == null || !druidType.isArray()) {
       initialvalue = "[]";
