@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Deprecated
 public class HdfsInputSourceConfig
 {
   static final Set<String> DEFAULT_ALLOWED_PROTOCOLS = ImmutableSet.of("hdfs");

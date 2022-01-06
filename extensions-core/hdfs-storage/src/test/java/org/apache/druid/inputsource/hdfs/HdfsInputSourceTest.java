@@ -386,8 +386,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void testDenyAllPaths()
     {
       HdfsInputSource.builder()
-                     .paths(fileSystem.getUri() + PATH + "*")
+                     .paths(fileSystem.makeQualified(new Path(PATH)) + "*")
                      .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("hdfs", "file")))
                      .build()
                      .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.emptyList(), null));
     }
@@ -395,23 +396,26 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void testAllowPath()
     {
+      Path path = fileSystem.makeQualified(new Path(PATH));
       HdfsInputSource.builder()
-                     .paths(fileSystem.getUri() + PATH + "*")
+                     .paths(path + "*")
                      .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("hdfs", "file")))
                      .build()
                      .validateAllowDenyPrefixList(
                          new InputSourceSecurityConfig(
-                             Collections.singletonList(URI.create(fileSystem.getUri() + PATH)),
+                             Collections.singletonList(path.getParent().toUri()),
                              null
                          ));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = RuntimeException.class)
     public void testDenyPathsRelativeToAllowPaths()
     {
       HdfsInputSource.builder()
                      .paths(fileSystem.getUri() + PATH + "/../../test2")
                      .configuration(CONFIGURATION)
+                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("hdfs", "file")))
                      .build()
                      .validateAllowDenyPrefixList(new InputSourceSecurityConfig(Collections.singletonList(URI.create(fileSystem.getUri() + PATH)), null));
     }

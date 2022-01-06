@@ -536,26 +536,18 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 
 
 ### Ingestion Security Configuration
-
-#### HDFS input source
-
-You can set the following property to specify permissible protocols for
-the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch-firehose.md#hdfsfirehose).
+You can optionally configure following additional configs to restrict druid ingestion
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols for the HDFS input source and HDFS firehose.|["hdfs"]|
+|`druid.ingestion.uri.allowPrefixList`|List of URIs|Allowed uris from which ingestion will be allowed. Only one of allowPrefixList or denyPrefixList can be set.|empty list|
+|`druid.ingestion.uri.denyPrefixList`|List of URIs|Blacklisted uris from which ingestion will NOT be allowed. Only one of allowPrefixList or denyPrefixList can be set. |empty list|
 
+`allowPrefixList` and `denyPrefixList` only apply to following ingestion sources - local disk, http, s3, google compute storage, azure, cloudfiles.
 
-#### HTTP input source
-
-You can set the following property to specify permissible protocols for
-the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch-firehose.md#httpfirehose).
-
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
-
+Using `allowPrefixList` offers more higher security than `denyPrefixList`.
+Prefix matching works by matching prefix of the URI instead of exact path boundaries.
+e.g.  `http://example.com/f` will match `http://example.com/foo` and `http://example.com/f/b` both.
 
 ### External Data Access Security Configuration
 
@@ -1524,20 +1516,6 @@ The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
-
-#### Indexer Security Configuration
-You can optionally configure following additional configs to restrict druid ingestion
- 
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.uri.allowPrefixList`|List of URIs|Allowed uris from which ingestion will be allowed. Only one of allowPrefixList or denyPrefixList can be set.|empty list|
-|`druid.ingestion.uri.denyPrefixList`|List of URIs|Blacklisted uris from which ingestion will NOT be allowed. Only one of allowPrefixList or denyPrefixList can be set. |empty list|
-
-`allowPrefixList` and `denyPrefixList` only apply to following ingestion sources - local disk, http, s3, google compute storage, azure, cloudfiles.  
-
-Using `allowPrefixList` offers more higher security than `denyPrefixList`.
-Prefix matching works by matching prefix of the URI instead of exact path boundaries.
-e.g.  `http://example.com/f` will match `http://example.com/foo` and `http://example.com/f/b` both.
 
 #### Query Configurations
 
