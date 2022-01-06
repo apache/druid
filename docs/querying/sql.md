@@ -610,7 +610,7 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
 |`NVL(expr, expr-for-null)`|Returns `expr-for-null` if `expr` is null (or empty string for string type).|
-|`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
+|`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details.|
 
 ## Multi-value string functions
 
