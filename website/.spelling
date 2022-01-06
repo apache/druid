@@ -38,6 +38,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+concat
 CIDR
 CORS
 CNF
@@ -1359,6 +1360,7 @@ numMetrics
 poolKind
 poolName
 remoteAddress
+segmentAvailabilityConfirmed
 serviceName
 taskStatus
 taskType
@@ -1518,7 +1520,12 @@ druid.broker.cache.useResultLevelCache
 druid.historical.cache.populateCache
 druid.historical.cache.useCache
 enableParallelMerge
+enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
 floatSum
+joinFilterRewriteMaxSize
 maxQueuedBytes
 maxScatterGatherBytes
 minTopNThreshold
@@ -1536,6 +1543,10 @@ useCache
 useResultLevelCache
 vectorSize
 enableJoinLeftTableScanDirect
+enableJoinFilterPushDown
+enableJoinFilterRewrite
+enableJoinFilterRewriteValueColumnFilters
+joinFilterRewriteMaxSize
  - ../docs/querying/querying.md
 7KiB
 DatasourceMetadata

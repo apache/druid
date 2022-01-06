@@ -18,10 +18,13 @@
 
 import { Tab, Tabs } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
-import React from 'react';
+import React, { useState } from 'react';
 
+import { DiffDialog } from '../../dialogs';
+import { cleanSpec, IngestionSpec } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
+import { deepSet } from '../../utils';
 import { Loader } from '../loader/loader';
 import { ShowValue } from '../show-value/show-value';
 
@@ -29,54 +32,60 @@ import './show-history.scss';
 
 export interface VersionSpec {
   version: string;
-  spec: any;
+  spec: IngestionSpec;
 }
 
 export interface ShowHistoryProps {
   endpoint: string;
-  downloadFilename?: string;
+  downloadFilenamePrefix?: string;
 }
 
 export const ShowHistory = React.memo(function ShowHistory(props: ShowHistoryProps) {
-  const { downloadFilename, endpoint } = props;
+  const { downloadFilenamePrefix, endpoint } = props;
 
   const [historyState] = useQueryManager<string, VersionSpec[]>({
     processQuery: async (endpoint: string) => {
       const resp = await Api.instance.get(endpoint);
-      return resp.data;
+      return resp.data.map((vs: VersionSpec) => deepSet(vs, 'spec', cleanSpec(vs.spec, true)));
     },
     initQuery: endpoint,
   });
+  const [diffIndex, setDiffIndex] = useState(-1);
 
   if (historyState.loading) return <Loader />;
-  if (!historyState.data) return null;
 
-  const versions = historyState.data.map((pastSupervisor: VersionSpec, index: number) => (
-    <Tab
-      id={index}
-      key={index}
-      title={pastSupervisor.version}
-      panel={
-        <ShowValue
-          jsonValue={
-            pastSupervisor.spec
-              ? JSONBig.stringify(pastSupervisor.spec, undefined, 2)
-              : historyState.getErrorMessage()
-          }
-          downloadFilename={`version-${pastSupervisor.version}-${downloadFilename}`}
-          endpoint={endpoint}
-        />
-      }
-      panelClassName="panel"
-    />
-  ));
+  const historyData = historyState.data;
+  if (!historyData) return null;
 
   return (
     <div className="show-history">
-      <Tabs animate renderActiveTabPanelOnly vertical className="tab-area" defaultSelectedTabId={0}>
-        {versions}
+      <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
+        {historyData.map((pastSupervisor, i) => (
+          <Tab
+            id={i}
+            key={i}
+            title={pastSupervisor.version}
+            panel={
+              <ShowValue
+                jsonValue={JSONBig.stringify(pastSupervisor.spec, undefined, 2)}
+                onDiffWithPrevious={i < historyData.length - 1 ? () => setDiffIndex(i) : undefined}
+                downloadFilename={`${downloadFilenamePrefix}-version-${pastSupervisor.version}.json`}
+              />
+            }
+            panelClassName="panel"
+          />
+        ))}
         <Tabs.Expander />
       </Tabs>
+      {diffIndex !== -1 && (
+        <DiffDialog
+          title="Supervisor spec diff"
+          versions={historyData.map(s => ({ label: s.version, value: s.spec }))}
+          initLeftIndex={diffIndex + 1}
+          initRightIndex={diffIndex}
+          onClose={() => setDiffIndex(-1)}
+        />
+      )}
     </div>
   );
 });

@@ -22,6 +22,7 @@ import React from 'react';
 import { AutoForm, ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import {
+  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
@@ -318,14 +319,18 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
- * @param spec
+ * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * @param spec - the spec to clean
+ * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  return {
-    type: spec.type,
-    spec: spec.spec,
-  };
+export function cleanSpec(
+  spec: Partial<IngestionSpec>,
+  allowSuspended?: boolean,
+): Partial<IngestionSpec> {
+  return allowKeys(
+    spec,
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+  ) as IngestionSpec;
 }
 
 export interface GranularitySpec {
@@ -1230,6 +1235,40 @@ export function fillDataSourceNameIfNeeded(spec: Partial<IngestionSpec>): Partia
   return deepSetIfUnset(spec, 'spec.dataSchema.dataSource', possibleName);
 }
 
+export function guessDataSourceNameFromInputSource(inputSource: InputSource): string | undefined {
+  switch (inputSource.type) {
+    case 'local':
+      if (inputSource.filter && filterIsFilename(inputSource.filter)) {
+        return basenameFromFilename(inputSource.filter);
+      } else if (inputSource.baseDir) {
+        return filenameFromPath(inputSource.baseDir);
+      } else {
+        return;
+      }
+
+    case 's3':
+    case 'azure':
+    case 'google': {
+      const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
+      const uriPath =
+        (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
+      return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
+    }
+
+    case 'http':
+      return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;
+
+    case 'druid':
+      return inputSource.dataSource;
+
+    case 'inline':
+      return 'inline_data';
+
+    default:
+      return;
+  }
+}
+
 export function guessDataSourceName(spec: Partial<IngestionSpec>): string | undefined {
   const ioConfig = deepGet(spec, 'spec.ioConfig');
   if (!ioConfig) return;
@@ -1239,39 +1278,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     case 'index_parallel': {
       const inputSource = ioConfig.inputSource;
       if (!inputSource) return;
-
-      switch (inputSource.type) {
-        case 'local':
-          if (inputSource.filter && filterIsFilename(inputSource.filter)) {
-            return basenameFromFilename(inputSource.filter);
-          } else if (inputSource.baseDir) {
-            return filenameFromPath(inputSource.baseDir);
-          } else {
-            return;
-          }
-
-        case 's3':
-        case 'azure':
-        case 'google': {
-          const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
-          const uriPath =
-            (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
-          return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
-        }
-
-        case 'http':
-          return Array.isArray(inputSource.uris)
-            ? filenameFromPath(inputSource.uris[0])
-            : undefined;
-
-        case 'druid':
-          return inputSource.dataSource;
-
-        case 'inline':
-          return 'inline_data';
-      }
-
-      return;
+      return guessDataSourceNameFromInputSource(inputSource);
     }
 
     case 'kafka':
@@ -1340,7 +1347,7 @@ export function adjustForceGuaranteedRollup(spec: Partial<IngestionSpec>) {
   const partitionsSpecType = deepGet(spec, 'spec.tuningConfig.partitionsSpec.type') || 'dynamic';
   if (partitionsSpecType === 'dynamic') {
     spec = deepDelete(spec, 'spec.tuningConfig.forceGuaranteedRollup');
-  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim')) {
+  } else if (oneOf(partitionsSpecType, 'hashed', 'single_dim', 'range')) {
     spec = deepSet(spec, 'spec.tuningConfig.forceGuaranteedRollup', true);
   }
 
@@ -1524,11 +1531,18 @@ export function getSecondaryPartitionRelatedFormFields(
           ),
         },
         {
+          name: 'spec.tuningConfig.partitionsSpec.partitionDimensions',
+          type: 'string-array',
+          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'range',
+          required: true,
+          info: <p>The dimensions to partition on.</p>,
+        },
+        {
           name: 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment',
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.maxRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1545,7 +1559,7 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'number',
           zeroMeansUndefined: true,
           defined: s =>
-            deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim' &&
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range') &&
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment'),
           required: s =>
             !deepGet(s, 'spec.tuningConfig.partitionsSpec.targetRowsPerSegment') &&
@@ -1557,7 +1571,8 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'boolean',
           defaultValue: false,
           hideInMore: true,
-          defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'single_dim',
+          defined: s =>
+            oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'single_dim', 'range'),
           info: (
             <p>
               Assume that input data has already been grouped on time and dimensions. Ingestion will
@@ -1627,10 +1642,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 10,
     min: 1,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: <>Number of tasks to merge partial segments after shuffle.</>,
   },
   {
@@ -1638,10 +1651,8 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 100,
     defined: s =>
-      Boolean(
-        s.type === 'index_parallel' &&
-          oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim'),
-      ),
+      s.type === 'index_parallel' &&
+      oneOf(deepGet(s, 'spec.tuningConfig.partitionsSpec.type'), 'hashed', 'single_dim', 'range'),
     info: (
       <>
         Max limit for the number of segments a single task can merge at the same time after shuffle.
@@ -2243,6 +2254,15 @@ export function updateSchemaWithSample(
 // ------------------------
 
 export function upgradeSpec(spec: any): Partial<IngestionSpec> {
+  if (deepGet(spec, 'type') && deepGet(spec, 'dataSchema')) {
+    spec = {
+      type: spec.type,
+      spec: deepDelete(spec, 'type'),
+    };
+  }
+
+  if (!deepGet(spec, 'spec.dataSchema.parser')) return spec;
+
   if (deepGet(spec, 'spec.ioConfig.firehose')) {
     switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 'static-s3':
@@ -2256,51 +2276,22 @@ export function upgradeSpec(spec: any): Partial<IngestionSpec> {
     }
 
     spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-      'spec.dataSchema.timestampSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-      'spec.dataSchema.dimensionsSpec',
-    );
-    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-    spec = deepDelete(spec, 'spec.dataSchema.parser');
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
   }
-  return spec;
-}
 
-export function downgradeSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  if (deepGet(spec, 'spec.ioConfig.inputSource')) {
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.type', 'spec.ioConfig.inputFormat.format');
-    spec = deepSet(spec, 'spec.dataSchema.parser', { type: 'string' });
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat', 'spec.dataSchema.parser.parseSpec');
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.dimensionsSpec',
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.timestampSpec',
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-    );
-    spec = deepMove(spec, 'spec.ioConfig.inputSource', 'spec.ioConfig.firehose');
+  spec = deepMove(
+    spec,
+    'spec.dataSchema.parser.parseSpec.timestampSpec',
+    'spec.dataSchema.timestampSpec',
+  );
+  spec = deepMove(
+    spec,
+    'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+    'spec.dataSchema.dimensionsSpec',
+  );
+  spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+  spec = deepDelete(spec, 'spec.dataSchema.parser');
+  spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
 
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 's3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-s3');
-        break;
-
-      case 'google':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'static-google-blobstore');
-        deepMove(spec, 'spec.ioConfig.firehose.objects', 'spec.ioConfig.firehose.blobs');
-        break;
-    }
-  }
   return spec;
 }
 

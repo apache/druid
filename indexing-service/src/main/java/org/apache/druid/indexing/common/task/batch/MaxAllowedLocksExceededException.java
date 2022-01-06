@@ -17,40 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.indexing.common.task.batch;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 
-import javax.validation.constraints.NotNull;
-
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class MaxAllowedLocksExceededException extends ISE
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public ServerInventoryView get()
+  public MaxAllowedLocksExceededException(int maxAllowedLockCount)
   {
-    return new SingleServerInventoryView(
-        zkPaths,
-        curator,
-        jsonMapper,
-        Predicates.alwaysTrue()
+    super(createMessage(maxAllowedLockCount));
+  }
+
+  private static String createMessage(
+      int maxAllowedLockCount
+  )
+  {
+    return StringUtils.format(
+        "Number of locks exceeded maxAllowedLockCount [%s].",
+        maxAllowedLockCount
     );
   }
 }

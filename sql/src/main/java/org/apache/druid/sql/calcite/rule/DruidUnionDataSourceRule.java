@@ -27,6 +27,7 @@ import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidRels;
@@ -34,7 +35,10 @@ import org.apache.druid.sql.calcite.rel.DruidUnionDataSourceRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +48,9 @@ import java.util.Optional;
  */
 public class DruidUnionDataSourceRule extends RelOptRule
 {
-  private static final DruidUnionDataSourceRule INSTANCE = new DruidUnionDataSourceRule();
+  private final PlannerContext plannerContext;
 
-  private DruidUnionDataSourceRule()
+  public DruidUnionDataSourceRule(final PlannerContext plannerContext)
   {
     super(
         operand(
@@ -55,11 +59,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
             operand(DruidQueryRel.class, none())
         )
     );
-  }
-
-  public static DruidUnionDataSourceRule instance()
-  {
-    return INSTANCE;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -69,7 +69,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
     final DruidRel<?> firstDruidRel = call.rel(1);
     final DruidQueryRel secondDruidRel = call.rel(2);
 
-    return isCompatible(unionRel, firstDruidRel, secondDruidRel);
+    return isCompatible(unionRel, firstDruidRel, secondDruidRel, plannerContext);
   }
 
   @Override
@@ -90,7 +90,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
       call.transformTo(
           DruidUnionDataSourceRel.create(
               (Union) newUnionRel,
-              getColumnNamesIfTableOrUnion(firstDruidRel).get(),
+              getColumnNamesIfTableOrUnion(firstDruidRel, plannerContext).get(),
               firstDruidRel.getPlannerContext()
           )
       );
@@ -103,7 +103,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
       call.transformTo(
           DruidUnionDataSourceRel.create(
               unionRel,
-              getColumnNamesIfTableOrUnion(firstDruidRel).get(),
+              getColumnNamesIfTableOrUnion(firstDruidRel, plannerContext).get(),
               firstDruidRel.getPlannerContext()
           )
       );
@@ -112,22 +112,39 @@ public class DruidUnionDataSourceRule extends RelOptRule
 
   // Can only do UNION ALL of inputs that have compatible schemas (or schema mappings) and right side
   // is a simple table scan
-  public static boolean isCompatible(final Union unionRel, final DruidRel<?> first, final DruidRel<?> second)
+  public static boolean isCompatible(final Union unionRel, final DruidRel<?> first, final DruidRel<?> second, @Nullable PlannerContext plannerContext)
   {
     if (!(second instanceof DruidQueryRel)) {
       return false;
     }
 
-    return unionRel.all && isUnionCompatible(first, second);
+    if (!unionRel.all && null != plannerContext) {
+      plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
+    }
+    return unionRel.all && isUnionCompatible(first, second, plannerContext);
   }
 
-  private static boolean isUnionCompatible(final DruidRel<?> first, final DruidRel<?> second)
+  private static boolean isUnionCompatible(final DruidRel<?> first, final DruidRel<?> second, @Nullable PlannerContext plannerContext)
   {
-    final Optional<List<String>> columnNames = getColumnNamesIfTableOrUnion(first);
-    return columnNames.isPresent() && columnNames.equals(getColumnNamesIfTableOrUnion(second));
+    final Optional<List<String>> firstColumnNames = getColumnNamesIfTableOrUnion(first, plannerContext);
+    final Optional<List<String>> secondColumnNames = getColumnNamesIfTableOrUnion(second, plannerContext);
+    if (!firstColumnNames.isPresent() || !secondColumnNames.isPresent()) {
+      // No need to set the planning error here
+      return false;
+    }
+    if (!firstColumnNames.equals(secondColumnNames)) {
+      if (null != plannerContext) {
+        plannerContext.setPlanningError("SQL requires union between two tables and column names queried for " +
+            "each table are different Left: %s, Right: %s.",
+            firstColumnNames.orElse(Collections.emptyList()),
+            secondColumnNames.orElse(Collections.emptyList()));
+      }
+      return false;
+    }
+    return true;
   }
 
-  static Optional<List<String>> getColumnNamesIfTableOrUnion(final DruidRel<?> druidRel)
+  static Optional<List<String>> getColumnNamesIfTableOrUnion(final DruidRel<?> druidRel, @Nullable PlannerContext plannerContext)
   {
     final PartialDruidQuery partialQuery = druidRel.getPartialDruidQuery();
 
@@ -171,7 +188,17 @@ public class DruidUnionDataSourceRule extends RelOptRule
       // This rel is a union itself.
 
       return Optional.of(((DruidUnionDataSourceRel) druidRel).getUnionColumnNames());
+    } else if (druidTable.isPresent()) {
+      if (null != plannerContext) {
+        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans " +
+            "and involve a filter or aliasing. Or column types of tables being unioned are not of same type.");
+      }
+      return Optional.empty();
     } else {
+      if (null != plannerContext) {
+        plannerContext.setPlanningError("SQL requires union with input of a datasource type that is not supported."
+            + " Union operation is only supported between regular tables. ");
+      }
       return Optional.empty();
     }
   }

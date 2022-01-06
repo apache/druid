@@ -122,7 +122,7 @@ public class StringInputRowParser implements ByteBufferInputRowParser
         chars.clear();
       }
     } else {
-      throw new ParseException("Failed with CoderResult[%s]", coderResult);
+      throw new ParseException(chars.toString(), "Failed with CoderResult[%s]", coderResult);
     }
     return theMap;
   }

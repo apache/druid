@@ -36,6 +36,7 @@ import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -161,6 +162,37 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 Long.MIN_VALUE,
                 Long.MIN_VALUE,
                 0L
+            }
+        )
+    );
+  }
+
+  // Test that the integers are getting correctly casted after being passed through a function when not selecting from
+  // a table
+  @Test
+  public void testDruidLogicalValuesRule() throws Exception
+  {
+    testQuery(
+        "SELECT FLOOR(123), CEIL(123), CAST(123.0 AS INTEGER)",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(new Object[]{123L, 123L, 123L}),
+                    RowSignature.builder()
+                                .add("EXPR$0", ColumnType.LONG)
+                                .add("EXPR$1", ColumnType.LONG)
+                                .add("EXPR$2", ColumnType.LONG)
+                                .build()
+                ))
+                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+                .columns(ImmutableList.of("EXPR$0", "EXPR$1", "EXPR$2"))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                123,
+                123,
+                123
             }
         )
     );

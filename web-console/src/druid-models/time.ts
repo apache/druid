@@ -83,10 +83,8 @@ export function timeFormatMatches(format: string, value: string | number | bigin
   }
 }
 
-export function possibleDruidFormatForValues(values: any[]): string | null {
-  return (
-    ALL_FORMAT_VALUES.filter(format => {
-      return values.every(value => timeFormatMatches(format, value));
-    })[0] || null
-  );
+export function possibleDruidFormatForValues(values: any[]): string | undefined {
+  return ALL_FORMAT_VALUES.find(format => {
+    return values.every(value => timeFormatMatches(format, value));
+  });
 }

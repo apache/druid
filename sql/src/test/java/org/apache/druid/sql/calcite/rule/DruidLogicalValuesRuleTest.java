@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
@@ -31,6 +32,7 @@ import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -44,6 +46,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
+
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
 
 @RunWith(Enclosed.class)
 public class DruidLogicalValuesRuleTest
@@ -69,11 +74,11 @@ public class DruidLogicalValuesRuleTest
       );
     }
 
-    private final Object val;
+    private final Comparable<?> val;
     private final SqlTypeName sqlTypeName;
     private final Class<?> javaType;
 
-    public GetValueFromLiteralSimpleTypesTest(Object val, SqlTypeName sqlTypeName, Class<?> javaType)
+    public GetValueFromLiteralSimpleTypesTest(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
     {
       this.val = val;
       this.sqlTypeName = sqlTypeName;
@@ -88,14 +93,21 @@ public class DruidLogicalValuesRuleTest
       Assert.assertSame(javaType, fromLiteral.getClass());
       Assert.assertEquals(val, fromLiteral);
       Mockito.verify(literal, Mockito.times(1)).getType();
-      Mockito.verify(literal, Mockito.times(1)).getValueAs(ArgumentMatchers.any());
     }
 
-    private static RexLiteral makeLiteral(Object val, SqlTypeName typeName, Class<?> javaType)
+    private static RexLiteral makeLiteral(Comparable<?> val, SqlTypeName typeName, Class<?> javaType)
     {
       RelDataType dataType = Mockito.mock(RelDataType.class);
       Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
       RexLiteral literal = Mockito.mock(RexLiteral.class);
+      try {
+        Field field = literal.getClass().getSuperclass().getDeclaredField("value");
+        field.setAccessible(true);
+        field.set(literal, val);
+      }
+      catch (Exception e) {
+        Assert.fail("Unable to mock the literal for test.\nException: " + e);
+      }
       Mockito.when(literal.getType()).thenReturn(dataType);
       Mockito.when(literal.getValueAs(ArgumentMatchers.any())).thenReturn(javaType.cast(val));
       return literal;
@@ -106,7 +118,8 @@ public class DruidLogicalValuesRuleTest
   {
     private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);
     private static final DateTimeZone TIME_ZONE = DateTimes.inferTzFromString("Asia/Seoul");
-    private static final RexBuilder REX_BUILDER = new RexBuilder(new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE));
+    private static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
+    private static final RexBuilder REX_BUILDER = new RexBuilder(TYPE_FACTORY);
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -164,8 +177,8 @@ public class DruidLogicalValuesRuleTest
           new TimestampString("2021-04-01 16:54:31"),
           0
       );
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIMESTAMP_WITH_LOCAL_TIME_ZONE]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIMESTAMP_WITH_LOCAL_TIME_ZONE type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
     }
 
@@ -173,8 +186,8 @@ public class DruidLogicalValuesRuleTest
     public void testGetValueFromTimeLiteral()
     {
       RexLiteral literal = REX_BUILDER.makeTimeLiteral(new TimeString("16:54:31"), 0);
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIME]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIME type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
     }
 
@@ -182,9 +195,20 @@ public class DruidLogicalValuesRuleTest
     public void testGetValueFromTimeWithLocalTimeZoneLiteral()
     {
       RexLiteral literal = REX_BUILDER.makeTimeWithLocalTimeZoneLiteral(new TimeString("16:54:31"), 0);
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unsupported type[TIME_WITH_LOCAL_TIME_ZONE]");
+      expectedException.expect(UnsupportedSQLQueryException.class);
+      expectedException.expectMessage("TIME_WITH_LOCAL_TIME_ZONE type is not supported");
       DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+    }
+
+    @Test
+    public void testGetCastedValuesFromFloatToNumeric()
+    {
+      RexLiteral literal = REX_BUILDER.makeExactLiteral(
+          new BigDecimal("123.0"),
+          TYPE_FACTORY.createSqlType(SqlTypeName.INTEGER)
+      );
+      Object value = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+      Assert.assertEquals(value, 123L);
     }
   }
 }

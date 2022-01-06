@@ -33,6 +33,8 @@ You can use aggregations:
 
 The following sections list the available aggregate functions. Unless otherwise noted, aggregations are available at both ingestion and query time.
 
+## Exact aggregations
+
 ### Count aggregator
 
 `count` computes the count of Druid rows that match the filters.
@@ -339,7 +341,7 @@ JavaScript functions are expected to return floating-point values.
 
 <a name="approx"></a>
 
-## Approximate Aggregations
+## Approximate aggregations
 
 ### Count distinct
 
@@ -416,9 +418,9 @@ It is not possible to determine a priori how well this aggregator will behave fo
 
 For these reasons, we have deprecated this aggregator and recommend using the DataSketches Quantiles aggregator instead for new and existing use cases, although we will continue to support Approximate Histogram for backwards compatibility.
 
-## Miscellaneous Aggregations
+## Miscellaneous aggregations
 
-### Filtered Aggregator
+### Filtered aggregator
 
 A filtered aggregator wraps any given aggregator, but only aggregates the values for which the given dimension filter matches.
 
@@ -438,7 +440,7 @@ This makes it possible to compute the results of a filtered and an unfiltered ag
 }
 ```
 
-### Grouping Aggregator
+### Grouping aggregator
 
 A grouping aggregator can only be used as part of GroupBy queries which have a subtotal spec. It returns a number for
 each output row that lets you infer whether a particular dimension is included in the sub-grouping used for that row. You can pass

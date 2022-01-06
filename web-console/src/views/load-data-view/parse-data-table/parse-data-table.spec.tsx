@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ParseDataTable } from './parse-data-table';
 
-describe('parse data table', () => {
+describe('ParseDataTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],

@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -52,7 +53,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -70,10 +73,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -326,10 +334,18 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     Map<String, Object> expectedReports = getExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
-            "Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}",
-            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2017-12-25T00:00:00.000Z,"
-            + " event={ts=2017-12-25, dim=0 th test file, val=badval}, dimensions=[ts, dim]}], "
-            + "exceptions: [Unable to parse value[badval] for field[val]]"
+            new ParseExceptionReport(
+                "{ts=2017unparseable}",
+                "unparseable",
+                ImmutableList.of("Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}"),
+                1L
+            ),
+            new ParseExceptionReport(
+                "{ts=2017-12-25, dim=0 th test file, val=badval}",
+                "processedWithError",
+                ImmutableList.of("Unable to parse value[badval] for field[val]"),
+                1L
+            )
         ),
         new RowIngestionMetersTotals(
             10,
@@ -337,12 +353,52 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             1,
             1)
     );
-    Assert.assertEquals(expectedReports, actualReports);
+    compareTaskReports(expectedReports, actualReports);
+  }
+
+  private void compareTaskReports(
+      Map<String, Object> expectedReports,
+      Map<String, Object> actualReports
+  )
+  {
+    expectedReports = (Map<String, Object>) expectedReports.get("ingestionStatsAndErrors");
+    actualReports = (Map<String, Object>) actualReports.get("ingestionStatsAndErrors");
+
+    Assert.assertEquals(expectedReports.get("taskId"), actualReports.get("taskId"));
+    Assert.assertEquals(expectedReports.get("type"), actualReports.get("type"));
+
+    Map<String, Object> expectedPayload = (Map<String, Object>) expectedReports.get("payload");
+    Map<String, Object> actualPayload = (Map<String, Object>) actualReports.get("payload");
+    Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
+    Assert.assertEquals(expectedPayload.get("rowStats"), actualPayload.get("rowStats"));
+    Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
+
+    List<ParseExceptionReport> expectedParseExceptionReports = (List<ParseExceptionReport>) ((Map<String, Object>) expectedPayload.get("unparseableEvents"))
+        .get("buildSegments");
+
+    List<ParseExceptionReport> actualParseExceptionReports = (List<ParseExceptionReport>) ((Map<String, Object>) actualPayload.get("unparseableEvents"))
+        .get("buildSegments");
+
+    List<String> expectedMessages = expectedParseExceptionReports.stream().map((r) -> {
+      return r.getDetails().get(0);
+    }).collect(Collectors.toList());
+    List<String> actualMessages = actualParseExceptionReports.stream().map((r) -> {
+      return r.getDetails().get(0);
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedMessages, actualMessages);
+
+    List<String> expectedInputs = expectedParseExceptionReports.stream().map((r) -> {
+      return r.getInput();
+    }).collect(Collectors.toList());
+    List<String> actualInputs = actualParseExceptionReports.stream().map((r) -> {
+      return r.getInput();
+    }).collect(Collectors.toList());
+    Assert.assertEquals(expectedInputs, actualInputs);
   }
 
   private Map<String, Object> getExpectedTaskReportParallel(
       String taskId,
-      List<String> expectedUnparseableEvents,
+      List<ParseExceptionReport> expectedUnparseableEvents,
       RowIngestionMetersTotals expectedTotals
   )
   {
@@ -398,11 +454,19 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         1,
         1
     );
-    List<String> expectedUnparseableEvents = ImmutableList.of(
-        "Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}",
-        "Found unparseable columns in row: [MapBasedInputRow{timestamp=2017-12-25T00:00:00.000Z,"
-        + " event={ts=2017-12-25, dim=0 th test file, val=badval}, dimensions=[ts, dim]}], "
-        + "exceptions: [Unable to parse value[badval] for field[val]]"
+    List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
+        new ParseExceptionReport(
+            "{ts=2017unparseable}",
+            "unparseable",
+            ImmutableList.of("Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}"),
+            1L
+        ),
+        new ParseExceptionReport(
+            "{ts=2017-12-25, dim=0 th test file, val=badval}",
+            "processedWithError",
+            ImmutableList.of("Unable to parse value[badval] for field[val]"),
+            1L
+        )
     );
 
     Map<String, Object> expectedReports;
@@ -422,13 +486,13 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       );
     }
 
-    Assert.assertEquals(expectedReports, actualReports);
+    compareTaskReports(expectedReports, actualReports);
     System.out.println(actualReports);
   }
 
   private Map<String, Object> getExpectedTaskReportSequential(
       String taskId,
-      List<String> expectedUnparseableEvents,
+      List<ParseExceptionReport> expectedUnparseableEvents,
       RowIngestionMetersTotals expectedTotals
   )
   {
@@ -533,6 +597,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             null
         ),
         VALID_INPUT_SOURCE_FILTER
@@ -558,6 +623,23 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
+  }
+
+  @Test
+  public void testMultipleAppends()
+  {
+    final Interval interval = null;
+    final ParallelIndexSupervisorTask task = newTask(interval, Granularities.DAY, true, true);
+    final ParallelIndexSupervisorTask task2 = newTask(interval, Granularities.DAY, true, true);
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    task.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task2.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+    task2.addToContext(Tasks.USE_SHARED_LOCK, true);
+    getIndexingServiceClient().runTask(task.getId(), task);
+    getIndexingServiceClient().runTask(task2.getId(), task2);
+
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().waitToFinish(task, 1, TimeUnit.DAYS).getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().waitToFinish(task2, 1, TimeUnit.DAYS).getStatusCode());
   }
 
   @Test
@@ -599,6 +681,127 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         .forSegments(afterAppendSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(afterAppendSegments), visibles);
+  }
+
+  @Test
+  public void testMaxLocksWith1MaxNumConcurrentSubTasks()
+  {
+    final Interval interval = Intervals.of("2017-12/P1M");
+    final boolean appendToExisting = false;
+    final ParallelIndexSupervisorTask task = newTask(
+        interval,
+        Granularities.DAY,
+        appendToExisting,
+        true,
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0
+        ),
+        VALID_INPUT_SOURCE_FILTER
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+
+    if (lockGranularity.equals(LockGranularity.TIME_CHUNK)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(
+          "Number of locks exceeded maxAllowedLockCount [0]"
+      );
+      getIndexingServiceClient().runAndWait(task);
+    } else {
+      Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+      Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
+      assertShardSpec(task, lockGranularity, appendToExisting, Collections.emptyList());
+    }
+  }
+
+
+  @Test
+  public void testMaxLocksWith2MaxNumConcurrentSubTasks()
+  {
+    final Interval interval = Intervals.of("2017-12/P1M");
+    final boolean appendToExisting = false;
+    final ParallelIndexSupervisorTask task = newTask(
+        interval,
+        Granularities.DAY,
+        appendToExisting,
+        true,
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0
+        ),
+        VALID_INPUT_SOURCE_FILTER
+    );
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+
+    if (lockGranularity.equals(LockGranularity.TIME_CHUNK)) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(
+          "Number of locks exceeded maxAllowedLockCount [0]"
+      );
+      getIndexingServiceClient().runAndWait(task);
+    } else {
+      Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+      Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
+      assertShardSpec(task, lockGranularity, appendToExisting, Collections.emptyList());
+    }
   }
 
   private ParallelIndexSupervisorTask newTask(

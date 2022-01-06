@@ -22,14 +22,24 @@ import React from 'react';
 
 import { HistoryDialog } from './history-dialog';
 
-describe('history dialog', () => {
+describe('HistoryDialog', () => {
   it('matches snapshot', () => {
     const historyDialog = (
       <HistoryDialog
+        title="History"
         historyRecords={[
-          { auditTime: 'test', auditInfo: 'test', payload: JSONBig.stringify({ name: 'test' }) },
-          { auditTime: 'test', auditInfo: 'test', payload: JSONBig.stringify({ name: 'test' }) },
+          {
+            auditTime: 'test',
+            auditInfo: { comment: 'test' },
+            payload: JSONBig.stringify({ name: 'test' }),
+          },
+          {
+            auditTime: 'test',
+            auditInfo: { comment: 'test' },
+            payload: JSONBig.stringify({ name: 'test' }),
+          },
         ]}
+        onBack={() => {}}
       />
     );
     render(historyDialog);

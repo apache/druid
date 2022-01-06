@@ -68,6 +68,7 @@
       "querying/sql",
       "querying/querying",
       "querying/query-execution",
+      "querying/troubleshooting",
       {
         "type": "subcategory",
         "label": "Concepts",

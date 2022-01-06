@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`number menu matches snapshot when menu is opened for column inside group by 1`] = `
+exports[`NumberMenuItems matches snapshot when menu is opened for column inside group by 1`] = `
 <div>
   <li
     class="bp3-submenu"
@@ -217,7 +217,7 @@ exports[`number menu matches snapshot when menu is opened for column inside grou
 </div>
 `;
 
-exports[`number menu matches snapshot when menu is opened for column not inside group by 1`] = `
+exports[`NumberMenuItems matches snapshot when menu is opened for column not inside group by 1`] = `
 <div>
   <li
     class="bp3-submenu"

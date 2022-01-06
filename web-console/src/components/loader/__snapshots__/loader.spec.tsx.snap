@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`loader matches snapshot 1`] = `
+exports[`Loader matches snapshot 1`] = `
 <div
   class="loader"
 >

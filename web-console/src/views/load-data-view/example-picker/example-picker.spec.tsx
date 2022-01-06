@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ExamplePicker } from './example-picker';
 
-describe('example picker', () => {
+describe('ExamplePicker', () => {
   it('matches snapshot', () => {
     const examplePicker = (
       <ExamplePicker

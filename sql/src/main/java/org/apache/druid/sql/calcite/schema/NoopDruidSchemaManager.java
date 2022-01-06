@@ -17,33 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.sql.calcite.table.DruidTable;
 
-import javax.validation.constraints.NotNull;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-public class FilteredSingleServerInventoryViewProvider implements FilteredServerInventoryViewProvider
+public class NoopDruidSchemaManager implements DruidSchemaManager
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
+  public static final String TYPE = "noop";
 
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
+  private static ConcurrentMap<String, DruidTable> MAP = new ConcurrentHashMap<>();
 
   @Override
-  public SingleServerInventoryView get()
+  public ConcurrentMap<String, DruidTable> getTables()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.alwaysFalse());
+    return MAP;
   }
 }

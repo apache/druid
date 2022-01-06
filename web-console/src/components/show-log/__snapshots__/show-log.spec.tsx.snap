@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`show log describe show log 1`] = `
+exports[`ShowLog describe show log 1`] = `
 <div
   class="show-log"
 >

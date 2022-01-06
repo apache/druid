@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`header bar matches snapshot 1`] = `
+exports[`HeaderBar matches snapshot 1`] = `
 <Blueprint3.Navbar
   className="header-bar"
 >

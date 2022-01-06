@@ -60,9 +60,11 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -90,7 +92,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw new ISE("Cannot build EARLIEST aggregatorFactory for type[%s]", type);
+            throw new UnsupportedSQLQueryException("EARLIEST aggregator is not supported for '%s' type", type);
         }
       }
     },
@@ -110,7 +112,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw new ISE("Cannot build LATEST aggregatorFactory for type[%s]", type);
+            throw new UnsupportedSQLQueryException("LATEST aggregator is not supported for '%s' type", type);
         }
       }
     },
@@ -129,7 +131,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw new ISE("Cannot build ANY aggregatorFactory for type[%s]", type);
+            throw new UnsupportedSQLQueryException("ANY aggregation is not supported for '%s' type", type);
         }
       }
     };

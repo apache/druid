@@ -381,7 +381,7 @@ Task logs on the Druid web console are retrieved via an [API](../operations/api-
 If you don't see the log file in long-term storage, it means either:
 
 1. the middleManager / indexer failed to push the log file to deep storage or
-2. the task failed before the Step 5 in the above flow.
+2. the task did not complete.
 
 You can check the middleManager / indexer logs locally to see if there was a push failure.  If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
