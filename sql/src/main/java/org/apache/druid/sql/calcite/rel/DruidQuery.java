@@ -660,6 +660,14 @@ public class DruidQuery
       virtualColumns.addAll(sorting.getProjection().getVirtualColumns());
     }
 
+    if (dataSource instanceof JoinDataSource) {
+      for (String expression : ((JoinDataSource) dataSource).getVirtualColumnCandidates()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
+        }
+      }
+    }
+
     // sort for predictable output
     List<VirtualColumn> columns = new ArrayList<>(virtualColumns);
     columns.sort(Comparator.comparing(VirtualColumn::getOutputName));

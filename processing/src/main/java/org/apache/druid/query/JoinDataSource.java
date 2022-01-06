@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Represents a join of two datasources.
@@ -219,6 +220,16 @@ public class JoinDataSource implements DataSource
   public boolean isConcrete()
   {
     return false;
+  }
+
+  public Set<String> getVirtualColumnCandidates()
+  {
+    return getConditionAnalysis().getEquiConditions()
+                                 .stream()
+                                 .filter(equality -> equality.getLeftExpr() != null)
+                                 .map(equality -> equality.getLeftExpr().analyzeInputs().getRequiredBindings())
+                                 .flatMap(Set::stream)
+                                 .collect(Collectors.toSet());
   }
 
   @Override
