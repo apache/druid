@@ -259,14 +259,17 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
-      private final ArrayBasedIndexedInts indexedInts = new ArrayBasedIndexedInts();
+      private final ArrayBasedIndexedInts defaultIndexedInts = new ArrayBasedIndexedInts();
+
+      @MonotonicNonNull
+      private IndexedInts cachedIndexedInts = null;
 
       @Nullable
       @MonotonicNonNull
       private int[] nullIdIntArray;
 
       /**
-       * Tries to fetch the int array using getDim() and convert it to IndexedInts.
+       * Tries to fetch the dimention as an IndexedInts.
        * If the dim is null or with zero length, the value is considered null.
        * It may be null or empty due to currEntry's rowIndex being smaller than the row's rowIndex in which this
        * dim first appears.
@@ -276,26 +279,18 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @Nullable
       private IndexedInts getRowOrNull()
       {
-        IncrementalIndexRow key = currEntry.get();
-
-        if (key.isDimNull(dimIndex)) {
-          return null;
+        IndexedInts ret = currEntry.get().getIndexedDim(dimIndex, cachedIndexedInts);
+        if (ret != null) {
+          cachedIndexedInts = ret;
+          return ret.size() > 0 ? ret : null;
         }
-
-        int[] indices = (int[]) key.getDim(dimIndex);
-
-        if (indices == null || indices.length == 0) {
-          return null;
-        }
-
-        indexedInts.setValues(indices, indices.length);
-        return indexedInts;
+        return null;
       }
 
       private IndexedInts getDefaultIndexedInts()
       {
         if (hasMultipleValues) {
-          indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
+          defaultIndexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
         } else {
           final int nullId = getEncodedValue(null, false);
           if (nullId >= 0 && nullId < maxId) {
@@ -303,15 +298,15 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
             if (nullIdIntArray == null) {
               nullIdIntArray = new int[]{nullId};
             }
-            indexedInts.setValues(nullIdIntArray, 1);
+            defaultIndexedInts.setValues(nullIdIntArray, 1);
           } else {
             // null doesn't exist in the dictionary; return an empty array.
             // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
-            indexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
+            defaultIndexedInts.setValues(IntArrays.EMPTY_ARRAY, 0);
           }
         }
 
-        return indexedInts;
+        return defaultIndexedInts;
       }
 
       @Override
