@@ -307,16 +307,28 @@ the [segment internals](../design/segments.md#sql-compatible-null-handling) docu
 
 ## Aggregation functions
 
-Aggregation functions can appear in the SELECT clause of any query. Any aggregator can be filtered using syntax
-like `AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
-possible for two aggregators in the same SQL query to have different filters.
 
-When no rows are selected, aggregate functions will return their initial value. This can occur when filtering results in
-no matches while aggregating values across an entire table without a grouping, or, when using filtered aggregations
-within a grouping. What this value is exactly varies per aggregator, but COUNT, and the various approximate count
-distinct sketch functions, will always return 0.
+You can use aggregation functions in the SELECT clause of any query.
+Filter any aggregator using the FILTER clause, for example:
 
-Only the COUNT, ARRAY_AGG, and STRING_AGG aggregations can accept the DISTINCT keyword.
+```
+SELECT 
+  SUM(added) FILTER(WHERE channel = '#en.wikipedia')
+FROM wikipedia
+```
+
+The FILTER clause limits an aggregation query to only the rows that match the filter.
+Druid translates the FILTER clause to a native [filtered aggregator](aggregations.md#filtered-aggregator).
+Two aggregators in the same SQL query may have different filters.
+
+When no rows are selected, aggregation functions return their initial value. This can occur from the following:
+* When no rows match the filter while aggregating values across an entire table without a grouping, or
+* When using filtered aggregations within a grouping.
+
+The initial value varies by aggregator. `COUNT` and the approximate count distinct sketch functions
+always return 0 as the initial value.
+
+In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
 
 > The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
 > functions can produce inconsistent results across the same query. 
