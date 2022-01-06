@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
@@ -495,7 +494,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
-      final AggregatorFactory[] existingMetricsSpec = CollectionUtils.isEmpty(lastCompactionState.getMetricsSpec()) ?
+      final AggregatorFactory[] existingMetricsSpec = lastCompactionState.getMetricsSpec() == null || lastCompactionState.getMetricsSpec().isEmpty() ?
                                                       null :
                                                       objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class);
       if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {

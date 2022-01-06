@@ -1286,7 +1286,7 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentMetricsSpec() throws Exception
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentMetricsSpec()
   {
     NullHandling.initializeForTests();
     mapper.setInjectableValues(
