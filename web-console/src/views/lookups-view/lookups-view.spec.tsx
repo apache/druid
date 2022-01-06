@@ -21,7 +21,7 @@ import React from 'react';
 
 import { LookupsView } from './lookups-view';
 
-describe('lookups view', () => {
+describe('LookupsView', () => {
   it('matches snapshot', () => {
     const lookupsView = shallow(<LookupsView />);
     expect(lookupsView).toMatchSnapshot();

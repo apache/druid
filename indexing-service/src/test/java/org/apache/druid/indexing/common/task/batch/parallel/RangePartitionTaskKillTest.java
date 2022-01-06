@@ -325,9 +325,15 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     }
 
     @Override
-    public void stopGracefully()
+    public void stopGracefully(String stopReason)
     {
 
+    }
+
+    @Override
+    public String getStopReason()
+    {
+      return null;
     }
 
     @Override

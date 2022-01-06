@@ -200,6 +200,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         null,
         ingestionSchema,
         context,
+        -1,
         securityConfig
     );
   }
@@ -212,6 +213,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
+      int maxAllowedLockCount,
       InputSourceSecurityConfig securityConfig
   )
   {
@@ -220,7 +222,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         groupId,
         resource,
         dataSource,
-        context
+        context,
+        maxAllowedLockCount
     );
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;

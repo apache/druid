@@ -21,7 +21,7 @@ import React from 'react';
 
 import { TransformTable } from './transform-table';
 
-describe('transform table', () => {
+describe('TransformTable', () => {
   it('matches snapshot', () => {
     const sampleData = {
       header: ['c1'],

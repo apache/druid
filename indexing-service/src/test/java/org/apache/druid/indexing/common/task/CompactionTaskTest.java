@@ -750,6 +750,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         null
     );
 

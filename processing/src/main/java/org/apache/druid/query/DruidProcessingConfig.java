@@ -38,6 +38,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final HumanReadableBytes DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = HumanReadableBytes.valueOf(-1);
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
+  public static final int DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL = 0;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -102,6 +103,15 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public int poolCacheMaxCount()
   {
     return Integer.MAX_VALUE;
+  }
+
+  @Config({
+      "druid.computation.buffer.poolCacheInitialCount",
+      "${base_path}.buffer.poolCacheInitialCount"
+  })
+  public int getNumInitalBuffersForIntermediatePool()
+  {
+    return DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL;
   }
 
   @Override
