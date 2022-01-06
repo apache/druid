@@ -208,9 +208,12 @@ public class DruidPlanner implements Closeable
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
-      Map<String, Object> sqlContext = parsed.getContextMap().entrySet().stream().collect(
-          Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
-      );
+      Map<String, Object> sqlContext = null;
+      if (parsed.getContextMap() != null) {
+        sqlContext = parsed.getContextMap().entrySet().stream().collect(
+            Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
+        );
+      }
       return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode(), sqlContext);
     }
     catch (Exception e) {
