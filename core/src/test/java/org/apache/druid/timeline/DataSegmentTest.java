@@ -188,7 +188,7 @@ public class DataSegmentTest
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
             null,
-            ImmutableList.of(),
+            null,
             null,
             ImmutableMap.of(),
             ImmutableMap.of()

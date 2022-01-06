@@ -36,6 +36,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -1110,6 +1113,7 @@ public class NewestSegmentFirstPolicyTest
             new Period("P0D"),
             null,
             new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
+            null,
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
@@ -1150,6 +1154,7 @@ public class NewestSegmentFirstPolicyTest
             new Period("P0D"),
             null,
             new UserCompactionTaskDimensionsConfig(null),
+            null,
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
@@ -1228,7 +1233,8 @@ public class NewestSegmentFirstPolicyTest
             new Period("P0D"),
             null,
             null,
-            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "bar", null))
+            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "bar", null)),
+            null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
@@ -1268,7 +1274,128 @@ public class NewestSegmentFirstPolicyTest
             new Period("P0D"),
             null,
             null,
-            new UserCompactionTaskTransformConfig(null)
+            new UserCompactionTaskTransformConfig(null),
+            null
+        )),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentMetricsSpec() throws Exception
+  {
+    NullHandling.initializeForTests();
+    // Same indexSpec as what is set in the auto compaction config
+    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    // Same partitionsSpec as what is set in the auto compaction config
+    PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
+
+    // Create segments that were compacted (CompactionState != null) and have
+    // metricsSpec={CountAggregatorFactory("cnt")} for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
+    // metricsSpec={CountAggregatorFactory("cnt"), LongSumAggregatorFactory("val", "val")} for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
+    // metricsSpec=[] for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (filter was not set during last compaction)
+    // and metricsSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (transformSpec was not set during last compaction)
+    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(
+                partitionsSpec,
+                null,
+                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<List<Object>>() {}),
+                null,
+                indexSpec,
+                null
+            )
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(
+                partitionsSpec,
+                null,
+                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<List<Object>>() {}),
+                null,
+                indexSpec,
+                null
+            )
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(
+                partitionsSpec,
+                null,
+                mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
+                null,
+                indexSpec,
+                null
+            )
+        ),
+        new SegmentGenerateSpec(
+            Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
+            new Period("P1D"),
+            null,
+            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
+        )
+    );
+
+    // Auto compaction config sets metricsSpec={CountAggregatorFactory("cnt"), LongSumAggregatorFactory("val", "val")}
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
+            130000,
+            new Period("P0D"),
+            null,
+            null,
+            null,
+            new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}
+        )),
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
+    );
+    // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    Assert.assertTrue(iterator.hasNext());
+    expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next())
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+
+    // Auto compaction config sets metricsSpec=null
+    iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
+            130000,
+            new Period("P0D"),
+            null,
+            null,
+            null,
+            null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
@@ -1454,7 +1581,7 @@ public class NewestSegmentFirstPolicyTest
       UserCompactionTaskGranularityConfig granularitySpec
   )
   {
-    return createCompactionConfig(inputSegmentSizeBytes, skipOffsetFromLatest, granularitySpec, null, null);
+    return createCompactionConfig(inputSegmentSizeBytes, skipOffsetFromLatest, granularitySpec, null, null, null);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(
@@ -1462,7 +1589,8 @@ public class NewestSegmentFirstPolicyTest
       Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec
+      UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec
   )
   {
     return new DataSourceCompactionConfig(
@@ -1474,7 +1602,7 @@ public class NewestSegmentFirstPolicyTest
         null,
         granularitySpec,
         dimensionsSpec,
-        null,
+        metricsSpec,
         transformSpec,
         null,
         null

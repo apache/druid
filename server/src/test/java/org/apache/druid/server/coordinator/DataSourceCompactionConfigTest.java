@@ -552,6 +552,6 @@ public class DataSourceCompactionConfigTest
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
-    Assert.assertEquals(config.getTransformSpec(), fromJson.getTransformSpec());
+    Assert.assertEquals(config.getMetricsSpec(), fromJson.getMetricsSpec());
   }
 }
