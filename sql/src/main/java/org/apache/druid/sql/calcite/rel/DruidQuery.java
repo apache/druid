@@ -161,7 +161,9 @@ public class DruidQuery
   )
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    final VirtualColumnRegistry virtualColumnRegistry = plannerContext.getVirtualColumnRegistry() == null
+                                                        ? VirtualColumnRegistry.create(sourceRowSignature)
+                                                        : plannerContext.getVirtualColumnRegistry();
 
     // Now the fun begins.
     final DimFilter filter;
