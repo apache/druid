@@ -104,7 +104,7 @@ public class OverlordResourceTestClient
                 response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
             );
             String taskID = responseData.get("task");
-            LOG.info("Submitted task with TaskID[%s]", taskID);
+            LOG.debug("Submitted task with TaskID[%s]", taskID);
             return taskID;
           },
           Predicates.alwaysTrue(),
@@ -127,7 +127,7 @@ public class OverlordResourceTestClient
               StringUtils.urlEncode(taskID)
           )
       );
-      LOG.info("Index status response" + response.getContent());
+      LOG.debug("Index status response" + response.getContent());
       TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
           response.getContent(),
           new TypeReference<TaskStatusResponse>()
@@ -180,7 +180,7 @@ public class OverlordResourceTestClient
           HttpMethod.GET,
           StringUtils.format("%s%s", getIndexerURL(), identifier)
       );
-      LOG.info("Tasks %s response %s", identifier, response.getContent());
+      LOG.debug("Tasks %s response %s", identifier, response.getContent());
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<TaskResponseObject>>()
           {
@@ -199,7 +199,7 @@ public class OverlordResourceTestClient
           HttpMethod.GET,
           StringUtils.format("%stask/%s", getIndexerURL(), taskId)
       );
-      LOG.info("Task %s response %s", taskId, response.getContent());
+      LOG.debug("Task %s response %s", taskId, response.getContent());
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<TaskPayloadResponse>()
           {
@@ -380,7 +380,7 @@ public class OverlordResourceTestClient
           response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING
       );
       String id = responseData.get("id");
-      LOG.info("Submitted supervisor with id[%s]", id);
+      LOG.debug("Submitted supervisor with id[%s]", id);
       return id;
     }
     catch (Exception e) {
@@ -409,7 +409,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Shutdown supervisor with id[%s]", id);
+      LOG.debug("Shutdown supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -440,7 +440,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Terminate supervisor with id[%s]", id);
+      LOG.debug("Terminate supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -471,7 +471,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Shutdown task with id[%s]", id);
+      LOG.debug("Shutdown task with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -511,7 +511,7 @@ public class OverlordResourceTestClient
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
       String state = (String) payload.get("state");
-      LOG.info("Supervisor id[%s] has state [%s]", id, state);
+      LOG.debug("Supervisor id[%s] has state [%s]", id, state);
       return SupervisorStateManager.BasicState.valueOf(state);
     }
     catch (ISE e) {
@@ -543,7 +543,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Suspended supervisor with id[%s]", id);
+      LOG.debug("Suspended supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -574,7 +574,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("stats supervisor with id[%s]", id);
+      LOG.debug("stats supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -605,7 +605,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("get supervisor health with id[%s]", id);
+      LOG.debug("get supervisor health with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -636,7 +636,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Resumed supervisor with id[%s]", id);
+      LOG.debug("Resumed supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
@@ -667,7 +667,7 @@ public class OverlordResourceTestClient
             response.getContent()
         );
       }
-      LOG.info("Reset supervisor with id[%s]", id);
+      LOG.debug("Reset supervisor with id[%s]", id);
     }
     catch (ISE e) {
       throw e;
