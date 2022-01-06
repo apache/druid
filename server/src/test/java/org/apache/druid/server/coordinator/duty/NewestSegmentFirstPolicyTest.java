@@ -79,7 +79,7 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(mapper);
-  
+
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
   {
