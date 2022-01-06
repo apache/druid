@@ -43,15 +43,13 @@ public final class ConnectionUriUtils
   public static final String MARIADB_PREFIX = "jdbc:mariadb:";
 
   public static final String POSTGRES_DRIVER = "org.postgresql.Driver";
-  public static final String MYSQL_DRIVER = "com.mysql.jdbc.Driver";
   public static final String MYSQL_NON_REGISTERING_DRIVER = "com.mysql.jdbc.NonRegisteringDriver";
-  public static final String MARIADB_DRIVER = "org.mariadb.jdbc.Driver";
 
   /**
    * This method checks {@param actualProperties} against {@param allowedProperties} if they are not system properties.
    * A property is regarded as a system property if its name starts with a prefix in {@param systemPropertyPrefixes}.
    * See org.apache.druid.server.initialization.JDBCAccessSecurityConfig for more details.
-   *
+   * <p>
    * If a non-system property that is not allowed is found, this method throws an {@link IllegalArgumentException}.
    */
   public static void throwIfPropertiesAreNotAllowed(
@@ -76,16 +74,16 @@ public final class ConnectionUriUtils
    * This method tries to determine the correct type of database for a given JDBC connection string URI, then load the
    * driver using reflection to parse the uri parameters, returning the set of keys which can be used for JDBC
    * parameter whitelist validation.
-   *
+   * <p>
    * uris starting with {@link #MYSQL_PREFIX} will first try to use the MySQL Connector/J driver (5.x), then fallback
    * to MariaDB Connector/J (version 2.x) which also accepts jdbc:mysql uris. This method does not attempt to use
    * MariaDB Connector/J 3.x alpha driver (at the time of these javadocs, it only handles the jdbc:mariadb prefix)
-   *
+   * <p>
    * uris starting with {@link #POSTGRES_PREFIX} will use the postgresql driver to parse the uri
-   *
+   * <p>
    * uris starting with {@link #MARIADB_PREFIX} will first try to use MariaDB Connector/J driver (2.x) then fallback to
    * MariaDB Connector/J 3.x driver.
-   *
+   * <p>
    * If the uri does not match any of these schemes, this method will return an empty set if unknown uris are allowed,
    * or throw an exception if not.
    */
@@ -185,7 +183,11 @@ public final class ConnectionUriUtils
     Class<?> driverClass = Class.forName(MYSQL_NON_REGISTERING_DRIVER);
     Method parseUrl = driverClass.getMethod("parseURL", String.class, Properties.class);
     // almost the same as postgres, but is an instance level method
-    Properties properties = (Properties) parseUrl.invoke(driverClass.getConstructor().newInstance(), connectionUri, null);
+    Properties properties = (Properties) parseUrl.invoke(
+        driverClass.getConstructor().newInstance(),
+        connectionUri,
+        null
+    );
 
     if (properties == null) {
       throw new IAE("Invalid URL format for MySQL: [%s]", connectionUri);

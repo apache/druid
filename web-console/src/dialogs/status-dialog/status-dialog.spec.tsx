@@ -21,7 +21,7 @@ import React from 'react';
 
 import { anywhereMatcher, StatusDialog } from './status-dialog';
 
-describe('status dialog', () => {
+describe('StatusDialog', () => {
   it('matches snapshot', () => {
     const statusDialog = <StatusDialog onClose={() => {}} />;
     render(statusDialog);

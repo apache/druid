@@ -35,6 +35,7 @@ import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -76,11 +77,12 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -88,6 +90,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.DataSegment;
@@ -146,6 +149,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Nullable
   private final DimensionsSpec dimensionsSpec;
   @Nullable
+  private final ClientCompactionTaskTransformSpec transformSpec;
+  @Nullable
   private final AggregatorFactory[] metricsSpec;
   @Nullable
   private final ClientCompactionTaskGranularitySpec granularitySpec;
@@ -180,6 +185,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("ioConfig") @Nullable CompactionIOConfig ioConfig,
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
+      @JsonProperty("transformSpec") @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
@@ -189,8 +195,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
-
+    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -198,7 +203,6 @@ public class CompactionTask extends AbstractBatchIndexTask
             new Property<>("segments", segments)
         )
     );
-
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
@@ -208,8 +212,8 @@ public class CompactionTask extends AbstractBatchIndexTask
       //noinspection ConstantConditions
       this.ioConfig = new CompactionIOConfig(SpecificSegmentsSpec.fromSegments(segments), null);
     }
-
     this.dimensionsSpec = dimensionsSpec == null ? dimensions : dimensionsSpec;
+    this.transformSpec = transformSpec;
     this.metricsSpec = metricsSpec;
     // Prior to apache/druid#10843 users could specify segmentGranularity using `segmentGranularity`
     // Now users should prefer to use `granularitySpec`
@@ -226,7 +230,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       ));
     }
     if (granularitySpec == null && segmentGranularity != null) {
-      this.granularitySpec = new ClientCompactionTaskGranularitySpec(segmentGranularity, null);
+      this.granularitySpec = new ClientCompactionTaskGranularitySpec(segmentGranularity, null, null);
     } else {
       this.granularitySpec = granularitySpec;
     }
@@ -342,6 +346,13 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonProperty
   @Nullable
+  public ClientCompactionTaskTransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @Nullable
   public AggregatorFactory[] getMetricsSpec()
   {
     return metricsSpec;
@@ -419,6 +430,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         segmentProvider,
         partitionConfigurationManager,
         dimensionsSpec,
+        transformSpec,
         metricsSpec,
         granularitySpec,
         toolbox.getCoordinatorClient(),
@@ -525,6 +537,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       final SegmentProvider segmentProvider,
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
+      @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
@@ -597,9 +610,10 @@ public class CompactionTask extends AbstractBatchIndexTask
             segmentProvider.dataSource,
             segmentsToCompact,
             dimensionsSpec,
+            transformSpec,
             metricsSpec,
             granularitySpec == null
-            ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null)
+            ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
         );
 
@@ -627,6 +641,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           segmentProvider.dataSource,
           queryableIndexAndSegments,
           dimensionsSpec,
+          transformSpec,
           metricsSpec,
           granularitySpec
       );
@@ -699,6 +714,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       String dataSource,
       List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
   )
@@ -728,7 +744,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     final GranularitySpec uniformGranularitySpec = new UniformGranularitySpec(
         Preconditions.checkNotNull(granularitySpec.getSegmentGranularity()),
         queryGranularityToUse,
-        rollup.get(),
+        granularitySpec.isRollup() == null ? rollup.get() : granularitySpec.isRollup(),
         Collections.singletonList(totalInterval)
     );
 
@@ -740,14 +756,13 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                  ? createMetricsSpec(queryableIndexAndSegments)
                                                  : convertToCombiningFactories(metricsSpec);
 
-    return new
-        DataSchema(
+    return new DataSchema(
         dataSource,
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
-        null
+        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null)
     );
   }
 
@@ -870,10 +885,9 @@ public class CompactionTask extends AbstractBatchIndexTask
           dimensionSchemaMap.put(
               dimension,
               createDimensionSchema(
-                  columnHolder.getCapabilities().getType(),
                   dimension,
-                  dimensionHandler.getMultivalueHandling(),
-                  columnHolder.getCapabilities().hasBitmapIndexes()
+                  columnHolder.getCapabilities(),
+                  dimensionHandler.getMultivalueHandling()
               )
           );
         }
@@ -917,14 +931,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     return segments;
   }
 
-  private static DimensionSchema createDimensionSchema(
-      ValueType type,
+  @VisibleForTesting
+  static DimensionSchema createDimensionSchema(
       String name,
-      MultiValueHandling multiValueHandling,
-      boolean hasBitmapIndexes
+      ColumnCapabilities capabilities,
+      MultiValueHandling multiValueHandling
   )
   {
-    switch (type) {
+    switch (capabilities.getType()) {
       case FLOAT:
         Preconditions.checkArgument(
             multiValueHandling == null,
@@ -947,9 +961,14 @@ public class CompactionTask extends AbstractBatchIndexTask
         );
         return new DoubleDimensionSchema(name);
       case STRING:
-        return new StringDimensionSchema(name, multiValueHandling, hasBitmapIndexes);
+        return new StringDimensionSchema(name, multiValueHandling, capabilities.hasBitmapIndexes());
       default:
-        throw new ISE("Unsupported value type[%s] for dimension[%s]", type, name);
+        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+            name,
+            capabilities,
+            multiValueHandling
+        );
+        return handler.getDimensionSchema(capabilities);
     }
   }
 
@@ -1030,6 +1049,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     @Nullable
     private DimensionsSpec dimensionsSpec;
     @Nullable
+    private ClientCompactionTaskTransformSpec transformSpec;
+    @Nullable
     private AggregatorFactory[] metricsSpec;
     @Nullable
     private Granularity segmentGranularity;
@@ -1079,6 +1100,12 @@ public class CompactionTask extends AbstractBatchIndexTask
       return this;
     }
 
+    public Builder transformSpec(ClientCompactionTaskTransformSpec transformSpec)
+    {
+      this.transformSpec = transformSpec;
+      return this;
+    }
+
     public Builder metricsSpec(AggregatorFactory[] metricsSpec)
     {
       this.metricsSpec = metricsSpec;
@@ -1120,6 +1147,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           ioConfig,
           null,
           dimensionsSpec,
+          transformSpec,
           metricsSpec,
           segmentGranularity,
           granularitySpec,
@@ -1243,7 +1271,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          null
       );
 
       Preconditions.checkArgument(

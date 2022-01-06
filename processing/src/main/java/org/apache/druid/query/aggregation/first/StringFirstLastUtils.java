@@ -43,7 +43,7 @@ public class StringFirstLastUtils
       @Nullable final ColumnCapabilities valueSelectorCapabilities
   )
   {
-    if (valueSelectorCapabilities != null && valueSelectorCapabilities.getType() != ValueType.COMPLEX) {
+    if (valueSelectorCapabilities != null && !valueSelectorCapabilities.is(ValueType.COMPLEX)) {
       // Known, non-complex type.
       return false;
     }

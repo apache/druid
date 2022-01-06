@@ -26,23 +26,28 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public abstract class DoublesSketchSingleArgBaseOperatorConversion extends DirectOperatorConversion
+public abstract class DoublesSketchSingleArgBaseOperatorConversion implements SqlOperatorConversion
 {
-  protected DoublesSketchSingleArgBaseOperatorConversion(
-      SqlOperator operator,
-      String druidFunctionName
-  )
+  private final SqlOperator operator;
+
+  protected DoublesSketchSingleArgBaseOperatorConversion(SqlOperator operator)
   {
-    super(operator, druidFunctionName);
+    this.operator = operator;
+  }
+
+  @Override
+  public SqlOperator calciteOperator()
+  {
+    return operator;
   }
 
   @Override

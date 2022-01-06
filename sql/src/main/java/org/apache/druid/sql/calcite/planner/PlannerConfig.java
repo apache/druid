@@ -33,6 +33,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
+  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -66,6 +67,12 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean computeInnerJoinCostAsFilter = true;
+
+  @JsonProperty
+  private boolean authorizeSystemTablesDirectly = false;
+
+  @JsonProperty
+  private boolean useNativeQueryExplain = false;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -129,6 +136,16 @@ public class PlannerConfig
     return computeInnerJoinCostAsFilter;
   }
 
+  public boolean isAuthorizeSystemTablesDirectly()
+  {
+    return authorizeSystemTablesDirectly;
+  }
+
+  public boolean isUseNativeQueryExplain()
+  {
+    return useNativeQueryExplain;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -153,15 +170,23 @@ public class PlannerConfig
         CTX_KEY_USE_APPROXIMATE_TOPN,
         isUseApproximateTopN()
     );
+    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(
+        context,
+        CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
+        computeInnerJoinCostAsFilter
+    );
+    newConfig.useNativeQueryExplain = getContextBoolean(
+        context,
+        CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+        isUseNativeQueryExplain()
+    );
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
-    newConfig.computeInnerJoinCostAsFilter = getContextBoolean(context,
-                                                               CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
-                                                               computeInnerJoinCostAsFilter);
+    newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
   }
 
@@ -202,7 +227,8 @@ public class PlannerConfig
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone);
+           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
+           useNativeQueryExplain == that.useNativeQueryExplain;
   }
 
   @Override
@@ -219,7 +245,8 @@ public class PlannerConfig
         sqlTimeZone,
         metadataSegmentCacheEnable,
         metadataSegmentPollPeriod,
-        serializeComplexValues
+        serializeComplexValues,
+        useNativeQueryExplain
     );
   }
 
@@ -237,6 +264,7 @@ public class PlannerConfig
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
            '}';
   }
 }

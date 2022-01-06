@@ -55,7 +55,9 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       new Period(3600),
       null,
-      new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+      new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+      null,
+      null,
       null,
       ImmutableMap.of("key", "val")
   );
@@ -150,7 +152,9 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, true),
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -190,7 +194,9 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );
@@ -311,7 +317,9 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         new Period(3600),
         null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null),
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
+        null,
         null,
         ImmutableMap.of("key", "val")
     );

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`history dialog matches snapshot 1`] = `
+exports[`HistoryDialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -16,128 +16,169 @@ exports[`history dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog"
+        class="bp3-dialog history-dialog"
       >
         <div
-          class="history-dialog"
+          class="bp3-dialog-header"
         >
-          <div
-            class="bp3-dialog-body history-record-container"
+          <h4
+            class="bp3-heading"
+          >
+            History
+          </h4>
+          <button
+            aria-label="Close"
+            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            type="button"
           >
             <span
-              class="history-dialog-title"
+              class="bp3-icon bp3-icon-small-cross"
+              icon="small-cross"
             >
-              History
+              <svg
+                data-icon="small-cross"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <desc>
+                  small-cross
+                </desc>
+                <path
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  fill-rule="evenodd"
+                />
+              </svg>
             </span>
+          </button>
+        </div>
+        <div
+          class="bp3-dialog-body"
+        >
+          <div
+            class="bp3-tabs bp3-vertical"
+          >
             <div
-              class="history-record-entries"
+              class="bp3-tab-list"
+              role="tablist"
             >
               <div
-                class="history-record-entry"
+                class="bp3-tab-indicator-wrapper"
+                style="height: 0px; transform: translateX(0px) translateY(0px); width: 0px; transition: none;"
               >
                 <div
-                  class="bp3-card bp3-elevation-0"
-                >
-                  <div
-                    class="history-record-title"
-                  >
-                    <span
-                      class="history-record-title-change"
-                    >
-                      Change
-                    </span>
-                    <span />
-                  </div>
-                  <div
-                    class="bp3-divider"
-                  />
-                  <p />
-                  <div
-                    class="json-collapse"
-                  >
-                    <div
-                      class="collapse-buttons"
-                    >
-                      <button
-                        class="bp3-button bp3-minimal"
-                        type="button"
-                      >
-                        <span
-                          class="bp3-button-text"
-                        >
-                          Payload
-                        </span>
-                      </button>
-                    </div>
-                    <div
-                      class="bp3-collapse"
-                    >
-                      <div
-                        aria-hidden="false"
-                        class="bp3-collapse-body"
-                        style="transform: translateY(-undefinedpx);"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  class="bp3-tab-indicator"
+                />
               </div>
               <div
-                class="history-record-entry"
+                aria-controls="bp3-tab-panel_undefined_0"
+                aria-disabled="false"
+                aria-expanded="true"
+                aria-selected="true"
+                class="bp3-tab"
+                data-tab-id="0"
+                id="bp3-tab-title_undefined_0"
+                role="tab"
+                tabindex="0"
+              >
+                test @ 
+              </div>
+              <div
+                aria-controls="bp3-tab-panel_undefined_1"
+                aria-disabled="false"
+                aria-expanded="false"
+                aria-selected="false"
+                class="bp3-tab"
+                data-tab-id="1"
+                id="bp3-tab-title_undefined_1"
+                role="tab"
+                tabindex="0"
+              >
+                test @ 
+              </div>
+              <div
+                class="bp3-flex-expander"
+              />
+            </div>
+            <div
+              aria-hidden="false"
+              aria-labelledby="bp3-tab-title_undefined_0"
+              class="bp3-tab-panel panel"
+              id="bp3-tab-panel_undefined_0"
+              role="tabpanel"
+            >
+              <div
+                class="show-json"
               >
                 <div
-                  class="bp3-card bp3-elevation-0"
+                  class="top-actions"
                 >
                   <div
-                    class="history-record-title"
+                    class="bp3-button-group right-buttons"
                   >
-                    <span
-                      class="history-record-title-change"
+                    <button
+                      class="bp3-button bp3-minimal"
+                      type="button"
                     >
-                      Change
-                    </span>
-                    <span />
-                  </div>
-                  <div
-                    class="bp3-divider"
-                  />
-                  <p />
-                  <div
-                    class="json-collapse"
-                  >
-                    <div
-                      class="collapse-buttons"
-                    >
-                      <button
-                        class="bp3-button bp3-minimal"
-                        type="button"
+                      <span
+                        class="bp3-button-text"
                       >
-                        <span
-                          class="bp3-button-text"
-                        >
-                          Payload
-                        </span>
-                      </button>
-                    </div>
-                    <div
-                      class="bp3-collapse"
-                    >
-                      <div
-                        aria-hidden="false"
-                        class="bp3-collapse-body"
-                        style="transform: translateY(-undefinedpx);"
-                      />
-                    </div>
+                        Diff with previous
+                      </span>
+                    </button>
                   </div>
+                </div>
+                <div
+                  class="main-area"
+                >
+                  <textarea
+                    class="bp3-input"
+                    readonly=""
+                  >
+                    {
+  "name": "test"
+}
+                  </textarea>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
           <div
-            class="bp3-dialog-footer"
+            class="bp3-dialog-footer-actions"
           >
-            <div
-              class="bp3-dialog-footer-actions"
-            />
+            <button
+              class="bp3-button"
+              type="button"
+            >
+              <span
+                class="bp3-icon bp3-icon-arrow-left"
+                icon="arrow-left"
+              >
+                <svg
+                  data-icon="arrow-left"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  width="16"
+                >
+                  <desc>
+                    arrow-left
+                  </desc>
+                  <path
+                    d="M13.99 6.99H4.41L7.7 3.7a1.003 1.003 0 00-1.42-1.42l-5 5a1.014 1.014 0 000 1.42l5 5a1.003 1.003 0 001.42-1.42L4.41 8.99H14c.55 0 1-.45 1-1s-.46-1-1.01-1z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp3-button-text"
+              >
+                Back
+              </span>
+            </button>
           </div>
         </div>
       </div>

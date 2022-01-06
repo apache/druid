@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -112,6 +114,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   public String getDimensionName()
   {
     return dimensionName;
+  }
+
+  @Override
+  public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+  {
+    return new StringDimensionSchema(dimensionName);
   }
 
   @Override

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`rule editor matches snapshot 1`] = `
+exports[`LookupValuesTable matches snapshot 1`] = `
 <div
   class="lookup-columns-table"
 >

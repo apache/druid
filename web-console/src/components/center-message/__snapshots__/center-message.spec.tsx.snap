@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`decribe center-message matches snapshot 1`] = `
+exports[`CenterMessage matches snapshot 1`] = `
 <div
   class="center-message bp3-input"
 >

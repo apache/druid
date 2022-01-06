@@ -73,6 +73,7 @@ public class BalancerStrategyBenchmark
   private int maxSegmentsToMove;
   
   private final List<ServerHolder> serverHolders = new ArrayList<>();
+  private boolean useBatchedSegmentSampler;
   private int reservoirSize = 1;
   private double percentOfSegmentsToConsider = 100;
   private final BalancerStrategy balancerStrategy = new CostBalancerStrategy(
@@ -85,9 +86,11 @@ public class BalancerStrategyBenchmark
     switch (mode) {
       case "50percentOfSegmentsToConsiderPerMove":
         percentOfSegmentsToConsider = 50;
+        useBatchedSegmentSampler = false;
         break;
       case "useBatchedSegmentSampler":
         reservoirSize = maxSegmentsToMove;
+        useBatchedSegmentSampler = true;
         break;
       default:
     }
@@ -128,12 +131,21 @@ public class BalancerStrategyBenchmark
   @Benchmark
   public void pickSegmentsToMove(Blackhole blackhole)
   {
-    Iterator<BalancerSegmentHolder> iterator = balancerStrategy.pickSegmentsToMove(
-        serverHolders,
-        Collections.emptySet(),
-        reservoirSize,
-        percentOfSegmentsToConsider
-    );
+    Iterator<BalancerSegmentHolder> iterator;
+    if (useBatchedSegmentSampler) {
+      iterator = balancerStrategy.pickSegmentsToMove(
+          serverHolders,
+          Collections.emptySet(),
+          reservoirSize
+      );
+    } else {
+      iterator = balancerStrategy.pickSegmentsToMove(
+          serverHolders,
+          Collections.emptySet(),
+          percentOfSegmentsToConsider
+      );
+    }
+
     for (int i = 0; i < maxSegmentsToMove && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());
     }

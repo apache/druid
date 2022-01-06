@@ -27,9 +27,9 @@ import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,7 +67,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
     );
   }
 
-  private static final int[] MAX_VALUES = new int[] {0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
+  private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
 
   public CompressedVSizeColumnarIntsSupplierTest(CompressionStrategy compressionStrategy, ByteOrder byteOrder)
   {
@@ -86,7 +86,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   public void setUp()
   {
     closer = Closer.create();
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
     columnarInts = null;
     supplier = null;
     vals = null;
@@ -95,13 +95,12 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   @After
   public void tearDown() throws Exception
   {
-    CloseQuietly.close(columnarInts);
-    closer.close();
+    CloseableUtils.closeAll(columnarInts, closer);
   }
 
   private void setupSimple(final int chunkSize)
   {
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
 
     vals = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
 
@@ -126,7 +125,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
   private void makeWithSerde(final int chunkSize) throws IOException
   {
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedVSizeColumnarIntsSupplier theSupplier = CompressedVSizeColumnarIntsSupplier.fromList(
@@ -212,8 +211,14 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   public void testmaxIntsInBuffer()
   {
     Assert.assertEquals(CompressedPools.BUFFER_SIZE, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(1));
-    Assert.assertEquals(CompressedPools.BUFFER_SIZE / 2, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(2));
-    Assert.assertEquals(CompressedPools.BUFFER_SIZE / 4, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(4));
+    Assert.assertEquals(
+        CompressedPools.BUFFER_SIZE / 2,
+        CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(2)
+    );
+    Assert.assertEquals(
+        CompressedPools.BUFFER_SIZE / 4,
+        CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(4)
+    );
 
     Assert.assertEquals(CompressedPools.BUFFER_SIZE, 0x10000); // nearest power of 2 is 2^14
     Assert.assertEquals(1 << 14, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(3));
@@ -330,7 +335,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(columnarInts2);
+      CloseableUtils.closeAndWrapExceptions(columnarInts2);
     }
 
     if (failureHappened.get()) {

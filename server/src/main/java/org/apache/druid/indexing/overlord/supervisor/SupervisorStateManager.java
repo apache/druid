@@ -289,5 +289,15 @@ public class SupervisorStateManager
           .findFirst()
           .orElse(Exception.class.getName());
     }
+
+    @Override
+    public String toString()
+    {
+      return "ExceptionEvent{" +
+             "timestamp=" + timestamp +
+             ", exceptionClass='" + exceptionClass + '\'' +
+             ", message='" + message + '\'' +
+             '}';
+    }
   }
 }

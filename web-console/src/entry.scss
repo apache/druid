@@ -32,6 +32,7 @@ body {
   width: 100%;
   overflow: hidden;
   font-size: 13px;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -45,10 +46,6 @@ body {
     *:focus {
       outline: none !important;
     }
-  }
-
-  .ace-solarized-dark {
-    background-color: rgba($dark-gray1, 0.5);
   }
 }
 

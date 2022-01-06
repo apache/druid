@@ -23,20 +23,22 @@ import {
   FormGroup,
   InputGroup,
   Intent,
+  Tab,
+  Tabs,
   TextArea,
 } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
-  BasicQueryExplanation,
+  formatSignature,
   getDruidErrorMessage,
-  parseQueryPlan,
   queryDruidSql,
+  QueryExplanation,
   QueryWithContext,
-  SemiJoinQueryExplanation,
   trimSemicolon,
 } from '../../../utils';
 import { isEmptyContext } from '../../../utils/query-context';
@@ -63,16 +65,17 @@ export interface ExplainDialogProps {
 export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDialogProps) {
   const { queryWithContext, onClose, setQueryString, mandatoryQueryContext } = props;
 
-  const [explainState] = useQueryManager<
-    QueryWithContext,
-    BasicQueryExplanation | SemiJoinQueryExplanation | string
-  >({
+  const [explainState] = useQueryManager<QueryWithContext, QueryExplanation[] | string>({
     processQuery: async (queryWithContext: QueryWithContext) => {
       const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
       let context: Record<string, any> | undefined;
       if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
-        context = { ...queryContext, ...(mandatoryQueryContext || {}) };
+        context = {
+          ...queryContext,
+          ...(mandatoryQueryContext || {}),
+          useNativeQueryExplain: true,
+        };
         if (typeof wrapQueryLimit !== 'undefined') {
           context.sqlOuterLimit = wrapQueryLimit + 1;
         }
@@ -88,88 +91,73 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
         throw new Error(getDruidErrorMessage(e));
       }
 
-      return parseQueryPlan(result[0]['PLAN']);
+      const plan = result[0]['PLAN'];
+      if (typeof plan !== 'string') {
+        throw new Error(`unexpected result from server`);
+      }
+
+      try {
+        return JSONBig.parse(plan);
+      } catch {
+        return plan;
+      }
     },
     initQuery: queryWithContext,
   });
 
   let content: JSX.Element;
-  let queryString: string | undefined;
 
   const { loading, error: explainError, data: explainResult } = explainState;
+
+  function renderQueryExplanation(queryExplanation: QueryExplanation) {
+    const queryString = JSONBig.stringify(queryExplanation.query, undefined, 2);
+    return (
+      <div className="query-explanation">
+        <FormGroup className="query-group" label="Query">
+          <TextArea readOnly value={queryString} />
+        </FormGroup>
+        <FormGroup className="signature-group" label="Signature">
+          <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
+        </FormGroup>
+        <Button
+          className="open-query"
+          text="Open query"
+          rightIcon={IconNames.ARROW_TOP_RIGHT}
+          intent={Intent.PRIMARY}
+          minimal
+          onClick={() => {
+            setQueryString(queryString);
+            onClose();
+          }}
+        />
+      </div>
+    );
+  }
+
   if (loading) {
     content = <Loader />;
   } else if (explainError) {
     content = <div>{explainError.message}</div>;
   } else if (!explainResult) {
     content = <div />;
-  } else if ((explainResult as BasicQueryExplanation).query) {
-    queryString = JSONBig.stringify(
-      (explainResult as BasicQueryExplanation).query[0],
-      undefined,
-      2,
-    );
-    content = (
-      <div className="one-query">
-        <FormGroup label="Query">
-          <TextArea readOnly value={queryString} />
-        </FormGroup>
-        {(explainResult as BasicQueryExplanation).signature && (
-          <FormGroup label="Signature">
-            <InputGroup
-              defaultValue={(explainResult as BasicQueryExplanation).signature || ''}
-              readOnly
+  } else if (Array.isArray(explainResult) && explainResult.length) {
+    if (explainResult.length === 1) {
+      content = renderQueryExplanation(explainResult[0]);
+    } else {
+      content = (
+        <Tabs animate renderActiveTabPanelOnly vertical>
+          {explainResult.map((queryExplanation, i) => (
+            <Tab
+              id={i}
+              key={i}
+              title={`Query ${i + 1}`}
+              panel={renderQueryExplanation(queryExplanation)}
             />
-          </FormGroup>
-        )}
-      </div>
-    );
-  } else if (
-    (explainResult as SemiJoinQueryExplanation).mainQuery &&
-    (explainResult as SemiJoinQueryExplanation).subQueryRight
-  ) {
-    content = (
-      <div className="two-queries">
-        <FormGroup label="Main query">
-          <TextArea
-            readOnly
-            value={JSONBig.stringify(
-              (explainResult as SemiJoinQueryExplanation).mainQuery.query,
-              undefined,
-              2,
-            )}
-          />
-        </FormGroup>
-        {(explainResult as SemiJoinQueryExplanation).mainQuery.signature && (
-          <FormGroup label="Signature">
-            <InputGroup
-              defaultValue={(explainResult as SemiJoinQueryExplanation).mainQuery.signature || ''}
-              readOnly
-            />
-          </FormGroup>
-        )}
-        <FormGroup label="Sub query">
-          <TextArea
-            readOnly
-            value={JSONBig.stringify(
-              (explainResult as SemiJoinQueryExplanation).subQueryRight.query,
-              undefined,
-              2,
-            )}
-          />
-        </FormGroup>
-        {(explainResult as SemiJoinQueryExplanation).subQueryRight.signature && (
-          <FormGroup label="Signature">
-            <InputGroup
-              defaultValue={
-                (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || ''
-              }
-              readOnly
-            />
-          </FormGroup>
-        )}
-      </div>
-    );
+          ))}
+          <Tabs.Expander />
+        </Tabs>
+      );
+    }
   } else {
     content = <div className="generic-result">{explainResult}</div>;
   }
@@ -180,16 +168,6 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
-          {queryString && (
-            <Button
-              text="Open query"
-              intent={Intent.PRIMARY}
-              onClick={() => {
-                if (queryString) setQueryString(queryString);
-                onClose();
-              }}
-            />
-          )}
         </div>
       </div>
     </Dialog>

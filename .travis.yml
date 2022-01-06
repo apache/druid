@@ -94,7 +94,7 @@ jobs:
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
-        - pip3 install pyyaml
+        - pip3 install pyyaml==5.4.1
       script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
@@ -120,6 +120,28 @@ jobs:
     - name: "analyze dependencies"
       script: |-
         MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
+
+        The dependency analysis has found a dependency that is either:
+
+        1) Used and undeclared: These are available as a transitive dependency but should be explicitly
+        added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
+        shown above.
+
+        2) Unused and declared: These are not needed and removing them from the POM will speed up the build
+        and reduce the artifact size. The dependencies to remove are shown above.
+
+        If there are false positive dependency analysis warnings, they can be suppressed:
+        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
+        https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
+
+        For more information, refer to:
+        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
+
+        " && false; }
+
+    - name: "analyze hadoop 3 dependencies"
+      script: |-
+        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 || { echo "
 
         The dependency analysis has found a dependency that is either:
 
@@ -398,7 +420,7 @@ jobs:
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} ${MAVEN_SKIP}
+        - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} -Dit.indexer=${USE_INDEXER} ${MAVEN_SKIP} -Doverride.config.path=${OVERRIDE_CONFIG_PATH}
       after_failure: &integration_test_diags
         - for v in ~/shared/logs/*.log ; do
           echo $v logtail ======================== ; tail -100 $v ;
@@ -453,11 +475,11 @@ jobs:
 
     - <<: *integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test with deep storage as intermediate store"
-      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/shuffle-deep-store'
 
     - <<: *integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test with deep storage as intermediate store with indexer"
-      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      env: TESTNG_GROUPS='-Dgroups=shuffle-deep-store' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/shuffle-deep-store'
 
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
@@ -474,7 +496,7 @@ jobs:
 
     - <<: *integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) custom coordinator duties integration test"
-      env: TESTNG_GROUPS='-Dgroups=custom-coordinator-duties' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=custom-coordinator-duties' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/custom-coordinator-duties'
 
     - &integration_kafka_index_slow
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test slow"
@@ -529,7 +551,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -538,7 +560,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -547,7 +569,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -556,7 +578,7 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
       script: *run_integration_test
       after_failure: *integration_test_diags
 
@@ -620,12 +642,12 @@ jobs:
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk8) leadership and high availability integration tests"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test (mariaDB)"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+      env: TESTNG_GROUPS='-Dgroups=query' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
@@ -653,22 +675,22 @@ jobs:
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_error
       name: "(Compile=openjdk8, Run=openjdk11) query error integration test for missing segments"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_security
       name: "(Compile=openjdk8, Run=openjdk11) security integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_ldap_security
       name: "(Compile=openjdk8, Run=openjdk11) ldap security integration test"
@@ -698,12 +720,12 @@ jobs:
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11) leadership and high availability integration tests"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      env: TESTNG_GROUPS='-Dgroups=high-availability' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test (mariaDB)"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver'
+      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' MYSQL_DRIVER_CLASSNAME='org.mariadb.jdbc.Driver' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 

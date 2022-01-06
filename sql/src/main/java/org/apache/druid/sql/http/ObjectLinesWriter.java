@@ -22,11 +22,11 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.io.SerializedString;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.rel.type.RelDataType;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 public class ObjectLinesWriter implements ResultFormat.Writer
 {
@@ -57,15 +57,13 @@ public class ObjectLinesWriter implements ResultFormat.Writer
   }
 
   @Override
-  public void writeHeader(final List<String> columnNames) throws IOException
+  public void writeHeader(
+      final RelDataType rowType,
+      final boolean includeTypes,
+      final boolean includeSqlTypes
+  ) throws IOException
   {
-    jsonGenerator.writeStartObject();
-
-    for (String columnName : columnNames) {
-      jsonGenerator.writeNullField(columnName);
-    }
-
-    jsonGenerator.writeEndObject();
+    ObjectWriter.writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
   }
 
   @Override

@@ -237,8 +237,6 @@ while (1) {
       if ($command->{down} < time) {
         my $logfile = sprintf("%s%s", "$svdir/$command->{name}", defined $opt{'svlogd'} ? "" : ".log");
 
-        logit "Running command[" . pretty($command->{name}, 'bold') . "], logging to[$logfile]: $command->{command}";
-
         if (my $pid = fork) {
           $command->{pid} = $pid;
           $command->{logfile} = $logfile;
@@ -260,7 +258,9 @@ while (1) {
 
             open STDOUT, "|svlogd $logfile" or logdie "pipe to svlogd $logfile failed: $!\n";
           } else {
-            open STDOUT, ">>", $logfile or logdie "open $logfile failed: $!\n";
+            # Since the log4j2 is configured to write log to file, which means there's no application log output to the console,
+            # We don't need to redirect the STDOUT of application to a file
+            # open STDOUT, ">>", $logfile or logdie "open $logfile failed: $!\n";
           }
 
           open STDERR, ">&STDOUT" or logdie "redirecting stderr failed: $!\n";
@@ -281,7 +281,7 @@ while (1) {
       logit "Command[" . pretty($command->{name}, 'bold') . "] exited (pid = $pid, " . stringify_exit_status($status) . ")";
       if ($status && !$killed && !$command->{restarting}) {
         # Unexpected exit
-        logit "Command[" . pretty($command->{name}, 'bold') . "] " . pretty("failed", "red") . ", see logfile for more details: $command->{logfile}";
+        logit "Command[" . pretty($command->{name}, 'bold') . "] " . pretty("failed", "red") . ", see its logfile for more details";
       }
       $command->{restarting} = 0;
     } else {

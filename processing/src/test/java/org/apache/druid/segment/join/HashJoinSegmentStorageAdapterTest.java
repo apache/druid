@@ -241,31 +241,30 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_getColumnTypeName_factToCountryFactColumn()
-  {
-    Assert.assertEquals("hyperUnique", makeFactToCountrySegment().getColumnTypeName("channel_uniques"));
-  }
-
-  @Test
-  public void test_getColumnTypeName_factToCountryJoinColumn()
+  public void test_getColumnCapabilities_complexTypeName_factToCountryFactColumn()
   {
     Assert.assertEquals(
-        "STRING",
-        makeFactToCountrySegment().getColumnTypeName(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
+        "hyperUnique",
+        makeFactToCountrySegment().getColumnCapabilities("channel_uniques").getComplexTypeName()
     );
   }
 
   @Test
-  public void test_getColumnTypeName_factToCountryNonexistentFactColumn()
+  public void test_getColumnCapabilities_typeString_factToCountryFactColumn()
   {
-    Assert.assertNull(makeFactToCountrySegment().getColumnTypeName("nonexistent"));
+    Assert.assertEquals(
+        "COMPLEX<hyperUnique>",
+        makeFactToCountrySegment().getColumnCapabilities("channel_uniques").asTypeString()
+    );
   }
 
   @Test
-  public void test_getColumnTypeName_factToCountryNonexistentJoinColumn()
+  public void test_getColumnCapabilities_typeString_factToCountryJoinColumn()
   {
-    Assert.assertNull(
-        makeFactToCountrySegment().getColumnTypeName(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "nonexistent")
+    Assert.assertEquals(
+        "STRING",
+        makeFactToCountrySegment().getColumnCapabilities(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
+                                  .asTypeString()
     );
   }
 

@@ -283,9 +283,12 @@
       <artifactId>jetty-client</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- we require not shaded version of hadoop deps in case of hadoop3 as we are extending
+    org.apache.hadoop.security.authentication.server.AuthenticationHandler -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
+      <version>${hadoop.compile.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.nimbusds</groupId>

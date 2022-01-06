@@ -21,11 +21,12 @@ package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.HistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -93,14 +94,14 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("approxHisto", ValueType.COMPLEX)
-                    .add("bucket", ValueType.COMPLEX)
-                    .add("equal", ValueType.COMPLEX)
-                    .add("custom", ValueType.COMPLEX)
-                    .add("min", ValueType.DOUBLE)
-                    .add("max", ValueType.DOUBLE)
-                    .add("quantile", ValueType.FLOAT)
-                    .add("quantiles", ValueType.COMPLEX)
+                    .add("approxHisto", null)
+                    .add("bucket", HistogramAggregatorFactory.TYPE)
+                    .add("equal", HistogramAggregatorFactory.TYPE)
+                    .add("custom", HistogramAggregatorFactory.TYPE)
+                    .add("min", ColumnType.DOUBLE)
+                    .add("max", ColumnType.DOUBLE)
+                    .add("quantile", ColumnType.FLOAT)
+                    .add("quantiles", ColumnType.UNKNOWN_COMPLEX)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

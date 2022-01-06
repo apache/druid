@@ -24,14 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
+import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.ServerView.CallbackAction;
 import org.apache.druid.client.ServerView.SegmentCallback;
 import org.apache.druid.client.ServerView.ServerRemovedCallback;
-import org.apache.druid.client.SingleServerInventoryView.FilteringSegmentCallback;
 import org.apache.druid.client.TimelineServerView.TimelineCallback;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
@@ -135,7 +136,9 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override
@@ -238,7 +241,9 @@ public class DruidSchemaConcurrencyTest extends DruidSchemaTestCommon
         segmentManager,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopEscalator()
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        null
     )
     {
       @Override

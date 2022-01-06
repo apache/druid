@@ -125,6 +125,7 @@ public class NamespaceLookupExtractorFactoryTest
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
+        null,
         null
     );
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
@@ -457,7 +458,7 @@ public class NamespaceLookupExtractorFactoryTest
     final Injector injector = makeInjector();
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\", \"maxHeapPercentage\": 10 } } }";
     final LookupExtractorFactory factory = mapper.readValue(str, LookupExtractorFactory.class);
     Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = (NamespaceLookupExtractorFactory) factory;

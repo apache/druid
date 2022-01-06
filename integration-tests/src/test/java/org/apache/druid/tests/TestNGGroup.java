@@ -159,4 +159,6 @@ public class TestNGGroup
   public static final String SHUFFLE_DEEP_STORE = "shuffle-deep-store";
 
   public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
+
+  public static final String HTTP_ENDPOINT = "http-endpoint";
 }

@@ -54,6 +54,7 @@ public class CoordinatorDynamicConfig
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
+  @Deprecated
   private final double percentOfSegmentsToConsiderPerMove;
   private final boolean useBatchedSegmentSampler;
   private final int replicantLifetime;
@@ -117,7 +118,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
-      @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+      @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
       @JsonProperty("useBatchedSegmentSampler") boolean useBatchedSegmentSampler,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
@@ -274,6 +275,7 @@ public class CoordinatorDynamicConfig
     return maxSegmentsToMove;
   }
 
+  @Deprecated
   @JsonProperty
   public double getPercentOfSegmentsToConsiderPerMove()
   {
@@ -559,7 +561,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
-        @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+        @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
         @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
@@ -623,6 +625,7 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    @Deprecated
     public Builder withPercentOfSegmentsToConsiderPerMove(double percentOfSegmentsToConsiderPerMove)
     {
       this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;

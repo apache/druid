@@ -21,7 +21,12 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import { ColumnMetadata, queryDruidSql } from '../../utils';
+import {
+  ColumnMetadata,
+  queryDruidSql,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
@@ -50,10 +55,13 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
   });
 
   function renderTable() {
+    const columns = columnsState.data || [];
     return (
       <ReactTable
-        data={columnsState.data || []}
-        defaultPageSize={20}
+        data={columns}
+        defaultPageSize={SMALL_TABLE_PAGE_SIZE}
+        pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination={columns.length > SMALL_TABLE_PAGE_SIZE}
         filterable
         columns={[
           {

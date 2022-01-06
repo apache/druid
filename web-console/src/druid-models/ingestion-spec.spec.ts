@@ -19,7 +19,6 @@
 import {
   adjustId,
   cleanSpec,
-  downgradeSpec,
   getColumnTypeFromHeaderAndRows,
   guessInputFormat,
   guessTypeFromSample,
@@ -29,60 +28,164 @@ import {
 } from './ingestion-spec';
 
 describe('ingestion-spec', () => {
-  const oldSpec = {
-    type: 'index_parallel',
-    spec: {
-      ioConfig: {
-        type: 'index_parallel',
-        firehose: {
-          type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+  it('upgrades / downgrades task spec', () => {
+    const oldTaskSpec = {
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          firehose: {
+            type: 'http',
+            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+        dataSchema: {
+          dataSource: 'wikipedia',
+          granularitySpec: {
+            segmentGranularity: 'day',
+            queryGranularity: 'hour',
+            rollup: true,
+          },
+          parser: {
+            type: 'string',
+            parseSpec: {
+              format: 'json',
+              timestampSpec: {
+                column: 'timestamp',
+                format: 'iso',
+              },
+              dimensionsSpec: {
+                dimensions: ['channel', 'cityName', 'comment'],
+              },
+              flattenSpec: {
+                fields: [
+                  {
+                    type: 'path',
+                    name: 'cityNameAlt',
+                    expr: '$.cityName',
+                  },
+                ],
+              },
+            },
+          },
+          transformSpec: {
+            transforms: [
+              {
+                type: 'expression',
+                name: 'channel',
+                expression: 'concat("channel", \'lol\')',
+              },
+            ],
+            filter: {
+              type: 'selector',
+              dimension: 'commentLength',
+              value: '35',
+            },
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              name: 'sum_added',
+              type: 'longSum',
+              fieldName: 'added',
+            },
+          ],
         },
       },
-      tuningConfig: {
-        type: 'index_parallel',
+    };
+
+    expect(upgradeSpec(oldTaskSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'wikipedia',
+          dimensionsSpec: {
+            dimensions: ['channel', 'cityName', 'comment'],
+          },
+          granularitySpec: {
+            queryGranularity: 'hour',
+            rollup: true,
+            segmentGranularity: 'day',
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              fieldName: 'added',
+              name: 'sum_added',
+              type: 'longSum',
+            },
+          ],
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'iso',
+          },
+          transformSpec: {
+            filter: {
+              dimension: 'commentLength',
+              type: 'selector',
+              value: '35',
+            },
+            transforms: [
+              {
+                expression: 'concat("channel", \'lol\')',
+                name: 'channel',
+                type: 'expression',
+              },
+            ],
+          },
+        },
+        ioConfig: {
+          inputFormat: {
+            flattenSpec: {
+              fields: [
+                {
+                  expr: '$.cityName',
+                  name: 'cityNameAlt',
+                  type: 'path',
+                },
+              ],
+            },
+            type: 'json',
+          },
+          inputSource: {
+            type: 'http',
+            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          },
+          type: 'index_parallel',
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
       },
+      type: 'index_parallel',
+    });
+  });
+
+  it('upgrades / downgrades supervisor spec', () => {
+    const oldSupervisorSpec = {
+      type: 'kafka',
       dataSchema: {
-        dataSource: 'wikipedia',
-        granularitySpec: {
-          segmentGranularity: 'day',
-          queryGranularity: 'hour',
-          rollup: true,
-        },
+        dataSource: 'metrics-kafka',
         parser: {
           type: 'string',
           parseSpec: {
             format: 'json',
             timestampSpec: {
               column: 'timestamp',
-              format: 'iso',
+              format: 'auto',
             },
             dimensionsSpec: {
-              dimensions: ['channel', 'cityName', 'comment'],
+              dimensions: [],
+              dimensionExclusions: ['timestamp', 'value'],
             },
-            flattenSpec: {
-              fields: [
-                {
-                  type: 'path',
-                  name: 'cityNameAlt',
-                  expr: '$.cityName',
-                },
-              ],
-            },
-          },
-        },
-        transformSpec: {
-          transforms: [
-            {
-              type: 'expression',
-              name: 'channel',
-              expression: 'concat("channel", \'lol\')',
-            },
-          ],
-          filter: {
-            type: 'selector',
-            dimension: 'commentLength',
-            value: '35',
           },
         },
         metricsSpec: [
@@ -91,21 +194,100 @@ describe('ingestion-spec', () => {
             type: 'count',
           },
           {
-            name: 'sum_added',
-            type: 'longSum',
-            fieldName: 'added',
+            name: 'value_sum',
+            fieldName: 'value',
+            type: 'doubleSum',
+          },
+          {
+            name: 'value_min',
+            fieldName: 'value',
+            type: 'doubleMin',
+          },
+          {
+            name: 'value_max',
+            fieldName: 'value',
+            type: 'doubleMax',
           },
         ],
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'HOUR',
+          queryGranularity: 'NONE',
+        },
       },
-    },
-  };
+      tuningConfig: {
+        type: 'kafka',
+        maxRowsPerSegment: 5000000,
+      },
+      ioConfig: {
+        topic: 'metrics',
+        consumerProperties: {
+          'bootstrap.servers': 'localhost:9092',
+        },
+        taskCount: 1,
+        replicas: 1,
+        taskDuration: 'PT1H',
+      },
+    };
 
-  it('upgrades', () => {
-    expect(upgradeSpec(oldSpec)).toMatchSnapshot();
-  });
-
-  it('round trips', () => {
-    expect(downgradeSpec(upgradeSpec(oldSpec))).toMatchObject(oldSpec);
+    expect(upgradeSpec(oldSupervisorSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'metrics-kafka',
+          dimensionsSpec: {
+            dimensionExclusions: ['timestamp', 'value'],
+            dimensions: [],
+          },
+          granularitySpec: {
+            queryGranularity: 'NONE',
+            segmentGranularity: 'HOUR',
+            type: 'uniform',
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_sum',
+              type: 'doubleSum',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_min',
+              type: 'doubleMin',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_max',
+              type: 'doubleMax',
+            },
+          ],
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+        },
+        ioConfig: {
+          consumerProperties: {
+            'bootstrap.servers': 'localhost:9092',
+          },
+          inputFormat: {
+            type: 'json',
+          },
+          replicas: 1,
+          taskCount: 1,
+          taskDuration: 'PT1H',
+          topic: 'metrics',
+        },
+        tuningConfig: {
+          maxRowsPerSegment: 5000000,
+          type: 'kafka',
+        },
+      },
+      type: 'kafka',
+    });
   });
 
   it('cleanSpec', () => {

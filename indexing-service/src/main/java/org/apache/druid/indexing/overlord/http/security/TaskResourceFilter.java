@@ -30,7 +30,6 @@ import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -79,18 +78,16 @@ public class TaskResourceFilter extends AbstractResourceFilter
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {
       throw new WebApplicationException(
-          Response.status(Response.Status.BAD_REQUEST)
+          Response.status(Response.Status.NOT_FOUND)
                   .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
                   .build()
       );
     }
     final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());
 
-    // Task APIs should always require DATASOURCE WRITE access
-    // as they deal with ingestion related information
     final ResourceAction resourceAction = new ResourceAction(
         new Resource(dataSourceName, ResourceType.DATASOURCE),
-        Action.WRITE
+        getAction(request)
     );
 
     final Access authResult = AuthorizationUtils.authorizeResourceAction(

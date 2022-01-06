@@ -74,7 +74,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
   @Test
   public void testMultithreadAddFacts() throws Exception
   {
-    final IncrementalIndex<?> index = indexCreator.createIndex(new IncrementalIndexSchema.Builder()
+    final IncrementalIndex index = indexCreator.createIndex(new IncrementalIndexSchema.Builder()
         .withQueryGranularity(Granularities.MINUTE)
         .withMetrics(new LongMaxAggregatorFactory("max", "max"))
         .build()
@@ -134,7 +134,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
   @Test
   public void testMultithreadAddFactsUsingExpressionAndJavaScript() throws Exception
   {
-    final IncrementalIndex<?> indexExpr = indexCreator.createIndex(
+    final IncrementalIndex indexExpr = indexCreator.createIndex(
         new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.MINUTE)
             .withMetrics(new LongSumAggregatorFactory(
@@ -147,7 +147,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
             .build()
     );
 
-    final IncrementalIndex<?> indexJs = indexCreator.createIndex(
+    final IncrementalIndex indexJs = indexCreator.createIndex(
         new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.MINUTE)
             .withMetrics(new JavaScriptAggregatorFactory(
@@ -222,7 +222,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final IncrementalIndex<?> genericIndex = indexCreator.createIndex(
+    final IncrementalIndex genericIndex = indexCreator.createIndex(
         new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.MINUTE)
             .withMetrics(new LongMaxAggregatorFactory("max", "max"))

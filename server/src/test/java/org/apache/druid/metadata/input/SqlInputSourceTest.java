@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -38,6 +37,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -102,7 +102,7 @@ public class SqlInputSourceTest
   public static void teardown() throws IOException
   {
     for (File dir : FIREHOSE_TMP_DIRS) {
-      FileUtils.forceDelete(dir);
+      org.apache.commons.io.FileUtils.forceDelete(dir);
     }
   }
 
@@ -131,8 +131,8 @@ public class SqlInputSourceTest
         SqlInputSourceTest.class.getSimpleName(),
         dirSuffix
     );
-    FileUtils.forceDelete(firehoseTempDir);
-    FileUtils.forceMkdir(firehoseTempDir);
+    org.apache.commons.io.FileUtils.forceDelete(firehoseTempDir);
+    FileUtils.mkdirp(firehoseTempDir);
     FIREHOSE_TMP_DIRS.add(firehoseTempDir);
     return firehoseTempDir;
   }

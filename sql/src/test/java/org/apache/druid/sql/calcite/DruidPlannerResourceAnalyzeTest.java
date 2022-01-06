@@ -20,8 +20,11 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +38,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -43,7 +46,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -54,7 +57,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM foo as druid WHERE druid.dim1 <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -62,7 +65,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -80,7 +83,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
                        + "  )\n"
                        + ")";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -88,8 +91,8 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE),
-            new Resource("numfoo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -106,7 +109,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
                        + "  FROM (SELECT * FROM druid.foo UNION ALL SELECT * FROM druid.foo2)\n"
                        + "  GROUP BY dim2\n"
                        + ")";
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -114,8 +117,8 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE),
-            new Resource("foo2", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("foo2", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -126,7 +129,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM foo INNER JOIN numfoo ON foo.dim1 = numfoo.dim1 WHERE numfoo.dim1 <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -134,8 +137,8 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE),
-            new Resource("numfoo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -146,7 +149,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM view.aview as druid WHERE dim1_firstchar <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -154,7 +157,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("aview", ResourceType.VIEW)
+            new ResourceAction(new Resource("aview", ResourceType.VIEW), Action.READ)
         ),
         requiredResources
     );
@@ -172,7 +175,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
                        + "  )\n"
                        + ")";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -180,8 +183,8 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE),
-            new Resource("cview", ResourceType.VIEW)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("cview", ResourceType.VIEW), Action.READ)
         ),
         requiredResources
     );
@@ -192,7 +195,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM view.cview as aview INNER JOIN numfoo ON aview.dim2 = numfoo.dim2 WHERE numfoo.dim1 <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -200,8 +203,8 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("cview", ResourceType.VIEW),
-            new Resource("numfoo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("cview", ResourceType.VIEW), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
@@ -212,7 +215,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   {
     final String sql = "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'";
 
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -220,7 +223,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("dview", ResourceType.VIEW)
+            new ResourceAction(new Resource("dview", ResourceType.VIEW), Action.READ)
         ),
         requiredResources
     );
@@ -230,7 +233,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   public void testDynamicParameters()
   {
     final String sql = "SELECT SUBSTRING(dim2, CAST(? as BIGINT), CAST(? as BIGINT)) FROM druid.foo LIMIT ?";
-    Set<Resource> requiredResources = analyzeResources(
+    Set<ResourceAction> requiredResources = analyzeResources(
         PLANNER_CONFIG_DEFAULT,
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT
@@ -238,9 +241,44 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new Resource("foo", ResourceType.DATASOURCE)
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ)
         ),
         requiredResources
     );
+  }
+
+  @Test
+  public void testSysTables()
+  {
+    testSysTable("SELECT * FROM sys.segments", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.servers", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.server_segments", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.tasks", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.supervisors", null, PLANNER_CONFIG_DEFAULT);
+
+    testSysTable("SELECT * FROM sys.segments", "segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.servers", "servers", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.server_segments", "server_segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.tasks", "tasks", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.supervisors", "supervisors", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+  }
+
+  private void testSysTable(String sql, String name, PlannerConfig plannerConfig)
+  {
+    Set<ResourceAction> requiredResources = analyzeResources(
+        plannerConfig,
+        sql,
+        CalciteTests.REGULAR_USER_AUTH_RESULT
+    );
+    if (name == null) {
+      Assert.assertEquals(0, requiredResources.size());
+    } else {
+      Assert.assertEquals(
+          ImmutableSet.of(
+              new ResourceAction(new Resource(name, ResourceType.SYSTEM_TABLE), Action.READ)
+          ),
+          requiredResources
+      );
+    }
   }
 }

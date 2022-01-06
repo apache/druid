@@ -40,7 +40,7 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -87,7 +87,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -95,7 +95,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -131,7 +131,12 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
                                                     new LongSumAggregatorFactory("_a0:sum", "a0"),
-                                                    new CountAggregatorFactory("_a0:count")
+                                                    useDefault
+                                                    ? new CountAggregatorFactory("_a0:count")
+                                                    : new FilteredAggregatorFactory(
+                                                        new CountAggregatorFactory("_a0:count"),
+                                                        not(selector("a0", null, null))
+                                                    )
                                                 )
                                                 .setPostAggregatorSpecs(Collections.singletonList(new ArithmeticPostAggregator(
                                                     "_a0",
@@ -200,7 +205,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -208,7 +213,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -293,7 +298,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimFilter(not(selector("country", null, null)))
@@ -301,7 +306,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -380,14 +385,14 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",
@@ -473,14 +478,14 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                 .setVirtualColumns(new ExpressionVirtualColumn(
                                                                     "v0",
                                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                                    ValueType.LONG,
+                                                                    ColumnType.LONG,
                                                                     TestExprMacroTable.INSTANCE
                                                                 ))
                                                                 .setDimensions(
                                                                     new DefaultDimensionSpec(
                                                                         "v0",
                                                                         "d0",
-                                                                        ValueType.LONG
+                                                                        ColumnType.LONG
                                                                     ),
                                                                     new DefaultDimensionSpec(
                                                                         "country",

@@ -36,6 +36,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -118,7 +119,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .annotatedWith(IndexingService.class)
                 .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
-          binder.bind(ObjectMapper.class).toInstance(objectMapper);
+          binder.bind(DruidSchemaManager.class).toInstance(new NoopDruidSchemaManager());
+          binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
         },

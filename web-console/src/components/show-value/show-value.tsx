@@ -19,39 +19,36 @@
 import { Button, ButtonGroup, TextArea } from '@blueprintjs/core';
 import React from 'react';
 
-import { UrlBaser } from '../../singletons';
 import { downloadFile } from '../../utils';
 
 import './show-value.scss';
 
 export interface ShowValueProps {
-  endpoint?: string;
+  jsonValue: string;
+  onDiffWithPrevious?: () => void;
   downloadFilename?: string;
-  jsonValue?: string;
 }
 
 export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
-  const { endpoint, downloadFilename, jsonValue } = props;
+  const { jsonValue, onDiffWithPrevious, downloadFilename } = props;
   return (
     <div className="show-json">
-      <div className="top-actions">
-        <ButtonGroup className="right-buttons">
-          {downloadFilename && (
-            <Button
-              text="Save"
-              minimal
-              onClick={() => (jsonValue ? downloadFile(jsonValue, 'json', downloadFilename) : null)}
-            />
-          )}
-          {endpoint && (
-            <Button
-              text="View raw"
-              minimal
-              onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
-            />
-          )}
-        </ButtonGroup>
-      </div>
+      {(onDiffWithPrevious || downloadFilename) && (
+        <div className="top-actions">
+          <ButtonGroup className="right-buttons">
+            {onDiffWithPrevious && (
+              <Button text="Diff with previous" minimal onClick={onDiffWithPrevious} />
+            )}
+            {downloadFilename && (
+              <Button
+                text="Save"
+                minimal
+                onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
+              />
+            )}
+          </ButtonGroup>
+        </div>
+      )}
       <div className="main-area">
         <TextArea readOnly value={jsonValue} />
       </div>

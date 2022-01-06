@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +32,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
@@ -77,12 +79,14 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -109,13 +113,17 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlLifecycleFactory;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.run.NativeQueryMakerFactory;
+import org.apache.druid.sql.calcite.run.QueryMakerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -124,11 +132,12 @@ import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
+import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
-import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -138,7 +147,6 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -186,8 +194,10 @@ public class CalciteTests
           return new Access(false);
         } else if (ResourceType.VIEW.equals(resource.getType()) && resource.getName().equals("forbiddenView")) {
           return new Access(false);
-        } else {
+        } else if (ResourceType.DATASOURCE.equals(resource.getType()) || ResourceType.VIEW.equals(resource.getType())) {
           return Access.OK;
+        } else {
+          return new Access(false);
         }
       };
     }
@@ -240,10 +250,6 @@ public class CalciteTests
 
   public static final Injector INJECTOR = Guice.createInjector(
       binder -> {
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-
-        // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
-
         final LookupExtractorFactoryContainerProvider lookupProvider =
             LookupEnabledTestExprMacroTable.createTestLookupProvider(
                 ImmutableMap.of(
@@ -253,8 +259,29 @@ public class CalciteTests
                     "6", "x6"
                 )
             );
+
+        ObjectMapper mapper = TestHelper.makeJsonMapper().registerModules(
+            new LookupSerdeModule().getJacksonModules()
+        );
+        mapper.setInjectableValues(
+            new InjectableValues.Std()
+                .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+                .addValue(ObjectMapper.class.getName(), mapper)
+                .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+                .addValue(LookupExtractorFactoryContainerProvider.class.getName(), lookupProvider)
+        );
+        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(
+            mapper
+        );
+
+        // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
-      }
+        SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
+
+        // Add "EXTERN" table macro, for CalciteInsertDmlTest.
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+      },
+      new SqlAggregationModule()
   );
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
@@ -703,17 +730,17 @@ public class CalciteTests
           x.get("l2")
       }).collect(Collectors.toList()),
       RowSignature.builder()
-                  .add("dim1", ValueType.STRING)
-                  .add("dim2", ValueType.STRING)
-                  .add("dim3", ValueType.STRING)
-                  .add("dim4", ValueType.STRING)
-                  .add("dim5", ValueType.STRING)
-                  .add("d1", ValueType.DOUBLE)
-                  .add("d2", ValueType.DOUBLE)
-                  .add("f1", ValueType.FLOAT)
-                  .add("f2", ValueType.FLOAT)
-                  .add("l1", ValueType.LONG)
-                  .add("l2", ValueType.LONG)
+                  .add("dim1", ColumnType.STRING)
+                  .add("dim2", ColumnType.STRING)
+                  .add("dim3", ColumnType.STRING)
+                  .add("dim4", ColumnType.STRING)
+                  .add("dim5", ColumnType.STRING)
+                  .add("d1", ColumnType.DOUBLE)
+                  .add("d2", ColumnType.DOUBLE)
+                  .add("f1", ColumnType.FLOAT)
+                  .add("f2", ColumnType.FLOAT)
+                  .add("l1", ColumnType.LONG)
+                  .add("l2", ColumnType.LONG)
                   .build()
   );
 
@@ -756,6 +783,14 @@ public class CalciteTests
   }
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
+
+  public static QueryMakerFactory createMockQueryMakerFactory(
+      final QuerySegmentWalker walker,
+      final QueryRunnerFactoryConglomerate conglomerate
+  )
+  {
+    return new NativeQueryMakerFactory(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+  }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
@@ -1017,15 +1052,14 @@ public class CalciteTests
       exprMacros.add(INJECTOR.getInstance(clazz));
     }
     exprMacros.add(INJECTOR.getInstance(LookupExprMacro.class));
+
     return new ExprMacroTable(exprMacros);
   }
 
   public static DruidOperatorTable createOperatorTable()
   {
     try {
-      final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-      extractionOperators.add(INJECTOR.getInstance(QueryLookupOperatorConversion.class));
-      return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
+      return INJECTOR.getInstance(DruidOperatorTable.class);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -1132,56 +1166,35 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig);
-    SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
-
-    LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = ImmutableSet.of(
-        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(systemSchema),
-        new NamedLookupSchema(lookupSchema)
-    );
-    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
-        rootSchema,
-        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
-    );
-    InformationSchema informationSchema =
-        new InformationSchema(
-            catalog,
-            authorizerMapper
-        );
-    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
-    rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
-    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-
-    return catalog;
+    return createMockRootSchema(conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
   }
 
   public static DruidSchemaCatalog createMockRootSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
-      final ViewManager viewManager,
+      @Nullable final ViewManager viewManager,
+      final DruidSchemaManager druidSchemaManager,
       final AuthorizerMapper authorizerMapper
   )
   {
-    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, viewManager);
+    DruidSchema druidSchema = createMockSchema(conglomerate, walker, plannerConfig, druidSchemaManager);
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
     LookupSchema lookupSchema = CalciteTests.createMockLookupSchema();
-    ViewSchema viewSchema = new ViewSchema(viewManager);
+    ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = ImmutableSet.of(
-        new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME),
-        new NamedSystemSchema(systemSchema),
-        new NamedLookupSchema(lookupSchema),
-        new NamedViewSchema(viewSchema)
-    );
+    Set<NamedSchema> namedSchemas = new HashSet<>();
+    namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
+    namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
+    namedSchemas.add(new NamedLookupSchema(lookupSchema));
+
+    if (viewSchema != null) {
+      namedSchemas.add(new NamedViewSchema(viewSchema));
+    }
+
     DruidSchemaCatalog catalog = new DruidSchemaCatalog(
         rootSchema,
         namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
@@ -1195,39 +1208,19 @@ public class CalciteTests
     rootSchema.add(CalciteTests.INFORMATION_SCHEMA_NAME, informationSchema);
     rootSchema.add(NamedSystemSchema.NAME, systemSchema);
     rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-    rootSchema.add(NamedViewSchema.NAME, viewSchema);
-    return catalog;
-  }
 
-  /**
-   * Some Calcite exceptions (such as that thrown by
-   * {@link org.apache.druid.sql.calcite.CalciteQueryTest#testCountStarWithTimeFilterUsingStringLiteralsInvalid)},
-   * are structured as a chain of RuntimeExceptions caused by InvocationTargetExceptions. To get the root exception
-   * it is necessary to make getTargetException calls on the InvocationTargetExceptions.
-   */
-  public static Throwable getRootCauseFromInvocationTargetExceptionChain(Throwable t)
-  {
-    Throwable curThrowable = t;
-    while (curThrowable.getCause() instanceof InvocationTargetException) {
-      curThrowable = ((InvocationTargetException) curThrowable.getCause()).getTargetException();
+    if (viewSchema != null) {
+      rootSchema.add(NamedViewSchema.NAME, viewSchema);
     }
-    return curThrowable;
-  }
 
-  private static DruidSchema createMockSchema(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig
-  )
-  {
-    return createMockSchema(conglomerate, walker, plannerConfig, new NoopViewManager());
+    return catalog;
   }
 
   private static DruidSchema createMockSchema(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
-      final ViewManager viewManager
+      final DruidSchemaManager druidSchemaManager
   )
   {
     final DruidSchema schema = new DruidSchema(
@@ -1243,7 +1236,9 @@ public class CalciteTests
         },
         createDefaultJoinableFactory(),
         plannerConfig,
-        TEST_AUTHENTICATOR_ESCALATOR
+        TEST_AUTHENTICATOR_ESCALATOR,
+        new BrokerInternalQueryConfig(),
+        druidSchemaManager
     );
 
     try {

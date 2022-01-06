@@ -351,7 +351,7 @@ public class TaskLockbox
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
           newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
           if (newSegmentId == null) {
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
           convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
         } else {
@@ -400,7 +400,7 @@ public class TaskLockbox
                 ? ((SegmentLock) posseToUse.taskLock).getPartitionId()
                 : null
             );
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
         } else {
           log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
@@ -408,7 +408,10 @@ public class TaskLockbox
         }
       } else {
         final boolean lockRevoked = posseToUse != null && posseToUse.getTaskLock().isRevoked();
-        return LockResult.fail(lockRevoked);
+        if (lockRevoked) {
+          return LockResult.revoked(posseToUse.getTaskLock());
+        }
+        return LockResult.fail();
       }
     }
     finally {
@@ -576,9 +579,8 @@ public class TaskLockbox
           .stream()
           .allMatch(interval -> {
             final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(task, interval);
-            // Tasks cannot enter the critical section with a shared lock
-            return lockPosses.stream().map(TaskLockPosse::getTaskLock).allMatch(
-                lock -> !lock.isRevoked() && lock.getType() != TaskLockType.SHARED
+            return lockPosses.stream().map(TaskLockPosse::getTaskLock).noneMatch(
+                lock -> lock.isRevoked()
             );
           });
     }
@@ -608,7 +610,8 @@ public class TaskLockbox
    * @param taskId an id of the task holding the lock
    * @param lock   lock to be revoked
    */
-  private void revokeLock(String taskId, TaskLock lock)
+  @VisibleForTesting
+  protected void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
@@ -1130,8 +1133,10 @@ public class TaskLockbox
       if (taskLock.getType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
         switch (taskLock.getType()) {
           case SHARED:
-            // All shared lock is not reusable. Instead, a new lock posse is created for each lock request.
-            // See createOrFindLockPosse().
+            if (request instanceof TimeChunkLockRequest) {
+              return taskLock.getInterval().contains(request.getInterval())
+                     && taskLock.getGroupId().equals(request.getGroupId());
+            }
             return false;
           case EXCLUSIVE:
             if (request instanceof TimeChunkLockRequest) {

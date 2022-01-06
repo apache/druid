@@ -20,11 +20,13 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
+import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CachingClusteredClient;
@@ -35,11 +37,10 @@ import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.discovery.DataNodeService;
-import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.BrokerProcessingModule;
+import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.CacheModule;
-import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -74,6 +75,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 @Command(
     name = "broker",
@@ -97,14 +99,21 @@ public class CliBroker extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.BROKER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
-        new DruidProcessingModule(),
+        new BrokerProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
+        new BrokerServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
@@ -126,6 +135,7 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
           JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
+          JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", BrokerInternalQueryConfig.class);
 
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
@@ -152,13 +162,9 @@ public class CliBroker extends ServerRunnable
             LifecycleModule.register(binder, ZkCoordinator.class);
           }
 
-          bindNodeRoleAndAnnouncer(
+          bindAnnouncer(
               binder,
-              DiscoverySideEffectsProvider
-                  .builder(NodeRole.BROKER)
-                  .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
-                  .useLegacyAnnouncer(true)
-                  .build()
+              DiscoverySideEffectsProvider.withLegacyAnnouncer()
           );
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { StatusCard } from './status-card';
 
-describe('status card', () => {
+describe('StatusCard', () => {
   it('matches snapshot', () => {
     const statusCard = <StatusCard />;
 
