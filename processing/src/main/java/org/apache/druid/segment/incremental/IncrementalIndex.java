@@ -84,6 +84,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -99,6 +100,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable, ColumnInspector
@@ -365,12 +367,19 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return outOfRowsReason;
   }
 
-  protected abstract Map<String, ColumnSelectorFactory> generateSelectors(
-      AggregatorFactory[] metrics,
-      Supplier<InputRow> rowSupplier,
-      boolean deserializeComplexMetrics,
-      boolean concurrentEventAdd
-  );
+  protected Map<String, ColumnSelectorFactory> generateSelectors(
+      final AggregatorFactory[] metrics,
+      final Supplier<InputRow> rowSupplier,
+      final boolean deserializeComplexMetrics,
+      final boolean concurrentEventAdd
+  )
+  {
+    return Arrays.stream(metrics).collect(Collectors.toMap(
+        AggregatorFactory::getName,
+        agg -> makeCachedColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, concurrentEventAdd),
+        (agg1, agg2) -> agg2
+    ));
+  }
 
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(

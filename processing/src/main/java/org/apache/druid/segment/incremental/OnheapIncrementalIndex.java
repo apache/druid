@@ -29,15 +29,12 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -123,24 +120,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   public FactsHolder getFacts()
   {
     return facts;
-  }
-
-  @Override
-  protected Map<String, ColumnSelectorFactory> generateSelectors(
-      final AggregatorFactory[] metrics,
-      final Supplier<InputRow> rowSupplier,
-      final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
-  )
-  {
-    Map<String, ColumnSelectorFactory> selectors = new HashMap<>();
-    for (AggregatorFactory agg : metrics) {
-      selectors.put(
-          agg.getName(),
-          makeCachedColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, concurrentEventAdd)
-      );
-    }
-    return selectors;
   }
 
   @Override
