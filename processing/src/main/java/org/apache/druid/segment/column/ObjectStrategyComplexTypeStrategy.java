@@ -34,10 +34,12 @@ import java.nio.ByteBuffer;
 public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
 {
   private final ObjectStrategy<T> objectStrategy;
+  private final TypeSignature<?> typeSignature;
 
-  public ObjectStrategyComplexTypeStrategy(ObjectStrategy<T> objectStrategy)
+  public ObjectStrategyComplexTypeStrategy(ObjectStrategy<T> objectStrategy, TypeSignature<?> signature)
   {
     this.objectStrategy = objectStrategy;
+    this.typeSignature = signature;
   }
 
   @Override
@@ -59,10 +61,10 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Override
   public int write(ByteBuffer buffer, T value, int maxSizeBytes)
   {
+    TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, typeSignature);
     byte[] bytes = objectStrategy.toBytes(value);
-    final int max = Math.min(buffer.limit() - buffer.position(), maxSizeBytes);
     final int sizeBytes = Integer.BYTES + bytes.length;
-    final int remaining = max - sizeBytes;
+    final int remaining = maxSizeBytes - sizeBytes;
     if (remaining >= 0) {
       buffer.putInt(bytes.length);
       buffer.put(bytes, 0, bytes.length);

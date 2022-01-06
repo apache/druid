@@ -132,7 +132,7 @@ public class TypeStrategies
    *
    * @return number of bytes written (always 9)
    */
-  public static int writeNullableLong(ByteBuffer buffer, int offset, long value)
+  public static int writeNotNullNullableLong(ByteBuffer buffer, int offset, long value)
   {
     buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
     buffer.putLong(offset, value);
@@ -148,7 +148,7 @@ public class TypeStrategies
    * This method does not change the buffer position, limit, or mark, because it does not expect  to own the buffer
    * given to it (i.e. buffer aggs)
    */
-  public static long readNullableLong(ByteBuffer buffer, int offset)
+  public static long readNotNullNullableLong(ByteBuffer buffer, int offset)
   {
     assert !isNullableNull(buffer, offset);
     return buffer.getLong(offset + VALUE_OFFSET);
@@ -165,7 +165,7 @@ public class TypeStrategies
    *
    * @return number of bytes written (always 9)
    */
-  public static int writeNullableDouble(ByteBuffer buffer, int offset, double value)
+  public static int writeNotNullNullableDouble(ByteBuffer buffer, int offset, double value)
   {
     buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
     buffer.putDouble(offset, value);
@@ -181,7 +181,7 @@ public class TypeStrategies
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    */
-  public static double readNullableDouble(ByteBuffer buffer, int offset)
+  public static double readNotNullNullableDouble(ByteBuffer buffer, int offset)
   {
     assert !isNullableNull(buffer, offset);
     return buffer.getDouble(offset + VALUE_OFFSET);
@@ -198,7 +198,7 @@ public class TypeStrategies
    *
    * @return number of bytes written (always 5)
    */
-  public static int writeNullableFloat(ByteBuffer buffer, int offset, float value)
+  public static int writeNotNullNullableFloat(ByteBuffer buffer, int offset, float value)
   {
     buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
     buffer.putFloat(offset, value);
@@ -214,20 +214,20 @@ public class TypeStrategies
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    */
-  public static float readNullableFloat(ByteBuffer buffer, int offset)
+  public static float readNotNullNullableFloat(ByteBuffer buffer, int offset)
   {
     assert !isNullableNull(buffer, offset);
     return buffer.getFloat(offset + VALUE_OFFSET);
   }
 
-  public static void checkMaxSize(ByteBuffer buffer, int maxSizeBytes, TypeSignature<?> signature)
+  public static void checkMaxSize(int available, int maxSizeBytes, TypeSignature<?> signature)
   {
-    if (maxSizeBytes > buffer.limit()) {
+    if (maxSizeBytes > available) {
       throw new IAE(
-          "Unable to write [%s], maxSizeBytes [%s] is greater than buffer limit [%s]",
+          "Unable to write [%s], maxSizeBytes [%s] is greater than available [%s]",
           signature.asTypeString(),
           maxSizeBytes,
-          buffer.limit()
+          available
       );
     }
   }
@@ -235,11 +235,11 @@ public class TypeStrategies
   /**
    * Read and write non-null LONG values. If reading non-null values, consider just using {@link ByteBuffer#getLong}
    * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
-   * {@link #readNullableLong}, both of which allow dealing in primitive long values instead of objects.
+   * {@link #readNotNullNullableLong}, both of which allow dealing in primitive long values instead of objects.
    */
   public static final class LongTypeStrategy implements TypeStrategy<Long>
   {
-    private static final Comparator<Long> COMPARATOR = Comparator.nullsFirst(Longs::compare);
+    private static final Comparator<Long> COMPARATOR = Longs::compare;
 
     @Override
     public int estimateSizeBytes(Long value)
@@ -256,7 +256,7 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Long value, int maxSizeBytes)
     {
-      checkMaxSize(buffer, maxSizeBytes, ColumnType.LONG);
+      checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.LONG);
       final int sizeBytes = Long.BYTES;
       final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
@@ -276,11 +276,11 @@ public class TypeStrategies
   /**
    * Read and write non-null FLOAT values. If reading non-null values, consider just using {@link ByteBuffer#getFloat}
    * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
-   * {@link #readNullableFloat}, both of which allow dealing in primitive float values instead of objects.
+   * {@link #readNotNullNullableFloat}, both of which allow dealing in primitive float values instead of objects.
    */
   public static final class FloatTypeStrategy implements TypeStrategy<Float>
   {
-    private static final Comparator<Float> COMPARATOR = Comparator.nullsFirst(Floats::compare);
+    private static final Comparator<Float> COMPARATOR = Floats::compare;
 
     @Override
     public int estimateSizeBytes(Float value)
@@ -297,7 +297,7 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Float value, int maxSizeBytes)
     {
-      checkMaxSize(buffer, maxSizeBytes, ColumnType.FLOAT);
+      checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.FLOAT);
       final int sizeBytes = Float.BYTES;
       final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
@@ -317,11 +317,11 @@ public class TypeStrategies
   /**
    * Read and write non-null DOUBLE values. If reading non-null values, consider just using {@link ByteBuffer#getDouble}
    * directly, or if reading values written with {@link NullableTypeStrategy}, using {@link #isNullableNull} and
-   * {@link #readNullableDouble}, both of which allow dealing in primitive double values instead of objects.
+   * {@link #readNotNullNullableDouble}, both of which allow dealing in primitive double values instead of objects.
    */
   public static final class DoubleTypeStrategy implements TypeStrategy<Double>
   {
-    private static final Comparator<Double> COMPARATOR = Comparator.nullsFirst(Double::compare);
+    private static final Comparator<Double> COMPARATOR = Double::compare;
 
     @Override
     public int estimateSizeBytes(Double value)
@@ -338,7 +338,7 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Double value, int maxSizeBytes)
     {
-      checkMaxSize(buffer, maxSizeBytes, ColumnType.DOUBLE);
+      checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.DOUBLE);
       final int sizeBytes = Double.BYTES;
       final int remaining = maxSizeBytes - sizeBytes;
       if (remaining >= 0) {
@@ -364,7 +364,7 @@ public class TypeStrategies
   public static final class StringTypeStrategy implements TypeStrategy<String>
   {
     // copy of lexicographical comparator
-    private static final Ordering<String> ORDERING = Ordering.from(String::compareTo).nullsFirst();
+    private static final Ordering<String> ORDERING = Ordering.from(String::compareTo);
 
     @Override
     public int estimateSizeBytes(String value)
@@ -385,7 +385,7 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, String value, int maxSizeBytes)
     {
-      checkMaxSize(buffer, maxSizeBytes, ColumnType.STRING);
+      checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.STRING);
       final byte[] bytes = StringUtils.toUtf8(value);
       final int sizeBytes = Integer.BYTES + bytes.length;
       final int remaining = maxSizeBytes - sizeBytes;
@@ -453,7 +453,7 @@ public class TypeStrategies
     @Override
     public int write(ByteBuffer buffer, Object[] value, int maxSizeBytes)
     {
-      checkMaxSize(buffer, maxSizeBytes, arrayType);
+      checkMaxSize(buffer.remaining(), maxSizeBytes, arrayType);
       int sizeBytes = Integer.BYTES;
       int remaining = maxSizeBytes - sizeBytes;
       if (remaining < 0) {

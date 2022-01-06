@@ -108,11 +108,9 @@ public class TypeStrategiesTest
   {
     TypeStrategy<String> strategy = ColumnType.STRING.getStrategy();
     Assert.assertEquals(-1, strategy.compare("a", "b"));
-    Assert.assertEquals(-1, strategy.compare(null, "b"));
     //noinspection EqualsWithItself
     Assert.assertEquals(0, strategy.compare("a", "a"));
     Assert.assertEquals(1, strategy.compare("b", "a"));
-    Assert.assertEquals(1, strategy.compare("b", null));
     Assert.assertEquals(-48, strategy.compare("1", "a"));
     Assert.assertEquals(48, strategy.compare("a", "1"));
 
@@ -132,11 +130,9 @@ public class TypeStrategiesTest
   {
     TypeStrategy<Double> strategy = ColumnType.DOUBLE.getStrategy();
     Assert.assertEquals(-1, strategy.compare(0.01, 1.01));
-    Assert.assertEquals(-1, strategy.compare(null, 1.01));
     //noinspection EqualsWithItself
     Assert.assertEquals(0, strategy.compare(0.00001, 0.00001));
     Assert.assertEquals(1, strategy.compare(1.01, 0.01));
-    Assert.assertEquals(1, strategy.compare(1.01, null));
 
     NullableTypeStrategy nullableTypeStrategy = ColumnType.DOUBLE.getNullableStrategy();
     Assert.assertEquals(-1, nullableTypeStrategy.compare(0.01, 1.01));
@@ -168,11 +164,9 @@ public class TypeStrategiesTest
   {
     TypeStrategy<Long> strategy = ColumnType.LONG.getStrategy();
     Assert.assertEquals(-1, strategy.compare(-1L, 1L));
-    Assert.assertEquals(-1, strategy.compare(null, 1L));
     //noinspection EqualsWithItself
     Assert.assertEquals(0, strategy.compare(1L, 1L));
     Assert.assertEquals(1, strategy.compare(1L, -1L));
-    Assert.assertEquals(1, strategy.compare(1L, null));
 
     NullableTypeStrategy<Long> nullableTypeStrategy = ColumnType.LONG.getNullableStrategy();
     Assert.assertEquals(-1, nullableTypeStrategy.compare(-1L, 1L));
@@ -339,17 +333,17 @@ public class TypeStrategiesTest
   {
     final long someLong = 12345567L;
     int offset = 0;
-    int bytesWritten = TypeStrategies.writeNullableLong(buffer, offset, someLong);
+    int bytesWritten = TypeStrategies.writeNotNullNullableLong(buffer, offset, someLong);
     Assert.assertEquals(1 + Long.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someLong, TypeStrategies.readNullableLong(buffer, offset));
+    Assert.assertEquals(someLong, TypeStrategies.readNotNullNullableLong(buffer, offset));
 
     // test non-zero offset
     offset = 1024;
-    bytesWritten = TypeStrategies.writeNullableLong(buffer, offset, someLong);
+    bytesWritten = TypeStrategies.writeNotNullNullableLong(buffer, offset, someLong);
     Assert.assertEquals(1 + Long.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someLong, TypeStrategies.readNullableLong(buffer, offset));
+    Assert.assertEquals(someLong, TypeStrategies.readNotNullNullableLong(buffer, offset));
   }
 
   @Test
@@ -357,17 +351,17 @@ public class TypeStrategiesTest
   {
     final double someDouble = 1.234567;
     int offset = 0;
-    int bytesWritten = TypeStrategies.writeNullableDouble(buffer, offset, someDouble);
+    int bytesWritten = TypeStrategies.writeNotNullNullableDouble(buffer, offset, someDouble);
     Assert.assertEquals(1 + Double.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someDouble, TypeStrategies.readNullableDouble(buffer, offset), 0);
+    Assert.assertEquals(someDouble, TypeStrategies.readNotNullNullableDouble(buffer, offset), 0);
 
     // test non-zero offset
     offset = 1024;
-    bytesWritten = TypeStrategies.writeNullableDouble(buffer, offset, someDouble);
+    bytesWritten = TypeStrategies.writeNotNullNullableDouble(buffer, offset, someDouble);
     Assert.assertEquals(1 + Double.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someDouble, TypeStrategies.readNullableDouble(buffer, offset), 0);
+    Assert.assertEquals(someDouble, TypeStrategies.readNotNullNullableDouble(buffer, offset), 0);
   }
 
   @Test
@@ -375,17 +369,17 @@ public class TypeStrategiesTest
   {
     final float someFloat = 1.234567f;
     int offset = 0;
-    int bytesWritten = TypeStrategies.writeNullableFloat(buffer, offset, someFloat);
+    int bytesWritten = TypeStrategies.writeNotNullNullableFloat(buffer, offset, someFloat);
     Assert.assertEquals(1 + Float.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someFloat, TypeStrategies.readNullableFloat(buffer, offset), 0);
+    Assert.assertEquals(someFloat, TypeStrategies.readNotNullNullableFloat(buffer, offset), 0);
 
     // test non-zero offset
     offset = 1024;
-    bytesWritten = TypeStrategies.writeNullableFloat(buffer, offset, someFloat);
+    bytesWritten = TypeStrategies.writeNotNullNullableFloat(buffer, offset, someFloat);
     Assert.assertEquals(1 + Float.BYTES, bytesWritten);
     Assert.assertFalse(TypeStrategies.isNullableNull(buffer, offset));
-    Assert.assertEquals(someFloat, TypeStrategies.readNullableFloat(buffer, offset), 0);
+    Assert.assertEquals(someFloat, TypeStrategies.readNotNullNullableFloat(buffer, offset), 0);
   }
 
   @Test
@@ -393,10 +387,23 @@ public class TypeStrategiesTest
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Unable to write [STRING], maxSizeBytes [2048] is greater than buffer limit [1024]"
+        "Unable to write [STRING], maxSizeBytes [2048] is greater than available [1024]"
     );
     ByteBuffer buffer = ByteBuffer.allocate(1 << 10);
-    TypeStrategies.checkMaxSize(buffer, 2048, ColumnType.STRING);
+    TypeStrategies.checkMaxSize(buffer.remaining(), 2048, ColumnType.STRING);
+  }
+
+  @Test
+  public void testCheckMaxSizePosition()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Unable to write [STRING], maxSizeBytes [1024] is greater than available [24]"
+    );
+    final int maxSize = 1 << 10;
+    ByteBuffer buffer = ByteBuffer.allocate(maxSize);
+    buffer.position(1000);
+    TypeStrategies.checkMaxSize(buffer.remaining(), maxSize, ColumnType.STRING);
   }
 
   @Test
@@ -488,13 +495,14 @@ public class TypeStrategiesTest
 
   private <T> void assertStrategy(TypeStrategy strategy, @Nullable T value)
   {
+    final int maxSize = 2048;
     final int expectedLength = strategy.estimateSizeBytes(value);
     Assert.assertNotEquals(0, expectedLength);
 
     // test buffer
     int offset = 10;
     buffer.position(offset);
-    Assert.assertEquals(expectedLength, strategy.write(buffer, value, buffer.limit()));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, value, maxSize));
     Assert.assertEquals(expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertEquals(value, strategy.read(buffer));
@@ -503,7 +511,7 @@ public class TypeStrategiesTest
     // test buffer nullable write read value
     NullableTypeStrategy nullableTypeStrategy = new NullableTypeStrategy(strategy);
     buffer.position(offset);
-    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, value, buffer.limit()));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, value, maxSize));
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertEquals(value, nullableTypeStrategy.read(buffer));
@@ -511,7 +519,7 @@ public class TypeStrategiesTest
 
     // test buffer nullable write read null
     buffer.position(offset);
-    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, null, buffer.limit()));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, null, maxSize));
     Assert.assertEquals(1, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertNull(nullableTypeStrategy.read(buffer));
@@ -520,30 +528,31 @@ public class TypeStrategiesTest
     buffer.position(0);
 
     // test buffer offset
-    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, buffer.limit()));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, maxSize));
     Assert.assertEquals(value, strategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read value
-    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, buffer.limit()));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, maxSize));
     Assert.assertEquals(value, nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read null
-    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, buffer.limit()));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, maxSize));
     Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
   }
 
   private void assertArrayStrategy(TypeStrategy strategy, @Nullable Object[] value)
   {
+    final int maxSize = 2048;
     final int expectedLength = strategy.estimateSizeBytes(value);
     Assert.assertNotEquals(0, expectedLength);
 
     // test buffer
     int offset = 10;
     buffer.position(offset);
-    Assert.assertEquals(expectedLength, strategy.write(buffer, value, buffer.limit()));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, value, maxSize));
     Assert.assertEquals(expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer));
@@ -552,7 +561,7 @@ public class TypeStrategiesTest
     // test buffer nullable write read value
     NullableTypeStrategy nullableTypeStrategy = new NullableTypeStrategy(strategy);
     buffer.position(offset);
-    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, value, buffer.limit()));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, value, maxSize));
     Assert.assertEquals(1 + expectedLength, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer));
@@ -560,7 +569,7 @@ public class TypeStrategiesTest
 
     // test buffer nullable write read null
     buffer.position(offset);
-    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, null, buffer.limit()));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, null, maxSize));
     Assert.assertEquals(1, buffer.position() - offset);
     buffer.position(offset);
     Assert.assertNull(nullableTypeStrategy.read(buffer));
@@ -569,17 +578,17 @@ public class TypeStrategiesTest
     buffer.position(0);
 
     // test buffer offset
-    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, buffer.limit()));
+    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, maxSize));
     Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read value
-    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, buffer.limit()));
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, maxSize));
     Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
 
     // test buffer offset nullable write read null
-    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, buffer.limit()));
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, maxSize));
     Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
     Assert.assertEquals(0, buffer.position());
   }

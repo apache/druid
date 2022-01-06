@@ -40,10 +40,12 @@ import java.util.Comparator;
 public final class NullableTypeStrategy<T> implements Comparator<T>
 {
   private final TypeStrategy<T> delegate;
+  private final Comparator<T> delegateComparator;
 
   public NullableTypeStrategy(TypeStrategy<T> delegate)
   {
     this.delegate = delegate;
+    this.delegateComparator = Comparator.nullsFirst(delegate::compare);
   }
 
   public int estimateSizeBytes(@Nullable T value)
@@ -109,6 +111,6 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
   @Override
   public int compare(T o1, T o2)
   {
-    return delegate.compare(o1, o2);
+    return delegateComparator.compare(o1, o2);
   }
 }

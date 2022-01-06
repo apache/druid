@@ -54,12 +54,12 @@ public abstract class ExprEval<T>
         if (TypeStrategies.isNullableNull(buffer, offset)) {
           return ofLong(null);
         }
-        return of(TypeStrategies.readNullableLong(buffer, offset));
+        return of(TypeStrategies.readNotNullNullableLong(buffer, offset));
       case DOUBLE:
         if (TypeStrategies.isNullableNull(buffer, offset)) {
           return ofDouble(null);
         }
-        return of(TypeStrategies.readNullableDouble(buffer, offset));
+        return of(TypeStrategies.readNotNullNullableDouble(buffer, offset));
       default:
         return ofType(type, type.getNullableStrategy().read(buffer, offset));
     }
@@ -80,14 +80,14 @@ public abstract class ExprEval<T>
         if (eval.isNumericNull()) {
           TypeStrategies.writeNull(buffer, offset);
         } else {
-          TypeStrategies.writeNullableLong(buffer, offset, eval.asLong());
+          TypeStrategies.writeNotNullNullableLong(buffer, offset, eval.asLong());
         }
         break;
       case DOUBLE:
         if (eval.isNumericNull()) {
           TypeStrategies.writeNull(buffer, offset);
         } else {
-          TypeStrategies.writeNullableDouble(buffer, offset, eval.asDouble());
+          TypeStrategies.writeNotNullNullableDouble(buffer, offset, eval.asDouble());
         }
         break;
       default:
