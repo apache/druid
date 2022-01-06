@@ -452,7 +452,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`SUBSTRING(expr, index, [length])`|Returns a substring of `expr` starting at index, with a max length, both measured in UTF-16 code units.|
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
-|`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
+|`SUBSTR(expr, index, [length])`|Alias for SUBSTRING.|
 |`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr, [chars])`|Alternate form of `TRIM(BOTH chars FROM expr)`.|
 |`LTRIM(expr, [chars])`|Alternate form of `TRIM(LEADING chars FROM expr)`.|
