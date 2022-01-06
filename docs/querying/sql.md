@@ -408,8 +408,8 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`ACOS(expr)`|Arc cosine of `expr`.|
 |`ATAN(expr)`|Arc tangent of `expr`.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
-|`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees|
-|`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians|
+|`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees.|
+|`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians.|
 |`BITWISE_AND(expr1, expr2)`|Returns the result of `expr1 & expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_COMPLEMENT(expr)`|Returns the result of `~expr`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles|
 |`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`|Converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
