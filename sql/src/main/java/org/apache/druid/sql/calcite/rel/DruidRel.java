@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
@@ -45,13 +46,18 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
-  public Sequence<Object[]> runQuery()
+  public Sequence<Object[]> runQuery(@Nullable Map<String, Object> sqlContext)
   {
     // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
     // is the outermost query, and it will actually get run as a native query. Druid's native query layer will
     // finalize aggregations for the outermost query even if we don't explicitly ask it to.
 
-    return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false));
+    return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false), sqlContext);
+  }
+
+  public Sequence<Object[]> runQuery()
+  {
+    return runQuery(null);
   }
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
@@ -70,20 +76,19 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   /**
    * Convert this DruidRel to a DruidQuery. This must be an inexpensive operation, since it is done often throughout
    * query planning.
-   *
+   * <p>
    * This method must not return null.
    *
    * @param finalizeAggregations true if this query should include explicit finalization for all of its
    *                             aggregators, where required. Useful for subqueries where Druid's native query layer
    *                             does not do this automatically.
-   *
    * @throws CannotBuildQueryException
    */
   public abstract DruidQuery toDruidQuery(boolean finalizeAggregations);
 
   /**
    * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation.
-   *
+   * <p>
    * This method must not return null.
    *
    * @throws CannotBuildQueryException

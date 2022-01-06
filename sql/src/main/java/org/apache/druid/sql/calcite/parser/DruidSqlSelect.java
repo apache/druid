@@ -19,12 +19,18 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.google.common.base.Preconditions;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectOperator;
 import org.apache.calcite.sql.SqlWriter;
-import org.checkerframework.checker.nullness.qual.Nullable;
+
+import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Extends the Select call to have custom context parameters specific to Druid
@@ -36,11 +42,12 @@ public class DruidSqlSelect extends SqlSelect
   // Unsure if this should be kept as is, but this allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlSelectOperator.INSTANCE;
 
-  private final SqlNodeList context;
+  @Nullable
+  private final Map<String, String> context;
 
   public DruidSqlSelect(
       SqlSelect selectNode,
-      @Nullable SqlNodeList context
+      @Nullable SqlNodeList contextMapAsList
   )
   {
     super(
@@ -56,7 +63,25 @@ public class DruidSqlSelect extends SqlSelect
         selectNode.getOffset(),
         selectNode.getFetch()
     );
-    this.context = context;
+    context = new LinkedHashMap<>();
+    if (contextMapAsList != null) {
+      int listSize = contextMapAsList.size();
+      Preconditions.checkArgument(listSize % 2 == 0);
+      for (int i = 0; i < listSize / 2; ++i) {
+        SqlNode keyNode = contextMapAsList.get(2 * i);
+        SqlNode valueNode = contextMapAsList.get(2 * i + 1);
+        if (!(keyNode instanceof SqlLiteral)) {
+          // Log some warning about conversion
+        }
+        if (!(valueNode instanceof SqlLiteral)) {
+          // Log some warning about conversion
+
+        }
+        String key = keyNode.toString();
+        String value = valueNode.toString();
+        context.put(key, value);
+      }
+    }
   }
 
   @Override
@@ -65,7 +90,7 @@ public class DruidSqlSelect extends SqlSelect
     return OPERATOR;
   }
 
-  public SqlNodeList getContext()
+  public Map<String, String> getContext()
   {
     return context;
   }
@@ -75,9 +100,10 @@ public class DruidSqlSelect extends SqlSelect
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     super.unparse(writer, leftPrec, rightPrec);
-    writer.keyword("DESCRIBE");
-    writer.keyword("SPACE");
-    writer.keyword("POWER");
+    if (context != null) {
+      writer.keyword("SET");
+      writer.keyword("CONTEXT");
+    }
   }
 
 }

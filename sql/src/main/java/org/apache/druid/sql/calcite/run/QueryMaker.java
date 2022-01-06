@@ -20,8 +20,11 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+
+import java.util.Map;
 
 /**
  * Interface for executing Druid queries. Each one is created by a {@link QueryMakerFactory} and is tied to a
@@ -39,4 +42,9 @@ public interface QueryMaker extends QueryFeatureInspector
    * created for. The returned arrays match the row type given by {@link #getResultType()}.
    */
   Sequence<Object[]> runQuery(DruidQuery druidQuery);
+
+  default Sequence<Object[]> runQuery(DruidQuery druidQuery, Map<String, Object> sqlContext)
+  {
+    return runQuery(druidQuery);
+  }
 }

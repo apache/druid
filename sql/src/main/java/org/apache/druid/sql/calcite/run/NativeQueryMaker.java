@@ -57,11 +57,13 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -112,7 +114,17 @@ public class NativeQueryMaker implements QueryMaker
   @Override
   public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    final Query<?> query = druidQuery.getQuery();
+    return runQuery(druidQuery, null);
+  }
+
+  @Override
+  public Sequence<Object[]> runQuery(final DruidQuery druidQuery, @Nullable final Map<String, Object> sqlContext)
+  {
+    Query<?> query = druidQuery.getQuery();
+
+    if (sqlContext != null) {
+      query = query.withOverriddenContext(sqlContext);
+    }
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {

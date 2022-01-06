@@ -19,13 +19,18 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.google.common.base.Preconditions;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlSelectOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Extends the Select call to have custom context parameters specific to Druid
@@ -36,11 +41,11 @@ public class DruidSqlOrderBy extends SqlOrderBy
 {
   // Unsure if this should be kept as is, but this allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlOrderBy.OPERATOR;
-  private final SqlNodeList context;
+  private final Map<String, String> context;
 
   public DruidSqlOrderBy(
       SqlOrderBy orderByNode,
-      @Nullable SqlNodeList context
+      @Nullable SqlNodeList contextMapAsList
   )
   {
     super(
@@ -50,7 +55,25 @@ public class DruidSqlOrderBy extends SqlOrderBy
         orderByNode.getOperandList().get(2),
         orderByNode.getOperandList().get(3)
     );
-    this.context = context;
+    this.context = new LinkedHashMap<>();
+    if (contextMapAsList != null) {
+      int listSize = contextMapAsList.size();
+      Preconditions.checkArgument(listSize % 2 == 0);
+      for (int i = 0; i < listSize / 2; ++i) {
+        SqlNode keyNode = contextMapAsList.get(2 * i);
+        SqlNode valueNode = contextMapAsList.get(2 * i + 1);
+        if (!(keyNode instanceof SqlLiteral)) {
+          // Log some warning about conversion
+        }
+        if (!(valueNode instanceof SqlLiteral)) {
+          // Log some warning about conversion
+
+        }
+        String key = keyNode.toString();
+        String value = valueNode.toString();
+        context.put(key, value);
+      }
+    }
   }
 
   @Override
@@ -59,7 +82,7 @@ public class DruidSqlOrderBy extends SqlOrderBy
     return OPERATOR;
   }
 
-  public SqlNodeList getContext()
+  public Map<String, String> getContext()
   {
     return context;
   }

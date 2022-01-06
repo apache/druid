@@ -79,6 +79,8 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.DruidSqlOrderBy;
+import org.apache.druid.sql.calcite.parser.DruidSqlSelect;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -94,6 +96,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -157,7 +160,7 @@ public class DruidPlanner implements Closeable
   /**
    * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
    * resolution, to support prepared statements via JDBC.
-   *
+   * <p>
    * In some future this could perhaps re-use some of the work done by {@link #validate()}
    * instead of repeating it, but that day is not today.
    */
@@ -185,10 +188,10 @@ public class DruidPlanner implements Closeable
 
   /**
    * Plan an SQL query for execution, returning a {@link PlannerResult} which can be used to actually execute the query.
-   *
+   * <p>
    * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
    * fall-back to {@link #planWithBindableConvention} if this is not possible.
-   *
+   * <p>
    * In some future this could perhaps re-use some of the work done by {@link #validate()}
    * instead of repeating it, but that day is not today.
    */
@@ -205,7 +208,10 @@ public class DruidPlanner implements Closeable
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
-      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
+      Map<String, Object> sqlContext = parsed.getContextMap().entrySet().stream().collect(
+          Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
+      );
+      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode(), sqlContext);
     }
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
@@ -250,12 +256,12 @@ public class DruidPlanner implements Closeable
    * {@link #planner} since we do not re-use artifacts or keep track of state between
    * {@link #validate}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
    * for each step.
-   *
+   * <p>
    * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new
    * planner for each of the corresponding steps so this isn't strictly necessary at this time, this method is here as
    * much to make this situation explicit and provide context for a future refactor as anything else (and some tests
    * do re-use the planner between validate, prepare, and plan, which will run into this issue).
-   *
+   * <p>
    * This could be improved by tying {@link org.apache.druid.sql.SqlLifecycle} and {@link DruidPlanner} states more
    * closely with the state of {@link #planner}, instead of repeating parsing and validation between each of these
    * steps.
@@ -272,7 +278,8 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final RelRoot root,
       @Nullable final SqlExplain explain,
-      @Nullable final SqlInsert insert
+      @Nullable final SqlInsert insert,
+      @Nullable final Map<String, Object> sqlContext
   ) throws ValidationException, RelConversionException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
@@ -309,7 +316,7 @@ public class DruidPlanner implements Closeable
             "Authorization sanity check failed"
         );
 
-        return druidRel.runQuery();
+        return druidRel.runQuery(sqlContext);
       };
 
       return new PlannerResult(resultsSupplier, queryMaker.getResultType());
@@ -319,7 +326,7 @@ public class DruidPlanner implements Closeable
   /**
    * Construct a {@link PlannerResult} for a fall-back 'bindable' rel, for things that are not directly translatable
    * to native Druid queries such as system tables and just a general purpose (but definitely not optimized) fall-back.
-   *
+   * <p>
    * See {@link #planWithDruidConvention} which will handle things which are directly translatable
    * to native Druid queries.
    */
@@ -474,11 +481,12 @@ public class DruidPlanner implements Closeable
    * node
    * For eg, a DruidRel structure of kind:
    * DruidUnionRel
-   *  DruidUnionRel
-   *    DruidRel (A)
-   *    DruidRel (B)
-   *  DruidRel(C)
+   * DruidUnionRel
+   * DruidRel (A)
+   * DruidRel (B)
+   * DruidRel(C)
    * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
+   *
    * @param outermostDruidRel The outermost rel which is to be flattened
    * @return a list of DruidRel's which donot have a DruidUnionRel nested in between them
    */
@@ -493,7 +501,8 @@ public class DruidPlanner implements Closeable
    * Recursive function (DFS) which traverses the nodes and collects the corresponding {@link DruidRel} into a list if
    * they are not of the type {@link DruidUnionRel} or else calls the method with the child nodes. The DFS order of the
    * nodes are retained, since that is the order in which they will actually be called in {@link DruidUnionRel#runQuery()}
-   * @param druidRel The current relNode
+   *
+   * @param druidRel                The current relNode
    * @param flattendListAccumulator Accumulator list which needs to be appended by this method
    */
   private void flattenOutermostRel(DruidRel<?> druidRel, List<DruidRel<?>> flattendListAccumulator)
@@ -513,7 +522,7 @@ public class DruidPlanner implements Closeable
    * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
-   *
+   * <p>
    * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
@@ -732,11 +741,20 @@ public class DruidPlanner implements Closeable
 
     private SqlNode query;
 
-    private ParsedNodes(@Nullable SqlExplain explain, @Nullable SqlInsert insert, SqlNode query)
+    @Nullable
+    private Map<String, String> contextMap;
+
+    private ParsedNodes(
+        @Nullable SqlExplain explain,
+        @Nullable SqlInsert insert,
+        SqlNode query,
+        @Nullable Map<String, String> contextMap
+    )
     {
       this.explain = explain;
       this.insert = insert;
       this.query = query;
+      this.contextMap = contextMap;
     }
 
     static ParsedNodes create(final SqlNode node) throws ValidationException
@@ -744,6 +762,7 @@ public class DruidPlanner implements Closeable
       SqlExplain explain = null;
       SqlInsert insert = null;
       SqlNode query = node;
+      Map<String, String> contextMap = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -755,11 +774,21 @@ public class DruidPlanner implements Closeable
         query = insert.getSource();
       }
 
+      if (query instanceof DruidSqlSelect) {
+        DruidSqlSelect druidSqlSelect = (DruidSqlSelect) query;
+        contextMap = druidSqlSelect.getContext();
+      }
+
+      if (query instanceof DruidSqlOrderBy) {
+        DruidSqlOrderBy druidSqlOrderBy = (DruidSqlOrderBy) query;
+        contextMap = druidSqlOrderBy.getContext();
+      }
+
       if (!query.isA(SqlKind.QUERY)) {
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, insert, query);
+      return new ParsedNodes(explain, insert, query, contextMap);
     }
 
     @Nullable
@@ -777,6 +806,12 @@ public class DruidPlanner implements Closeable
     public SqlNode getQueryNode()
     {
       return query;
+    }
+
+    @Nullable
+    public Map<String, String> getContextMap()
+    {
+      return contextMap;
     }
   }
 }

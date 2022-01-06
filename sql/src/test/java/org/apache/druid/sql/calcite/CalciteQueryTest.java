@@ -293,18 +293,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testtest() throws Exception
   {
+    // testQuery(
+        // "SELECT * FROM druid.foo SET CONTEXT (artist='blondie', song='maria')",
+        // ImmutableList.of(),
+        // ImmutableList.of()
+    // );
+
     testQuery(
-        "SELECT * FROM druid.foo SET CONTEXT (artist='blondie', song='maria')",
+//        "SELECT * FROM druid.foo",
+         "SELECT * FROM druid.foo SET CONTEXT (artist='blondie', song='maria')",
         ImmutableList.of(),
         ImmutableList.of()
     );
-
-//    testQuery(
-//        "VALUES ( )",
-//        ImmutableList.of(),
-//        ImmutableList.of()
-//    );
-
   }
 
   @Test
