@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -99,6 +100,7 @@ public class TaskQueue
   private final ServiceEmitter emitter;
 
   private final ReentrantLock giant = new ReentrantLock(true);
+  //noinspection MismatchedCollectionQueryUpdate
   private final BlockingQueue<Object> managementMayBeNecessary = new ArrayBlockingQueue<>(8);
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
@@ -275,6 +277,7 @@ public class TaskQueue
    * @param nanos
    * @throws InterruptedException
    */
+  @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED", justification = "using queue as notification mechanism, result has no value")
   void awaitManagementNanos(long nanos) throws InterruptedException
   {
     // mitigate a busy loop, it can get pretty busy when there are a lot of start/stops
@@ -560,7 +563,6 @@ public class TaskQueue
         task.getId(),
         taskStatus.getId()
     );
-
 
     // Inform taskRunner that this task can be shut down
     TaskLocation taskLocation = TaskLocation.unknown();

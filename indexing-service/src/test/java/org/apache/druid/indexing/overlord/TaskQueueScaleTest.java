@@ -85,7 +85,7 @@ public class TaskQueueScaleTest
   private Closer closer;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
@@ -138,12 +138,21 @@ public class TaskQueueScaleTest
   public void doMassLaunchAndExit() throws Exception
   {
     Assert.assertEquals("no tasks should be running", 0, taskRunner.getKnownTasks().size());
+    Assert.assertEquals("no tasks should be known", 0, taskQueue.getTasks().size());
+    Assert.assertEquals("no tasks should be running", 0, taskQueue.getRunningTaskCount().size());
 
     // Add all tasks.
     for (int i = 0; i < numTasks; i++) {
       final TestTask testTask = new TestTask(i, 2000L /* runtime millis */);
       taskQueue.add(testTask);
     }
+
+    // in theory we can get a race here, since we fetch the counts at separate times
+    Assert.assertEquals("all tasks should be known", numTasks, taskQueue.getTasks().size());
+    long runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    long pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    long waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    Assert.assertEquals("all tasks should be known", numTasks, (runningTasks + pendingTasks + waitingTasks));
 
     // Wait for all tasks to finish.
     while (taskStorage.getRecentlyCreatedAlreadyFinishedTaskInfo(
@@ -153,7 +162,15 @@ public class TaskQueueScaleTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals("no tasks should be running", 0, taskStorage.getActiveTasks().size());
+    Thread.sleep(100);
+
+    Assert.assertEquals("no tasks should be active", 0, taskStorage.getActiveTasks().size());
+    runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    Assert.assertEquals("no tasks should be running", 0, runningTasks);
+    Assert.assertEquals("no tasks should be pending", 0, pendingTasks);
+    Assert.assertEquals("no tasks should be waiting", 0, waitingTasks);
   }
 
   @Test(timeout = 60_000L) // more than enough time if the task queue is efficient
@@ -261,6 +278,7 @@ public class TaskQueueScaleTest
                         final TestTaskRunnerWorkItem item2;
                         synchronized (knownTasks) {
                           item2 = knownTasks.get(task.getId());
+                          knownTasks.put(task.getId(), item2.withState(RunnerTaskState.NONE));
                         }
                         if (item2 != null) {
                           item2.setResult(TaskStatus.success(task.getId()));
