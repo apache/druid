@@ -26,6 +26,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
@@ -86,12 +87,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -167,6 +170,23 @@ public class QueryResourceTest
       + "      }\n"
       + "    ],\n"
       + "    \"context\": { \"priority\": -1 }"
+      + "}";
+
+  private static final String SIMPLE_TIMESERIES_QUERY_LONGQUERY =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ],\n"
+      + "    \"context\": { \"longQuery\": 250 }"
       + "}";
 
 
@@ -355,6 +375,91 @@ public class QueryResourceTest
     Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
     Assert.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
   }
+
+
+  @Test
+  public void testGoodQueryWithLongQueryConfig() throws IOException
+  {
+    ImmutableList<Integer> delayList = ImmutableList.of(10, 100, 150, 200, 300, 500, 600, 700, 800, 1000);
+    UnmodifiableIterator<Integer> delayIt = delayList.iterator();
+    QuerySegmentWalker randomQuerytimeWalker = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+      {
+        return (queryPlus, responseContext) -> Sequences.simple(() -> new Iterator<T>()
+        {
+          @Override
+          public boolean hasNext()
+          {
+            try {
+              if (delayIt.hasNext()) {
+                Thread.sleep(delayIt.next());
+              }
+            }
+            catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+            return false;
+          }
+
+          @Override
+          public T next()
+          {
+            return null;
+          }
+        });
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+      {
+        return getQueryRunnerForIntervals(null, null);
+      }
+    };
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            randomQuerytimeWalker,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+    expectPermissiveHappyPathAuth();
+    int longQueryCount = 0;
+    for (int i = 0; i < delayList.size(); i++) {
+      Response response = queryResource.doPost(
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY_LONGQUERY.getBytes(StandardCharsets.UTF_8)),
+          null /*pretty*/,
+          testServletRequest
+      );
+
+      Assert.assertNotNull(response);
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ((StreamingOutput) response.getEntity()).write(baos);
+      List<RequestLogLine> nativeQuerylogs = testRequestLogger.getNativeQuerylogs();
+      int size = nativeQuerylogs.size();
+      QueryStats queryStats = testRequestLogger.getNativeQuerylogs().get(size - 1).getQueryStats();
+      boolean longQuery = (boolean) queryStats.getStats().get("longQuery");
+      if (longQuery) {
+        longQueryCount++;
+      }
+    }
+
+    Assert.assertEquals(queryResource.getLongQueryCount(), longQueryCount);
+  }
+
 
   @Test
   public void testTruncatedResponseContextShouldFail() throws IOException

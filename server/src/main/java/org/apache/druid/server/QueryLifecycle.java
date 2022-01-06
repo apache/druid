@@ -89,6 +89,7 @@ public class QueryLifecycle
   private AuthenticationResult authenticationResult;
   private QueryToolChest toolChest;
   private Query baseQuery;
+  private boolean isLongQuery;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -304,12 +305,21 @@ public class QueryLifecycle
         queryMetrics.identity(authenticationResult.getIdentity());
       }
 
+      long queryTime = TimeUnit.NANOSECONDS.toMillis(queryTimeNs);
+
+      if (success &&
+          QueryContexts.hasLongQueryTime(baseQuery) &&
+          QueryContexts.getLongQueryTime(baseQuery) < queryTime) {
+        this.isLongQuery = true;
+      }
+
       queryMetrics.emit(emitter);
 
       final Map<String, Object> statsMap = new LinkedHashMap<>();
-      statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+      statsMap.put("query/time", queryTime);
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      statsMap.put("longQuery", this.isLongQuery);
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());
@@ -356,6 +366,11 @@ public class QueryLifecycle
 
     //noinspection unchecked
     return toolChest;
+  }
+
+  public boolean isLongQuery()
+  {
+    return isLongQuery;
   }
 
   private void transition(final State from, final State to)

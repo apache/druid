@@ -800,6 +800,26 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
   }
 
+  @Test
+  public void testGetLongQueryCount()
+  {
+    final AsyncQueryForwardingServlet testGetLongQueryCountServlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        null,
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+    Assert.assertEquals(0, testGetLongQueryCountServlet.getLongQueryCount());
+  }
+
   private static Map<String, Object> asMap(String json, ObjectMapper mapper) throws JsonProcessingException
   {
     return mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);

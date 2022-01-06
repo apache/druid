@@ -40,9 +40,11 @@ public class QueryContexts
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
+  public static final String LONG_QUERY_KEY = "longQuery";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  public static final String DEFAULT_LONG_QUERY_KEY = "defaultlongQuery";
   public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
@@ -79,7 +81,9 @@ public class QueryContexts
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
+  public static final long DEFAULT_LONG_QUERY_MILLIS = TimeUnit.SECONDS.toMillis(10);
   public static final long NO_TIMEOUT = 0;
+  public static final long NO_LONG_QUERY = 0;
   public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
@@ -412,6 +416,31 @@ public class QueryContexts
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
   }
+
+  public static <T> boolean hasLongQueryTime(Query<T> query)
+  {
+    return getLongQueryTime(query) != NO_LONG_QUERY;
+  }
+
+  public static <T> long getLongQueryTime(Query<T> query)
+  {
+    return getLongQueryTime(query, getDefaultLongQueryTime(query));
+  }
+
+  public static <T> long getLongQueryTime(Query<T> query, long defaultLongQueryTime)
+  {
+    final long longQueryTime = parseLong(query, LONG_QUERY_KEY, defaultLongQueryTime);
+    Preconditions.checkState(longQueryTime >= 0, "longQueryTime must be a non negative value, but was [%s]", longQueryTime);
+    return longQueryTime;
+  }
+
+  static <T> long getDefaultLongQueryTime(Query<T> query)
+  {
+    final long defaultLongQueryTime = parseLong(query, DEFAULT_LONG_QUERY_KEY, DEFAULT_LONG_QUERY_MILLIS);
+    Preconditions.checkState(defaultLongQueryTime >= 0, "longQueryTime must be a non negative value, but was [%s]", defaultLongQueryTime);
+    return defaultLongQueryTime;
+  }
+
 
   public static <T> int getNumRetriesOnMissingSegments(Query<T> query, int defaultValue)
   {

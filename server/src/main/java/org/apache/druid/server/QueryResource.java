@@ -119,6 +119,7 @@ public class QueryResource implements QueryCountStatsProvider
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
   private final AtomicLong timedOutQueryCount = new AtomicLong();
+  private final AtomicLong longQueryCount = new AtomicLong();
 
   @Inject
   public QueryResource(
@@ -221,6 +222,9 @@ public class QueryResource implements QueryCountStatsProvider
       if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
         queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
         successfulQueryCount.incrementAndGet();
+        if (queryLifecycle.isLongQuery()) {
+          longQueryCount.incrementAndGet();
+        }
         return Response.notModified().build();
       }
 
@@ -267,6 +271,9 @@ public class QueryResource implements QueryCountStatsProvider
 
                       if (e == null) {
                         successfulQueryCount.incrementAndGet();
+                        if (queryLifecycle.isLongQuery()) {
+                          longQueryCount.incrementAndGet();
+                        }
                       } else {
                         failedQueryCount.incrementAndGet();
                       }
@@ -558,6 +565,12 @@ public class QueryResource implements QueryCountStatsProvider
     return timedOutQueryCount.get();
   }
 
+  @Override
+  public long getLongQueryCount()
+  {
+    return longQueryCount.get();
+  }
+
   @VisibleForTesting
   public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
   {
@@ -566,4 +579,6 @@ public class QueryResource implements QueryCountStatsProvider
       builder.header(HEADER_ETAG, entityTag);
     }
   }
+
+
 }
