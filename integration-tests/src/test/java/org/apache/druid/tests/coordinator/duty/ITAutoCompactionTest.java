@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -629,6 +628,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -641,6 +641,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -663,6 +664,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -675,6 +677,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -703,6 +706,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result is not rollup
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -722,6 +726,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result should rollup on language dimension
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -749,6 +754,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -768,6 +774,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // For dim "page", result should only contain value "Striker Eureka"
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(459.0))))
       );
@@ -794,6 +801,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -814,16 +822,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
       expectedResult = ImmutableMap.of(
-          "added", "double_sum_added",
+          "%%FIELD_TO_QUERY%%", "double_sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
 
       expectedResult = ImmutableMap.of(
-          "added", "long_sum_added",
+          "%%FIELD_TO_QUERY%%", "long_sum_added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
-          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57), ImmutableList.of(459))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
 
@@ -836,7 +844,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
   }
-  
+
   @Test
   public void testAutoCompactionDutyWithOverlappingInterval() throws Exception
   {
@@ -854,10 +862,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
-          "%%EXPECTED_COUNT_RESULT%%",
-          2,
-          "%%EXPECTED_SCAN_RESULT%%",
-          ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
 
@@ -927,7 +934,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     verifyQuery(queryResource, ImmutableMap.of());
   }
 
-  private void verifyQuery(String queryResource, Map<String, Object> expectedResults) throws Exception
+  private void verifyQuery(String queryResource, Map<String, Object> keyValueToReplace) throws Exception
   {
     String queryResponseTemplate;
     try {
@@ -942,7 +949,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         "%%DATASOURCE%%",
         fullDatasourceName
     );
-    for (Map.Entry<String, Object> entry : expectedResults.entrySet()) {
+    for (Map.Entry<String, Object> entry : keyValueToReplace.entrySet()) {
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           entry.getKey(),
