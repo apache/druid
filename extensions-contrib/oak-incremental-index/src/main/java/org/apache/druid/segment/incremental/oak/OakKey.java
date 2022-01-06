@@ -177,24 +177,18 @@ public final class OakKey
     int arraySize;
     long arrayAddress;
 
-    public StringDim(long dimensionsAddress)
+    public StringDim(long dimensionsAddress, int dimIndex)
     {
-      this.dimensionsAddress = dimensionsAddress;
-      dimIndex = -1;
-      initialized = false;
+      setValues(dimensionsAddress, dimIndex);
     }
 
-    public void reset(long dimensions)
+    public void setValues(long dimensionsAddress, int dimIndex)
     {
-      this.dimensionsAddress = dimensions;
-      dimIndex = -1;
-      initialized = false;
-    }
-
-    public void setDimIndex(final int dimIndex)
-    {
-      this.dimIndex = dimIndex;
-      initialized = false;
+      if (this.dimensionsAddress != dimensionsAddress || this.dimIndex != dimIndex) {
+        this.dimensionsAddress = dimensionsAddress;
+        this.dimIndex = dimIndex;
+        initialized = false;
+      }
     }
 
     private void init()

@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -107,6 +108,27 @@ public class IncrementalIndexRow
     return dims[index];
   }
 
+  @Nullable
+  public IndexedInts getIndexedDim(final int index, @Nullable IndexedInts cachedIndexedInts)
+  {
+    Object dim = getDim(index);
+    if (!(dim instanceof int[])) {
+      return null;
+    }
+
+    int[] indices = (int[]) dim;
+    ArrayBasedIndexedInts indexedInts;
+
+    if (!(cachedIndexedInts instanceof ArrayBasedIndexedInts)) {
+      indexedInts = new ArrayBasedIndexedInts(indices);
+    } else {
+      indexedInts = (ArrayBasedIndexedInts) cachedIndexedInts;
+      indexedInts.setValues(indices, indices.length);
+    }
+
+    return indexedInts;
+  }
+
   public int getDimsLength()
   {
     return dims.length;
@@ -115,12 +137,6 @@ public class IncrementalIndexRow
   public boolean isDimNull(int index)
   {
     return (index >= dims.length) || (dims[index] == null);
-  }
-
-  @Nullable
-  public IndexedInts getStringDim(final int dimIndex)
-  {
-    return null;
   }
 
   public int getRowIndex()

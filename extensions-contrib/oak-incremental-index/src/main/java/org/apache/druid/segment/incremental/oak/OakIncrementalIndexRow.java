@@ -40,8 +40,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   private ByteBuffer aggregationsBuffer;
   private int aggregationsOffset;
   private int dimsLength;
-  @Nullable
-  private OakKey.StringDim stringDim;
 
   public OakIncrementalIndexRow(OakUnscopedBuffer dimensions,
                                 List<DimensionDesc> dimensionDescsList,
@@ -54,7 +52,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     this.aggregationsBuffer = null;
     this.aggregationsOffset = 0;
     this.dimsLength = -1; // lazy initialization
-    this.stringDim = null;
   }
 
   /**
@@ -71,9 +68,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     dimensions = oakDimensions.getAddress();
     aggregationsBuffer = null;
     aggregationsOffset = 0;
-    if (stringDim != null) {
-      stringDim.reset(dimensions);
-    }
   }
 
   private void updateAggregationsBuffer()
@@ -132,21 +126,26 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   }
 
   /**
-   * Allows faster access to a string dimension because it uses lazy evaluation (no need for deserialization).
-   * The caller must validate that this dimension is not null.
+   * Allows faster access to a IndexedInts dimension because it uses lazy evaluation (no need for deserialization).
    */
   @Override
-  public IndexedInts getStringDim(final int dimIndex)
+  @Nullable
+  public IndexedInts getIndexedDim(final int dimIndex, @Nullable IndexedInts cachedIndexedInts)
   {
-    if (stringDim == null) {
-      stringDim = new OakKey.StringDim(dimensions);
+    if (isDimNull(dimIndex)) {
+      return null;
     }
 
-    if (stringDim.getDimIndex() != dimIndex) {
-      stringDim.setDimIndex(dimIndex);
+    OakKey.StringDim indexedInts;
+
+    if (!(cachedIndexedInts instanceof OakKey.StringDim)) {
+      indexedInts = new OakKey.StringDim(dimensions, dimIndex);
+    } else {
+      indexedInts = (OakKey.StringDim) cachedIndexedInts;
+      indexedInts.setValues(dimensions, dimIndex);
     }
 
-    return stringDim;
+    return indexedInts;
   }
 
   @Override
