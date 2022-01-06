@@ -143,8 +143,8 @@ public class DimensionDictionary<T extends Comparable<T>>
    */
   protected AddResult addNull()
   {
-    long stamp = 0;
-    AddResult result = null;
+    long stamp;
+    AddResult result;
 
     // try until we can complete an optimistic read
     do {
@@ -175,7 +175,7 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public T getMinValue()
   {
-    long stamp = 0;
+    long stamp;
     T result;
     do {
       stamp = lock.tryOptimisticRead();
@@ -187,7 +187,7 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public T getMaxValue()
   {
-    long stamp = 0;
+    long stamp;
     T result;
     do {
       stamp = lock.tryOptimisticRead();

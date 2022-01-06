@@ -69,8 +69,8 @@ public class StringDimensionIndexerProcessBenchmark
   @Threads(1)
   public void singleThread(Blackhole blackhole)
   {
-    for (int i = 0; i < inputData.length; i++) {
-      freshIndexer.processRowValsToUnsortedEncodedKeyComponent(inputData[i], true);
+    for (String data : inputData) {
+      freshIndexer.processRowValsToUnsortedEncodedKeyComponent(data, true);
     }
   }
 
@@ -80,8 +80,8 @@ public class StringDimensionIndexerProcessBenchmark
   @Threads(2)
   public void twoThreads(Blackhole blackhole)
   {
-    for (int i = 0; i < inputData.length; i++) {
-      freshIndexer.processRowValsToUnsortedEncodedKeyComponent(inputData[i], true);
+    for (String data : inputData) {
+      freshIndexer.processRowValsToUnsortedEncodedKeyComponent(data, true);
     }
   }
 }
