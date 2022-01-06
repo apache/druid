@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class ArrayGroupByColumnSelectorStrategy
+public class ArrayStringGroupByColumnSelectorStrategy
     implements GroupByColumnSelectorStrategy
 {
   private static final int GROUP_BY_MISSING_VALUE = -1;
@@ -56,14 +56,14 @@ public class ArrayGroupByColumnSelectorStrategy
     return Integer.BYTES;
   }
 
-  public ArrayGroupByColumnSelectorStrategy()
+  public ArrayStringGroupByColumnSelectorStrategy()
   {
     dictionaryToInt = HashBiMap.create();
     intListToInt = HashBiMap.create();
   }
 
   @VisibleForTesting
-  ArrayGroupByColumnSelectorStrategy(
+  ArrayStringGroupByColumnSelectorStrategy(
       BiMap<String, Integer> dictionaryToInt,
       BiMap<ComparableIntArray, Integer> intArrayToInt
   )

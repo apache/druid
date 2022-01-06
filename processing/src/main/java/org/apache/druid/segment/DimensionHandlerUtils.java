@@ -39,6 +39,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
@@ -287,7 +288,7 @@ public final class DimensionHandlerUtils
   )
   {
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector, dimSpec);
+    return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
   @Nullable
@@ -374,11 +375,32 @@ public final class DimensionHandlerUtils
       case STRING:
         return convertObjectToString(obj);
       case ARRAY:
-        return convertToArray(obj);
+        switch (type.getElementType().getType()){
+          case STRING:
+            return convertToArray(obj);
+          default:
+            return convertToLongArray(obj);
+        }
+
       default:
         throw new IAE("Type[%s] is not supported for dimensions!", type);
     }
   }
+
+  private static ComparableList convertToLongArray(Object obj)
+  {
+    if (obj == null) {
+      return null;
+    }
+    if (obj instanceof List) {
+      return new ComparableList((List) obj);
+    }
+    if (obj instanceof ComparableList) {
+      return (ComparableList) obj;
+    }
+    throw new ISE("Unable to convert type %s to %s", obj.getClass().getName(), ComparableList.class.getName());
+  }
+
 
   @Nullable
   public static ComparableStringArray convertToArray(Object obj)

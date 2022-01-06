@@ -26,7 +26,6 @@ public interface ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass exten
 {
   ColumnSelectorStrategyClass makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector,
-      DimensionSpec dimensionSpec
+      ColumnValueSelector selector
   );
 }

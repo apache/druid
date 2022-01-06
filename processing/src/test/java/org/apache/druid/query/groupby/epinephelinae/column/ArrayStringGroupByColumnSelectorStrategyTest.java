@@ -40,7 +40,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ArrayGroupByColumnSelectorStrategyTest
+public class ArrayStringGroupByColumnSelectorStrategyTest
 {
 
   // The dictionary has been constructed such that the values are not sorted lexicographically
@@ -71,12 +71,12 @@ public class ArrayGroupByColumnSelectorStrategyTest
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
 
-  private ArrayGroupByColumnSelectorStrategy strategy;
+  private ArrayStringGroupByColumnSelectorStrategy strategy;
 
   @Before
   public void setup()
   {
-    strategy = new ArrayGroupByColumnSelectorStrategy(DICTIONARY_INT, INDEXED_INTARRAYS);
+    strategy = new ArrayStringGroupByColumnSelectorStrategy(DICTIONARY_INT, INDEXED_INTARRAYS);
   }
 
   @Test

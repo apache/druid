@@ -37,7 +37,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -71,8 +70,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     @Override
     public SearchColumnSelectorStrategy makeColumnSelectorStrategy(
         ColumnCapabilities capabilities,
-        ColumnValueSelector selector,
-        DimensionSpec dimensionSpec
+        ColumnValueSelector selector
     )
     {
       switch (capabilities.getType()) {

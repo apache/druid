@@ -42,7 +42,6 @@ public class NullHandling
   public static final Long ZERO_LONG = 0L;
   public static final byte IS_NULL_BYTE = (byte) 1;
   public static final byte IS_NOT_NULL_BYTE = (byte) 0;
-  public static final String[] NULL_STRING_ARRAY = new String[0];
 
   /**
    * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
@@ -119,10 +118,6 @@ public class NullHandling
     return replaceWithDefault() ? ZERO_DOUBLE : null;
   }
 
-  public static String[] defaultStringValues()
-  {
-    return NULL_STRING_ARRAY;
-  }
 
   /**
    * Returns the default value for an object of the provided class. Will be null in SQL-compatible null handling mode.

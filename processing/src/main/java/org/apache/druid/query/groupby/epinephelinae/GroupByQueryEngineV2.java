@@ -42,12 +42,14 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.column.ArrayGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ListDoubleGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ListLongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
@@ -393,8 +395,7 @@ public class GroupByQueryEngineV2
     @Override
     public GroupByColumnSelectorStrategy makeColumnSelectorStrategy(
         ColumnCapabilities capabilities,
-        ColumnValueSelector selector,
-        DimensionSpec dimensionSpec
+        ColumnValueSelector selector
     )
     {
       switch (capabilities.getType()) {
@@ -412,7 +413,19 @@ public class GroupByQueryEngineV2
         case DOUBLE:
           return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
         case ARRAY:
-          return new ArrayGroupByColumnSelectorStrategy();
+          switch (capabilities.getElementType().getType()) {
+            case LONG:
+              return new ListLongGroupByColumnSelectorStrategy();
+            case STRING:
+              return new ArrayStringGroupByColumnSelectorStrategy();
+            case DOUBLE:
+              return new ListDoubleGroupByColumnSelectorStrategy();
+            case FLOAT:
+              // Array<Float> not supported in expressions, ingestion
+            default:
+              throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
+
+          }
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }

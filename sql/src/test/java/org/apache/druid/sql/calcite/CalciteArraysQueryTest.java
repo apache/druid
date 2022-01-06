@@ -973,6 +973,135 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testArrayGroupAsLongArray() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY[l1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"l1\")",
+                            ColumnType.LONG_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(0L), 4L},
+            new Object[]{ImmutableList.of(325323L), 1L},
+            new Object[]{ImmutableList.of(7L), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testArrayGroupAsDoubleArray() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"d1\")",
+                            ColumnType.DOUBLE_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(0.0), 4L},
+            new Object[]{ImmutableList.of(1.0), 1L},
+            new Object[]{ImmutableList.of(1.7), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayGroupAsFloatArray() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY[f1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"f1\")",
+                            ColumnType.DOUBLE_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DISABLED_UNNESTING_ARRAYS)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(0.0), 4L},
+            new Object[]{ImmutableList.of(0.10000000149011612), 1L},
+            new Object[]{ImmutableList.of(1.0), 1L}
+        )
+    );
+  }
 
   @Test
   public void testArrayGroupAsArrayWithFunction() throws Exception
