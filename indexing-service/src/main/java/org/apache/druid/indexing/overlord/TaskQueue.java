@@ -100,7 +100,7 @@ public class TaskQueue
   private final ServiceEmitter emitter;
 
   private final ReentrantLock giant = new ReentrantLock(true);
-  //noinspection MismatchedCollectionQueryUpdate
+  //noinspection MismatchedQueryAndUpdateOfCollection
   private final BlockingQueue<Object> managementMayBeNecessary = new ArrayBlockingQueue<>(8);
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
