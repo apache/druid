@@ -150,7 +150,6 @@ public class TypeStrategies
    */
   public static long readNotNullNullableLong(ByteBuffer buffer, int offset)
   {
-    assert !isNullableNull(buffer, offset);
     return buffer.getLong(offset + VALUE_OFFSET);
   }
 
@@ -183,7 +182,6 @@ public class TypeStrategies
    */
   public static double readNotNullNullableDouble(ByteBuffer buffer, int offset)
   {
-    assert !isNullableNull(buffer, offset);
     return buffer.getDouble(offset + VALUE_OFFSET);
   }
 
@@ -216,7 +214,6 @@ public class TypeStrategies
    */
   public static float readNotNullNullableFloat(ByteBuffer buffer, int offset)
   {
-    assert !isNullableNull(buffer, offset);
     return buffer.getFloat(offset + VALUE_OFFSET);
   }
 
