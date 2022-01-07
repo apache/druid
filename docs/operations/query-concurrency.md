@@ -25,7 +25,9 @@ sidebar_label: Query concurrency
 
 If you frequently run concurrent, mixed workloads on your Druid cluster, configure Druid to properly allocate cluster resources and optimize your overall query performance. With proper resource isolation, you can execute long-running, low priority queries that are resource intensive without interfering with short-running, high priority queries that require fewer resources. By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
 
-There are two approaches to isolate your resources for improving query concurrency: query laning and cluster tiering. Use query laning to set a limit on the maximum number of long-running queries executed on each Broker. Use cluster tiering to define separate groups of Historicals and Brokers to which different queries can be directed based on their priority.
+Druid provides the following approaches to isolate resources and improve query concurrency:
+- **Query laning** where you set a limit on the maximum number of long-running queries executed on each Broker. 
+- **Cluster tiering** which defines separate groups of Historicals and Brokers to receive different query assignments based on query priority.
 
 ## Query laning
 
@@ -105,16 +107,16 @@ See [Load rules](rule-configuration.md#load-rules) for more information on segme
 
 ### Assign Historicals to tiers
 
-Assign the Historical to tiers by labeling the tier name and setting the priority value in the  `historical/runtime.properties` files.
+To assign a Historical to a tier, add a label for the tier name and set the priority value in the  `historical/runtime.properties` for the Historical.
 
-Example config for a Historical in the hot tier:
+Example Historical in the hot tier:
 
 ```
 druid.server.tier=hot
 druid.server.priority=1
 ```
 
-Example config for a Historical in the cold tier:
+Example Historical in the cold tier:
 
 ```
 druid.server.tier=_default_tier
