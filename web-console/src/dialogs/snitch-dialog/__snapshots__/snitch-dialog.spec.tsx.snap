@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`snitch dialog matches snapshot 1`] = `
+exports[`SnitchDialog matches snapshot 1`] = `
 <div
   class="bp3-portal"
 >
@@ -97,7 +97,7 @@ exports[`snitch dialog matches snapshot 1`] = `
 </div>
 `;
 
-exports[`snitch dialog matches snapshot with history 1`] = `
+exports[`SnitchDialog matches snapshot with history 1`] = `
 <div
   class="bp3-portal"
 >

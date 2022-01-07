@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -768,6 +769,59 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify compacted segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithOverlappingInterval() throws Exception
+  {
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.NONE, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
+    // Create WEEK segment with 2013-08-26 to 2013-09-02
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+    specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.NONE, false, ImmutableList.of(new Interval("2013-09-01/2013-09-02", chrono))));
+    // Create MONTH segment with 2013-09-01 to 2013-10-01
+    loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
+
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      verifySegmentsCount(2);
+
+      // Result is not rollup
+      // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%EXPECTED_COUNT_RESULT%%",
+          2,
+          "%%EXPECTED_SCAN_RESULT%%",
+          ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          null,
+          null,
+          null,
+          false
+      );
+      // Compact the MONTH segment
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Compact the WEEK segment
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Verify all task succeed
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      for (TaskResponseObject taskResponseObject : compactTasksBefore) {
+        Assert.assertEquals(TaskState.SUCCESS, taskResponseObject.getStatus());
+      }
+
       // Verify compacted segments does not get compacted again
       forceTriggerAutoCompaction(2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ShowValueDialog } from './show-value-dialog';
 
-describe('clipboard dialog', () => {
+describe('ShowValueDialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
       <ShowValueDialog

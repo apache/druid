@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`status card matches snapshot 1`] = `
+exports[`StatusCard matches snapshot 1`] = `
 <a
   class="home-view-card status-card"
 >

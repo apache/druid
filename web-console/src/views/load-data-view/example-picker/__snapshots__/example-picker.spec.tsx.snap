@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`example picker matches snapshot 1`] = `
+exports[`ExamplePicker matches snapshot 1`] = `
 <div
   class="bp3-form-group"
 >
