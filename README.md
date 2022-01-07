@@ -32,7 +32,7 @@
 [Documentation](https://druid.apache.org/docs/latest/design/) |
 [Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
 [User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
-[Slack](https://s.apache.org/slack-invite) |
+[Slack](https://app.slack.com/client/T4S1WH2J3/CJ8D1JTB8) |
 [Twitter](https://twitter.com/druidio) |
 [Download](https://druid.apache.org/downloads.html)
 
@@ -79,14 +79,12 @@ If you would like to contribute documentation, please do so under
 
 ### Community
 
-Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
-is hosted at Google Groups.
+Community support is available on the `#druid` channel in the Apache Slack team. Please send an email to 
+druid-user@googlegroups.com to get an invite to slack channel. 
+You must send the request from same email-id that slack invitation has to be sent to. 
 
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
-
-Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
 
 ### Building from source
 
