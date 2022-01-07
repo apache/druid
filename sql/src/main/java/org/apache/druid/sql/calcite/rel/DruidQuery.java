@@ -858,7 +858,7 @@ public class DruidQuery
     // initialized state for given aggregators instead of nothing.
     // Alternatively, the timeseries query should return empty buckets, even with ALL granularity when timeseries query
     // was originally a groupBy query, but with the grouping dimensions removed away in Grouping#applyProject
-    if (!Granularities.ALL.equals(queryGranularity) || grouping.isOptimizedWhileGrouping()) {
+    if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
     theContext.putAll(plannerContext.getQueryContext());

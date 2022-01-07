@@ -66,7 +66,7 @@ public class Grouping
   // Denotes whether the original Grouping had more dimensions which were dropped while applying projection to optimize
   // the grouping. Used for returning result which is consistent with most SQL implementations, by correspondingly
   // setting/unsetting the SKIP_EMPTY_BUCKETS flag, if the GroupBy query can be reduced to a timeseries query.
-  private final boolean optimizedWhileGrouping;
+  private final boolean groupingDimensionsDropped;
 
   private Grouping(
       final List<DimensionExpression> dimensions,
@@ -85,7 +85,7 @@ public class Grouping
       final List<Aggregation> aggregations,
       @Nullable final DimFilter havingFilter,
       final RowSignature outputRowSignature,
-      final boolean optimizedWhileGrouping
+      final boolean groupingDimensionsDropped
   )
   {
     this.dimensions = ImmutableList.copyOf(dimensions);
@@ -93,7 +93,7 @@ public class Grouping
     this.aggregations = ImmutableList.copyOf(aggregations);
     this.havingFilter = havingFilter;
     this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
-    this.optimizedWhileGrouping = optimizedWhileGrouping;
+    this.groupingDimensionsDropped = groupingDimensionsDropped;
 
     // Verify no collisions between dimensions, aggregations, post-aggregations.
     final Set<String> seen = new HashSet<>();
@@ -121,7 +121,7 @@ public class Grouping
     }
   }
 
-  // This method is private since optimizedWhileGrouping should only be deviated from default in
+  // This method is private since groupingDimensionsDropped should only be deviated from default in
   // applyProject
   private static Grouping create(
       final List<DimensionExpression> dimensions,
@@ -129,7 +129,7 @@ public class Grouping
       final List<Aggregation> aggregations,
       @Nullable final DimFilter havingFilter,
       final RowSignature outputRowSignature,
-      final boolean optimizedWhileGrouping
+      final boolean groupingDimensionsDropped
   )
   {
     return new Grouping(
@@ -138,7 +138,7 @@ public class Grouping
         aggregations,
         havingFilter,
         outputRowSignature,
-        optimizedWhileGrouping
+        groupingDimensionsDropped
     );
   }
 
@@ -199,9 +199,9 @@ public class Grouping
     return outputRowSignature;
   }
 
-  public boolean isOptimizedWhileGrouping()
+  public boolean hasGroupingDimensionsDropped()
   {
-    return optimizedWhileGrouping;
+    return groupingDimensionsDropped;
   }
 
   /**
@@ -291,7 +291,7 @@ public class Grouping
            aggregations.equals(grouping.aggregations) &&
            Objects.equals(havingFilter, grouping.havingFilter) &&
            outputRowSignature.equals(grouping.outputRowSignature) &&
-           optimizedWhileGrouping == grouping.optimizedWhileGrouping;
+           groupingDimensionsDropped == grouping.groupingDimensionsDropped;
   }
 
   @Override
@@ -303,7 +303,7 @@ public class Grouping
         aggregations,
         havingFilter,
         outputRowSignature,
-        optimizedWhileGrouping
+        groupingDimensionsDropped
     );
   }
 }
