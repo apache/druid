@@ -25,7 +25,7 @@ import inet.ipaddr.ipv4.IPv4Address;
 
 import javax.annotation.Nullable;
 
-class IPv4AddressExprUtils
+public class IPv4AddressExprUtils
 {
 
   private static final IPAddressStringParameters IPV4_ADDRESS_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).allowEmpty(false).toParams();
@@ -34,7 +34,7 @@ class IPv4AddressExprUtils
   /**
    * @return True if argument cannot be represented by an unsigned integer (4 bytes), else false
    */
-  static boolean overflowsUnsignedInt(long value)
+  public static boolean overflowsUnsignedInt(long value)
   {
     return value < 0L || 0xff_ff_ff_ffL < value;
   }
@@ -59,7 +59,7 @@ class IPv4AddressExprUtils
    * @return IPv4 address if the supplied string is a valid dotted-decimal IPv4 Address string.
    */
   @Nullable
-  static IPv4Address parse(@Nullable String string)
+  public static IPv4Address parse(@Nullable String string)
   {
     IPAddressString ipAddressString = new IPAddressString(string, IPV4_ADDRESS_PARAMS);
     if (ipAddressString.isIPv4()) {
@@ -72,7 +72,7 @@ class IPv4AddressExprUtils
    * @return IPv4 address if the supplied integer is a valid IPv4 integer number.
    */
   @Nullable
-  static IPv4Address parse(long value)
+  public static IPv4Address parse(long value)
   {
     if (!overflowsUnsignedInt(value)) {
       return new IPv4Address((int) value);
@@ -83,7 +83,7 @@ class IPv4AddressExprUtils
   /**
    * @return IPv4 address dotted-decimal canonical string.
    */
-  static String toString(IPv4Address address)
+  public static String toString(IPv4Address address)
   {
     return address.toString();
   }
@@ -92,7 +92,7 @@ class IPv4AddressExprUtils
    *
    * @return IPv4 address as an integer.
    */
-  static long toLong(IPv4Address address)
+  public static long toLong(IPv4Address address)
   {
     return address.longValue();
   }
