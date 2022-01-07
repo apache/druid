@@ -182,6 +182,15 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testInsertIntoInvalidDataSourceName()
+  {
+    testInsertQuery()
+        .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo")
+        .expectValidationError(SqlPlanningException.class, "INSERT dataSource cannot contain the '/' character.")
+        .verify();
+  }
+
+  @Test
   public void testInsertUsingColumnList()
   {
     testInsertQuery()
