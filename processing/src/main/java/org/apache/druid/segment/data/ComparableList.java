@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.base.Preconditions;
 
 import java.util.List;
 
@@ -31,7 +32,12 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
 
   public ComparableList(List<T> input)
   {
-    delegate = input;
+    Preconditions.checkArgument(
+        input != null,
+        "Input cannot be null for %s",
+        ComparableList.class.getName()
+    );
+    this.delegate = input;
   }
 
   @JsonValue
@@ -61,22 +67,39 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
   }
 
   @Override
-  public int compareTo(ComparableList o)
+  public int compareTo(ComparableList rhs)
   {
-    if (delegate.size() > o.getDelegate().size()) {
+    if (rhs == null) {
       return 1;
-    } else if (delegate.size() < o.getDelegate().size()) {
-      return -1;
+    }
+
+    final int minSize = Math.min(this.getDelegate().size(), rhs.getDelegate().size());
+
+    if (this.delegate == rhs.getDelegate()) {
+      return 0;
     } else {
-      for (int i = 0; i < delegate.size(); i++) {
-        final int cmp = delegate.get(i).compareTo(o.getDelegate().get(i));
+      for (int i = 0; i < minSize; i++) {
+        final int cmp = delegate.get(i) != null ? delegate.get(i).compareTo(rhs.getDelegate().get(i)) : -1;
         if (cmp == 0) {
           continue;
-        } else {
-          return cmp;
         }
+        return cmp;
       }
-      return 0;
+      if (this.getDelegate().size() == rhs.getDelegate().size()) {
+        return 0;
+      } else if (this.getDelegate().size() < rhs.getDelegate().size()) {
+        return -1;
+      } else {
+        return 1;
+      }
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ComparableList{" +
+           "delegate=" + delegate +
+           '}';
   }
 }

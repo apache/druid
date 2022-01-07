@@ -85,6 +85,7 @@ import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -239,6 +240,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
                    .add(new MultiValueStringOperatorConversions.FilterOnly())
                    .add(new MultiValueStringOperatorConversions.FilterNone())
+                   .add(new MultiValueStringToArrayOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =

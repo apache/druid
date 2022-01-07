@@ -414,7 +414,7 @@ public final class DimensionHandlerUtils
     if (obj instanceof String[]) {
       return ComparableStringArray.of((String[]) obj);
     }
-    // Jackson converts the serialized array into a string. Converting it back to a string array
+    // Jackson converts the serialized array into a list. Converting it back to a string array
     if (obj instanceof List) {
       return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
     }

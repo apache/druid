@@ -42,14 +42,14 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ListDoubleGroupByColumnSelectorStrategy;
-import org.apache.druid.query.groupby.epinephelinae.column.ListLongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
@@ -415,11 +415,11 @@ public class GroupByQueryEngineV2
         case ARRAY:
           switch (capabilities.getElementType().getType()) {
             case LONG:
-              return new ListLongGroupByColumnSelectorStrategy();
+              return new ArrayLongGroupByColumnSelectorStrategy();
             case STRING:
               return new ArrayStringGroupByColumnSelectorStrategy();
             case DOUBLE:
-              return new ListDoubleGroupByColumnSelectorStrategy();
+              return new ArrayDoubleGroupByColumnSelectorStrategy();
             case FLOAT:
               // Array<Float> not supported in expressions, ingestion
             default:

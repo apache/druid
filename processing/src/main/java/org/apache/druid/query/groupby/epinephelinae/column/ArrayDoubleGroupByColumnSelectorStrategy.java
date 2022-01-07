@@ -26,7 +26,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import java.util.Arrays;
 import java.util.List;
 
-public class ListLongGroupByColumnSelectorStrategy extends ListGroupByColumnSelectorStrategy<Long>
+public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayGroupByColumnSelectorStrategy<Double>
 {
   @Override
   public Object getOnlyValue(ColumnValueSelector selector)
@@ -34,14 +34,16 @@ public class ListLongGroupByColumnSelectorStrategy extends ListGroupByColumnSele
     Object object = selector.getObject();
     if (object == null) {
       return GROUP_BY_MISSING_VALUE;
-    } else if (object instanceof Long) {
-      return addToIndexedDictionary(ImmutableList.of((Long) object));
+    } else if (object instanceof Double) {
+      return addToIndexedDictionary(ImmutableList.of((Double) object));
     } else if (object instanceof List) {
-      return addToIndexedDictionary((List<Long>) object);
-    } else if (object instanceof Long[]) {
-      return addToIndexedDictionary(Arrays.asList((Long[]) object));
+      return addToIndexedDictionary((List<Double>) object);
+    } else if (object instanceof Double[]) {
+      return addToIndexedDictionary(Arrays.asList((Double[]) object));
     } else {
       throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
     }
   }
 }
+
+

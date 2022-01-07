@@ -1321,7 +1321,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+        .setVirtualColumns(new ExpressionVirtualColumn("v0",
+                                                       "mv_to_array(placementish)",
+                                                       ColumnType.STRING_ARRAY,
                                                        ExprMacroTable.nil()
         ))
         .setDimensions(
@@ -1358,7 +1360,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+        .setVirtualColumns(new ExpressionVirtualColumn("v0",
+                                                       "mv_to_array(placementish)",
+                                                       ColumnType.STRING_ARRAY,
                                                        ExprMacroTable.nil()
         ))
         .setDimensions(
@@ -1497,7 +1501,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setVirtualColumns(new ExpressionVirtualColumn("v0", "array(placementish)", ColumnType.STRING_ARRAY,
+        .setVirtualColumns(new ExpressionVirtualColumn("v0",
+                                                       "mv_to_array(placementish)",
+                                                       ColumnType.STRING_ARRAY,
                                                        ExprMacroTable.nil()
         ))
         .setDimensions(

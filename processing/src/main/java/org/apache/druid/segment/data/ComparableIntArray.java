@@ -83,22 +83,39 @@ public class ComparableIntArray implements Comparable<ComparableIntArray>
   @Override
   public int compareTo(ComparableIntArray rhs)
   {
+    // rhs.getDelegate() cannot be null
+    if (rhs == null) {
+      return 1;
+    }
+    final int minSize = Math.min(this.getDelegate().length, rhs.getDelegate().length);
     //noinspection ArrayEquality
     if (this.delegate == rhs.getDelegate()) {
       return 0;
-    } else if (delegate.length > rhs.getDelegate().length) {
-      return 1;
-    } else if (delegate.length < rhs.getDelegate().length) {
-      return -1;
     } else {
-      for (int i = 0; i < delegate.length; i++) {
+      for (int i = 0; i < minSize; i++) {
         final int cmp = Integer.compare(delegate[i], rhs.getDelegate()[i]);
         if (cmp == 0) {
           continue;
         }
         return cmp;
       }
-      return 0;
+      if (this.getDelegate().length == rhs.getDelegate().length) {
+        return 0;
+      } else if (this.getDelegate().length < rhs.getDelegate().length) {
+        return -1;
+      } else {
+        return 1;
+      }
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ComparableIntArray{" +
+           "delegate=" + Arrays.toString(delegate) +
+           ", hashCode=" + hashCode +
+           ", hashCodeComputed=" + hashCodeComputed +
+           '}';
   }
 }

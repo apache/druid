@@ -2977,6 +2977,60 @@ public interface Function
     }
   }
 
+  class MVToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "mv_to_array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return args.get(0).eval(bindings);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+  }
   class ArrayConstructorFunction implements Function
   {
     @Override
@@ -2997,11 +3051,6 @@ public interface Function
 
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
-        // short circuit the case where you have one input argument whose input type is array. So array function has
-        // nothing to do.
-        if (i == 0 && length == 1 && evaluated.isArray()) {
-          return evaluated;
-        }
         arrayType = setArrayOutput(arrayType, out, i, evaluated);
       }
 
@@ -3011,20 +3060,15 @@ public interface Function
     @Override
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
-      return Collections.emptySet();
+      return ImmutableSet.copyOf(args);
     }
 
     @Override
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
-      return ImmutableSet.copyOf(args);
+      return Collections.emptySet();
     }
 
-    @Override
-    public boolean hasArrayInputs()
-    {
-      return true;
-    }
 
     @Override
     public boolean hasArrayOutput()

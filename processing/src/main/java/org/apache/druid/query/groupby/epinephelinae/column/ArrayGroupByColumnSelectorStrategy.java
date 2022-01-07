@@ -31,14 +31,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> implements GroupByColumnSelectorStrategy
+public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> implements GroupByColumnSelectorStrategy
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
   protected final List<List<T>> dictionary = new ArrayList<>();
   protected final Object2IntOpenHashMap<List<T>> reverseDictionary = new Object2IntOpenHashMap<>();
 
-  public ListGroupByColumnSelectorStrategy()
+  public ArrayGroupByColumnSelectorStrategy()
   {
     reverseDictionary.defaultReturnValue(-1);
   }

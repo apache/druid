@@ -24,9 +24,12 @@ import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -141,6 +144,55 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"1word\",\"up\"]", "1"},
             new Object[]{"[\"defword\",\"up\"]", "def"}
         )
+    );
+  }
+
+  @Test
+  public void testSelectNonConstantArrayExpressionFromTableForMultival() throws Exception
+  {
+    final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
+    final Query<?> scanQuery = newScanQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE1)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim3\",'word'),'up')", ColumnType.STRING_ARRAY))
+        .columns("dim1", "v0")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .limit(5)
+        .context(QUERY_CONTEXT_DEFAULT)
+        .build();
+
+
+    ExpressionProcessing.initializeForTests(true);
+    // if nested arrays are allowed, dim3 is a multi-valued string column, so the automatic translation will turn this
+    // expression into
+    //
+    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+    //
+    // this works, but we still translate the output into a string since that is the current output type
+    // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
+
+    testQuery(
+        sql,
+        ImmutableList.of(scanQuery),
+        ImmutableList.of(
+            new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
+            new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
+            new Object[]{"[[\"dword\",\"up\"]]", "2"},
+            new Object[]{"[[\"word\",\"up\"]]", "1"},
+            useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
+        )
+    );
+
+    ExpressionProcessing.initializeForTests(null);
+
+    // if nested arrays are not enabled, this doesn't work
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true");
+    testQuery(
+        sql,
+        ImmutableList.of(scanQuery),
+        ImmutableList.of()
     );
   }
 
@@ -878,12 +930,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testArrayGroupAsArray() throws Exception
+  public void testArrayGroupAsArrayOnMultiValueDimension() throws Exception
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY[dim3], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        "SELECT MV_TO_ARRAY(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -892,7 +944,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
-                            "array(\"dim3\")",
+                            "mv_to_array(\"dim3\")",
                             ColumnType.STRING_ARRAY
                         ))
                         .setDimensions(
@@ -924,6 +976,143 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayGroupAsArrayOnMultiValueDimensionWithFunction() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(concat(dim3,'c')), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(concat(\"dim3\",'c'))",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of("c"), 3L},
+            new Object[]{ImmutableList.of("ac", "bc"), 1L},
+            new Object[]{ImmutableList.of("bc", "cc"), 1L},
+            new Object[]{ImmutableList.of("dc"), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayGroupAsArrayWithSingleDimension() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim1\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testArrayGroupAsArrayWithSingleDimFunction() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(concat(dim1,'c')), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(concat(\"dim1\",'c'))",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of("10.1c"), 1L},
+            new Object[]{ImmutableList.of("1c"), 1L},
+            new Object[]{ImmutableList.of("2c"), 1L},
+            new Object[]{ImmutableList.of("abcc"), 1L},
+            new Object[]{ImmutableList.of("c"), 1L},
+            new Object[]{ImmutableList.of("defc"), 1L}
         )
     );
   }
@@ -1105,44 +1294,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             },
             new Object[]{ImmutableList.of("b"), 1L},
             new Object[]{ImmutableList.of("c"), 1L}
-        )
-    );
-  }
-
-
-  @Test
-  public void testArrayGroupAsArrayWithLiteral() throws Exception
-  {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-    testQuery(
-        "SELECT ARRAY['3'], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE3)
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array('3')", ColumnType.STRING_ARRAY))
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
-                            )
-                        )
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                        .setLimitSpec(new DefaultLimitSpec(
-                            ImmutableList.of(new OrderByColumnSpec(
-                                "a0",
-                                OrderByColumnSpec.Direction.DESCENDING,
-                                StringComparators.NUMERIC
-                            )),
-                            Integer.MAX_VALUE
-                        ))
-                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{ImmutableList.of("3"), 6L}
         )
     );
   }

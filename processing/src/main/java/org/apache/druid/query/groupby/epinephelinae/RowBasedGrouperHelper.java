@@ -1559,7 +1559,6 @@ public class RowBasedGrouperHelper
           @Nullable StringComparator stringComparator
       )
       {
-        //TODO: karan : add pushLimitDown ?
         final StringComparator comparator = stringComparator == null
                                             ? StringComparators.LEXICOGRAPHIC
                                             : stringComparator;

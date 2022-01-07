@@ -402,8 +402,7 @@ public class DruidQuery
       }
 
       final RelDataType dataType = rexNode.getType();
-      final ColumnType outputType;
-      outputType = Calcites.getColumnTypeForRelDataType(dataType);
+      final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
 
       if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
