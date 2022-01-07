@@ -913,7 +913,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{new ArrayList<String>(){{add(null);}}, 3L},
+            new Object[]{
+                new ArrayList<String>()
+                {
+                  {
+                    add(null);
+                  }
+                }, 3L
+            },
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
@@ -1076,18 +1083,26 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(new DefaultLimitSpec(
-                            ImmutableList.of(new OrderByColumnSpec(
-                                "a0",
-                                OrderByColumnSpec.Direction.DESCENDING,
-                                StringComparators.NUMERIC
-                            )),
-                            Integer.MAX_VALUE
-                        ))
+                                          ImmutableList.of(new OrderByColumnSpec(
+                                              "a0",
+                                              OrderByColumnSpec.Direction.DESCENDING,
+                                              StringComparators.NUMERIC
+                                          )),
+                                          Integer.MAX_VALUE
+                                      )
+                        )
                         .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{new ArrayList<String>(){{add(null);}}, 4L},
+            new Object[]{
+                new ArrayList<String>()
+                {
+                  {
+                    add(null);
+                  }
+                }, 4L
+            },
             new Object[]{ImmutableList.of("b"), 1L},
             new Object[]{ImmutableList.of("c"), 1L}
         )

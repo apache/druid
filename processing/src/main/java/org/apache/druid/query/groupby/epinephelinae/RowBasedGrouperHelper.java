@@ -1385,7 +1385,6 @@ public class RowBasedGrouperHelper
             case STRING:
               return new ArrayRowBasedKeySerdeHelper(
                   keyBufferPosition,
-                  pushLimitDown,
                   stringComparator
               );
             case LONG:
@@ -1557,9 +1556,7 @@ public class RowBasedGrouperHelper
 
       ArrayRowBasedKeySerdeHelper(
           int keyBufferPosition,
-          boolean pushLimitDown,
-          @Nullable
-              StringComparator stringComparator
+          @Nullable StringComparator stringComparator
       )
       {
         //TODO: karan : add pushLimitDown ?

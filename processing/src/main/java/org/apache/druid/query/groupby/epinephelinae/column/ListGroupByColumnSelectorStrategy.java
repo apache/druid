@@ -23,7 +23,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ComparableList;
 
@@ -131,18 +130,25 @@ public abstract class ListGroupByColumnSelectorStrategy<T extends Comparable> im
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
-    final StringComparator comparator = stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
       List<T> lhs = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
       List<T> rhs = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
 
       int minLength = Math.min(lhs.size(), rhs.size());
-      //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
       } else {
         for (int i = 0; i < minLength; i++) {
-          final int cmp = lhs.get(i).compareTo(rhs.get(i));
+          final T left = lhs.get(i);
+          final T right = rhs.get(i);
+          final int cmp;
+          if (left == null && right == null) {
+            cmp = 0;
+          } else if (left == null) {
+            cmp = -1;
+          } else {
+            cmp = lhs.get(i).compareTo(rhs.get(i));
+          }
           if (cmp == 0) {
             continue;
           }

@@ -346,7 +346,7 @@ public class NativeQueryMaker implements QueryMaker
           coercedValue = Arrays.asList(((ComparableStringArray) value).getDelegate());
         } else if (value instanceof ComparableList) {
           coercedValue = ((ComparableList) value).getDelegate();
-        } else{
+        } else {
           throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }
       }
