@@ -55,6 +55,14 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   }
 
   @Override
+  public SegmentWriteOutMedium makeChildWriteOutMedium() throws IOException
+  {
+    TmpFileSegmentWriteOutMedium tmpFileSegmentWriteOutMedium = new TmpFileSegmentWriteOutMedium(dir);
+    closer.register(tmpFileSegmentWriteOutMedium);
+    return tmpFileSegmentWriteOutMedium;
+  }
+
+  @Override
   public Closer getCloser()
   {
     return closer;
