@@ -21,11 +21,11 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ComparableIntArray;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.junit.After;
@@ -125,11 +125,9 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   @Test
   public void sanityTest()
   {
-    DimensionSelector dimensionSelector = Mockito.mock(DimensionSelector.class);
-    Mockito.when(dimensionSelector.getRow()).thenReturn(new ArrayBasedIndexedInts(new int[]{1, 2}));
-    Mockito.when(dimensionSelector.lookupName(1)).thenReturn("a");
-    Mockito.when(dimensionSelector.lookupName(2)).thenReturn("b");
-    Assert.assertEquals(0, strategy.getOnlyValue(dimensionSelector));
+    ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
+    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of("a", "b"));
+    Assert.assertEquals(0, strategy.getOnlyValue(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
