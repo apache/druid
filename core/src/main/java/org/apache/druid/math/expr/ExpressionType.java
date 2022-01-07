@@ -28,8 +28,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.BaseTypeSignature;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.TypeStrategies;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 
@@ -64,37 +62,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
       @JsonProperty("elementType") @Nullable ExpressionType elementType
   )
   {
-    super(exprType, complexTypeName, elementType);
-  }
-
-  @Override
-  public <T> TypeStrategy<T> getStrategy()
-  {
-    final TypeStrategy strategy;
-    switch (type) {
-      case LONG:
-        strategy = TypeStrategies.LONG;
-        break;
-      case DOUBLE:
-        strategy = TypeStrategies.DOUBLE;
-        break;
-      case STRING:
-        strategy = TypeStrategies.STRING;
-        break;
-      case ARRAY:
-        strategy = new TypeStrategies.ArrayTypeStrategy(this);
-        break;
-      case COMPLEX:
-        TypeStrategy<?> complexStrategy = TypeStrategies.getComplex(complexTypeName);
-        if (complexStrategy == null) {
-          throw new IAE("Cannot find strategy for type [%s]", asTypeString());
-        }
-        strategy = complexStrategy;
-        break;
-      default:
-        throw new ISE("Unsupported column type[%s]", type);
-    }
-    return strategy;
+    super(ExpressionTypeFactory.getInstance(), exprType, complexTypeName, elementType);
   }
 
   @Nullable

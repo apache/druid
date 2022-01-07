@@ -32,7 +32,7 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
 
   private static final Interner<ColumnType> INTERNER = Interners.newWeakInterner();
 
-  public static ColumnTypeFactory getInstance()
+  public static TypeFactory<ColumnType> getInstance()
   {
     return INSTANCE;
   }
@@ -89,7 +89,8 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
     }
   }
 
-  public static <T> TypeStrategy<T> getTypeStrategy(TypeSignature<ValueType> type)
+  @Override
+  public <T> TypeStrategy<T> getTypeStrategy(ColumnType type)
   {
     final TypeStrategy strategy;
     switch (type.getType()) {

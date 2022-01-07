@@ -371,15 +371,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
           expected.asArray(),
           ExprEval.deserialize(buffer, position, expected.type()).asArray()
       );
-      Assert.assertArrayEquals(
-          expected.asArray(),
-          ExprEval.deserialize(buffer, position, expected.type()).asArray()
-      );
     } else {
-      Assert.assertEquals(
-          expected.value(),
-          ExprEval.deserialize(buffer, position, expected.type()).value()
-      );
       Assert.assertEquals(
           expected.value(),
           ExprEval.deserialize(buffer, position, expected.type()).value()

@@ -153,7 +153,7 @@ public class ColumnTypeTest
         @Nullable TypeSignature<ValueType> elementType
     )
     {
-      super(valueType, complexTypeName, elementType);
+      super(ColumnTypeFactory.getInstance(), valueType, complexTypeName, elementType);
     }
 
     @Override

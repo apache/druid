@@ -47,13 +47,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
       @JsonProperty("elementType") @Nullable ColumnType elementType
   )
   {
-    super(type, complexTypeName, elementType);
-  }
-
-  @Override
-  public <T> TypeStrategy<T> getStrategy()
-  {
-    return ColumnTypeFactory.getTypeStrategy(this);
+    super(ColumnTypeFactory.getInstance(), type, complexTypeName, elementType);
   }
 
   @Nullable
