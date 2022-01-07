@@ -41,10 +41,10 @@ In Druid, query lanes reserve resources for Broker HTTP threads. Each Druid quer
 
 Set the following query laning properties in the `broker/runtime.properties` file.
 
+* `druid.query.scheduler.laning.strategy` – The strategy used to assign queries to lanes. You can [define your own laning strategy manually](../configuration/index.md#manual-laning-strategy) or use the built-in [“high/low” laning strategy](../configuration/index.md#highlow-laning-strategy).
 * `druid.query.scheduler.numThreads` – The total number of queries that can be served per Broker. We recommend setting this value to 1-2 less than `druid.server.http.numThreads`.
   > The query scheduler by default does not limit the number of Broker HTTP threads. Setting this property to a bounded number limits the thread count. If the allocated threads are all occupied, any incoming query, including interactive queries, will be rejected with an HTTP 429 status code.
 
-* `druid.query.scheduler.laning.strategy` – The strategy used to assign queries to lanes. You can [define your own laning strategy manually](../configuration/index.md#manual-laning-strategy) or use the built-in [“high/low” laning strategy](../configuration/index.md#highlow-laning-strategy).
 
 Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for how queries are labeled high or low priority. Otherwise, manually set the priority for incoming queries on the query context.
 
