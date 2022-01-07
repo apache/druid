@@ -464,7 +464,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 
-### Date and time functions
+### Time functions
 
 Time functions can be used with Druid's `__time` column, with any column storing millisecond timestamps through use
 of the `MILLIS_TO_TIMESTAMP` function, or with any column storing string timestamps through use of the `TIME_PARSE`
