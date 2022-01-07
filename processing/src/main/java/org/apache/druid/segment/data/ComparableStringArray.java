@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.hash.Hashing;
 
 import java.util.Arrays;
 
@@ -59,9 +58,9 @@ public class ComparableStringArray implements Comparable<ComparableStringArray>
   {
     // Check is not thread-safe, but that's fine. Even if used by multiple threads, it's ok to write these primitive
     // fields more than once.
+    // As ComparableIntArray is used in hot loop caching the hashcode
     if (!hashCodeComputed) {
-      // Use murmur3_32 for dispersion properties needed by DistinctKeyCollector#isKeySelected.
-      hashCode = Hashing.murmur3_32().hashInt(Arrays.hashCode(delegate)).asInt();
+      hashCode = Arrays.hashCode(delegate);
       hashCodeComputed = true;
     }
 
