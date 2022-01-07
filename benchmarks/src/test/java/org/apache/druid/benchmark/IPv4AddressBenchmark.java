@@ -1,8 +1,10 @@
 package org.apache.druid.benchmark;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 import com.google.common.net.InetAddresses;
+import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import inet.ipaddr.IPAddressStringParameters;
 import inet.ipaddr.ipv4.IPv4Address;
@@ -12,9 +14,12 @@ import org.apache.druid.query.expression.IPv4AddressExprUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.Runner;
@@ -26,7 +31,6 @@ import org.apache.commons.net.util.SubnetUtils;
 
 import javax.annotation.Nullable;
 import java.net.Inet4Address;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -34,34 +38,35 @@ import java.util.regex.Pattern;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3)
+@Warmup(iterations = 5)
+@Measurement(iterations = 5)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class IPv4AddressBenchmark
 {
-  private static final List<String> IPV4_ADDRESSES = Arrays.asList(
-      "192.168.0.1",
-      "1.2.3.4",
-//      "255.255.255.255",
-//      "0.0.0.0",
-      "255.0.0.0"
-//      "1.2.3.0/24",  // invalid prefixed cidr
-//      "1.2.3.4",
-//      ""
-  );
-
-  private static final List<String> IPV4_SUBNETS = Arrays.asList(
-      "192.168.0.0/16",
-      "1.2.3.0/8",
-//      "255.255.255.0/20",
-//      "1.1.1.0/24",
-      "1.2.3.0/21"
-//      "255.255.255.0/20",
-//      "1.2.3.4/23", // invalid subnet
-//      "1.2.3.4/23"
-      );
-
   private static final IPAddressStringParameters IPV4_ADDRESS_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowIPv6(false).allowPrefix(false).allowEmpty(false).toParams();
+
+  private static List<String> IPV4_ADDRESSES;
+  private static List<String> IPV4_SUBNETS;
+
+  @Param({"10", "100", "1000"})
+  public int numOfAddresses;
+
+  @Setup
+  public void setUp()
+  {
+    IPV4_ADDRESSES = new ArrayList<>(numOfAddresses);
+    IPV4_SUBNETS = new ArrayList<>(numOfAddresses);
+
+    for (int i = 0; i < numOfAddresses; i++) {
+      Random r = new Random();
+      String genIpAddress = r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256) + "." + r.nextInt(256);
+      IPAddressString ipAddressString = new IPAddressString(genIpAddress);
+      IPAddress prefixBlock = ipAddressString.getAddress().applyPrefixLength(r.nextInt(32)).toPrefixBlock();
+      IPV4_ADDRESSES.add(ipAddressString.toString());
+      IPV4_SUBNETS.add(prefixBlock.toString());
+    }
+  }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
