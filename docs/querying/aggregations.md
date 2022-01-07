@@ -25,7 +25,7 @@ title: "Aggregations"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about aggregators available in SQL, refer to the
-> [SQL documentation](sql.md#aggregation-functions).
+> [SQL documentation](sql-aggregations.md).
 
 You can use aggregations:
 -  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.

@@ -168,7 +168,7 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 #### Metadata store information
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`sys.segments`](../querying/sql.md#segments-table) table.
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
 
 ##### GET
 
@@ -871,9 +871,9 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 ##### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 
@@ -892,7 +892,7 @@ druid.query.segmentMetadata.defaultHistory
 Returns the dimensions of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/metrics`
@@ -900,7 +900,7 @@ Returns the dimensions of the datasource.
 Returns the metrics of the datasource.
 
 > This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.md#metadata-tables)
+> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
 > if you're using SQL.
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals}&numCandidates={numCandidates}`
@@ -936,9 +936,9 @@ Returns segment information lists including server locations for the given query
 #### GET
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql.md#columns-table), and
-> [`sys.segments`](../querying/sql.md#segments-table) tables.
+> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
 
 * `/druid/v2/datasources`
 

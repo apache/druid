@@ -32,7 +32,7 @@ array of values instead of a single value, such as the `tags` values in the foll
 
 This document describes filtering and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
 [segments documentation](../design/segments.md#multi-value-columns). Examples in this document
-are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql.md) for details
+are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql-multivalue-string-functions.md) for details
 about using multi-value string dimensions in SQL.
 
 ## Overview
