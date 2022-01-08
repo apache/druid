@@ -34,15 +34,17 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 
+/*
+ * Function that converts a String or a Multi Value direct column to an array.
+ * Input expressions are not supported as one should use the array function for such cases.
+ */
+
 public class MultiValueStringToArrayOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("MV_TO_ARRAY")
       .operandTypeChecker(
-          OperandTypes.or(
-              OperandTypes.family(SqlTypeFamily.ARRAY),
               OperandTypes.family(SqlTypeFamily.STRING)
-          )
       )
       .functionCategory(SqlFunctionCategory.STRING)
       .returnTypeNullableArray(SqlTypeName.VARCHAR)

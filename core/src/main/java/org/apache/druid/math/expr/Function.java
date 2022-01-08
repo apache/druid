@@ -2997,6 +2997,14 @@ public interface Function
       if (args.size() != 1) {
         throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
       }
+      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
+
+      if (expr == null) {
+        throw new IAE(
+            "Arg %s should be an identifier expression ie refer to columns directally. Use array[] instead",
+            args.get(0).toString()
+        );
+      }
     }
 
     @Nullable
@@ -3029,7 +3037,6 @@ public interface Function
     {
       return ImmutableSet.copyOf(args);
     }
-
   }
   class ArrayConstructorFunction implements Function
   {
@@ -3068,7 +3075,6 @@ public interface Function
     {
       return Collections.emptySet();
     }
-
 
     @Override
     public boolean hasArrayOutput()

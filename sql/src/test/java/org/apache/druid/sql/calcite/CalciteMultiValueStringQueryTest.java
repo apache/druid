@@ -38,11 +38,13 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(JUnitParamsRunner.class)
@@ -1257,6 +1259,159 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 1L},
             new Object[]{"c", 1L}
         )
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayGroupAsArrayWithMultiValueDimension() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim3\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                new ArrayList<String>()
+                {
+                  {
+                    add(null);
+                  }
+                }, 3L
+            },
+            new Object[]{ImmutableList.of("a", "b"), 1L},
+            new Object[]{ImmutableList.of("b", "c"), 1L},
+            new Object[]{ImmutableList.of("d"), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testMultiValueToArrayGroupAsArrayWithSingleValueDim() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim1\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayMoreArgs() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("Invalid number of arguments to function");
+        }
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayNoArgs() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY() FROM druid.numfoo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("Invalid number of arguments to function");
+        }
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayArgsWithMultiValueDimFunc() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim3,'c')) FROM druid.numfoo",
+        exception -> {
+          exception.expect(RuntimeException.class);
+        }
+    );
+  }
+  @Test
+  public void testMultiValueToArrayArgsWithSingleDimFunc() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
+        exception -> {
+          exception.expect(RuntimeException.class);
+        }
+    );
+  }
+  @Test
+  public void testMultiValueToArrayArgsWithConstant() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
+        exception -> {
+          exception.expect(RuntimeException.class);
+        }
     );
   }
 }

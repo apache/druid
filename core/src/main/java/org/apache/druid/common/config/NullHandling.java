@@ -117,6 +117,7 @@ public class NullHandling
   {
     return replaceWithDefault() ? ZERO_DOUBLE : null;
   }
+
   /**
    * Returns the default value for an object of the provided class. Will be null in SQL-compatible null handling mode.
    * May be null or some non-null default value when not in SQL-compatible null handling mode.

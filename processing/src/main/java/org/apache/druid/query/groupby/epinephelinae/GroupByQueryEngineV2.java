@@ -236,7 +236,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions()),
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -247,7 +247,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory, query.getDimensions())
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions())
                   );
                 }
               }
@@ -327,11 +327,12 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
-   * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery.
+   * Checks whether all "dimensions" are either single-valued,
+   * or STRING_ARRAY, in case we don't want to explode the underline multi value column,
+   * or if allowed, nonexistent. Since non-existent columnselectors will show up as full of nulls they are effectively
+   * single valued, however they can also be null during broker merge, for example with an 'inline' datasource subquery.
    */
-  public static boolean isAllSingleValueDims(
+  public static boolean hasNoExplodingDimensions(
       final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )

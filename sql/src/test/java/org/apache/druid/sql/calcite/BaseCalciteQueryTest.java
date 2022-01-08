@@ -894,6 +894,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
+      throws Exception
+  {
+    testQueryThrows(sql, new HashMap<>(QUERY_CONTEXT_DEFAULT), ImmutableList.of(), expectedExceptionInitializer);
+  }
+
   public void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
