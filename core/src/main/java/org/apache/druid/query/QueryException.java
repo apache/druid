@@ -20,7 +20,10 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.exception.SanitizableException;
 
@@ -34,6 +37,9 @@ import java.util.function.Function;
  *
  * QueryResource and SqlResource are expected to emit the JSON form of this object when errors happen.
  */
+@SuppressWarnings("serial")
+// Streaming parser depend on the error field being first.
+@JsonPropertyOrder({"error", "errorMessage"})
 public class QueryException extends RuntimeException implements SanitizableException
 {
   private final String errorCode;
@@ -71,6 +77,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   }
 
   @JsonProperty("errorMessage")
+  @JsonInclude(Include.NON_NULL)
   @Override
   public String getMessage()
   {
@@ -78,12 +85,14 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   }
 
   @JsonProperty
+  @JsonInclude(Include.NON_NULL)
   public String getErrorClass()
   {
     return errorClass;
   }
 
   @JsonProperty
+  @JsonInclude(Include.NON_NULL)
   public String getHost()
   {
     return host;

@@ -114,6 +114,8 @@ public class OverlordResource
 {
   private static final Logger log = new Logger(OverlordResource.class);
 
+  public static final String ERROR_KEY = "error";
+
   private final TaskMaster taskMaster;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -190,7 +192,7 @@ public class OverlordResource
               return Response.status(Response.Status.BAD_REQUEST)
                              .entity(
                                  ImmutableMap.of(
-                                     "error",
+                                     ERROR_KEY,
                                      StringUtils.format("Task[%s] already exists!", task.getId())
                                  )
                              )
@@ -234,7 +236,13 @@ public class OverlordResource
   public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
   {
     if (minTaskPriority == null || minTaskPriority.isEmpty()) {
-      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+      return Response
+          .status(Status.BAD_REQUEST)
+          .entity(
+              ImmutableMap.of(
+                  ERROR_KEY,
+                  "No Datasource provided"))
+          .build();
     }
 
     // Build the response

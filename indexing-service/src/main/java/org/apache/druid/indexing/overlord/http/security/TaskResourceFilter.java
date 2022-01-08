@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.http.security;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -38,6 +39,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -77,10 +79,16 @@ public class TaskResourceFilter extends AbstractResourceFilter
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {
+      // This response is returned from APIs that promise to return JSON.
       throw new WebApplicationException(
-          Response.status(Response.Status.NOT_FOUND)
-                  .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
-                  .build()
+          Response
+              .status(Response.Status.NOT_FOUND)
+              .type(MediaType.APPLICATION_JSON_TYPE)
+              .entity(
+                  ImmutableMap.of(
+                      "error",
+                      StringUtils.format("Cannot find any task with id: [%s]", taskId)))
+              .build()
       );
     }
     final String dataSourceName = Preconditions.checkNotNull(taskOptional.get().getDataSource());

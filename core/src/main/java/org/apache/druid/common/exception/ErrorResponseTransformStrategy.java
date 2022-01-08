@@ -34,7 +34,7 @@ public interface ErrorResponseTransformStrategy
 {
   /**
    * For a given {@link SanitizableException} apply the transformation strategy and return the sanitized Exception
-   * if the transformation stategy was applied.
+   * if the transformation strategy was applied.
    */
   default Exception transformIfNeeded(SanitizableException exception)
   {
