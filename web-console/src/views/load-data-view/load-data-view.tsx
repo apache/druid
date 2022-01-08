@@ -1277,13 +1277,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
               }
 
-              if (inputData.queryGranularity) {
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.dataSchema.granularitySpec.queryGranularity',
-                  inputData.queryGranularity,
-                );
-              }
+              newSpec = deepSet(
+                newSpec,
+                'spec.dataSchema.granularitySpec.queryGranularity',
+                'none',
+              );
 
               if (inputData.columns) {
                 const aggregators = inputData.aggregators || {};

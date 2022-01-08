@@ -57,8 +57,17 @@ export function parseHtmlError(htmlStr: string): string | undefined {
     .replace(/&gt;/g, '>');
 }
 
+function getDruidErrorObject(e: any): DruidErrorResponse | string {
+  if (e.response) {
+    // This is a direct axios response error
+    return e.response.data || {};
+  } else {
+    return e; // Assume the error was passed in directly
+  }
+}
+
 export function getDruidErrorMessage(e: any): string {
-  const data: DruidErrorResponse | string = (e.response || {}).data || {};
+  const data = getDruidErrorObject(e);
   switch (typeof data) {
     case 'object':
       return (
@@ -241,7 +250,7 @@ export class DruidError extends Error {
     if (axios.isCancel(e)) {
       this.canceled = true;
     } else {
-      const data: DruidErrorResponse | string = (e.response || {}).data || {};
+      const data = getDruidErrorObject(e);
 
       let druidErrorResponse: DruidErrorResponse;
       switch (typeof data) {
