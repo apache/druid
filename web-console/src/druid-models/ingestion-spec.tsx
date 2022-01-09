@@ -1325,7 +1325,7 @@ export interface TuningConfig {
 }
 
 export interface PartitionsSpec {
-  type: 'string';
+  type: string;
 
   // For type: dynamic
   maxTotalRows?: number;
