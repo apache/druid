@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
@@ -35,12 +36,24 @@ public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> i
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
-  protected final List<List<T>> dictionary = new ArrayList<>();
-  protected final Object2IntOpenHashMap<List<T>> reverseDictionary = new Object2IntOpenHashMap<>();
+  protected final List<List<T>> dictionary;
+  protected final Object2IntOpenHashMap<List<T>> reverseDictionary;
 
   public ArrayGroupByColumnSelectorStrategy()
   {
+    dictionary = new ArrayList<>();
+    reverseDictionary = new Object2IntOpenHashMap<>();
     reverseDictionary.defaultReturnValue(-1);
+  }
+
+  @VisibleForTesting
+  ArrayGroupByColumnSelectorStrategy(
+      List<List<T>> dictionary,
+      Object2IntOpenHashMap<List<T>> reverseDictionary
+  )
+  {
+    this.dictionary = dictionary;
+    this.reverseDictionary = reverseDictionary;
   }
 
   @Override

@@ -19,15 +19,13 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.segment.data.ComparableList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,46 +35,40 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ArrayStringGroupByColumnSelectorStrategyTest
+public class ArrayLongGroupByColumnSelectorStrategyTest
 {
-
-  private final BiMap<String, Integer> DICTIONARY_INT = HashBiMap.create(new HashMap<String, Integer>()
+  protected final List<List<Long>> dictionary = new ArrayList<List<Long>>()
   {
     {
-      put("a", 0);
-      put("b", 1);
-      put("bd", 2);
-      put("d", 3);
-      put("e", 4);
+      add(ImmutableList.of(1l, 2l));
+      add(ImmutableList.of(2l, 3l));
+      add(ImmutableList.of(1l));
     }
-  });
+  };
 
-  // The dictionary has been constructed such that the values are not sorted lexicographically
-  // so we can tell when the comparator uses a lexicographic comparison and when it uses the indexes.
-  private final BiMap<ComparableIntArray, Integer> INDEXED_INTARRAYS = HashBiMap.create(
-      new HashMap<ComparableIntArray, Integer>()
-      {
-        {
-          put(ComparableIntArray.of(0, 1), 0);
-          put(ComparableIntArray.of(2, 4), 1);
-          put(ComparableIntArray.of(0, 2), 2);
-        }
-      }
-  );
-
+  protected final Object2IntOpenHashMap<List<Long>> reverseDictionary = new Object2IntOpenHashMap<List<Long>>()
+  {
+    {
+      put(ImmutableList.of(1l, 2l), 0);
+      put(ImmutableList.of(2l, 3l), 1);
+      put(ImmutableList.of(1l), 2);
+    }
+  };
 
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
 
-  private ArrayStringGroupByColumnSelectorStrategy strategy;
+  private ArrayGroupByColumnSelectorStrategy strategy;
 
   @Before
   public void setup()
   {
-    strategy = new ArrayStringGroupByColumnSelectorStrategy(DICTIONARY_INT, INDEXED_INTARRAYS);
+    reverseDictionary.defaultReturnValue(-1);
+    strategy = new ArrayLongGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
   }
 
   @Test
@@ -93,40 +85,39 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   }
 
   @Test
-  public void testBufferComparatorCanCompareIntsAndNullStringComparatorShouldUseLexicographicComparator()
+  public void testBufferComparatorsWithNullAndNonNullStringComprators()
   {
     buffer1.putInt(1);
     buffer2.putInt(2);
     Grouper.BufferComparator comparator = strategy.bufferComparator(0, null);
     Assert.assertTrue(comparator.compare(buffer1, buffer2, 0, 0) > 0);
     Assert.assertTrue(comparator.compare(buffer2, buffer1, 0, 0) < 0);
-  }
 
-  @Test
-  public void testBufferComparatorCanCompareIntsAndLexicographicStringComparatorShouldUseLexicographicComparator()
-  {
-    buffer1.putInt(1);
-    buffer2.putInt(2);
-    Grouper.BufferComparator comparator = strategy.bufferComparator(0, StringComparators.LEXICOGRAPHIC);
+    comparator = strategy.bufferComparator(0, StringComparators.LEXICOGRAPHIC);
+    Assert.assertTrue(comparator.compare(buffer1, buffer2, 0, 0) > 0);
+    Assert.assertTrue(comparator.compare(buffer2, buffer1, 0, 0) < 0);
+
+    comparator = strategy.bufferComparator(0, StringComparators.STRLEN);
     Assert.assertTrue(comparator.compare(buffer1, buffer2, 0, 0) > 0);
     Assert.assertTrue(comparator.compare(buffer2, buffer1, 0, 0) < 0);
   }
 
   @Test
-  public void testBufferComparatorCanCompareIntsAndStrLenStringComparatorShouldUseLexicographicComparator()
+  public void testBufferComparator()
   {
-    buffer1.putInt(1);
+    buffer1.putInt(0);
     buffer2.putInt(2);
-    Grouper.BufferComparator comparator = strategy.bufferComparator(0, StringComparators.STRLEN);
+    Grouper.BufferComparator comparator = strategy.bufferComparator(0, null);
     Assert.assertTrue(comparator.compare(buffer1, buffer2, 0, 0) > 0);
-    Assert.assertTrue(comparator.compare(buffer2, buffer1, 0, 0) < 0);
+
   }
+
 
   @Test
   public void testSanity()
   {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of("a", "b"));
+    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(1L, 2L));
     Assert.assertEquals(0, strategy.getOnlyValue(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -135,7 +126,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of("a", "b"), row.get(0));
+    Assert.assertEquals(new ComparableList(ImmutableList.of(1l, 2l)), row.get(0));
   }
 
 
@@ -143,7 +134,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
   public void testAddingInDictionary()
   {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
-    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of("f", "a"));
+    Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(4L, 2L));
     Assert.assertEquals(3, strategy.getOnlyValue(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
@@ -152,7 +143,7 @@ public class ArrayStringGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(ComparableStringArray.of("f", "a"), row.get(0));
+    Assert.assertEquals(new ComparableList(ImmutableList.of(4l, 2l)), row.get(0));
   }
 
   @After

@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -28,6 +30,22 @@ import java.util.List;
 
 public class ArrayLongGroupByColumnSelectorStrategy extends ArrayGroupByColumnSelectorStrategy<Long>
 {
+
+  public ArrayLongGroupByColumnSelectorStrategy()
+  {
+
+  }
+
+  @VisibleForTesting
+  ArrayLongGroupByColumnSelectorStrategy(
+      List<List<Long>> dictionary,
+      Object2IntOpenHashMap<List<Long>> reverseDictionary
+  )
+  {
+    super(dictionary, reverseDictionary);
+  }
+
+
   @Override
   public Object getOnlyValue(ColumnValueSelector selector)
   {
