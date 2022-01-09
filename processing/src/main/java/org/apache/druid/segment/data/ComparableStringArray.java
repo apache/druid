@@ -112,10 +112,6 @@ public class ComparableStringArray implements Comparable<ComparableStringArray>
   @Override
   public String toString()
   {
-    return "ComparableStringArray{" +
-           "delegate=" + Arrays.toString(delegate) +
-           ", hashCode=" + hashCode +
-           ", hashCodeComputed=" + hashCodeComputed +
-           '}';
+    return Arrays.toString(delegate);
   }
 }

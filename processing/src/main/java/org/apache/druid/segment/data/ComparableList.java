@@ -98,8 +98,6 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
   @Override
   public String toString()
   {
-    return "ComparableList{" +
-           "delegate=" + delegate +
-           '}';
+    return delegate.toString();
   }
 }
