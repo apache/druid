@@ -58,6 +58,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     super(name, fieldName, lgK, tgtHllType, round);
   }
 
+
   @Override
   public ColumnType getIntermediateType()
   {
@@ -82,6 +83,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
     final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildBufferAggregator(
         selector,
         getLgK(),
@@ -99,6 +101,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    validateInputs(selectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildVectorAggregator(
         selectorFactory,
         getFieldName(),
@@ -123,11 +126,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     if (capabilities != null) {
       if (capabilities.is(ValueType.COMPLEX)) {
         throw new ISE(
-            "Invalid input type [%s] in ingestion for metric type %s, in aggregate %s for field name %s",
+            "Invalid input [%s] of type [%s] for [%s] aggregator [%s]",
+            getFieldName(),
             capabilities.asTypeString(),
             HllSketchModule.BUILD_TYPE_NAME,
-            getName(),
-            getFieldName()
+            getName()
         );
       }
     }
