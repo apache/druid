@@ -75,15 +75,19 @@ druid.query.scheduler.laning.maxLowPercent=20
 
 See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for details on query laning and the available query laning strategies.
 
-## Historical tiering
+## Service tiering
 
-Configure segment loading and tiers for Historicals as described in this section. In the examples below, we set up two tiers—hot and cold—for the Historicals and for the Brokers. We’ll instruct the Brokers to serve hot queries before cold queries. Short-running queries will be routed to the hot tiers, and long-running queries will be routed to the cold tiers.
+The examples below demonstrate two tiers—hot and cold—for the Historicals and for the Brokers. The Brokers will serve short-running, "hot" queries before long-running, "cold" queries. Hot queries will be routed to the hot tiers, and cold queries will be routed to the cold tiers.
 
 It is possible to separate Historical processes into tiers without having separate Broker tiers. This way, you can assign data from specific time intervals to specific tiers in order to support higher concurrency on hot data. 
 
-### Configure segment loading
+### Historical tiering
 
-Druid stores data in segment files. Define a [load rule](rule-configuration.md#load-rules) to indicate how segment replicas should be assigned to different Historical tiers. For example, you may store segments of more recent data on more powerful hardware for better performance.
+Configure segment loading and tiers for Historicals as described in this section.
+
+#### Configure segment loading
+
+Define a [load rule](rule-configuration.md#load-rules) to indicate how segment replicas should be assigned to different Historical tiers. For example, you may store segments of more recent data on more powerful hardware for better performance.
 
 There are three types of load rules: forever, interval, and period. Select the load rule that matches your use case for each Historical, whether you want all segments to be loaded, segments within a certain time interval, or segments within a certain time period. 
 
@@ -105,7 +109,7 @@ Example load rule with two Historical tiers, named “hot” and “\_default\_t
 
 See [Load rules](rule-configuration.md#load-rules) for more information on segment load rules. Visit [Tutorial: Configuring data retention](../tutorials/tutorial-retention.md) for an example of setting retention rules from the Druid web console.
 
-### Assign Historicals to tiers
+#### Assign Historicals to tiers
 
 To assign a Historical to a tier, add a label for the tier name and set the priority value in the  `historical/runtime.properties` for the Historical.
 
@@ -125,12 +129,12 @@ druid.server.priority=0
 
 See [Historical general configuration](../configuration/index.md#historical-general-configuration) for more details on these properties.
 
-## Broker tiering
+### Broker tiering
 
 To set up Broker tiering, assign Brokers to tiers and configure query routing by the Router. You must set up Historical tiering before you can use Broker tiering.
 
 
-### Assign Brokers to tiers
+#### Assign Brokers to tiers
 
 For each of the Brokers, define the Broker group in the `broker/runtime.properties` files.
 
@@ -153,7 +157,7 @@ druid.broker.select.tier=highestPriority
 
 See [Broker configuration](../configuration/index.md#broker-process-configs) for more details on these properties.
 
-### Configure query routing
+#### Configure query routing
 
 Direct the Router to route queries appropriately by setting the default Broker tier and the map of Historical tier to Broker tier in the `router/runtime.properties` file.
 
