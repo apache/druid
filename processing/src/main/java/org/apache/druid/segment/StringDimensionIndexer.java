@@ -261,8 +261,9 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     {
       private final ArrayBasedIndexedInts defaultIndexedInts = new ArrayBasedIndexedInts();
 
+      @Nullable
       @MonotonicNonNull
-      private IndexedInts cachedIndexedInts = null;
+      private IndexedInts cachedIndexedInts;
 
       @Nullable
       @MonotonicNonNull

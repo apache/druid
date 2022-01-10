@@ -136,12 +136,12 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       return null;
     }
 
-    OakKey.StringDim indexedInts;
+    OakKey.IndexedDim indexedInts;
 
-    if (!(cachedIndexedInts instanceof OakKey.StringDim)) {
-      indexedInts = new OakKey.StringDim(dimensions, dimIndex);
+    if (!(cachedIndexedInts instanceof OakKey.IndexedDim)) {
+      indexedInts = new OakKey.IndexedDim(dimensions, dimIndex);
     } else {
-      indexedInts = (OakKey.StringDim) cachedIndexedInts;
+      indexedInts = (OakKey.IndexedDim) cachedIndexedInts;
       indexedInts.setValues(dimensions, dimIndex);
     }
 

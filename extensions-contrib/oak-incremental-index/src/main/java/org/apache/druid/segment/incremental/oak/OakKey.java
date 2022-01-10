@@ -166,18 +166,19 @@ public final class OakKey
   }
 
   /**
-   * StringDim purpose is to generate a lazy-evaluation version of a string dimension instead of the array of integers
-   * that is returned by getDim(int index).
+   * A lazy-evaluation version of an indexed ints dimension, used by 
+   * {@link OakIncrementalIndexRow#getIndexedDim(int, IndexedInts)}.
+   * As opposed to the integers array version that is returned by
+   * {@link IncrementalIndexRow#getIndexedDim(int, IndexedInts)}.
    */
-  public static class StringDim implements IndexedInts
+  public static class IndexedDim implements IndexedInts
   {
     long dimensionsAddress;
     int dimIndex;
-    boolean initialized;
     int arraySize;
     long arrayAddress;
 
-    public StringDim(long dimensionsAddress, int dimIndex)
+    public IndexedDim(long dimensionsAddress, int dimIndex)
     {
       setValues(dimensionsAddress, dimIndex);
     }
@@ -187,39 +188,21 @@ public final class OakKey
       if (this.dimensionsAddress != dimensionsAddress || this.dimIndex != dimIndex) {
         this.dimensionsAddress = dimensionsAddress;
         this.dimIndex = dimIndex;
-        initialized = false;
+        long dimAddress = this.dimensionsAddress + getDimOffsetInBuffer(dimIndex);
+        arrayAddress = dimensionsAddress + UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
+        arraySize = UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
       }
-    }
-
-    private void init()
-    {
-      if (initialized) {
-        return;
-      }
-
-      long dimAddress = this.dimensionsAddress + getDimOffsetInBuffer(dimIndex);
-      arrayAddress = dimensionsAddress + UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_POS_OFFSET);
-      arraySize = UnsafeUtils.getInt(dimAddress + STRING_DIM_ARRAY_LENGTH_OFFSET);
-      initialized = true;
-    }
-
-    public int getDimIndex()
-    {
-      init();
-      return dimIndex;
     }
 
     @Override
     public int size()
     {
-      init();
       return arraySize;
     }
 
     @Override
     public int get(int index)
     {
-      init();
       return UnsafeUtils.getInt(arrayAddress + ((long) index) * Integer.BYTES);
     }
 
