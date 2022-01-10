@@ -119,13 +119,13 @@ public class IncrementalIndexRow
     int[] indices = (int[]) dim;
     ArrayBasedIndexedInts indexedInts;
 
-    if (!(cachedIndexedInts instanceof ArrayBasedIndexedInts)) {
-      indexedInts = new ArrayBasedIndexedInts(indices);
-    } else {
+    if (cachedIndexedInts instanceof ArrayBasedIndexedInts) {
       indexedInts = (ArrayBasedIndexedInts) cachedIndexedInts;
-      indexedInts.setValues(indices, indices.length);
+    } else {
+      indexedInts = new ArrayBasedIndexedInts();
     }
 
+    indexedInts.setValues(indices, indices.length);
     return indexedInts;
   }
 
