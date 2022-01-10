@@ -1325,7 +1325,7 @@ export interface TuningConfig {
 }
 
 export interface PartitionsSpec {
-  type: 'string';
+  type: string;
 
   // For type: dynamic
   maxTotalRows?: number;
@@ -2261,8 +2261,7 @@ export function upgradeSpec(spec: any): Partial<IngestionSpec> {
     };
   }
 
-  if (!deepGet(spec, 'spec.dataSchema.parser')) return spec;
-
+  // Upgrade firehose if exists
   if (deepGet(spec, 'spec.ioConfig.firehose')) {
     switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
       case 'static-s3':
@@ -2278,19 +2277,22 @@ export function upgradeSpec(spec: any): Partial<IngestionSpec> {
     spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
   }
 
-  spec = deepMove(
-    spec,
-    'spec.dataSchema.parser.parseSpec.timestampSpec',
-    'spec.dataSchema.timestampSpec',
-  );
-  spec = deepMove(
-    spec,
-    'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-    'spec.dataSchema.dimensionsSpec',
-  );
-  spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-  spec = deepDelete(spec, 'spec.dataSchema.parser');
-  spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
+  // Decompose parser if exists
+  if (deepGet(spec, 'spec.dataSchema.parser')) {
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+      'spec.dataSchema.timestampSpec',
+    );
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+    spec = deepDelete(spec, 'spec.dataSchema.parser');
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
+  }
 
   return spec;
 }

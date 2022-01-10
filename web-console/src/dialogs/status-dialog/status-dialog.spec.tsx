@@ -29,16 +29,16 @@ describe('StatusDialog', () => {
   });
 
   it('filters data that contains input', () => {
-    const data = [
+    const row = [
       'org.apache.druid.common.gcp.GcpModule',
       'org.apache.druid.common.aws.AWSModule',
-      'io.imply.druid.UtilityBeltModule',
+      'org.apache.druid.OtherModule',
     ];
 
-    expect(anywhereMatcher({ id: '0', value: 'common' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'common' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '0', value: 'org' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'org' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '2', value: 'common' }, data)).toEqual(false);
+    expect(anywhereMatcher({ id: '0', value: 'common' }, row)).toEqual(true);
+    expect(anywhereMatcher({ id: '1', value: 'common' }, row)).toEqual(true);
+    expect(anywhereMatcher({ id: '0', value: 'org' }, row)).toEqual(true);
+    expect(anywhereMatcher({ id: '1', value: 'org' }, row)).toEqual(true);
+    expect(anywhereMatcher({ id: '2', value: 'common' }, row)).toEqual(false);
   });
 });

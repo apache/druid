@@ -5107,7 +5107,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.26.1
+version: 3.31.0
 
 ---
 
@@ -5574,7 +5574,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.4
+version: 0.14.6
 
 ---
 
@@ -5992,7 +5992,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Javier Blanco
-version: 1.0.6
+version: 1.0.7
 license_file_path: licenses/bin/path-parse.MIT
 
 ---

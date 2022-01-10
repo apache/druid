@@ -68,7 +68,7 @@
   "dependencies": {
     "@blueprintjs/core": "^3.45.0",
     "@blueprintjs/datetime": "^3.23.4",
-    "@blueprintjs/icons": "^3.26.1",
+    "@blueprintjs/icons": "^3.31.0",
     "@blueprintjs/popover2": "^0.10.1",
     "ace-builds": "^1.4.13",
     "axios": "^0.21.4",
@@ -79,7 +79,7 @@
     "d3-axis": "^1.0.12",
     "d3-scale": "^3.2.0",
     "d3-selection": "^1.4.0",
-    "druid-query-toolkit": "^0.14.4",
+    "druid-query-toolkit": "^0.14.6",
     "file-saver": "^2.0.2",
     "fontsource-open-sans": "^3.0.9",
     "has-own-prop": "^2.0.0",
