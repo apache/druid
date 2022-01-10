@@ -1314,9 +1314,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   {
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(IllegalStateException.class);
+      expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage(
-          "Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+          "GroupBy v1 only supports dimensions with an outputType of STRING.");
     }
 
     // Cannot vectorize due to multi-value dimensions.
@@ -1353,13 +1353,54 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSingleValueDimensionAsArray()
+  {
+    // array types don't work with group by v1
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage(
+          "GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+
+    // Cannot vectorize due to multi-value dimensions.
+    cannotVectorize();
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "mv_to_array(placement)",
+            ColumnType.STRING_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias",
+                ComparableStringArray.of("preferred"), "rows", 26L, "idx", 12446L
+        )
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim-groupby-arrays");
+  }
+
+  @Test
   public void testMultiValueDimensionAsArrayWithOtherDims()
   {
     // array types don't work with group by v1
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(IllegalStateException.class);
+      expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage(
-          "Unable to handle type[ARRAY<STRING>] for AggregatorFactory[class org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory]");
+          "GroupBy v1 only supports dimensions with an outputType of STRING");
     }
 
 
