@@ -93,6 +93,7 @@ public class ComparableIntArray implements Comparable<ComparableIntArray>
       return 0;
     } else {
       for (int i = 0; i < minSize; i++) {
+        //int's cant be null
         final int cmp = Integer.compare(delegate[i], rhs.getDelegate()[i]);
         if (cmp == 0) {
           continue;

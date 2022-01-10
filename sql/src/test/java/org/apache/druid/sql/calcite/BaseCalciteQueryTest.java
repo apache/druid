@@ -129,6 +129,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
+  public static List NULL_LIST;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
   @BeforeClass
@@ -137,6 +138,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     NULL_STRING = NullHandling.defaultStringValue();
     NULL_FLOAT = NullHandling.defaultFloatValue();
     NULL_LONG = NullHandling.defaultLongValue();
+    NULL_LIST = new ArrayList<Object>()
+    {
+      {
+        add(null);
+      }
+    };
   }
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);

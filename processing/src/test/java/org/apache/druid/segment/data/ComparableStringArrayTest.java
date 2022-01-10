@@ -66,5 +66,11 @@ public class ComparableStringArrayTest
     Assert.assertEquals(1, comparableStringArray.compareTo(ComparableStringArray.of("a", "b")));
     Assert.assertEquals(-1, comparableStringArray.compareTo(ComparableStringArray.of("a", "b", "c", "d")));
     Assert.assertTrue(comparableStringArray.compareTo(ComparableStringArray.of("b")) < 0);
+
+    ComparableStringArray nullList = ComparableStringArray.of(null, "a");
+
+    Assert.assertTrue(comparableStringArray.compareTo(nullList) > 0);
+    Assert.assertTrue(nullList.compareTo(comparableStringArray) < 0);
+    Assert.assertTrue(nullList.compareTo(ComparableStringArray.of(null, "a")) == 0);
   }
 }

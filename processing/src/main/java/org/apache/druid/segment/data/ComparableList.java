@@ -79,7 +79,18 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
       return 0;
     } else {
       for (int i = 0; i < minSize; i++) {
-        final int cmp = delegate.get(i) != null ? delegate.get(i).compareTo(rhs.getDelegate().get(i)) : -1;
+        final int cmp;
+        T first = this.delegate.get(i);
+        Object second = rhs.getDelegate().get(i);
+        if (first == null && second == null) {
+          cmp = 0;
+        } else if (first == null) {
+          cmp = -1;
+        } else if (second == null) {
+          cmp = 1;
+        } else {
+          cmp = first.compareTo(second);
+        }
         if (cmp == 0) {
           continue;
         }

@@ -44,7 +44,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(JUnitParamsRunner.class)
@@ -1297,15 +1296,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
+        useDefault ? ImmutableList.of(
+            new Object[]{NULL_LIST, 3L},
+            new Object[]{ImmutableList.of("a", "b"), 1L},
+            new Object[]{ImmutableList.of("b", "c"), 1L},
+            new Object[]{ImmutableList.of("d"), 1L}
+        ) :
         ImmutableList.of(
-            new Object[]{
-                new ArrayList<String>()
-                {
-                  {
-                    add(null);
-                  }
-                }, 3L
-            },
+            new Object[]{NULL_LIST, 2L},
+            new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
@@ -1349,8 +1348,16 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                         .build()
         ),
-        ImmutableList.of(
+        useDefault ? ImmutableList.of(
             new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("1"), 1L},
             new Object[]{ImmutableList.of("10.1"), 1L},
             new Object[]{ImmutableList.of("2"), 1L},
