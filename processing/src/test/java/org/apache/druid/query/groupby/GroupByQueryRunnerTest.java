@@ -1383,7 +1383,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(query, "2011-04-01", "alias",
                 ComparableStringArray.of("preferred"), "rows", 26L, "idx", 12446L
         )
@@ -1587,7 +1587,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    List<ResultRow> expectedResults = Arrays.asList(
+    List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(
             query,
             "2011-04-01",
@@ -1730,7 +1730,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality");
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Not supported for multi-value dimensions");
