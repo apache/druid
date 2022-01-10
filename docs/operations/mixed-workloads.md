@@ -1,7 +1,7 @@
 ---
-id: query-concurrency
-title: Query concurrency
-sidebar_label: Query concurrency
+id: mixed-workloads
+title: Configure Druid for mixed workloads
+sidebar_label: Mixed workloads
 ---
 
 <!--
@@ -23,7 +23,7 @@ sidebar_label: Query concurrency
   ~ under the License.
   -->
 
-If you frequently run concurrent, mixed workloads on your Druid cluster, configure Druid to properly allocate cluster resources and optimize your overall query performance. With proper resource isolation, you can execute long-running, low priority queries that are resource intensive without interfering with short-running, high priority queries that require fewer resources. By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
+If you frequently run concurrent, mixed workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources and optimize your overall query performance. With proper resource isolation, you can execute long-running, low priority queries that are resource intensive without interfering with short-running, high priority queries that require fewer resources. By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
 
 Druid provides the following approaches to isolate resources and improve query concurrency:
 - **Query laning** where you set a limit on the maximum number of long-running queries executed on each Broker. 
