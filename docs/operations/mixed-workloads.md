@@ -24,9 +24,15 @@ sidebar_label: Mixed workloads
   -->
 
 If you frequently run concurrent, heterogeneous workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
-Without proper resource isolation, long-running, low priority queries may interfere with short-running, high priority queries.
+
+Each Druid query consumes a certain amount of cluster resources, such as processing threads, memory buffers for intermediate query results, and HTTP threads for communicating between Brokers and data servers.
+"Heavy" queries that return large results are more resource-intensive than short-running, "light" queries.
 You typically do not want these long resource-intensive queries to throttle the performance of short interactive queries.
-By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
+For example, if you run both sets of queries in the same Druid cluster, heavy queries may employ all available HTTP threads.
+This situation slows down subsequent queries—heavy and light—and may trigger timeout errors for those queries.
+
+With proper resource isolation, you can execute long-running, low priority queries without interfering with short-running, high priority queries.
+Separated cluster resources helps prevent queries from competing with each other for resources such as CPU, memory, and network access.
 
 Druid provides the following strategies to isolate resources and improve query concurrency:
 - **Query laning** where you set a limit on the maximum number of long-running queries executed on each Broker. 
@@ -86,7 +92,7 @@ druid.query.scheduler.numThreads=40
 
 ## Service tiering
 
-The examples below demonstrate two tiers—hot and cold—for the Historicals and for the Brokers. The Brokers will serve short-running, "hot" queries before long-running, "cold" queries. Hot queries will be routed to the hot tiers, and cold queries will be routed to the cold tiers.
+The examples below demonstrate two tiers—hot and cold—for the Historicals and for the Brokers. The Brokers will serve short-running, light queries before long-running, heavy queries. Light queries will be routed to the hot tiers, and heavy queries will be routed to the cold tiers.
 
 It is possible to separate Historical processes into tiers without having separate Broker tiers. This way, you can assign data from specific time intervals to specific tiers in order to support higher concurrency on hot data. 
 
@@ -98,7 +104,7 @@ This section describes how to configure segment loading and how to assign Histor
 
 Define a [load rule](rule-configuration.md#load-rules) to indicate how segment replicas should be assigned to different Historical tiers. For example, you may store segments of more recent data on more powerful hardware for better performance.
 
-There are three types of load rules: forever, interval, and period. Select the load rule that matches your use case for each Historical, whether you want all segments to be loaded, segments within a certain time interval, or segments within a certain time period. 
+There are several types of load rules: forever, interval, and period. Select the load rule that matches your use case for each Historical, whether you want all segments to be loaded, segments within a certain time interval, or segments within a certain time period.
 
 In the load rule, define tiers in the `tieredReplicants` property. Provide descriptive names for your tiers, and specify how many replicas each tier should have. You can designate a higher number of replicas for the hot tier to increase the concurrency for processing queries.
 
