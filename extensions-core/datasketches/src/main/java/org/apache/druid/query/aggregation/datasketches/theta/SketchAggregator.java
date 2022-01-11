@@ -53,7 +53,7 @@ public class SketchAggregator implements Aggregator
       sketchField.setAccessible(true);
     }
     catch (NoSuchFieldException | ClassNotFoundException e) {
-      throw new ISE("Could not initialize SketchAggregator", e);
+      throw new ISE(e, "Could not initialize SketchAggregator");
     }
   }
 
@@ -74,7 +74,7 @@ public class SketchAggregator implements Aggregator
         sketch = (Sketch) sketchField.get(union);
     }
     catch (IllegalAccessException e) {
-      throw new ISE("Could not initialize sketch field in SketchAggregator", e);
+      throw new ISE(e, "Could not initialize sketch field in SketchAggregator");
     }
   }
 
@@ -199,7 +199,7 @@ public class SketchAggregator implements Aggregator
   public long getInitialSizeBytes()
   {
     // SketchAggregator has 3 references and an int
-    return 3 * Long.BYTES + Integer.BYTES;
+    return 3L * Long.BYTES + Integer.BYTES;
   }
 
 }
