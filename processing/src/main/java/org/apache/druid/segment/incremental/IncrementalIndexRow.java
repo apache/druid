@@ -113,8 +113,7 @@ public final class IncrementalIndexRow
   }
 
   /**
-   * bytesInMemory estimates the size of IncrementalIndexRow key, it takes into account the timestamp(long),
-   * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:
+   * Estimates the size of IncrementalIndexRow key by adding the following components:
    * <ul>
    * <li> timestamp : Long.BYTES
    * <li> dims array : Integer.BYTES * array length + Long.BYTES (dims object) + dimsKeySize(passed via constructor)
@@ -126,7 +125,7 @@ public final class IncrementalIndexRow
    */
   public long estimateBytesInMemory()
   {
-    long sizeInBytes = Long.BYTES + ((long) Integer.BYTES) * dims.length + Long.BYTES + Long.BYTES;
+    long sizeInBytes = Long.BYTES + Integer.BYTES * (long) dims.length + Long.BYTES + Long.BYTES;
     sizeInBytes += dimsKeySize;
     return sizeInBytes;
   }
@@ -137,17 +136,10 @@ public final class IncrementalIndexRow
     return "IncrementalIndexRow{" +
            "timestamp=" + DateTimes.utc(timestamp) +
            ", dims=" + Lists.transform(
-        Arrays.asList(dims), new Function<Object, Object>()
-        {
-          @Override
-          public Object apply(@Nullable Object input)
-          {
-            if (input == null || Array.getLength(input) == 0) {
-              return Collections.singletonList("null");
-            }
-            return Collections.singletonList(input);
-          }
-        }
+        Arrays.asList(dims),
+        input -> (input == null || Array.getLength(input) == 0)
+                 ? Collections.singletonList("null")
+                 : Collections.singletonList(input)
     ) + '}';
   }
 

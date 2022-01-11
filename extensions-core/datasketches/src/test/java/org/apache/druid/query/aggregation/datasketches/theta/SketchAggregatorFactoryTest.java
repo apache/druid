@@ -23,14 +23,18 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchMergeAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,6 +63,21 @@ public class SketchAggregatorFactoryTest
   {
     Assert.assertEquals(262176, AGGREGATOR_16384.getMaxIntermediateSize());
     Assert.assertEquals(524320, AGGREGATOR_32768.getMaxIntermediateSize());
+  }
+
+  @Test
+  public void testFactorizeSized()
+  {
+    ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
+            .andReturn(EasyMock.createMock(ColumnValueSelector.class)).anyTimes();
+    EasyMock.replay(colSelectorFactory);
+
+    AggregatorAndSize aggregatorAndSize = AGGREGATOR_16384.factorizeWithSize(colSelectorFactory);
+    Assert.assertEquals(591, aggregatorAndSize.getInitialSizeBytes());
+
+    aggregatorAndSize = AGGREGATOR_32768.factorizeWithSize(colSelectorFactory);
+    Assert.assertEquals(1103, aggregatorAndSize.getInitialSizeBytes());
   }
 
   @Test

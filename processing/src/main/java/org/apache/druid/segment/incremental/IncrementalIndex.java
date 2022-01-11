@@ -57,6 +57,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.EncodedDimensionValue;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
@@ -478,6 +479,11 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return add(row, false);
   }
 
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  {
+    return add(row, false, true);
+  }
+
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
@@ -486,14 +492,19 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * Calls to add() are thread safe.
    * <p>
    *
-   * @param row the row of data to add
-   * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
+   * @param row                      the row of data to add
+   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows limit
+   * @param useMaxMemoryEstimates    whether or not to use maximum values to estimate memory
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(
+      InputRow row,
+      boolean skipMaxRowsInMemoryCheck,
+      boolean useMaxMemoryEstimates
+  ) throws IndexSizeExceededException
   {
-    IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
+    IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row, useMaxMemoryEstimates);
     final AddToFactsResult addToFactsResult = addToFacts(
         row,
         incrementalIndexRowResult.getIncrementalIndexRow(),
@@ -516,6 +527,11 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   @VisibleForTesting
   IncrementalIndexRowResult toIncrementalIndexRow(InputRow row)
+  {
+    return toIncrementalIndexRow(row, true);
+  }
+
+  private IncrementalIndexRowResult toIncrementalIndexRow(InputRow row, boolean useMaxMemoryEstimates)
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
@@ -557,12 +573,17 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          final EncodedDimensionValue<?> encodedDimensionValue
+              = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          dimsKey = encodedDimensionValue.getValue();
+          final long keySizeDelta = useMaxMemoryEstimates
+                                    ? indexer.estimateEncodedKeyComponentSize(dimsKey)
+                                    : encodedDimensionValue.getIncrementalSizeBytes();
+          dimsKeySize += keySizeDelta;
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
         }
-        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         if (wasNewDim) {
           // unless this is the first row we are processing, all newly discovered columns will be sparse
           if (maxIngestedEventTime != null) {

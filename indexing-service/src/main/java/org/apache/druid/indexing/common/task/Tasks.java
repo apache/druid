@@ -46,11 +46,13 @@ public class Tasks
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
+  public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = true;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String USE_SHARED_LOCK = "useSharedLock";
+  public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**
    * This context is used in compaction. When it is set in the context, the segments created by the task

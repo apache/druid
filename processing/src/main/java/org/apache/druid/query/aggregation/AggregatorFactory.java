@@ -70,6 +70,15 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * Creates an {@link Aggregator} based on the provided column selector factory.
+   *
+   * @return AggregatorAndSize which contains the actual aggregator and its initial size.
+   */
+  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory) {
+    return new AggregatorAndSize(factorize(metricFactory), getMaxIntermediateSize());
+  }
+
+  /**
    * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
    */
   public boolean canVectorize(ColumnInspector columnInspector)

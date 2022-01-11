@@ -22,9 +22,11 @@ package org.apache.druid.segment;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
@@ -44,6 +46,7 @@ public class DimensionDictionary<T extends Comparable<T>>
   private T maxValue = null;
   private volatile int idForNull = ABSENT_VALUE_ID;
 
+  private final AtomicLong sizeInBytes = new AtomicLong(0L);
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
@@ -96,6 +99,11 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
+  public long sizeInBytes()
+  {
+    return sizeInBytes.get();
+  }
+
   public int add(@Nullable T originalValue)
   {
     lock.writeLock().lock();
@@ -114,6 +122,11 @@ public class DimensionDictionary<T extends Comparable<T>>
       final int index = idToValue.size();
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
+
+      long sizeOfString = getObjectSize(originalValue);
+      long sizeOfReference = Long.BYTES;
+      sizeInBytes.addAndGet(sizeOfString + 2 * sizeOfReference);
+
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
       return index;
@@ -160,4 +173,16 @@ public class DimensionDictionary<T extends Comparable<T>>
       lock.readLock().unlock();
     }
   }
+
+  private long getObjectSize(@Nonnull T object)
+  {
+    // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
+    // String has the following memory usuage...
+    // 28 bytes of data for String metadata (class pointer, flags, locks, hash, count, offset, reference to char array)
+    // 16 bytes of data for the char array metadata (class pointer, flags, locks, size)
+    // 2 bytes for every letter of the string
+    String val = object.toString();
+    return 28 + 16 + (2L * val.length());
+  }
+
 }

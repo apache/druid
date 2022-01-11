@@ -127,7 +127,7 @@ public interface DimensionIndexer
    * @return An array containing an encoded representation of the input row value.
    */
   @Nullable
-  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
+  EncodedDimensionValue<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
 
   /**
    * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either

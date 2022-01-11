@@ -165,7 +165,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -187,7 +188,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           cache,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -206,7 +208,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -225,7 +228,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -243,7 +247,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -262,7 +267,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -280,7 +286,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     synchronized (this) {
@@ -299,7 +306,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           indexIO,
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          useMaxMemoryEstimates
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;

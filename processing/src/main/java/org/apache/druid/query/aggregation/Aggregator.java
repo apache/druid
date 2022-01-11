@@ -42,6 +42,12 @@ public interface Aggregator extends Closeable
 {
   void aggregate();
 
+  default long aggregateWithSize()
+  {
+    aggregate();
+    return 0;
+  }
+
   @Nullable
   Object get();
   float getFloat();
@@ -54,7 +60,7 @@ public interface Aggregator extends Closeable
    */
   default double getDouble()
   {
-    return (double) getFloat();
+    return getFloat();
   }
 
   /**
