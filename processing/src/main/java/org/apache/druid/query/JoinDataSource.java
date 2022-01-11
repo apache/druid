@@ -222,6 +222,12 @@ public class JoinDataSource implements DataSource
     return false;
   }
 
+  /**
+   * Computes a set of column names for left table expressions in join condition which may already have been defined as
+   * a virtual column in the virtual column registry. It helps to remove any extraenous virtual columns created and only
+   * use the relevant ones.
+   * @return a set of column names which might be virtual columns on left table in join condition
+   */
   public Set<String> getVirtualColumnCandidates()
   {
     return getConditionAnalysis().getEquiConditions()

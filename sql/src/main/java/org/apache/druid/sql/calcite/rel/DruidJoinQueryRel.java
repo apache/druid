@@ -164,7 +164,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(prefixSignaturePair.rhs);
-    getPlannerContext().setVirtualColumnRegistry(virtualColumnRegistry);
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
     // Generate the condition for this join as a Druid expression.
     final DruidExpression condition = Expressions.toDruidExpression(
@@ -172,6 +172,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         prefixSignaturePair.rhs,
         joinRel.getCondition()
     );
+
+    // Unsetting it to avoid any VC Registry leaks incase there are multiple druid quries for the SQL
+    // It should be fixed soon with changes in interface for SqlOperatorConversion and Expressions bridge class
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(null);
 
     // DruidJoinRule should not have created us if "condition" is null. Check defensively anyway, which also
     // quiets static code analysis.
@@ -192,7 +196,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         prefixSignaturePair.rhs,
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        finalizeAggregations
+        finalizeAggregations,
+        virtualColumnRegistry
     );
   }
 

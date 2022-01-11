@@ -364,8 +364,10 @@ public class MultiValueStringOperatorConversions
             )
         );
 
-        if (plannerContext.getVirtualColumnRegistry() != null) {
-          VirtualColumn vc = plannerContext.getVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
+        // if the join expression VC registry is present, it means that this expression is part of a join condition
+        // and since that's the case, create virtual column here itself for optimized usage in join matching
+        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+          VirtualColumn vc = plannerContext.getJoinExpressionVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
               plannerContext,
               druidExpression,
               ColumnType.STRING

@@ -4665,4 +4665,76 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{"[\"a\",\"b\"]", "[\"a\",\"b\"]"})
     );
   }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testVirtualColumnOnMVFilterMultiJoinExpression(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN "
+        + "(SELECT foo3.dim3 FROM druid.numfoo as foo3 INNER JOIN druid.numfoo as foo4 "
+        + "   ON MV_FILTER_ONLY(foo3.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo4.dim3, ARRAY['a'])) as foo2 "
+        + "ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(
+                                    join(
+                                        new TableDataSource(CalciteTests.DATASOURCE3),
+                                        new QueryDataSource(
+                                            newScanQueryBuilder()
+                                                .dataSource(CalciteTests.DATASOURCE3)
+                                                .intervals(querySegmentSpec(Intervals.of(
+                                                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                                                .virtualColumns(new ListFilteredVirtualColumn(
+                                                    "v0",
+                                                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                                                    ImmutableSet.of("a"),
+                                                    true
+                                                ))
+                                                .columns("v0")
+                                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                .context(queryContext)
+                                                .build()
+                                        ),
+                                        "j0.",
+                                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.v0")),
+                                        JoinType.INNER
+                                    )
+                                )
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .virtualColumns(new ListFilteredVirtualColumn(
+                                    "v0",
+                                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                                    ImmutableSet.of("a"),
+                                    true
+                                ))
+                                .columns("dim3", "v0")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(DruidExpression.fromColumn("v0"), DruidExpression.fromColumn("j0.v0")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ListFilteredVirtualColumn(
+                    "v0",
+                    new DefaultDimensionSpec("dim3", "dim3", ColumnType.STRING),
+                    ImmutableSet.of("a"),
+                    true
+                ))
+                .columns("dim3", "j0.dim3")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"[\"a\",\"b\"]", "[\"a\",\"b\"]"})
+    );
+  }
 }

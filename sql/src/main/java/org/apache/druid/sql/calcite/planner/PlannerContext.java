@@ -96,7 +96,7 @@ public class PlannerContext
   @Nullable
   private String planningError;
   private QueryMaker queryMaker;
-  private VirtualColumnRegistry virtualColumnRegistry;
+  private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
 
   private PlannerContext(
       final String sql,
@@ -395,13 +395,13 @@ public class PlannerContext
     return Preconditions.checkNotNull(queryMaker, "QueryMaker not available");
   }
 
-  public VirtualColumnRegistry getVirtualColumnRegistry()
+  public VirtualColumnRegistry getJoinExpressionVirtualColumnRegistry()
   {
-    return virtualColumnRegistry;
+    return joinExpressionVirtualColumnRegistry;
   }
 
-  public void setVirtualColumnRegistry(VirtualColumnRegistry virtualColumnRegistry)
+  public void setJoinExpressionVirtualColumnRegistry(VirtualColumnRegistry joinExpressionVirtualColumnRegistry)
   {
-    this.virtualColumnRegistry = virtualColumnRegistry;
+    this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
   }
 }

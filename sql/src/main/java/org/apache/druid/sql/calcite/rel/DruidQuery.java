@@ -157,13 +157,14 @@ public class DruidQuery
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
-      final boolean finalizeAggregations
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
-    final VirtualColumnRegistry virtualColumnRegistry = plannerContext.getVirtualColumnRegistry() == null
-                                                        ? VirtualColumnRegistry.create(sourceRowSignature)
-                                                        : plannerContext.getVirtualColumnRegistry();
+    if (virtualColumnRegistry == null) {
+      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    }
 
     // Now the fun begins.
     final DimFilter filter;
