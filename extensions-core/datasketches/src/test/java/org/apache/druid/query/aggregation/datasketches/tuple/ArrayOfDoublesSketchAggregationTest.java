@@ -941,7 +941,7 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertEquals("cnt", 40.0, row.getDoubleMetric("cnt"), 0);
     Assert.assertEquals("sketch", 40.0, row.getDoubleMetric("sketch"), 0);
     Assert.assertEquals("estimate", 40.0, row.getDoubleMetric("estimate"), 0);
-    Assert.assertEquals("union", 40.0,row.getDoubleMetric("union"), 0);
+    Assert.assertEquals("union", 40.0, row.getDoubleMetric("union"), 0);
     Assert.assertEquals("intersection", 40.0, row.getDoubleMetric("intersection"), 0);
     Assert.assertEquals("anotb", 0, row.getDoubleMetric("anotb"), 0);
 
@@ -1028,7 +1028,7 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertEquals("cnt", 40.0, row.getDoubleMetric("cnt"), 0);
     Assert.assertEquals("sketch", 40.0, row.getDoubleMetric("sketch"), 0);
     Assert.assertEquals("estimate", 40.0, row.getDoubleMetric("estimate"), 0);
-    Assert.assertEquals("union", 40.0,row.getDoubleMetric("union"), 0);
+    Assert.assertEquals("union", 40.0, row.getDoubleMetric("union"), 0);
     Assert.assertEquals("intersection", 40.0, row.getDoubleMetric("intersection"), 0);
     Assert.assertEquals("anotb", 0, row.getDoubleMetric("anotb"), 0);
 
