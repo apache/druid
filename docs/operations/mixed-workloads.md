@@ -23,11 +23,14 @@ sidebar_label: Mixed workloads
   ~ under the License.
   -->
 
-If you frequently run concurrent, mixed workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources and optimize your overall query performance. With proper resource isolation, you can execute long-running, low priority queries that are resource intensive without interfering with short-running, high priority queries that require fewer resources. By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
+If you frequently run concurrent, heterogeneous workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
+Without proper resource isolation, long-running, low priority queries may interfere with short-running, high priority queries.
+You typically do not want these long resource-intensive queries to throttle the performance of short interactive queries.
+By separating cluster resources, you prevent queries from competing with each other for resources such as CPU, memory, and network access.
 
-Druid provides the following approaches to isolate resources and improve query concurrency:
+Druid provides the following strategies to isolate resources and improve query concurrency:
 - **Query laning** where you set a limit on the maximum number of long-running queries executed on each Broker. 
-- **Cluster tiering** which defines separate groups of Historicals and Brokers to receive different query assignments based on query priority.
+- **Service tiering** which defines separate groups of Historicals and Brokers to receive different query assignments based on query priority.
 
 ## Query laning
 
@@ -83,7 +86,7 @@ It is possible to separate Historical processes into tiers without having separa
 
 ### Historical tiering
 
-Configure segment loading and tiers for Historicals as described in this section.
+This section descibes how to configure segment loading and how to assign Historical services into tiers.
 
 #### Configure segment loading
 
@@ -131,7 +134,8 @@ See [Historical general configuration](../configuration/index.md#historical-gene
 
 ### Broker tiering
 
-To set up Broker tiering, assign Brokers to tiers and configure query routing by the Router. You must set up Historical tiering before you can use Broker tiering.
+You must set up Historical tiering before you can use Broker tiering.
+To set up Broker tiering, assign Brokers to tiers, and configure query routing by the Router.
 
 
 #### Assign Brokers to tiers
