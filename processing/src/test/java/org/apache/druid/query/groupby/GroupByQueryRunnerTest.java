@@ -1926,7 +1926,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     List<ResultRow> expectedResults = ImmutableList.of(
         makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1L, 2L)),
-                "rows", 1L
+                "rows", 26L
         ));
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);

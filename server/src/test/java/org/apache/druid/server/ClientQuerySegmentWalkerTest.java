@@ -909,10 +909,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1l, 2l))},
-            new Object[]{new ComparableList(ImmutableList.of(2l, 4l))},
-            new Object[]{new ComparableList(ImmutableList.of(3l, 6l))},
-            new Object[]{new ComparableList(ImmutableList.of(4l, 8l))}
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L))},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L))},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L))},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L))}
         )
     );
   }
@@ -934,10 +934,10 @@ public class ClientQuerySegmentWalkerTest
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(
-            new Object[]{new ComparableList(ImmutableList.of(1l, 2l)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(2l, 4l)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(3l, 6l)).toString()},
-            new Object[]{new ComparableList(ImmutableList.of(4l, 8l)).toString()}
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L)).toString()}
         )
     );
   }
