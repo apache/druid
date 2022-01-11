@@ -517,7 +517,13 @@ public class Initialization
       Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
                                            .map(NodeRole::fromJsonName)
                                            .collect(Collectors.toSet());
-      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      boolean shouldLoad = rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      if (!shouldLoad) {
+        log.debug(
+            "Module [%s] excluded by LoadScope rules",
+            object.getClass().getName());
+      }
+      return shouldLoad;
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)
