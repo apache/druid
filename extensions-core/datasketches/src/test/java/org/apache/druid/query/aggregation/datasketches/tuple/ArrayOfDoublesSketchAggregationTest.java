@@ -470,6 +470,109 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   }
 
   @Test
+  public void buildingSketchesAtIngestionTimeTwoValuesAndNumericalProduct() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(
+            this.getClass().getClassLoader().getResource(
+                "tuple/array_of_doubles_build_data_two_values_and_key_as_number.tsv").getFile()),
+        String.join(
+            "\n",
+            "{",
+            "  \"type\": \"string\",",
+            "  \"parseSpec\": {",
+            "    \"format\": \"tsv\",",
+            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+            "    \"dimensionsSpec\": {",
+            "      \"dimensions\": [\"product\", {\"type\": \"long\", \"name\": \"product_num\"}],",
+            "      \"dimensionExclusions\": [],",
+            "      \"spatialDimensions\": []",
+            "    },",
+            "    \"columns\": [\"timestamp\", \"product\", \"key\", \"key_num\", \"value1\", \"value2\"]",
+            "  }",
+            "}"
+        ),
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"key_num\", \"metricColumns\": [ \"value1\", \"value2\" ], \"nominalEntries\": 1024}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"estimate\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToQuantilesSketch\", \"name\": \"quantiles-sketch\", \"column\": 2, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"union\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"union\",",
+            "      \"operation\": \"UNION\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"intersection\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"intersection\",",
+            "      \"operation\": \"INTERSECT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToEstimate\", \"name\": \"anotb\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"anotb\",",
+            "      \"operation\": \"NOT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}]",
+            "    }},",
+            "    {",
+            "      \"type\": \"arrayOfDoublesSketchToMeans\",",
+            "      \"name\": \"means\",",
+            "      \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}",
+            "    }",
+            "  ],",
+            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    Assert.assertEquals("estimate", 40.0, (double) row.get(1), 0);
+    Assert.assertEquals("union", 40.0, (double) row.get(3), 0);
+    Assert.assertEquals("intersection", 40.0, (double) row.get(4), 0);
+    Assert.assertEquals("anotb", 0, (double) row.get(5), 0);
+
+    Object meansObj = row.get(6); // means
+    Assert.assertTrue(meansObj instanceof double[]);
+    double[] means = (double[]) meansObj;
+    Assert.assertEquals(2, means.length);
+    Assert.assertEquals(1.0, means[0], 0);
+    Assert.assertEquals(2.0, means[1], 0);
+
+    Object obj = row.get(2); // quantiles-sketch
+    Assert.assertTrue(obj instanceof DoublesSketch);
+    DoublesSketch ds = (DoublesSketch) obj;
+    Assert.assertEquals(40, ds.getN());
+    Assert.assertEquals(2.0, ds.getMinValue(), 0);
+    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+  }
+
+  @Test
   public void buildingSketchesAtIngestionTimeThreeValuesAndNulls() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
