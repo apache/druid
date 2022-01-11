@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -44,7 +43,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.virtual.ExpressionPlan;
 import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -305,16 +303,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
       return (o1, o2) ->
           compareExpr.eval(compareBindings.get().withBinding(COMPARE_O1, o1).withBinding(COMPARE_O2, o2)).asInt();
     }
-    switch (initialCombineValue.get().type().getType()) {
-      case LONG:
-        return LongSumAggregator.COMPARATOR;
-      case DOUBLE:
-        return DoubleSumAggregator.COMPARATOR;
-      case COMPLEX:
-        return Types.getStrategy(initialCombineValue.get().type().getComplexTypeName());
-      default:
-        return Comparators.naturalNullsFirst();
-    }
+    return initialCombineValue.get().type().getStrategy();
   }
 
   @Nullable
