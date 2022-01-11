@@ -41,8 +41,6 @@ Druid restricts low priority queries to the general lanes and allows high priori
 
 In Druid, query lanes reserve resources for Broker HTTP threads. Each Druid query requires one Broker thread. The number of threads on a Broker is defined by the `druid.server.http.numThreads` parameter. Broker threads may be occupied by tasks other than queries, such as health checks. You can use query laning to limit the number of HTTP threads designated for resource-intensive queries, leaving other threads available for short-running queries and other tasks.
 
-Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context](../querying/query-context.md).
-
 ### General properties
 
 Set the following query laning properties in the `broker/runtime.properties` file.
@@ -55,14 +53,22 @@ You can use the built-in [“high/low” laning strategy](../configuration/index
 
 ### Lane-specific properties
 
-If you use the high/low laning strategy, set the following:
+If you use the __high/low laning strategy__, set the following:
 
 * `druid.query.scheduler.laning.maxLowPercent` – The maximum percent of query threads to handle low priority queries. The remaining query threads are dedicated to high priority queries.
 
-If you use a manual laning strategy, set the following:
+Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context](../querying/query-context.md).
 
-* `druid.query.scheduler.laning.lanes.{name}`
-* `druid.query.scheduler.laning.isLimitPercent`
+
+If you use a __manual laning strategy__, set the following:
+
+* `druid.query.scheduler.laning.lanes.{name}` – The limit for how many queries can run in the `name` lane. Define as many named lanes as needed.
+* `druid.query.scheduler.laning.isLimitPercent` – Whether to treat the lane limit as an exact number or a percent of the minimum of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`.
+
+With manual laning, incoming queries can be labeled with the desired lane in the `lane` parameter of the [query context](../querying/query-context.md).
+
+See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for additional details on query laning configuration.
+
 
 ### Example
 
@@ -78,8 +84,6 @@ druid.query.scheduler.laning.maxLowPercent=20
 druid.query.scheduler.numThreads=40
 ```
 
-See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for details on query laning and the available query laning strategies.
-
 ## Service tiering
 
 The examples below demonstrate two tiers—hot and cold—for the Historicals and for the Brokers. The Brokers will serve short-running, "hot" queries before long-running, "cold" queries. Hot queries will be routed to the hot tiers, and cold queries will be routed to the cold tiers.
@@ -88,7 +92,7 @@ It is possible to separate Historical processes into tiers without having separa
 
 ### Historical tiering
 
-This section descibes how to configure segment loading and how to assign Historical services into tiers.
+This section describes how to configure segment loading and how to assign Historical services into tiers.
 
 #### Configure segment loading
 
