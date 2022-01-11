@@ -158,6 +158,12 @@ public class TombstoneHelper
   }
 
 
+  /**
+   * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
+   * since those that not cover used intervals will be redundant.
+   * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
+   * @throws IOException
+   */
   public List<Interval> getUsedIntervals() throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
@@ -171,7 +177,7 @@ public class TombstoneHelper
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {
-          if (condensedInputInterval.contains(usedSegment.getInterval())) {
+          if (condensedInputInterval.overlaps(usedSegment.getInterval())) {
             retVal.add(usedSegment.getInterval());
             break;
           }
