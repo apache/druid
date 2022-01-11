@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A class that concatenates files together into configurable sized chunks,
@@ -86,7 +87,7 @@ public class FileSmoosher implements Closeable
   private List<File> filesInProcess = new ArrayList<>();
   // delegated smooshedWriter creates a new temporary file per file added. we use a counter to name these temporary
   // files, and map the file number to the file name so we don't have to escape the file names (e.g. names with '/')
-  private int delegateFileCounter = 0;
+  private AtomicLong delegateFileCounter = new AtomicLong(0);
   private Map<String, String> delegateFileNameMap;
 
   private Outer currOut = null;
@@ -356,7 +357,7 @@ public class FileSmoosher implements Closeable
 
   private String getDelegateFileName(String name)
   {
-    final String delegateName = String.valueOf(delegateFileCounter++);
+    final String delegateName = String.valueOf(delegateFileCounter.getAndIncrement());
     delegateFileNameMap.put(delegateName, name);
     return delegateName;
   }
