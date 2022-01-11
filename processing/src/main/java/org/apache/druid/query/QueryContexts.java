@@ -51,6 +51,7 @@ public class QueryContexts
   public static final String VECTORIZE_VIRTUAL_COLUMNS_KEY = "vectorizeVirtualColumns";
   public static final String VECTOR_SIZE_KEY = "vectorSize";
   public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  public static final String MAX_SUBQUERY_MEMORY_KEY = "maxSubqueryMemory";
   public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
@@ -236,6 +237,10 @@ public class QueryContexts
     return parseInt(query, MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
+  public static <T> long getMaxSubqueryMemory(Query<T> query, long defaultSize)
+  {
+    return parseLong(query, MAX_SUBQUERY_MEMORY_KEY, defaultSize);
+  }
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
   {
     return getUncoveredIntervalsLimit(query, DEFAULT_UNCOVERED_INTERVALS_LIMIT);

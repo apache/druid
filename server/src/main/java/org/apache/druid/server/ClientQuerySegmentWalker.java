@@ -54,6 +54,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -66,9 +67,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -164,12 +167,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+    final long maxSubqueryMemory = QueryContexts.getMaxSubqueryMemory(query, serverConfig.getMaxSubqueryMemory());
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
         toolChest,
         new AtomicInteger(),
+        new AtomicLong(),
         maxSubqueryRows,
+        maxSubqueryMemory,
         true
     );
 
@@ -185,7 +191,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             freeTradeDataSource,
             toolChest,
             new AtomicInteger(),
+            new AtomicLong(),
             maxSubqueryRows,
+            maxSubqueryMemory,
             false
         )
     );
@@ -312,7 +320,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final DataSource dataSource,
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
+      final AtomicLong subqueryRowMemoryLimitAccumulator,
       final int maxSubqueryRows,
+      final long maxSubqueryMemory,
       final boolean dryRun
   )
   {
@@ -333,7 +343,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
 
         assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
-        current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
+        current = inlineIfNecessary(
+            current,
+            null,
+            subqueryRowLimitAccumulator,
+            subqueryRowMemoryLimitAccumulator,
+            maxSubqueryRows,
+            maxSubqueryMemory,
+            dryRun
+        );
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
@@ -346,7 +364,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         } else {
           // Something happened during inlining that means the toolchest is no longer able to handle this subquery.
           // We need to consider inlining it.
-          return inlineIfNecessary(current, toolChestIfOutermost, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
+          return inlineIfNecessary(
+              current,
+              toolChestIfOutermost,
+              subqueryRowLimitAccumulator,
+              subqueryRowMemoryLimitAccumulator,
+              maxSubqueryRows,
+              maxSubqueryMemory,
+              dryRun
+          );
         }
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
@@ -368,7 +394,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             queryResults,
             warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
-            maxSubqueryRows
+            subqueryRowMemoryLimitAccumulator,
+            maxSubqueryRows,
+            maxSubqueryMemory
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -379,14 +407,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         Iterables.getOnlyElement(dataSource.getChildren()),
                         null,
                         subqueryRowLimitAccumulator,
+                        subqueryRowMemoryLimitAccumulator,
                         maxSubqueryRows,
+                        maxSubqueryMemory,
                         dryRun
                     )
                 )
             ),
             toolChestIfOutermost,
             subqueryRowLimitAccumulator,
+            subqueryRowMemoryLimitAccumulator,
             maxSubqueryRows,
+            maxSubqueryMemory,
             dryRun
         );
       }
@@ -395,7 +427,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       return dataSource.withChildren(
           dataSource.getChildren()
                     .stream()
-                    .map(child -> inlineIfNecessary(child, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun))
+                    .map(child -> inlineIfNecessary(
+                        child,
+                        null,
+                        subqueryRowLimitAccumulator,
+                        subqueryRowMemoryLimitAccumulator,
+                        maxSubqueryRows,
+                        maxSubqueryMemory,
+                        dryRun
+                    ))
                     .collect(Collectors.toList())
       );
     }
@@ -559,10 +599,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
-      final int limit
+      final AtomicLong memoryLimitAccumulator,
+      final int limit,
+      final long memoryLimit
   )
   {
     final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
+    final long memoryLimitToUse = memoryLimit < 0 ? Long.MAX_VALUE : memoryLimit;
 
     if (limitAccumulator.get() >= limitToUse) {
       throw ResourceLimitExceededException.withMessage(
@@ -584,12 +627,61 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 limitToUse
             );
           }
+          long estimatedMemorySize = estimateResultRowSize(in, signature);
+          if (memoryLimitAccumulator.getAndAdd(estimatedMemorySize) >= memoryLimitToUse) {
+            throw ResourceLimitExceededException.withMessage(
+                "Subquery estimatedly consuming memory beyond maximum %d byte(s)",
+                memoryLimitToUse
+            );
+          }
           acc.add(in);
           return acc;
         }
     );
 
     return InlineDataSource.fromIterable(resultList, signature);
+  }
+
+  private static long estimateResultRowSize(Object[] row, RowSignature rowSignature)
+  {
+    int estimate = 0;
+    if (row == null) {
+      return 0;
+    }
+    estimate += 24; // Add memory overhead for the row array
+    for (int i = 0; i < rowSignature.size(); ++i) {
+      Optional<ColumnType> maybeColumnType = rowSignature.getColumnType(i);
+      if (!maybeColumnType.isPresent()) {
+        // This shouldn't be encountered
+        continue;
+      }
+      ColumnType columnType = maybeColumnType.get();
+      if (columnType.equals(ColumnType.LONG)) {
+        estimate += Long.BYTES;
+      } else if (columnType.equals(ColumnType.FLOAT)) {
+        estimate += Float.BYTES;
+      } else if (columnType.equals(ColumnType.DOUBLE)) {
+        estimate += Double.BYTES;
+      } else if (columnType.equals(ColumnType.STRING)
+                 || columnType.equals(ColumnType.STRING_ARRAY)
+                 || columnType.equals(ColumnType.LONG_ARRAY)
+                 || columnType.equals(ColumnType.DOUBLE_ARRAY)) {
+        if (row[i] instanceof String) {
+          estimate += 28 + 16 + 2 * (((String) row[i]).length());
+        } else if (row[i] instanceof Long) {
+          estimate += Long.BYTES;
+        } else if (row[i] instanceof Double) {
+          estimate += Double.BYTES;
+        } else if (row[i] instanceof Float) {
+          estimate += Float.BYTES;
+        } else {
+          estimate += 0;
+        }
+      } else {
+        estimate += 0;
+      }
+    }
+    return estimate;
   }
 
   /**

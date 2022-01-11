@@ -799,6 +799,35 @@ public class ClientQuerySegmentWalkerTest
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
 
+
+  @Test
+  public void testTimeseriesOnGroupByOnTableErrorTooLarge()
+  {
+    initWalker(ImmutableMap.of("maxSubqueryMemory", "1"));
+
+    final GroupByQuery subquery =
+        GroupByQuery.builder()
+                    .setDataSource(FOO)
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Collections.singletonList(INTERVAL))
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .build();
+
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(new QueryDataSource(subquery))
+                                .granularity(Granularities.ALL)
+                                .intervals(Intervals.ONLY_ETERNITY)
+                                .aggregators(new CountAggregatorFactory("cnt"))
+                                .build()
+                                .withId(DUMMY_QUERY_ID);
+
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("Subquery estimatedly consuming memory beyond maximum 1 byte(s)");
+
+    testQuery(query, ImmutableList.of(), ImmutableList.of());
+  }
+
   @Test
   public void testGroupByOnArraysDoubles()
   {
