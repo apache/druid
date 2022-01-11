@@ -215,9 +215,7 @@ public class DruidPlanner implements Closeable
       }
       if (parsed.getInsertNode() != null) {
         // Cannot INSERT with BINDABLE.
-        plannerContext.setPlanningError("Cannot use insert keyword with bindable convention.");
-        String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-        throw new UnsupportedSQLQueryException(errorMessage);
+        throw e;
       }
       // Try again with BINDABLE convention. Used for querying Values and metadata tables.
       try {
