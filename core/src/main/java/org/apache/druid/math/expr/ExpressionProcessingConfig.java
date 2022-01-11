@@ -28,6 +28,7 @@ public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
+  public static final String CAST_ARRAY_TO_STRING_CONFIG_STRING = "druid.expressions.allowArrayToStringCast";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
@@ -35,10 +36,14 @@ public class ExpressionProcessingConfig
   @JsonProperty("useStrictBooleans")
   private final boolean useStrictBooleans;
 
+  @JsonProperty("allowArrayToStringCast")
+  private final boolean allowArrayToStringCast;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
-      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans
+      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
+      @JsonProperty("allowArrayToStringCast") @Nullable Boolean allowArrayToStringCast
   )
   {
     this.allowNestedArrays = allowNestedArrays == null
@@ -51,6 +56,10 @@ public class ExpressionProcessingConfig
     } else {
       this.useStrictBooleans = useStrictBooleans;
     }
+    this.allowArrayToStringCast
+        = allowArrayToStringCast == null
+          ? Boolean.valueOf(System.getProperty(CAST_ARRAY_TO_STRING_CONFIG_STRING, "false"))
+          : allowArrayToStringCast;
   }
 
   public boolean allowNestedArrays()
@@ -61,5 +70,10 @@ public class ExpressionProcessingConfig
   public boolean isUseStrictBooleans()
   {
     return useStrictBooleans;
+  }
+
+  public boolean allowArrayToStringCast()
+  {
+    return allowArrayToStringCast;
   }
 }

@@ -131,6 +131,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -1654,7 +1655,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ExprMacroTable.nil()
         ))
         .setDimensions(
-            new DefaultDimensionSpec("vo", "alias", ColumnType.STRING)
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING)
         )
         .setDimensions(
             new DefaultDimensionSpec("index", "alias", ColumnType.STRING_ARRAY)
@@ -1794,16 +1795,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedGroupByWithArrays()
+  public void testNestedGroupByWithStringArray()
   {
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
-    } else {
-      expectedException.expect(IAE.class);
-      expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
     }
-
+    cannotVectorize();
     GroupByQuery inner = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -1814,7 +1812,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ExprMacroTable.nil()
         ))
         .setDimensions(
-            new DefaultDimensionSpec("vo", "alias", ColumnType.STRING_ARRAY)
+            new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY)
         )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -1831,7 +1829,108 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("a", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("b", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("e", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("h", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("m", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("n", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("p", "preferred"), "rows", 1L),
+        makeRow(outer, "2011-04-01", "alias_outer", ComparableStringArray.of("preferred", "t"), "rows", 1L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim-nested-groupby-arrays");
+  }
+
+  @Test
+  public void testNestedGroupByWithLongArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery inner = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(1,2)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias", ColumnType.LONG_ARRAY)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(new QueryDataSource(inner))
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("alias", "alias_outer", ColumnType.LONG_ARRAY
+            )
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1L, 2L)),
+                "rows", 1L
+        ));
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-nested-groupby-arrays");
+  }
+
+
+  @Test
+  public void testGroupByWithLongArrays()
+  {
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
+    }
+    cannotVectorize();
+    GroupByQuery outer = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setVirtualColumns(new ExpressionVirtualColumn(
+            "v0",
+            "array(1,2)",
+            ColumnType.LONG_ARRAY,
+            ExprMacroTable.nil()
+        ))
+        .setDimensions(
+            new DefaultDimensionSpec("v0", "alias_outer", ColumnType.LONG_ARRAY)
+        )
+        .setLimitSpec(new DefaultLimitSpec(
+            ImmutableList.of(new OrderByColumnSpec(
+                "rows",
+                OrderByColumnSpec.Direction.DESCENDING,
+                StringComparators.NUMERIC
+            )),
+            Integer.MAX_VALUE
+        ))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT
+        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
+
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(outer, "2011-04-01", "alias_outer", new ComparableList(ImmutableList.of(1L, 2L)),
+                "rows", 1L
+        ));
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, outer);
+    TestHelper.assertExpectedObjects(expectedResults, results, "long-groupby-arrays");
   }
 
   @Test

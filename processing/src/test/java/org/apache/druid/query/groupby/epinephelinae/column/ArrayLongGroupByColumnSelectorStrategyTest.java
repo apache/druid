@@ -44,18 +44,18 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   protected final List<List<Long>> dictionary = new ArrayList<List<Long>>()
   {
     {
-      add(ImmutableList.of(1l, 2l));
-      add(ImmutableList.of(2l, 3l));
-      add(ImmutableList.of(1l));
+      add(ImmutableList.of(1L, 2L));
+      add(ImmutableList.of(2L, 3L));
+      add(ImmutableList.of(1L));
     }
   };
 
   protected final Object2IntOpenHashMap<List<Long>> reverseDictionary = new Object2IntOpenHashMap<List<Long>>()
   {
     {
-      put(ImmutableList.of(1l, 2l), 0);
-      put(ImmutableList.of(2l, 3l), 1);
-      put(ImmutableList.of(1l), 2);
+      put(ImmutableList.of(1L, 2L), 0);
+      put(ImmutableList.of(2L, 3L), 1);
+      put(ImmutableList.of(1L), 2);
     }
   };
 
@@ -126,7 +126,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList(ImmutableList.of(1l, 2l)), row.get(0));
+    Assert.assertEquals(new ComparableList(ImmutableList.of(1L, 2L)), row.get(0));
   }
 
 
@@ -143,7 +143,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList(ImmutableList.of(4l, 2l)), row.get(0));
+    Assert.assertEquals(new ComparableList(ImmutableList.of(4L, 2L)), row.get(0));
   }
 
   @After

@@ -387,7 +387,8 @@ public final class DimensionHandlerUtils
     }
   }
 
-  private static ComparableList convertToList(Object obj)
+  @Nullable
+  public static ComparableList convertToList(Object obj)
   {
     if (obj == null) {
       return null;

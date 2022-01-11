@@ -432,6 +432,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         }
       }
     };
+
     // Deserializer that can deserialize either array- or map-based rows.
     final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
     {

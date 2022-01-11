@@ -1421,4 +1421,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         }
     );
   }
+
+  @Test
+  public void testMultiValueToArrayArgsWithArray() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
+        exception -> {
+          exception.expect(RuntimeException.class);
+        }
+    );
+  }
 }

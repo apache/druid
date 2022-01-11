@@ -443,7 +443,10 @@ public class ExpressionSelectors
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
     if (eval.type().isArray()) {
-      return Arrays.stream(eval.asArray()).collect(Collectors.toList());
+      final Object[] asArray = eval.asArray();
+      return asArray == null
+             ? null
+             : Arrays.stream(asArray).collect(Collectors.toList());
     }
     return eval.value();
   }

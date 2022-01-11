@@ -752,6 +752,28 @@ public class RowBasedGrouperHelper
         case DOUBLE:
           return (InputRawSupplierColumnSelectorStrategy<BaseDoubleColumnValueSelector>)
               columnSelector -> () -> columnSelector.isNull() ? null : columnSelector.getDouble();
+        case ARRAY:
+          switch (capabilities.getElementType().getType()) {
+            case STRING:
+              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
+                  columnSelector ->
+                      () -> columnSelector.isNull()
+                            ? null
+                            : DimensionHandlerUtils.convertToComparableStringArray(columnSelector.getObject());
+            case FLOAT:
+            case LONG:
+            case DOUBLE:
+              return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
+                  columnSelector ->
+                      () -> columnSelector.isNull()
+                            ? null
+                            : DimensionHandlerUtils.convertToList(columnSelector.getObject());
+            default:
+              throw new IAE(
+                  "Cannot create query type helper from invalid type [%s]",
+                  capabilities.asTypeString()
+              );
+          }
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
@@ -1023,6 +1045,11 @@ public class RowBasedGrouperHelper
           final ComparableStringArray lhs = DimensionHandlerUtils.convertToComparableStringArray(key1.getKey()[i]);
           final ComparableStringArray rhs = DimensionHandlerUtils.convertToComparableStringArray(key2.getKey()[i]);
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
+        } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
+                   || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
+          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i]);
+          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i]);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(
               (Comparable) key1.getKey()[i],
@@ -1052,24 +1079,24 @@ public class RowBasedGrouperHelper
         final int fieldIndex = fieldIndices.get(i);
         final boolean needsReverse = needsReverses.get(i);
         final int cmp;
-        final Comparable lhs;
-        final Comparable rhs;
+        final Object lhs;
+        final Object rhs;
 
         if (aggFlags.get(i)) {
           if (needsReverse) {
-            lhs = (Comparable) entry2.getValues()[fieldIndex];
-            rhs = (Comparable) entry1.getValues()[fieldIndex];
+            lhs = entry2.getValues()[fieldIndex];
+            rhs = entry1.getValues()[fieldIndex];
           } else {
-            lhs = (Comparable) entry1.getValues()[fieldIndex];
-            rhs = (Comparable) entry2.getValues()[fieldIndex];
+            lhs = entry1.getValues()[fieldIndex];
+            rhs = entry2.getValues()[fieldIndex];
           }
         } else {
           if (needsReverse) {
-            lhs = (Comparable) entry2.getKey().getKey()[fieldIndex + dimStart];
-            rhs = (Comparable) entry1.getKey().getKey()[fieldIndex + dimStart];
+            lhs = entry2.getKey().getKey()[fieldIndex + dimStart];
+            rhs = entry1.getKey().getKey()[fieldIndex + dimStart];
           } else {
-            lhs = (Comparable) entry1.getKey().getKey()[fieldIndex + dimStart];
-            rhs = (Comparable) entry2.getKey().getKey()[fieldIndex + dimStart];
+            lhs = entry1.getKey().getKey()[fieldIndex + dimStart];
+            rhs = entry2.getKey().getKey()[fieldIndex + dimStart];
           }
         }
 
@@ -1086,8 +1113,17 @@ public class RowBasedGrouperHelper
                 rhs != null ? ((Number) rhs).doubleValue() : null
             );
           } else {
-            cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
+            cmp = Comparators.<Comparable>naturalNullsFirst().compare((Comparable) lhs, (Comparable) rhs);
           }
+        } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
+          final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhs);
+          final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhs);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+        } else if (fieldType.equals(ColumnType.LONG_ARRAY)
+                   || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
+          final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhs);
+          final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhs);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
         } else {
           cmp = comparator.compare(
               DimensionHandlerUtils.convertObjectToString(lhs),

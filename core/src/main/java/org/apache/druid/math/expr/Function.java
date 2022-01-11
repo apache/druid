@@ -2988,7 +2988,7 @@ public interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return args.get(0).eval(bindings);
+      return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
     }
 
     @Override
@@ -3001,7 +3001,7 @@ public interface Function
 
       if (expr == null) {
         throw new IAE(
-            "Arg %s should be an identifier expression ie refer to columns directally. Use array[] instead",
+            "Arg %s should be an identifier expression ie refer to columns directaly. Use array() instead",
             args.get(0).toString()
         );
       }

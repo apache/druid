@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
@@ -128,10 +129,23 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}}.
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
+   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
+  {
+    ColumnType valueType = getValueTypeForRelDataTypeFull(type);
+    // coerce array to string
+    if (ExpressionProcessing.allowArrayToStringCast() && valueType != null && valueType.isArray()) {
+      return ColumnType.STRING;
+    }
+    return valueType;
+  }
+
+  @Nullable
+  private static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {
