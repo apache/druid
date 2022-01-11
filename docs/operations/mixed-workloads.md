@@ -34,46 +34,48 @@ Druid provides the following strategies to isolate resources and improve query c
 
 ## Query laning
 
-Query laning directs Druid to restrict resource usage for less urgent queries to ensure dedicated resources for higher priority queries. Query laning is ideal when you need to run many concurrent queries having heterogeneous workloads.
+Query laning directs Druid to restrict resource usage for less urgent queries to ensure dedicated resources for high priority queries. Query laning is ideal when you need to run many concurrent queries having heterogeneous workloads.
 
-Query lanes are analogous to carpool and normal lanes on the freeway. With query laning, Druid restricts low priority queries to low lanes and allows high priority queries to run wherever possible, whether in a high or low lane. In this way, higher priority queries may bypass other queries in lower priority lanes.
+Query lanes are analogous to carpool and normal lanes on the freeway. With query laning, Druid sets apart VIP lanes from other general lanes.
+Druid restricts low priority queries to the general lanes and allows high priority queries to run wherever possible, whether in a VIP or general lane.
 
 In Druid, query lanes reserve resources for Broker HTTP threads. Each Druid query requires one Broker thread. The number of threads on a Broker is defined by the `druid.server.http.numThreads` parameter. Broker threads may be occupied by tasks other than queries, such as health checks. You can use query laning to limit the number of HTTP threads designated for resource-intensive queries, leaving other threads available for short-running queries and other tasks.
+
+Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context](../querying/query-context.md).
 
 ### General properties
 
 Set the following query laning properties in the `broker/runtime.properties` file.
 
-* `druid.query.scheduler.laning.strategy` – The strategy used to assign queries to lanes. You can [define your own laning strategy manually](../configuration/index.md#manual-laning-strategy) or use the built-in [“high/low” laning strategy](../configuration/index.md#highlow-laning-strategy).
+* `druid.query.scheduler.laning.strategy` – The strategy used to assign queries to lanes.
+You can use the built-in [“high/low” laning strategy](../configuration/index.md#highlow-laning-strategy), or [define your own laning strategy manually](../configuration/index.md#manual-laning-strategy).
 * `druid.query.scheduler.numThreads` – The total number of queries that can be served per Broker. We recommend setting this value to 1-2 less than `druid.server.http.numThreads`.
   > The query scheduler by default does not limit the number of Broker HTTP threads. Setting this property to a bounded number limits the thread count. If the allocated threads are all occupied, any incoming query, including interactive queries, will be rejected with an HTTP 429 status code.
 
 
-Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for how queries are labeled high or low priority. Otherwise, manually set the priority for incoming queries on the query context.
-
 ### Lane-specific properties
+
+If you use the high/low laning strategy, set the following:
+
+* `druid.query.scheduler.laning.maxLowPercent` – The maximum percent of query threads to handle low priority queries. The remaining query threads are dedicated to high priority queries.
 
 If you use a manual laning strategy, set the following:
 
 * `druid.query.scheduler.laning.lanes.{name}`
 * `druid.query.scheduler.laning.isLimitPercent`
 
-If you use the high/low laning strategy, set the following:
-
-* `druid.query.scheduler.laning.maxLowPercent` – The maximum percent of query threads to handle low priority queries. The remaining query threads are dedicated to higher priority queries.
-
 ### Example
 
 Example config for query laning with the high/low laning strategy:
 
 ```
-# Limit the number of HTTP threads for query processing
-# This value should be less than druid.server.http.numThreads
-druid.query.scheduler.numThreads=40 
-
 # Laning strategy
 druid.query.scheduler.laning.strategy=hilo
 druid.query.scheduler.laning.maxLowPercent=20
+
+# Limit the number of HTTP threads for query processing
+# This value should be less than druid.server.http.numThreads
+druid.query.scheduler.numThreads=40
 ```
 
 See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for details on query laning and the available query laning strategies.
