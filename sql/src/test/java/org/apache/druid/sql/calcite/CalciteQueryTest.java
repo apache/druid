@@ -13480,4 +13480,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{"A", "10.1"})
     );
   }
+
+  @Test
+  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
+  {
+    assertQueryIsUnplannable(
+        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
+        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
+    );
+  }
 }
