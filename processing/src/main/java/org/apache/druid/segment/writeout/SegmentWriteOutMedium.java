@@ -40,6 +40,18 @@ public interface SegmentWriteOutMedium extends Closeable
   WriteOutBytes makeWriteOutBytes() throws IOException;
 
   /**
+   * Creates a 'child' version of the {@link SegmentWriteOutMedium}, which can be optionally closed,
+   * independent of this {@link SegmentWriteOutMedium} but otherwise shares the same configuration. This allows callers
+   * using a shared {@link SegmentWriteOutMedium} but which control the complete lifecycle of the {@link WriteOutBytes}
+   * which they require to free the backing resources when they are finished, rather than waiting until
+   * {@link #close()} is called for this medium.
+   *
+   * The 'child' medium will be closed when {@link #close()} is called, if not called explicitly prior to closing this
+   * medium.
+   */
+  SegmentWriteOutMedium makeChildWriteOutMedium() throws IOException;
+
+  /**
    * Returns a closer of this SegmentWriteOutMedium, which is closed in this SegmentWriteOutMedium's close() method.
    * Could be used to "attach" some random resources to this SegmentWriteOutMedium, to be closed at the same time.
    */
