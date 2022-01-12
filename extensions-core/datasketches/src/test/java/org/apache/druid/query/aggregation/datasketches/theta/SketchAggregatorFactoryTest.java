@@ -74,10 +74,10 @@ public class SketchAggregatorFactoryTest
     EasyMock.replay(colSelectorFactory);
 
     AggregatorAndSize aggregatorAndSize = AGGREGATOR_16384.factorizeWithSize(colSelectorFactory);
-    Assert.assertEquals(591, aggregatorAndSize.getInitialSizeBytes());
+    Assert.assertEquals(28, aggregatorAndSize.getInitialSizeBytes());
 
     aggregatorAndSize = AGGREGATOR_32768.factorizeWithSize(colSelectorFactory);
-    Assert.assertEquals(1103, aggregatorAndSize.getInitialSizeBytes());
+    Assert.assertEquals(28, aggregatorAndSize.getInitialSizeBytes());
   }
 
   @Test

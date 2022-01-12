@@ -74,7 +74,8 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * @return AggregatorAndSize which contains the actual aggregator and its initial size.
    */
-  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory) {
+  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
+  {
     return new AggregatorAndSize(factorize(metricFactory), getMaxIntermediateSize());
   }
 
