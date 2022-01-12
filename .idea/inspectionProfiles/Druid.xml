@@ -70,7 +70,6 @@
       </option>
       <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
     </inspection_tool>
-    <inspection_tool class="FieldMayBeFinal" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="FinalStaticMethod" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FlowJSError" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="ForCanBeForeach" enabled="true" level="WARNING" enabled_by_default="true">
@@ -372,15 +371,15 @@
         <constraint name="l" within="" contains="" />
         <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Assign an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
+      <searchConfiguration name="Assign an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" within="" contains="" />
         <constraint name="x" nameOfExprType="java\.util\.concurrent\.Executor" within="" contains="" />
         <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Intialize an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="Executor $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
+      <searchConfiguration name="Intialize an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="Executor $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" within="" contains="" />
-        <constraint name="x"  within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true"  within="" contains="" />
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
@@ -480,8 +479,8 @@
     <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="XmlPathReference" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
-    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" isSelected="false">
-      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" isSelected="false">
+    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" checkParameterExcludingHierarchy="false">
+      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" checkParameterExcludingHierarchy="false">
         <option name="LOCAL_VARIABLE" value="true" />
         <option name="FIELD" value="true" />
         <option name="METHOD" value="true" />

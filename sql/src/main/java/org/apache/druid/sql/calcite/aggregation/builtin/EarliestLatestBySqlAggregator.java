@@ -30,6 +30,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -161,12 +162,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
               OperandTypes.sequence(
                   "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
                   OperandTypes.ANY,
-                  OperandTypes.NUMERIC
+                  OperandTypes.family(SqlTypeFamily.TIMESTAMP)
               ),
               OperandTypes.sequence(
                   "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
                   OperandTypes.ANY,
-                  OperandTypes.NUMERIC,
+                  OperandTypes.family(SqlTypeFamily.TIMESTAMP),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )
           ),
