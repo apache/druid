@@ -30,13 +30,18 @@ Each Druid query consumes a certain amount of cluster resources, such as process
 You typically do not want these long resource-intensive queries to throttle the performance of short interactive queries.
 For example, if you run both sets of queries in the same Druid cluster, heavy queries may employ all available HTTP threads.
 This situation slows down subsequent queries—heavy and light—and may trigger timeout errors for those queries.
-
 With proper resource isolation, you can execute long-running, low priority queries without interfering with short-running, high priority queries.
-Separated cluster resources helps prevent queries from competing with each other for resources such as CPU, memory, and network access.
 
 Druid provides the following strategies to isolate resources and improve query concurrency:
 - **Query laning** where you set a limit on the maximum number of long-running queries executed on each Broker. 
 - **Service tiering** which defines separate groups of Historicals and Brokers to receive different query assignments based on query priority.
+
+You can profile Druid queries using normal performance profiling techniques such as Druid query metrics analysis, thread dumps of JVM, or flame graphs to identify what resources are affected by mixed workloads.
+The largest bottleneck will likely be in the Broker HTTP threads.
+Mitigate resource contention of the Broker HTTP threads with query laning.
+However, mixed workloads also affect other resources, including processing threads and merge buffers.
+Reduce the burden on these resources by applying service tiering in addition to query laning.
+
 
 ## Query laning
 
@@ -56,7 +61,6 @@ You can use the built-in [“high/low” laning strategy](../configuration/index
 * `druid.query.scheduler.numThreads` – The total number of queries that can be served per Broker. We recommend setting this value to 1-2 less than `druid.server.http.numThreads`.
   > The query scheduler by default does not limit the number of Broker HTTP threads. Setting this property to a bounded number limits the thread count. If the allocated threads are all occupied, any incoming query, including interactive queries, will be rejected with an HTTP 429 status code.
 
-
 ### Lane-specific properties
 
 If you use the __high/low laning strategy__, set the following:
@@ -64,7 +68,6 @@ If you use the __high/low laning strategy__, set the following:
 * `druid.query.scheduler.laning.maxLowPercent` – The maximum percent of query threads to handle low priority queries. The remaining query threads are dedicated to high priority queries.
 
 Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context](../querying/query-context.md).
-
 
 If you use a __manual laning strategy__, set the following:
 
@@ -74,7 +77,6 @@ If you use a __manual laning strategy__, set the following:
 With manual laning, incoming queries can be labeled with the desired lane in the `lane` parameter of the [query context](../querying/query-context.md).
 
 See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for additional details on query laning configuration.
-
 
 ### Example
 
@@ -90,11 +92,21 @@ druid.query.scheduler.laning.maxLowPercent=20
 druid.query.scheduler.numThreads=40
 ```
 
+
 ## Service tiering
 
-The examples below demonstrate two tiers—hot and cold—for the Historicals and for the Brokers. The Brokers will serve short-running, light queries before long-running, heavy queries. Light queries will be routed to the hot tiers, and heavy queries will be routed to the cold tiers.
+In service tiering, you define separate groups of Historicals and Brokers to manage queries based on the segments and resource requirements of the query.
+You can limit the resources that are set aside for certain types of queries.
+Many heavy queries involving complex subqueries or large result sets can crash a Broker, or worse, take down a cluster.
+Minimize the impact of these heavy queries by limiting them to a separate Broker tier.
+When all Brokers set aside for heavy queries are occupied, users must wait to submit additional heavy queries until the designated resources become available.
 
-It is possible to separate Historical processes into tiers without having separate Broker tiers. This way, you can assign data from specific time intervals to specific tiers in order to support higher concurrency on hot data. 
+Note that you can separate Historical processes into tiers without having separate Broker tiers.
+Historical-only tiering is not sufficient to meet the demands of mixed workloads on a Druid cluster.
+However, it is useful when you query certain segments more frequently than others, such as often analyzing the most recent data.
+Historical tiering assigns data from specific time intervals to specific tiers in order to support higher concurrency on hot data. 
+
+The examples below demonstrate two tiers—hot and cold—for both the Historicals and Brokers. The Brokers will serve short-running, light queries before long-running, heavy queries. Light queries will be routed to the hot tiers, and heavy queries will be routed to the cold tiers.
 
 ### Historical tiering
 
@@ -102,13 +114,17 @@ This section describes how to configure segment loading and how to assign Histor
 
 #### Configure segment loading
 
+The Coordinator service assigns segments to different tiers of Historicals using load rules.
 Define a [load rule](rule-configuration.md#load-rules) to indicate how segment replicas should be assigned to different Historical tiers. For example, you may store segments of more recent data on more powerful hardware for better performance.
 
 There are several types of load rules: forever, interval, and period. Select the load rule that matches your use case for each Historical, whether you want all segments to be loaded, segments within a certain time interval, or segments within a certain time period.
+Interval and period load rules must be accompanied by corresponding [drop rules](rule-configuration.md#drop-rules).
 
 In the load rule, define tiers in the `tieredReplicants` property. Provide descriptive names for your tiers, and specify how many replicas each tier should have. You can designate a higher number of replicas for the hot tier to increase the concurrency for processing queries.
 
-Example load rule with two Historical tiers, named “hot” and “\_default\_tier”:
+The following example shows a period load rule with two Historical tiers, named “hot” and “\_default\_tier”.
+For the most recent month of data, Druid loads three replicas in the hot tier and one replica in the default cold tier.
+Incoming queries that rely on this month of data can use the single replica in the cold Historical tier or any of the three replicas in the hot Historical tier.
 
 ```
 {
@@ -148,7 +164,6 @@ See [Historical general configuration](../configuration/index.md#historical-gene
 
 You must set up Historical tiering before you can use Broker tiering.
 To set up Broker tiering, assign Brokers to tiers, and configure query routing by the Router.
-
 
 #### Assign Brokers to tiers
 
