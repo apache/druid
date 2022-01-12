@@ -173,8 +173,6 @@ public class Calcites
         return ColumnType.LONG_ARRAY;
       }
       return ColumnType.STRING_ARRAY;
-    } else if (sqlTypeName == SqlTypeName.NULL) {
-      return ColumnType.STRING;
     } else {
       return null;
     }

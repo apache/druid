@@ -134,7 +134,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         ImmutableList.of(new Object[]{null, "United States"}),
                         RowSignature
                             .builder()
-                            .add("EXPR$0", ColumnType.STRING)
+                            .add("EXPR$0", null)
                             .add("EXPR$1", ColumnType.STRING)
                             .build()
                     )
