@@ -59,7 +59,7 @@ Set the following query laning properties in the `broker/runtime.properties` fil
 * `druid.query.scheduler.laning.strategy` – The strategy used to assign queries to lanes.
 You can use the built-in [“high/low” laning strategy](../configuration/index.md#highlow-laning-strategy), or [define your own laning strategy manually](../configuration/index.md#manual-laning-strategy).
 * `druid.query.scheduler.numThreads` – The total number of queries that can be served per Broker. We recommend setting this value to 1-2 less than `druid.server.http.numThreads`.
-  > The query scheduler by default does not limit the number of Broker HTTP threads. Setting this property to a bounded number limits the thread count. If the allocated threads are all occupied, any incoming query, including interactive queries, will be rejected with an HTTP 429 status code.
+  > The query scheduler by default does not limit the number of queries that a Broker can serve. Setting this property to a bounded number limits the thread count. If the allocated threads are all occupied, any incoming query, including interactive queries, will be rejected with an HTTP 429 status code.
 
 ### Lane-specific properties
 
@@ -97,9 +97,10 @@ druid.query.scheduler.numThreads=40
 
 In service tiering, you define separate groups of Historicals and Brokers to manage queries based on the segments and resource requirements of the query.
 You can limit the resources that are set aside for certain types of queries.
-Many heavy queries involving complex subqueries or large result sets can crash a Broker, or worse, take down a cluster.
+Many heavy queries involving complex subqueries or large result sets can hog resources away from high priority, interactive queries.
 Minimize the impact of these heavy queries by limiting them to a separate Broker tier.
-When all Brokers set aside for heavy queries are occupied, users must wait to submit additional heavy queries until the designated resources become available.
+When all Brokers set aside for heavy queries are occupied, subsequent heavy queries must wait until the designated resources become available.
+A prolonged wait results in the later queries failing with a timeout error.
 
 Note that you can separate Historical processes into tiers without having separate Broker tiers.
 Historical-only tiering is not sufficient to meet the demands of mixed workloads on a Druid cluster.
