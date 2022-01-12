@@ -38,7 +38,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   private final OakUnsafeDirectBuffer oakAggregations;
   @Nullable
   private ByteBuffer aggregationsBuffer;
-  private int aggregationsOffset;
   private int dimsLength;
 
   public OakIncrementalIndexRow(OakUnscopedBuffer dimensions,
@@ -50,7 +49,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     this.oakAggregations = (OakUnsafeDirectBuffer) aggregations;
     this.dimensions = oakDimensions.getAddress();
     this.aggregationsBuffer = null;
-    this.aggregationsOffset = 0;
     this.dimsLength = -1; // lazy initialization
   }
 
@@ -67,27 +65,15 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     dimsLength = -1;
     dimensions = oakDimensions.getAddress();
     aggregationsBuffer = null;
-    aggregationsOffset = 0;
-  }
-
-  private void updateAggregationsBuffer()
-  {
-    if (aggregationsBuffer == null) {
-      aggregationsBuffer = oakAggregations.getByteBuffer();
-      aggregationsOffset = oakAggregations.getOffset();
-    }
   }
 
   public ByteBuffer getAggregationsBuffer()
   {
-    updateAggregationsBuffer();
+    // Read buffer only once
+    if (aggregationsBuffer == null) {
+      aggregationsBuffer = oakAggregations.getByteBuffer();
+    }
     return aggregationsBuffer;
-  }
-
-  public int getAggregationsOffset()
-  {
-    updateAggregationsBuffer();
-    return aggregationsOffset;
   }
 
   @Override
