@@ -609,8 +609,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
         + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10), "
-        + "EARLIEST(cnt, m1), EARLIEST(m1, m1), EARLIEST(dim1, 10, m1), "
-        + "EARLIEST(cnt + 1, m1), EARLIEST(m1 + 1, m1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
+        + "EARLIEST_BY(cnt, m1), EARLIEST_BY(m1, m1), EARLIEST_BY(dim1, 10, m1), "
+        + "EARLIEST_BY(cnt + 1, m1), EARLIEST_BY(m1 + 1, m1), EARLIEST_BY(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -657,8 +657,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
         + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10), "
-        + "LATEST(cnt, m1), LATEST(m1, m1), LATEST(dim1, 10, m1), "
-        + "LATEST(cnt + 1, m1), LATEST(m1 + 1, m1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
+        + "LATEST_BY(cnt, m1), LATEST_BY(m1, m1), LATEST_BY(dim1, 10, m1), "
+        + "LATEST_BY(cnt + 1, m1), LATEST_BY(m1 + 1, m1), LATEST_BY(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
