@@ -124,9 +124,9 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(2), rexNodes.get(2)),
+            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
             outputType,
-            RexLiteral.intValue(rexNodes.get(1))
+            RexLiteral.intValue(rexNodes.get(2))
         );
         break;
       default:
@@ -164,10 +164,10 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
                   OperandTypes.NUMERIC
               ),
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, maxBytesPerString, timeColumn)'\n",
+                  "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
                   OperandTypes.ANY,
-                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL),
-                  OperandTypes.NUMERIC
+                  OperandTypes.NUMERIC,
+                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )
           ),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
