@@ -28,8 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Since the off-heap incremental index is not yet supported in production ingestion, we define its spec here only
- * for testing purposes.
+ * Oak incremental index spec (describes the in-memory indexing method for data ingestion).
  */
 public class OakIncrementalIndexSpec implements AppendableIndexSpec
 {
