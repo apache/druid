@@ -609,12 +609,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
         + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10), "
-        + "EARLIEST(cnt, m1), EARLIEST(m1, m1), EARLIEST(dim1, 10, m1), "
-        + "EARLIEST(cnt + 1, m1), EARLIEST(m1 + 1, m1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
-        + "FROM druid.foo",
+        + "EARLIEST_BY(cnt, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(m1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(dim1, MILLIS_TO_TIMESTAMP(l1), 10), "
+        + "EARLIEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10) "
+        + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
+                  .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
@@ -630,19 +630,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongFirstAggregatorFactory("a3", "v0", null),
                           new FloatFirstAggregatorFactory("a4", "v1", null),
                           new StringFirstAggregatorFactory("a5", "v2", null, 10),
-                          new LongFirstAggregatorFactory("a6", "cnt", "m1"),
-                          new FloatFirstAggregatorFactory("a7", "m1", "m1"),
-                          new StringFirstAggregatorFactory("a8", "dim1", "m1", 10),
-                          new LongFirstAggregatorFactory("a9", "v0", "m1"),
-                          new FloatFirstAggregatorFactory("a10", "v1", "m1"),
-                          new StringFirstAggregatorFactory("a11", "v2", "m1", 10)
+                          new LongFirstAggregatorFactory("a6", "cnt", "l1"),
+                          new FloatFirstAggregatorFactory("a7", "m1", "l1"),
+                          new StringFirstAggregatorFactory("a8", "dim1", "l1", 10),
+                          new LongFirstAggregatorFactory("a9", "v0", "l1"),
+                          new FloatFirstAggregatorFactory("a10", "v1", "l1"),
+                          new StringFirstAggregatorFactory("a11", "v2", "l1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 1.0f, "", 2L, 2.0f, "1"}
+            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21"}
         )
     );
   }
@@ -657,12 +657,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT "
         + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
         + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10), "
-        + "LATEST(cnt, m1), LATEST(m1, m1), LATEST(dim1, 10, m1), "
-        + "LATEST(cnt + 1, m1), LATEST(m1 + 1, m1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10, m1) "
-        + "FROM druid.foo",
+        + "LATEST_BY(cnt, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(m1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(dim1, MILLIS_TO_TIMESTAMP(l1), 10), "
+        + "LATEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10) "
+        + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
+                  .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
@@ -678,20 +678,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongLastAggregatorFactory("a3", "v0", null),
                           new FloatLastAggregatorFactory("a4", "v1", null),
                           new StringLastAggregatorFactory("a5", "v2", null, 10),
-                          new LongLastAggregatorFactory("a6", "cnt", "m1"),
-                          new FloatLastAggregatorFactory("a7", "m1", "m1"),
-                          new StringLastAggregatorFactory("a8", "dim1", "m1", 10),
-                          new LongLastAggregatorFactory("a9", "v0", "m1"),
-                          new FloatLastAggregatorFactory("a10", "v1", "m1"),
-                          new StringLastAggregatorFactory("a11", "v2", "m1", 10)
+                          new LongLastAggregatorFactory("a6", "cnt", "l1"),
+                          new FloatLastAggregatorFactory("a7", "m1", "l1"),
+                          new StringLastAggregatorFactory("a8", "dim1", "l1", 10),
+                          new LongLastAggregatorFactory("a9", "v0", "l1"),
+                          new FloatLastAggregatorFactory("a10", "v1", "l1"),
+                          new StringLastAggregatorFactory("a11", "v2", "l1", 10)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1", 1L, 6.0f, "abc", 2L, 7.0f, "abc1"}
+            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1", 1L, 2.0f, "10.1", 2L, 3.0f, "10.11"}
         )
+    );
+  }
+
+  @Test
+  public void testEarliestByInvalidTimestamp() throws Exception
+  {
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)");
+
+    testQuery(
+        "SELECT EARLIEST_BY(m1, l1) FROM druid.numfoo",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testLatestByInvalidTimestamp() throws Exception
+  {
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)");
+
+    testQuery(
+        "SELECT LATEST_BY(m1, l1) FROM druid.numfoo",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 

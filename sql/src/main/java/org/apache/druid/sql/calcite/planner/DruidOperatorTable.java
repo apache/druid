@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
@@ -133,6 +134,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
                    .add(EarliestLatestAnySqlAggregator.LATEST)
                    .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
+                   .add(EarliestLatestBySqlAggregator.EARLIEST_BY)
+                   .add(EarliestLatestBySqlAggregator.LATEST_BY)
                    .add(new MinSqlAggregator())
                    .add(new MaxSqlAggregator())
                    .add(new SumSqlAggregator())
