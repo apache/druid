@@ -46,20 +46,20 @@ public class IdUtils
   {
     Preconditions.checkArgument(
         !Strings.isNullOrEmpty(stringToValidate),
-        StringUtils.format("%s cannot be null or empty. Please provide a %s.", thingToValidate, thingToValidate)
+        "%s cannot be null or empty. Please provide a %s.", thingToValidate, thingToValidate
     );
     Preconditions.checkArgument(
         !stringToValidate.startsWith("."),
-        StringUtils.format("%s cannot start with the '.' character.", thingToValidate)
+        "%s cannot start with the '.' character.", thingToValidate
     );
     Preconditions.checkArgument(
         !stringToValidate.contains("/"),
-        StringUtils.format("%s cannot contain the '/' character.", thingToValidate)
+        "%s cannot contain the '/' character.", thingToValidate
     );
     Matcher m = INVALIDCHARS.matcher(stringToValidate);
     Preconditions.checkArgument(
         !m.matches(),
-        StringUtils.format("%s cannot contain whitespace character except space.", thingToValidate)
+        "%s cannot contain whitespace character except space.", thingToValidate
     );
 
     for (int i = 0; i < stringToValidate.length(); i++) {
