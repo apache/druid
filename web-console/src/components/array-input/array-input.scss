@@ -16,24 +16,12 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+.array-input {
+  position: relative;
 
-import { ArrayInput } from './array-input';
-
-describe('ArrayInput', () => {
-  it('matches snapshot', () => {
-    const arrayInput = (
-      <ArrayInput
-        values={['apple', 'banana', 'pear']}
-        className="test"
-        placeholder="test"
-        onChange={() => {}}
-        suggestions={['dog', 'cat', 'skunk']}
-      />
-    );
-
-    const { container } = render(arrayInput);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+  .suggestion-button {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+  }
+}

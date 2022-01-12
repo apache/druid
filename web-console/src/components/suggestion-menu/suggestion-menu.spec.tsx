@@ -19,17 +19,22 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { ArrayInput } from './array-input';
+import { SuggestionMenu } from './suggestion-menu';
 
-describe('ArrayInput', () => {
+describe('SuggestionMenu', () => {
   it('matches snapshot', () => {
     const arrayInput = (
-      <ArrayInput
-        values={['apple', 'banana', 'pear']}
-        className="test"
-        placeholder="test"
-        onChange={() => {}}
-        suggestions={['dog', 'cat', 'skunk']}
+      <SuggestionMenu
+        suggestions={[
+          'dog',
+          'cat',
+          'skunk',
+          {
+            group: 'Fruit',
+            suggestions: ['lemon', 'apple'],
+          },
+        ]}
+        onSuggest={() => {}}
       />
     );
 
