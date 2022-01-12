@@ -41,12 +41,12 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.type',
     label: 'Partitioning type',
     type: 'string',
-    suggestions: ['dynamic', 'hashed', 'single_dim'],
+    suggestions: ['dynamic', 'hashed', 'range'],
     info: (
       <p>
         For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on the
-        hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a single
-        dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
+        hash of dimensions in each row) or <Code>range</Code> (based on several dimensions). For
+        best-effort rollup, you should use <Code>dynamic</Code>.
       </p>
     ),
   },

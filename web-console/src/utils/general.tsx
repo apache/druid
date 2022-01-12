@@ -429,6 +429,28 @@ export function moveElement<T>(items: readonly T[], fromIndex: number, toIndex: 
   }
 }
 
+export function moveToIndex<T>(
+  items: readonly T[],
+  itemToIndex: (item: T, i: number) => number,
+): T[] {
+  const frontItems: { item: T; index: number }[] = [];
+  const otherItems: T[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const index = itemToIndex(item, i);
+    if (index >= 0) {
+      frontItems.push({ item, index });
+    } else {
+      otherItems.push(item);
+    }
+  }
+
+  return frontItems
+    .sort((a, b) => a.index - b.index)
+    .map(d => d.item)
+    .concat(otherItems);
+}
+
 export function stringifyValue(value: unknown): string {
   switch (typeof value) {
     case 'object':
