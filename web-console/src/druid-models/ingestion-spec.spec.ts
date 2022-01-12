@@ -28,7 +28,7 @@ import {
 } from './ingestion-spec';
 
 describe('ingestion-spec', () => {
-  it('upgrades / downgrades task spec', () => {
+  it('upgrades / downgrades task spec 1', () => {
     const oldTaskSpec = {
       type: 'index_parallel',
       spec: {
@@ -36,7 +36,7 @@ describe('ingestion-spec', () => {
           type: 'index_parallel',
           firehose: {
             type: 'http',
-            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+            uris: ['https://website.com/wikipedia.json.gz'],
           },
         },
         tuningConfig: {
@@ -157,7 +157,46 @@ describe('ingestion-spec', () => {
           },
           inputSource: {
             type: 'http',
-            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+            uris: ['https://website.com/wikipedia.json.gz'],
+          },
+          type: 'index_parallel',
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+      },
+      type: 'index_parallel',
+    });
+  });
+
+  it('upgrades / downgrades task spec (without parser)', () => {
+    const oldTaskSpec = {
+      type: 'index_parallel',
+      ioConfig: {
+        type: 'index_parallel',
+        firehose: { type: 'http', uris: ['https://website.com/wikipedia.json.gz'] },
+      },
+      tuningConfig: { type: 'index_parallel' },
+      dataSchema: {
+        dataSource: 'new-data-source',
+        granularitySpec: { type: 'uniform', segmentGranularity: 'DAY', queryGranularity: 'HOUR' },
+      },
+    };
+
+    expect(upgradeSpec(oldTaskSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'new-data-source',
+          granularitySpec: {
+            queryGranularity: 'HOUR',
+            segmentGranularity: 'DAY',
+            type: 'uniform',
+          },
+        },
+        ioConfig: {
+          inputSource: {
+            type: 'http',
+            uris: ['https://website.com/wikipedia.json.gz'],
           },
           type: 'index_parallel',
         },
@@ -364,7 +403,7 @@ describe('spec utils', () => {
         type: 'index_parallel',
         inputSource: {
           type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
         inputFormat: {
           type: 'json',
@@ -439,7 +478,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
@@ -490,7 +529,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",

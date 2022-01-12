@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.column.TypesTest;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -52,7 +53,10 @@ public class ParserTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setup()
   {
-    Types.registerStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypesTest.PairObjectByteStrategy());
+    TypeStrategies.registerComplex(
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        new TypeStrategiesTest.NullableLongPairTypeStrategy()
+    );
   }
 
   @Test
@@ -341,18 +345,27 @@ public class ParserTest extends InitializedNullHandlingTest
     );
 
     // complex types too
-    TypesTest.NullableLongPair l1 = new TypesTest.NullableLongPair(1L, 2L);
-    TypesTest.NullableLongPair l2 = new TypesTest.NullableLongPair(2L, 3L);
-    ObjectByteStrategy byteStrategy = Types.getStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName());
+    TypeStrategiesTest.NullableLongPair l1 = new TypeStrategiesTest.NullableLongPair(1L, 2L);
+    TypeStrategiesTest.NullableLongPair l2 = new TypeStrategiesTest.NullableLongPair(2L, 3L);
+    TypeStrategy byteStrategy = TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy();
+    final byte[] b1 = new byte[byteStrategy.estimateSizeBytes(l1)];
+    final byte[] b2 = new byte[byteStrategy.estimateSizeBytes(l2)];
+    ByteBuffer bb1 = ByteBuffer.wrap(b1);
+    ByteBuffer bb2 = ByteBuffer.wrap(b2);
+    int w1 = byteStrategy.write(bb1, l1, b1.length);
+    int w2 = byteStrategy.write(bb2, l2, b2.length);
+
+    Assert.assertTrue(w1 > 0);
+    Assert.assertTrue(w2 > 0);
     String l1String = StringUtils.format(
         "complex_decode_base64('%s', '%s')",
-        TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
-        StringUtils.encodeBase64String(byteStrategy.toBytes(l1))
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        StringUtils.encodeBase64String(b1)
     );
     String l2String = StringUtils.format(
         "complex_decode_base64('%s', '%s')",
-        TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
-        StringUtils.encodeBase64String(byteStrategy.toBytes(l2))
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        StringUtils.encodeBase64String(b2)
     );
     validateConstantExpression(
         l1String,

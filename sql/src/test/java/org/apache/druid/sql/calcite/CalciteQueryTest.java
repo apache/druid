@@ -3911,12 +3911,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new CountAggregatorFactory("a0"),
                       new LongMaxAggregatorFactory("a1", "cnt")
                   ))
-                  .context(QUERY_CONTEXT_DEFAULT)
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
         ),
-        ImmutableList.of(
-            new Object[]{0L, NullHandling.sqlCompatible() ? null : Long.MIN_VALUE}
-        )
+        ImmutableList.of()
     );
   }
 
@@ -13373,6 +13371,113 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .threshold(1)
                              .build()),
         ImmutableList.of()
+    );
+  }
+
+  // When optimization in Grouping#applyProject is applied, and it reduces a Group By query to a timeseries, we
+  // want it to return empty bucket if no row matches
+  @Test
+  public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension() throws Exception
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT 'A' from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY 'foobar'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(
+                      and(
+                          selector("m1", "50", null),
+                          selector("dim1", "wat", null)
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .postAggregators(
+                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil())
+                  )
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+
+
+    // dim1 is not getting reduced to 'wat' in this case in Calcite (ProjectMergeRule is not getting applied),
+    // therefore the query is not optimized to a timeseries query
+    testQuery(
+        "SELECT 'A' from foo WHERE dim1 = 'wat' GROUP BY dim1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            "foo"
+                        )
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                        .setDimFilter(selector("dim1", "wat", null))
+                        .setPostAggregatorSpecs(
+                            ImmutableList.of(
+                                new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil())
+                            )
+                        )
+
+                        .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMutlipleConstantDimensions() throws Exception
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(
+                      and(
+                          selector("m1", "50", null),
+                          selector("dim1", "wat", null)
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .postAggregators(
+                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
+                      new ExpressionPostAggregator("p1", "'wat'", null, ExprMacroTable.nil())
+                  )
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+
+    // Sanity test, that even when dimensions are reduced, but should produce a valid result (i.e. when filters are
+    // correct, then they should
+    testQuery(
+        "SELECT 'A', dim1 from foo WHERE m1 = 2.0 AND dim1 = '10.1' GROUP BY dim1",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .filters(
+                      and(
+                          selector("m1", "2.0", null),
+                          selector("dim1", "10.1", null)
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .postAggregators(
+                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
+                      new ExpressionPostAggregator("p1", "'10.1'", null, ExprMacroTable.nil())
+                  )
+                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{"A", "10.1"})
     );
   }
 }
