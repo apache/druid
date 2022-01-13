@@ -931,6 +931,10 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
+    // grouping col cannot be type array
+    if (dimensionSpec.getOutputType().isArray()) {
+      return null;
+    }
     final OrderByColumnSpec limitColumn;
     if (sorting.getOrderBys().isEmpty()) {
       limitColumn = new OrderByColumnSpec(

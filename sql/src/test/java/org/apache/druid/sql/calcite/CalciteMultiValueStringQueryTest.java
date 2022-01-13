@@ -1368,6 +1368,62 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testMultiValueToArrayGroupAsArrayWithSingleValueDimIsNotConvertedToTopN() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    // Test for method {@link org.apache.druid.sql.calcite.rel.DruidQuery.toTopNQuery()} so that it does not convert
+    // group by on array to topn
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC limit 10",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim1\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            10
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(""), 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueToArrayMoreArgs() throws Exception
   {
     testQueryThrows(
@@ -1396,29 +1452,25 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim3,'c')) FROM druid.numfoo",
-        exception -> {
-          exception.expect(RuntimeException.class);
-        }
+        exception -> exception.expect(RuntimeException.class)
     );
   }
+
   @Test
   public void testMultiValueToArrayArgsWithSingleDimFunc() throws Exception
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
-        exception -> {
-          exception.expect(RuntimeException.class);
-        }
+        exception -> exception.expect(RuntimeException.class)
     );
   }
+
   @Test
   public void testMultiValueToArrayArgsWithConstant() throws Exception
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
-        exception -> {
-          exception.expect(RuntimeException.class);
-        }
+        exception -> exception.expect(RuntimeException.class)
     );
   }
 
@@ -1427,9 +1479,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
-        exception -> {
-          exception.expect(RuntimeException.class);
-        }
+        exception -> exception.expect(RuntimeException.class)
     );
   }
 }
