@@ -81,6 +81,7 @@
     "d3-selection": "^1.4.0",
     "druid-query-toolkit": "^0.14.6",
     "file-saver": "^2.0.2",
+    "follow-redirects": "^1.14.7",
     "fontsource-open-sans": "^3.0.9",
     "has-own-prop": "^2.0.0",
     "hjson": "^3.2.1",
