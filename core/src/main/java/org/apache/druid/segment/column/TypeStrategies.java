@@ -466,7 +466,7 @@ public class TypeStrategies
           remaining = 0;
         } else {
           sizeBytes += written;
-          remaining -= sizeBytes;
+          remaining -= written;
         }
       }
       return extraNeeded < 0 ? extraNeeded : sizeBytes;
