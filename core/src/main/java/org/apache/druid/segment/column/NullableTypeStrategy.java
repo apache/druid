@@ -92,20 +92,27 @@ public final class NullableTypeStrategy<T> implements Comparator<T>
   public T read(ByteBuffer buffer, int offset)
   {
     final int oldPosition = buffer.position();
-    buffer.position(offset);
-    T value = read(buffer);
-    buffer.position(oldPosition);
-    return value;
+    try {
+      buffer.position(offset);
+      T value = read(buffer);
+      return value;
+    }
+    finally {
+      buffer.position(oldPosition);
+    }
   }
 
 
   public int write(ByteBuffer buffer, int offset, @Nullable T value, int maxSizeBytes)
   {
     final int oldPosition = buffer.position();
-    buffer.position(offset);
-    final int size = write(buffer, value, maxSizeBytes);
-    buffer.position(oldPosition);
-    return size;
+    try {
+      buffer.position(offset);
+      return write(buffer, value, maxSizeBytes);
+    }
+    finally {
+      buffer.position(oldPosition);
+    }
   }
 
   @Override
