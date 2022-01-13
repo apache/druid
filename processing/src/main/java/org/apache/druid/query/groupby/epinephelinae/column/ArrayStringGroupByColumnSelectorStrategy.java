@@ -159,7 +159,14 @@ public class ArrayStringGroupByColumnSelectorStrategy
       for (int i = 0; i < size; i++) {
         intRepresentation[i] = addToIndexedDictionary(((String[]) object)[i]);
       }
-    } else {
+    } else if (object instanceof Object[]) {
+      final int size = ((Object[]) object).length;
+      intRepresentation = new int[size];
+      for (int i = 0; i < size; i++) {
+        intRepresentation[i] = addToIndexedDictionary((String) ((Object[]) object)[i]);
+      }
+    }
+    else {
       throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
     }
 

@@ -757,17 +757,13 @@ public class RowBasedGrouperHelper
             case STRING:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> columnSelector.isNull()
-                            ? null
-                            : DimensionHandlerUtils.convertToComparableStringArray(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.convertToComparableStringArray(columnSelector.getObject());
             case FLOAT:
             case LONG:
             case DOUBLE:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> columnSelector.isNull()
-                            ? null
-                            : DimensionHandlerUtils.convertToList(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.convertToList(columnSelector.getObject());
             default:
               throw new IAE(
                   "Cannot create query type helper from invalid type [%s]",

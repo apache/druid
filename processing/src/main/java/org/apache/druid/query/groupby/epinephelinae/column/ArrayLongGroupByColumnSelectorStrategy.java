@@ -27,6 +27,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ArrayLongGroupByColumnSelectorStrategy extends ArrayGroupByColumnSelectorStrategy<Long>
 {
@@ -58,6 +59,10 @@ public class ArrayLongGroupByColumnSelectorStrategy extends ArrayGroupByColumnSe
       return addToIndexedDictionary((List<Long>) object);
     } else if (object instanceof Long[]) {
       return addToIndexedDictionary(Arrays.asList((Long[]) object));
+    } else if (object instanceof Object[]) {
+      return addToIndexedDictionary(Arrays.stream(((Object[]) (object)))
+                                          .map(a -> (Long) a)
+                                          .collect(Collectors.toList()));
     } else {
       throw new ISE("Found unknowm type %s in ColumnValueSelector.", object.getClass().toString());
     }
