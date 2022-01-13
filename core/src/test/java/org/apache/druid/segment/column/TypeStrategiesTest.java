@@ -501,7 +501,7 @@ public class TypeStrategiesTest
     String filler = "AAAAAAAAAA";
     // test runs at offset 10, and 5 bytes for array null byte and size int, so
     int size = (int) Math.floor(
-        (double) (buffer.capacity() - 5)  / (double) ColumnType.STRING.getNullableStrategy().estimateSizeBytes(filler)
+        (double) (buffer.capacity() - 5) / (double) ColumnType.STRING.getNullableStrategy().estimateSizeBytes(filler)
     );
     Object[] filler_array = new Object[size];
     Arrays.fill(filler_array, filler);
@@ -565,7 +565,7 @@ public class TypeStrategiesTest
     Assert.assertNotEquals(0, expectedLength);
 
     // basic tests at some position and offset
-    assertArrayStrategy(strategy,value, maxSize, 10);
+    assertArrayStrategy(strategy, value, maxSize, 10);
 
     buffer.position(0);
 
