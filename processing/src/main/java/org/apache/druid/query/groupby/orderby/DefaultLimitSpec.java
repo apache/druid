@@ -61,6 +61,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -384,9 +385,15 @@ public class DefaultLimitSpec implements LimitSpec
           //noinspection unchecked
           nextOrdering = metricOrdering(columnIndex, aggregatorsMap.get(columnName).getComparator());
         } else if (dimensionsMap.containsKey(columnName)) {
+          Optional<DimensionSpec> dimensionSpec = dimensions.stream()
+                                                            .filter(ds -> ds.getOutputName().equals(columnName))
+                                                            .findFirst();
+          if (!dimensionSpec.isPresent()) {
+            throw new ISE("Could not find the dimension spec for ordering column %s", columnName);
+          }
           nextOrdering = dimensionOrdering(
               columnIndex,
-              dimensions.get(columnIndex).getOutputType(),
+              dimensionSpec.get().getOutputType(),
               columnSpec.getDimensionComparator()
           );
         }
