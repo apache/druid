@@ -17,6 +17,7 @@ branches:
   only:
   - master
   - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+  - spark_druid_connector
 
 language: java
 
@@ -94,7 +95,7 @@ jobs:
         - sudo apt-get update && sudo apt-get install python3 python3-pip python3-setuptools -y
         - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
         - pip3 install wheel  # install wheel first explicitly
-        - pip3 install pyyaml
+        - pip3 install pyyaml==5.4.1
       script:
         - >
           ${MVN} apache-rat:check -Prat --fail-at-end
@@ -323,7 +324,12 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) other modules test"
       env:
-        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests'
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!spark'
+      after_failure:
+        - ls -alh
+        - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/
+        - ls -alh /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/
+        - for d in /home/travis/build/apache/druid/extensions-core/kafka-extraction-namespace/target/surefire-reports/*.txt; do echo $d; cat $d; done
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"
@@ -347,6 +353,24 @@ jobs:
 
     - <<: *test_other_modules_sqlcompat
       name: "(openjdk15) other modules test (SQL Compatibility)"
+      stage: Tests - phase 2
+      jdk: openjdk15
+
+    # There's no need for separate sql compatibility tests since null handling isn't controlled by a command-line flag
+    # Instead, the spark module unit tests test both variations of null handling themselves.
+    - &test_spark_module
+      <<: *test_processing_module # Using the processing module settings for now
+      name: "(openjdk8) spark module test"
+      env:
+        - MAVEN_PROJECTS='spark'
+
+    - <<: *test_spark_module
+      name: "(openjdk11) spark module test"
+      stage: Tests - phase 2
+      jdk: openjdk11
+
+    - <<: *test_spark_module
+      name: "(openjdk15) spark module test"
       stage: Tests - phase 2
       jdk: openjdk15
 

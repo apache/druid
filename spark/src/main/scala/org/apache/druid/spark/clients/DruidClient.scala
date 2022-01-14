@@ -78,6 +78,9 @@ class DruidClient(
     */
   def getSchema(dataSource: String, intervals: Option[List[Interval]]): Map[String, (String, Boolean)] = {
     val queryInterval = intervals.getOrElse(DefaultSegmentMetadataInterval)
+    logInfo(
+      s"Creating schema for $dataSource over intervals ${queryInterval.map(_.toString).mkString("[", ", ", "]")}.")
+
     val body = Druids.newSegmentMetadataQueryBuilder()
       .dataSource(dataSource)
       .intervals(queryInterval.asJava)
@@ -87,6 +90,7 @@ class DruidClient(
         "timeout" -> Int.box(timeoutWaitMilliseconds)
       ).asJava)
       .build()
+
     val response = sendRequestWithRetry(
       druidBaseQueryURL(hostAndPort), numRetries, Option(MAPPER.writeValueAsBytes(body))
     )
@@ -102,7 +106,8 @@ class DruidClient(
     if (segments.size() > 1) {
       throw new ISE("Merged segment metadata response had more than one row!")
     }
-    log.debug(segments.asScala.map(_.toString).mkString("SegmentAnalysis: [", ", ", "]"))
+    logDebug(segments.asScala.map(_.toString).mkString("SegmentAnalysis: [", ", ", "]"))
+
     /*
      * If a dimension has multiple types within the spanned interval, the resulting column
      * analysis will have the type "STRING" and be an error message. We abuse that here to infer
@@ -111,7 +116,7 @@ class DruidClient(
     val columns = segments.asScala.head.getColumns.asScala.toMap
     columns.foreach{ case(key, column) =>
       if (column.isError) {
-        log.warn(s"Multiple column types found for dimension $key in interval" +
+        logWarn(s"Multiple column types found for dimension $key in interval" +
           s" ${queryInterval.mkString("[", ", ", "]")}! Falling back to STRING type")
       }
     }
@@ -140,7 +145,7 @@ class DruidClient(
     } catch {
       case e: Exception =>
         if (retryCount > 0) {
-          logInfo(s"Got exception: ${e.getMessage}, retrying ...")
+          logInfo(s"Encountered an exception: ${e.getMessage}; retrying request...")
           Thread.sleep(retryWaitSeconds * 1000)
           sendRequestWithRetry(url, retryCount - 1, content)
         } else {
@@ -159,14 +164,14 @@ class DruidClient(
       ).get
       if (response.getStatus == HttpResponseStatus.TEMPORARY_REDIRECT) {
         val newUrl = response.getResponse.headers().get("Location")
-        logInfo(s"Got a redirect, new location: $newUrl")
+        logInfo(s"Redirected, new location: $newUrl")
         response = httpClient.go(
           buildRequest(newUrl, content), new StringFullResponseHandler(StringUtils.UTF8_CHARSET)
         ).get
       }
       if (!(response.getStatus == HttpResponseStatus.OK)) {
         throw new ISE(
-          s"Error getting response for %s, status[%s] content[%s]",
+          s"Error getting response for %s, status [%s] content [%s]",
           url,
           response.getStatus,
           response.getContent

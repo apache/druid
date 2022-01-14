@@ -77,7 +77,6 @@ public class KafkaLookupExtractorFactoryTest
       NamespaceExtractionCacheManager.class);
   private final CacheHandler cacheHandler = PowerMock.createStrictMock(CacheHandler.class);
 
-
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 

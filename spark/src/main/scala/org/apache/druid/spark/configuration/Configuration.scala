@@ -205,5 +205,7 @@ object Configuration {
     StringUtils.toLowerCase(paths.mkString(Configuration.SEPARATOR))
   }
 
+  val EMPTY_CONF: Configuration = Configuration(Map[String, String]())
+
   private val SEPARATOR = "."
 }

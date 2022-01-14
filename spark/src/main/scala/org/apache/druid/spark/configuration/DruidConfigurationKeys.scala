@@ -19,7 +19,26 @@
 
 package org.apache.druid.spark.configuration
 
+import org.apache.spark.sql.sources.v2.DataSourceOptions
+
 object DruidConfigurationKeys {
+  // Shadowing DataSourceOptions.TABLE_KEY here so other classes won't need unnecessary imports
+  val tableKey: String = DataSourceOptions.TABLE_KEY
+
+  // Metadata Client Configs
+  val metadataPrefix: String = "metadata"
+  val metadataDbTypeKey: String = "dbType"
+  val metadataHostKey: String = "host"
+  val metadataPortKey: String = "port"
+  val metadataConnectUriKey: String = "connectUri"
+  val metadataUserKey: String = "user"
+  val metadataPasswordKey: String = "password"
+  val metadataDbcpPropertiesKey: String = "dbcpProperties"
+  val metadataBaseNameKey: String = "baseName"
+  private[spark] val metadataHostDefaultKey: (String, String) = (metadataHostKey, "localhost")
+  private[spark] val metadataPortDefaultKey: (String, Int) = (metadataPortKey, 1527)
+  private[spark] val metadataBaseNameDefaultKey: (String, String) = (metadataBaseNameKey, "druid")
+
   // Druid Client Configs
   val brokerPrefix: String = "broker"
   val brokerHostKey: String = "host"
@@ -32,4 +51,79 @@ object DruidConfigurationKeys {
   private[spark] val numRetriesDefaultKey: (String, Int) = (numRetriesKey, 5)
   private[spark] val retryWaitSecondsDefaultKey: (String, Int) = (retryWaitSecondsKey, 5)
   private[spark] val timeoutMillisecondsDefaultKey: (String, Int) = (timeoutMillisecondsKey, 300000)
+
+  // Common configs
+  val useCompactSketchesKey: String = "useCompactSketches"
+  val useDefaultValueForNull: String = "useDefaultValueForNull"
+  private[spark] val useCompactSketchesDefaultKey: (String, Boolean) = (useCompactSketchesKey, false)
+  private[spark] val useDefaultValueForNullDefaultKey: (String, Boolean) = (useDefaultValueForNull, true)
+
+  // Reader Configs
+  val readerPrefix: String = "reader"
+  val segmentsKey: String = "segments"
+  val vectorizeKey: String = "vectorize" // Experimental key!
+  val batchSizeKey: String = "batchSize"
+  val useSparkConfForDeepStorageKey: String = "useClusterConfForDeepStorage"
+  val allowIncompletePartitionsKey: String = "allowIncompletePartitions"
+  val timestampColumnKey: String = "timestampColumn"
+  val timestampFormatKey: String = "timestampFormat"
+  private[spark] val vectorizeDefaultKey: (String, Boolean) = (vectorizeKey, false)
+  private[spark] val batchSizeDefaultKey: (String, Int) = (batchSizeKey, 512)
+  private[spark] val useSparkConfForDeepStorageDefaultKey: (String, Boolean) = (useSparkConfForDeepStorageKey, false)
+  private[spark] val allowIncompletePartitionsDefaultKey: (String, Boolean) = (allowIncompletePartitionsKey, false)
+  private[spark] val timestampColumnDefaultReaderKey: (String, String) = (timestampColumnKey, "__time")
+  private[spark] val timestampFormatDefaultReaderKey: (String, String) = (timestampFormatKey, "millis")
+
+
+  val deepStorageTypeKey: String = "deepStorageType"
+  private[spark] val deepStorageTypeDefaultKey: (String, String) = (deepStorageTypeKey, "local")
+
+  // Common Deep Storage Configs
+  val storageDirectoryKey: String = "storageDirectory"
+  val bucketKey: String = "bucket"
+  val maxListingLengthKey: String = "maxListingLength"
+  val prefixKey: String = "prefix"
+  val protocolKey: String = "protocol"
+
+  // Local Deep Storage Configs
+  val localDeepStorageTypeKey: String = "local"
+  val localStorageDirectoryKey: String = "storageDirectory"
+
+  // HDFS Deep Storage Configs
+  val hdfsDeepStorageTypeKey: String = "hdfs"
+  val hdfsHadoopConfKey: String = "hadoopConf" // Base64-encoded serialized Configuration
+
+  // S3 Deep Storage Configs
+  val s3DeepStorageTypeKey: String = "s3"
+  val s3BaseKeyKey: String = "baseKey"
+  val s3DisableAclKey: String = "disableAcl"
+  val s3UseS3ASchemaKey: String = "useS3aSchema"
+  val s3AccessKeyKey: String = "accessKey"
+  val s3SecretKeyKey: String = "secretKey"
+  val s3FileSessionCredentialsKey: String = "fileSessionCredentials"
+  val s3ProxyPrefix: String = "proxy"
+  val s3ProxyHostKey: String = "host"
+  val s3ProxyPortKey: String = "port"
+  val s3ProxyUsernameKey: String = "username"
+  val s3ProxyPasswordKey: String = "password"
+  val s3EndpointPrefix: String = "endpoint"
+  val s3EndpointUrlKey: String = "url"
+  val s3EndpointSigningRegionKey: String = "signingRegion"
+  val s3DisableChunkedEncodingKey: String = "disableChunkedEncoding"
+  val s3EnablePathStyleAccessKey: String = "enablePathStyleAccess"
+  val s3ForceGlobalBucketAccessEnabledKey: String = "forceGlobalBucketAccessEnabled"
+  val s3ServerSideEncryptionPrefix: String = "sse"
+  val s3ServerSideEncryptionTypeKey: String = "type"
+  val s3ServerSideEncryptionKmsKeyIdKey: String = "keyId"
+  val s3ServerSideEncryptionCustomKeyKey: String = "base64EncodedKey"
+
+  // GCS Deep Storage Configs
+  val googleDeepStorageTypeKey: String = "google"
+
+  // Azure Deep Storage Configs
+  val azureDeepStorageTypeKey: String = "azure"
+  val azureAccountKey: String = "account"
+  val azureKeyKey: String = "key"
+  val azureMaxTriesKey: String = "maxTries"
+  val azureContainerKey: String = "container"
 }
