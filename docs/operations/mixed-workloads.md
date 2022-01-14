@@ -40,7 +40,7 @@ You can profile Druid queries using normal performance profiling techniques such
 The largest bottleneck will likely be in the Broker HTTP threads.
 Mitigate resource contention of the Broker HTTP threads with query laning.
 However, mixed workloads also affect other resources, including processing threads and merge buffers.
-Reduce the burden on these resources by applying service tiering in addition to query laning.
+To reduce the burden on these resources, apply both service tiering and to query laning.
 
 
 ## Query laning
@@ -48,7 +48,7 @@ Reduce the burden on these resources by applying service tiering in addition to 
 When you need to run many concurrent queries having heterogeneous workloads, start with query laning to optimize your query performance.
 Query laning restricts resource usage for less urgent queries to ensure dedicated resources for high priority queries.
 
-Query lanes are analogous to carpool and normal lanes on the freeway. With query laning, Druid sets apart VIP lanes from other general lanes.
+Query lanes are analogous to carpool and normal lanes on the freeway. With query laning, Druid sets apart prioritized lanes from other general lanes.
 Druid restricts low priority queries to the general lanes and allows high priority queries to run wherever possible, whether in a VIP or general lane.
 
 In Druid, query lanes reserve resources for Broker HTTP threads. Each Druid query requires one Broker thread. The number of threads on a Broker is defined by the `druid.server.http.numThreads` parameter. Broker threads may be occupied by tasks other than queries, such as health checks. You can use query laning to limit the number of HTTP threads designated for resource-intensive queries, leaving other threads available for short-running queries and other tasks.
