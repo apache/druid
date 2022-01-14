@@ -327,17 +327,22 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with DAY segment granularity");
 
       // Since dropExisting is set to true...
-      // The earlier segment with YEAR granularity will be dropped post-compaction
-      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02.
+      // The earlier segment with YEAR granularity will be completely covered, overshadowed, by the
+      // new DAY segments for data and tombstones for days with no data
+      // Hence, we will only have 2013-08-31 to 2013-09-01 and 2013-09-01 to 2013-09-02
+      // plus 363 tombstones
+      final List<String> intervalsAfterYEARCompactionButBeforeDAYCompaction =
+          coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
-      for (String interval : intervalsBeforeCompaction) {
+      for (String interval : intervalsAfterYEARCompactionButBeforeDAYCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(365);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(2, 1000);
+      verifyTombstones(363);
+      verifySegmentsCompacted(365, 1000);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
@@ -513,7 +518,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
-      // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
+      // We will still have one visible segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
+      // and four overshadowed segments
       for (String interval : intervalsBeforeCompaction) {
         for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
@@ -535,22 +541,27 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(expectedIntervalAfterCompaction);
 
       newGranularity = Granularities.MONTH;
-      // Set dropExisting to true
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+      final List<String> intervalsAfterYEARButBeforeMONTHCompaction =
+          coordinator.getSegmentIntervals(fullDatasourceName);
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true);
+      // verify:
       expectedIntervalAfterCompaction = new ArrayList<>();
-      // The previous segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) will be dropped
-      // We will only have one segments with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
-      // and one segments with interval of 2013-10-01/2013-11-01 (compacted with MONTH)
-      for (String interval : intervalsBeforeCompaction) {
+      // The previous segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) will be
+      // completely overshadowed by a combination of tombstones and segments with data.
+      // We will only have one segment with interval of 2013-08-01/2013-09-01 (compacted with MONTH)
+      // and one segment with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
+      // plus ten tombstones for the remaining months, thus expecting 12 intervals...
+      for (String interval : intervalsAfterYEARButBeforeMONTHCompaction) {
         for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(12);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifyTombstones(10);
+      verifySegmentsCompacted(12, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(expectedIntervalAfterCompaction);
     }
   }
@@ -1123,6 +1134,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         new DynamicPartitionsSpec(expectedMaxRowsPerSegment, Long.MAX_VALUE),
         expectedCompactedSegmentCount
     );
+  }
+
+  private void verifyTombstones(int expectedCompactedTombstoneCount)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+    int actualTombstoneCount = 0;
+    for (DataSegment segment : segments) {
+      if (segment.isTombstone()) {
+        actualTombstoneCount++;
+      }
+    }
+    Assert.assertEquals(actualTombstoneCount, expectedCompactedTombstoneCount);
   }
 
   private void verifySegmentsCompacted(PartitionsSpec partitionsSpec, int expectedCompactedSegmentCount)

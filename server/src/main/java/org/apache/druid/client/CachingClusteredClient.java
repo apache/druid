@@ -39,6 +39,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.client.selector.Server;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -86,6 +87,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline.PartitionChunkEntry;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -425,9 +427,31 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
           = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
+
+      // filter out tombstones (this facilitates correct procesing of sub-sequent filtering)
+      // For example time boundary query filtering ... (which does not work with tombstones)
+      List<TimelineObjectHolder<String, ServerSelector>> timelineObjectHolders =
+          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
+      List<TimelineObjectHolder<String, ServerSelector>> holdersNoTombstones = new ArrayList<>();
+      for (TimelineObjectHolder<String, ServerSelector> timelineObjectHolder : timelineObjectHolders) {
+        boolean allEmpty = false;
+        for (ServerSelector ss: timelineObjectHolder.getObject().payloads()) {
+          if (ss.getSegment().isTombstone())   {
+            allEmpty = true;
+          } else {
+            allEmpty = false;
+            break;
+          }
+        }
+        if (!allEmpty) {
+          // This segment is not empty since some of its segments are not tombstones
+          holdersNoTombstones.add(timelineObjectHolder);
+        }
+      }
+      // pass holders w/o tombstones to toolchest:
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
-          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList())
+          holdersNoTombstones
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
