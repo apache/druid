@@ -62,7 +62,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   private final ByteBuffer buffer1 = ByteBuffer.allocate(4);
   private final ByteBuffer buffer2 = ByteBuffer.allocate(4);
 
-  private ArrayGroupByColumnSelectorStrategy strategy;
+  private ArrayNumericGroupByColumnSelectorStrategy strategy;
 
   @Before
   public void setup()

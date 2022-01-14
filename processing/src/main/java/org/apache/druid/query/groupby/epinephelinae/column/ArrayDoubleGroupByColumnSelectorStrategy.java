@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayGroupByColumnSelectorStrategy<Double>
+public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy<Double>
 {
   public ArrayDoubleGroupByColumnSelectorStrategy()
   {

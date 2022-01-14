@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ComparableList;
 
@@ -32,14 +33,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> implements GroupByColumnSelectorStrategy
+public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Comparable> implements GroupByColumnSelectorStrategy
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
   protected final List<List<T>> dictionary;
   protected final Object2IntOpenHashMap<List<T>> reverseDictionary;
 
-  public ArrayGroupByColumnSelectorStrategy()
+  public ArrayNumericGroupByColumnSelectorStrategy()
   {
     dictionary = new ArrayList<>();
     reverseDictionary = new Object2IntOpenHashMap<>();
@@ -47,7 +48,7 @@ public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> i
   }
 
   @VisibleForTesting
-  ArrayGroupByColumnSelectorStrategy(
+  ArrayNumericGroupByColumnSelectorStrategy(
       List<List<T>> dictionary,
       Object2IntOpenHashMap<List<T>> reverseDictionary
   )
@@ -143,6 +144,7 @@ public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> i
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
+    StringComparator comparator = stringComparator == null ? StringComparators.NUMERIC : stringComparator;
     return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
       List<T> lhs = dictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition));
       List<T> rhs = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
@@ -160,7 +162,7 @@ public abstract class ArrayGroupByColumnSelectorStrategy<T extends Comparable> i
           } else if (left == null) {
             cmp = -1;
           } else {
-            cmp = lhs.get(i).compareTo(rhs.get(i));
+            cmp = comparator.compare(String.valueOf(lhs.get(i)), String.valueOf(rhs.get(i)));
           }
           if (cmp == 0) {
             continue;

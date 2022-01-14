@@ -1112,14 +1112,20 @@ public class RowBasedGrouperHelper
             cmp = Comparators.<Comparable>naturalNullsFirst().compare((Comparable) lhs, (Comparable) rhs);
           }
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
-          final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhs);
-          final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhs);
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+          cmp = ComparableStringArray.compareWithComparator(
+              comparator,
+              DimensionHandlerUtils.convertToComparableStringArray(lhs),
+              DimensionHandlerUtils.convertToComparableStringArray(rhs)
+          );
         } else if (fieldType.equals(ColumnType.LONG_ARRAY)
                    || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
-          final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhs);
-          final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhs);
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+
+          cmp = ComparableList.compareWithComparator(
+              comparator,
+              DimensionHandlerUtils.convertToList(lhs),
+              DimensionHandlerUtils.convertToList(rhs)
+          );
+
         } else {
           cmp = comparator.compare(
               DimensionHandlerUtils.convertObjectToString(lhs),
@@ -1415,14 +1421,14 @@ public class RowBasedGrouperHelper
         case ARRAY:
           switch (valueType.getElementType().getType()) {
             case STRING:
-              return new ArrayRowBasedKeySerdeHelper(
+              return new ArrayStringRowBasedKeySerdeHelper(
                   keyBufferPosition,
                   stringComparator
               );
             case LONG:
             case FLOAT:
             case DOUBLE:
-              return new ListRowBasedKeySerdeHelper(keyBufferPosition, stringComparator);
+              return new ArrayNumericRowBasedKeySerdeHelper(keyBufferPosition, stringComparator);
             default:
               throw new IAE("invalid type: %s", valueType);
           }
@@ -1496,57 +1502,25 @@ public class RowBasedGrouperHelper
       }
     }
 
-    private class ListRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    private class ArrayNumericRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
       final BufferComparator bufferComparator;
 
-      public ListRowBasedKeySerdeHelper(
+      public ArrayNumericRowBasedKeySerdeHelper(
           int keyBufferPosition,
           @Nullable StringComparator stringComparator
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        final StringComparator comparator = stringComparator == null
-                                            ? StringComparators.LEXICOGRAPHIC
-                                            : stringComparator;
-
-        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          final ComparableList lhsComparableArray = listDictionary.get(lhsBuffer.getInt(lhsPosition
-                                                                                        + keyBufferPosition));
-          final ComparableList rhsComparableArray = listDictionary.get(rhsBuffer.getInt(rhsPosition
-                                                                                        + keyBufferPosition));
-          if (lhsComparableArray == null && rhsComparableArray == null) {
-            return 0;
-          } else if (lhsComparableArray == null) {
-            return -1;
-          } else if (rhsComparableArray == null) {
-            return 1;
-          }
-
-          List lhs = lhsComparableArray.getDelegate();
-          List rhs = rhsComparableArray.getDelegate();
-
-          int minLength = Math.min(lhs.size(), rhs.size());
-
-          //noinspection ArrayEquality
-          if (lhs == rhs) {
-            return 0;
-          }
-          for (int i = 0; i < minLength; i++) {
-            final int cmp = comparator.compare(String.valueOf(lhs.get(i)), String.valueOf(rhs.get(i)));
-            if (cmp == 0) {
-              continue;
-            }
-            return cmp;
-          }
-          if (lhs.size() == rhs.size()) {
-            return 0;
-          } else if (lhs.size() < rhs.size()) {
-            return -1;
-          }
-          return 1;
-        };
+        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
+            ComparableList.compareWithComparator(
+                stringComparator,
+                listDictionary.get(lhsBuffer.getInt(lhsPosition
+                                                    + keyBufferPosition)),
+                listDictionary.get(rhsBuffer.getInt(rhsPosition
+                                                    + keyBufferPosition))
+            );
       }
 
       @Override
@@ -1581,56 +1555,26 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
     }
-    private class ArrayRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+
+    private class ArrayStringRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       final int keyBufferPosition;
       final BufferComparator bufferComparator;
 
-      ArrayRowBasedKeySerdeHelper(
+      ArrayStringRowBasedKeySerdeHelper(
           int keyBufferPosition,
           @Nullable StringComparator stringComparator
       )
       {
-        final StringComparator comparator = stringComparator == null
-                                            ? StringComparators.LEXICOGRAPHIC
-                                            : stringComparator;
         this.keyBufferPosition = keyBufferPosition;
-        bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          final ComparableStringArray lhsComparableArray = arrayDictionary.get(lhsBuffer.getInt(lhsPosition
-                                                                                                + keyBufferPosition));
-          final ComparableStringArray rhsComparableArray = arrayDictionary.get(rhsBuffer.getInt(rhsPosition
-                                                                                                + keyBufferPosition));
-          if (lhsComparableArray == null && rhsComparableArray == null) {
-            return 0;
-          } else if (lhsComparableArray == null) {
-            return -1;
-          } else if (rhsComparableArray == null) {
-            return 1;
-          }
-
-          String[] lhs = lhsComparableArray.getDelegate();
-          String[] rhs = rhsComparableArray.getDelegate();
-
-          int minLength = Math.min(lhs.length, rhs.length);
-
-          //noinspection ArrayEquality
-          if (lhs == rhs) {
-            return 0;
-          }
-          for (int i = 0; i < minLength; i++) {
-            final int cmp = comparator.compare(lhs[i], rhs[i]);
-            if (cmp == 0) {
-              continue;
-            }
-            return cmp;
-          }
-          if (lhs.length == rhs.length) {
-            return 0;
-          } else if (lhs.length < rhs.length) {
-            return -1;
-          }
-          return 1;
-        };
+        bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
+            ComparableStringArray.compareWithComparator(
+                stringComparator,
+                arrayDictionary.get(lhsBuffer.getInt(lhsPosition
+                                                     + keyBufferPosition)),
+                arrayDictionary.get(rhsBuffer.getInt(rhsPosition
+                                                     + keyBufferPosition))
+            );
       }
 
       @Override

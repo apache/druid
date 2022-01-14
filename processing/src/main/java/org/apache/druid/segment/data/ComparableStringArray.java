@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 
 import java.util.Arrays;
 
@@ -124,5 +126,47 @@ public class ComparableStringArray implements Comparable<ComparableStringArray>
   public String toString()
   {
     return Arrays.toString(delegate);
+  }
+
+
+  public static int compareWithComparator(
+      StringComparator stringComparator,
+      ComparableStringArray lhsComparableArray,
+      ComparableStringArray rhsComparableArray
+  )
+  {
+    final StringComparator comparator = stringComparator == null
+                                        ? StringComparators.LEXICOGRAPHIC
+                                        : stringComparator;
+    if (lhsComparableArray == null && rhsComparableArray == null) {
+      return 0;
+    } else if (lhsComparableArray == null) {
+      return -1;
+    } else if (rhsComparableArray == null) {
+      return 1;
+    }
+
+    String[] lhs = lhsComparableArray.getDelegate();
+    String[] rhs = rhsComparableArray.getDelegate();
+
+    int minLength = Math.min(lhs.length, rhs.length);
+
+    //noinspection ArrayEquality
+    if (lhs == rhs) {
+      return 0;
+    }
+    for (int i = 0; i < minLength; i++) {
+      final int cmp = comparator.compare(lhs[i], rhs[i]);
+      if (cmp == 0) {
+        continue;
+      }
+      return cmp;
+    }
+    if (lhs.length == rhs.length) {
+      return 0;
+    } else if (lhs.length < rhs.length) {
+      return -1;
+    }
+    return 1;
   }
 }
