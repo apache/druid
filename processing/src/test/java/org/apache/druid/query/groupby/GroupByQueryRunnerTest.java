@@ -1573,7 +1573,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("java.lang.String cannot be cast to [Ljava.util.Objects");
+      expectedException.expectMessage("java.lang.String cannot be cast to");
     }
     cannotVectorize();
 
@@ -1615,7 +1615,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("java.lang.Double cannot be cast to [Ljava.util.Objects");
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expectMessage("java.lang.Double cannot be cast to");
     }
 
     cannotVectorize();
@@ -1641,7 +1642,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("java.lang.Double cannot be cast to [Ljava.util.Objects");
+      // cannot add exact class cast message due to discrepancies between various JDK versions
+      expectedException.expectMessage("java.lang.Double cannot be cast to");
     }
 
     cannotVectorize();
@@ -1768,8 +1770,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expectMessage("GroupBy v1 only supports dimensions with an outputType of STRING");
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
+      // cannot add exact class cast message due to discrepancies between various JDK versions
       expectedException.expectMessage(
-          "org.apache.druid.segment.data.ComparableList cannot be cast to [Ljava.util.Objects");
+          "org.apache.druid.segment.data.ComparableList cannot be cast to");
     }
 
     cannotVectorize();
