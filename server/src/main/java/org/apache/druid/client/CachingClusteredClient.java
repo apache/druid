@@ -39,7 +39,6 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.selector.QueryableDruidServer;
-import org.apache.druid.client.selector.Server;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -87,7 +86,6 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline.PartitionChunkEntry;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -435,8 +433,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       List<TimelineObjectHolder<String, ServerSelector>> holdersNoTombstones = new ArrayList<>();
       for (TimelineObjectHolder<String, ServerSelector> timelineObjectHolder : timelineObjectHolders) {
         boolean allEmpty = false;
-        for (ServerSelector ss: timelineObjectHolder.getObject().payloads()) {
-          if (ss.getSegment().isTombstone())   {
+        for (ServerSelector ss : timelineObjectHolder.getObject().payloads()) {
+          if (ss.getSegment().isTombstone()) {
             allEmpty = true;
           } else {
             allEmpty = false;
