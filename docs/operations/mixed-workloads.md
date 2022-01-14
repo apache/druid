@@ -40,7 +40,7 @@ You can profile Druid queries using normal performance profiling techniques such
 The largest bottleneck will likely be in the Broker HTTP threads.
 Mitigate resource contention of the Broker HTTP threads with query laning.
 However, mixed workloads also affect other resources, including processing threads and merge buffers.
-To reduce the burden on these resources, apply both service tiering and to query laning.
+To reduce the burden on these resources, apply both service tiering and query laning.
 
 
 ## Query laning
