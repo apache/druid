@@ -5782,7 +5782,7 @@ name: Scala Library
 license_category: binary
 module: spark
 license_name: Apache License version 2.0
-version: 2.12.12
+version: 2.12.15
 libraries:
   - org.scala-lang: scala-library
   - org.scala-lang: scala-reflect

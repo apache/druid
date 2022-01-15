@@ -281,10 +281,15 @@ SOURCE/JAVA-CORE
 
     This product contains Scala logging and serializable Hadoop configuration utilities adapted from Apache Spark.
       * spark/src/main/scala/org/apache/druid/spark/mixins/Logging
+      * spark/src/main/scala/org/apache/druid/spark/configuration/SerializableHadoopConfiguration
 
     This product contains a Druid client wrapper adapted from Imply Data's druid-hadoop-input-format.
       * spark/src/main/scala/org/apache/druid/spark/clients/DruidClient
       * spark/src/main/scala/org/apache/druid/spark/clients/HttpClientHolder
+
+    This product contains hash partitioning logic for a Spark data frame adapted from MetaMarkets druid-spark-batch project.
+      * spark/src/main/scala/org/apache/druid/spark/partitioners/HashedNumberedSegmentPartitioner
+      * spark/src/main/scala/org/apache/druid/spark/v2/writer/DruidDataWriter
 
 
 MIT License

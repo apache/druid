@@ -21,8 +21,8 @@ package org.apache.druid.spark.v2
 
 import com.google.common.base.{Supplier, Suppliers}
 import org.apache.commons.dbcp2.BasicDataSource
-import org.apache.druid.java.util.common.granularity.GranularityType
 import org.apache.druid.java.util.common.{FileUtils, Intervals, StringUtils}
+import org.apache.druid.java.util.common.granularity.GranularityType
 import org.apache.druid.metadata.{MetadataStorageConnectorConfig, MetadataStorageTablesConfig,
   SQLMetadataConnector}
 import org.apache.druid.spark.MAPPER
@@ -32,14 +32,15 @@ import org.apache.druid.spark.utils.SchemaUtils
 import org.apache.druid.timeline.DataSegment
 import org.apache.druid.timeline.partition.NumberedShardSpec
 import org.apache.spark.TaskContext
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.util.ArrayData
+import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 import org.apache.spark.sql.types.{ArrayType, BinaryType, DoubleType, FloatType, LongType,
   StringType, StructField, StructType}
 import org.apache.spark.sql.vectorized.ColumnarBatch
-import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.unsafe.types.UTF8String
 import org.joda.time.Interval
 import org.skife.jdbi.v2.{DBI, Handle}
@@ -47,8 +48,8 @@ import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException
 
 import java.io.File
 import java.util.{Properties, UUID, List => JList, Map => JMap}
-import scala.collection.JavaConverters.{asScalaIteratorConverter, mapAsJavaMapConverter,
-  seqAsJavaListConverter}
+import scala.collection.JavaConverters.{asScalaIteratorConverter,
+  collectionAsScalaIterableConverter, mapAsJavaMapConverter, seqAsJavaListConverter}
 import scala.collection.mutable.ArrayBuffer
 
 trait DruidDataSourceV2TestUtils {
@@ -158,6 +159,20 @@ trait DruidDataSourceV2TestUtils {
   val metadataClientProps: String => Map[String, String] = (uri: String) => Map[String, String](
     s"${DruidConfigurationKeys.metadataPrefix}.${DruidConfigurationKeys.metadataDbTypeKey}" -> "embedded_derby",
     s"${DruidConfigurationKeys.metadataPrefix}.${DruidConfigurationKeys.metadataConnectUriKey}" -> uri
+  )
+
+  lazy val writerProps: Map[String, String] = Map[String, String](
+    DataSourceOptions.TABLE_KEY -> dataSource,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.versionKey}" -> version,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.storageDirectoryKey}" ->
+      testWorkingStorageDirectory,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.dimensionsKey}" ->
+      dimensions.asScala.mkString(","),
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.metricsKey}" -> metricsSpec,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.writerTimestampColumnKey}" ->
+      timestampColumn,
+    s"${DruidConfigurationKeys.writerPrefix}.${DruidConfigurationKeys.segmentGranularityKey}" ->
+      segmentGranularity
   )
 
   def createTestDb(uri: String): Unit = new DBI(s"$uri;create=true").open().close()

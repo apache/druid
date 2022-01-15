@@ -20,14 +20,16 @@
 package org.apache.druid.spark.v2
 
 import org.apache.druid.java.util.common.StringUtils
-import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys}
-import org.apache.druid.spark.{MAPPER, SparkFunSuite}
+import org.apache.druid.spark.{DruidDataFrameReader, DruidDataFrameWriter}
 import org.apache.druid.spark.mixins.TryWithResources
+import org.apache.druid.spark.model.LocalDeepStorageConfig
+import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.scalatest.matchers.should.Matchers
 
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsJavaMapConverter,
+  seqAsJavaListConverter}
 
 class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
   with DruidDataSourceV2TestUtils with TryWithResources {
@@ -48,15 +50,81 @@ class DruidDataSourceV2Suite extends SparkFunSuite with Matchers
 
     val df = sparkSession
       .read
-      .format("druid")
-      .options(Map(
-        s"${DruidConfigurationKeys.readerPrefix}.${DruidConfigurationKeys.segmentsKey}" -> segmentsString,
-        s"${DruidConfigurationKeys.readerPrefix}.${DruidConfigurationKeys.useSparkConfForDeepStorageKey}" -> "true"
-      ))
+      .segments(segmentsString)
       .schema(schema)
-      .load()
+      .useSparkConfForDeepStorage(true)
+      .druid()
 
     matchDfs(df, expected)
+  }
+
+  test("round trip test") {
+    val sourceDf = sparkSession.createDataFrame(Seq(
+      Row.fromSeq(Seq(1577836800000L, List("dim1"), "1", "1", "2", 1L, 1L, 3L, 4.2, 1.7F, idOneSketch)),
+      Row.fromSeq(Seq(1577851200000L, List("dim1"), "1", "1", "2", 1L, 3L, 1L, 0.2, 0.0F, idOneSketch)),
+      Row.fromSeq(Seq(1577862000000L, List("dim2"), "1", "1", "2", 1L, 4L, 2L, 5.1, 8.9F, idOneSketch)),
+      Row.fromSeq(Seq(1577876400000L, List("dim2"), "2", "1", "2", 1L, 1L, 5L, 8.0, 4.15F, idOneSketch)),
+      Row.fromSeq(Seq(1577962800000L, List("dim1", "dim3"), "2", "3", "7", 1L, 2L, 4L, 11.17, 3.7F, idThreeSketch)),
+      Row.fromSeq(Seq(1577988000000L, List("dim2"), "3", "2", "1", 1L, 1L, 7L, 0.0, 19.0F, idTwoSketch))
+    ).asJava, schema)
+
+    val uri = generateUniqueTestUri()
+    createTestDb(uri)
+    registerEmbeddedDerbySQLConnector()
+
+    sourceDf
+      .write
+      .mode(SaveMode.Overwrite)
+      .dataSource(dataSource)
+      .version(version)
+      .deepStorage(new LocalDeepStorageConfig().storageDirectory(testWorkingStorageDirectory))
+      .dimensions(dimensions.asScala.mkString(","))
+      .metrics(metricsSpec)
+      .timestampColumn(timestampColumn)
+      .segmentGranularity(segmentGranularity)
+      .options( metadataClientProps(uri).asJava)
+      .druid()
+
+    tryWithResources(openDbiToTestDb(uri)) {
+      handle =>
+        val res =
+          handle.createQuery("SELECT DATASOURCE, START, \"end\", PARTITIONED, VERSION, USED FROM druid_segments")
+            .list().asScala.toSeq.map(m => m.values().asScala.map(_.toString).toSeq)
+        val expected = Seq[Seq[String]](
+          Seq(
+            dataSource,
+            "2020-01-01T00:00:00.000Z",
+            "2020-01-02T00:00:00.000Z",
+            "true",
+            version,
+            "true"
+          ), Seq(
+            dataSource,
+            "2020-01-02T00:00:00.000Z",
+            "2020-01-03T00:00:00.000Z",
+            "true",
+            version,
+            "true"
+          )
+        )
+        expected.size should equal(res.size)
+        expected.zipWithIndex.foreach{
+          // The results from the query are stored in an unordered map, so we can't rely on a simple should equal
+          case (s, index) => s should contain theSameElementsAs res(index)
+        }
+    }
+
+    val readDf = sparkSession
+      .read
+      .schema(schema)
+      .dataSource(dataSource)
+      .options(metadataClientProps(uri).asJava)
+      .druid()
+
+    matchDfs(readDf, sourceDf)
+
+    tearDownTestDb(uri)
+    cleanUpWorkingDirectory()
   }
 
   /**

@@ -55,6 +55,8 @@ object DruidConfigurationKeys {
   // Common configs
   val useCompactSketchesKey: String = "useCompactSketches"
   val useDefaultValueForNull: String = "useDefaultValueForNull"
+  val deepStorageTypeKey: String = "deepStorageType"
+  private[spark] val deepStorageTypeDefaultKey: (String, String) = (deepStorageTypeKey, "local")
   private[spark] val useCompactSketchesDefaultKey: (String, Boolean) = (useCompactSketchesKey, false)
   private[spark] val useDefaultValueForNullDefaultKey: (String, Boolean) = (useDefaultValueForNull, true)
 
@@ -65,18 +67,50 @@ object DruidConfigurationKeys {
   val batchSizeKey: String = "batchSize"
   val useSparkConfForDeepStorageKey: String = "useClusterConfForDeepStorage"
   val allowIncompletePartitionsKey: String = "allowIncompletePartitions"
-  val timestampColumnKey: String = "timestampColumn"
-  val timestampFormatKey: String = "timestampFormat"
+  val readerTimestampColumnKey: String = "timestampColumn"
+  val readerTimestampFormatKey: String = "timestampFormat"
   private[spark] val vectorizeDefaultKey: (String, Boolean) = (vectorizeKey, false)
   private[spark] val batchSizeDefaultKey: (String, Int) = (batchSizeKey, 512)
   private[spark] val useSparkConfForDeepStorageDefaultKey: (String, Boolean) = (useSparkConfForDeepStorageKey, false)
   private[spark] val allowIncompletePartitionsDefaultKey: (String, Boolean) = (allowIncompletePartitionsKey, false)
-  private[spark] val timestampColumnDefaultReaderKey: (String, String) = (timestampColumnKey, "__time")
-  private[spark] val timestampFormatDefaultReaderKey: (String, String) = (timestampFormatKey, "millis")
+  private[spark] val timestampColumnDefaultReaderKey: (String, String) = (readerTimestampColumnKey, "__time")
+  private[spark] val timestampFormatDefaultReaderKey: (String, String) = (readerTimestampFormatKey, "millis")
 
+  // Writer Configs
+  val writerPrefix: String = "writer"
+  val versionKey: String = "version"
+  val dimensionsKey: String = "dimensions"
+  val metricsKey: String = "metrics"
+  val excludedDimensionsKey: String = "excludedDimensions"
+  val segmentGranularityKey: String = "segmentGranularity"
+  val queryGranularityKey: String = "queryGranularity"
+  val partitionMapKey: String = "partitionMap"
+  val writerTimestampColumnKey: String = "timestampColumn"
+  val writerTimestampFormatKey: String = "timestampFormat"
+  val shardSpecTypeKey: String = "shardSpecType"
+  val rollUpSegmentsKey: String = "rollUpSegments"
+  val rowsPerPersistKey: String = "rowsPerPersist"
+  val rationalizeSegmentsKey: String = "rationalizeSegments"
+  private[spark] val dimensionsDefaultKey: (String, String) = (dimensionsKey, "[]")
+  private[spark] val metricsDefaultKey: (String, String) = (metricsKey, "[]")
+  private[spark] val segmentGranularityDefaultKey: (String, String) = (segmentGranularityKey, "ALL")
+  private[spark] val queryGranularityDefaultKey: (String, String) = (queryGranularityKey, "None")
+  private[spark] val timestampColumnDefaultWriterKey: (String, String) = (writerTimestampColumnKey, "ts")
+  private[spark] val timestampFormatDefaultWriterKey: (String, String) = (writerTimestampFormatKey, "auto")
+  private[spark] val shardSpecTypeDefaultKey: (String, String) = (shardSpecTypeKey, "numbered")
+  private[spark] val rollUpSegmentsDefaultKey: (String, Boolean) = (rollUpSegmentsKey, true)
+  private[spark] val rowsPerPersistDefaultKey: (String, Int) = (rowsPerPersistKey, 2000000)
+  private[spark] val rationalizeSegmentsDefaultKey: (String, Boolean) = (rationalizeSegmentsKey, true)
 
-  val deepStorageTypeKey: String = "deepStorageType"
-  private[spark] val deepStorageTypeDefaultKey: (String, String) = (deepStorageTypeKey, "local")
+  // IndexSpec Configs for Writer
+  val indexSpecPrefix: String = "indexSpec"
+  val bitmapTypeKey: String = "bitmap"
+  val compressRunOnSerializationKey: String = "compressRunOnSerialization"
+  val dimensionCompressionKey: String = "dimensionCompression"
+  val metricCompressionKey: String = "metricCompression"
+  val longEncodingKey: String = "longEncoding"
+  private[spark] val bitmapTypeDefaultKey: (String, String) = (bitmapTypeKey, "roaring")
+  private[spark] val compressRunOnSerializationDefaultKey: (String, Boolean) = (compressRunOnSerializationKey, true)
 
   // Common Deep Storage Configs
   val storageDirectoryKey: String = "storageDirectory"
