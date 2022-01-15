@@ -19,12 +19,19 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 /**
@@ -35,22 +42,29 @@ import java.util.Objects;
  */
 public class DiscoveryDruidNode
 {
+  private static final Logger LOG = new Logger(DiscoveryDruidNode.class);
+  private static final TypeReference<Map<String, Object>> RAW_DRUID_SERVICE_TYPE =
+      new TypeReference<Map<String, Object>>()
+      {
+      };
+
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
 
   /**
-   * Other metadata associated with the node e.g.
-   * if it's a historical node then lookup information, segment loading capacity etc.
+   * Map of service name -> DruidServices.
+   * This map has only the DruidServices that is understandable.
+   * It means, if there is some DruidService not understandable found while converting rawServices to services,
+   * that DruidService will be ignored and not stored in this map.
    *
    * @see DruidNodeDiscoveryProvider#SERVICE_TO_NODE_TYPES
    */
   private final Map<String, DruidService> services = new HashMap<>();
 
-  @JsonCreator
   public DiscoveryDruidNode(
-      @JsonProperty("druidNode") DruidNode druidNode,
-      @JsonProperty("nodeType") NodeRole nodeRole,
-      @JsonProperty("services") Map<String, DruidService> services
+      DruidNode druidNode,
+      NodeRole nodeRole,
+      Map<String, DruidService> services
   )
   {
     this.druidNode = druidNode;
@@ -59,6 +73,32 @@ public class DiscoveryDruidNode
     if (services != null && !services.isEmpty()) {
       this.services.putAll(services);
     }
+  }
+
+  @JsonCreator
+  private static DiscoveryDruidNode fromJson(
+      @JsonProperty("druidNode") DruidNode druidNode,
+      @JsonProperty("nodeType") NodeRole nodeRole,
+      @JsonProperty("services") Map<String, Map<String, Object>> rawServices,
+      @JacksonInject ObjectMapper jsonMapper
+  )
+  {
+    Map<String, DruidService> services = new HashMap<>();
+    if (rawServices != null && !rawServices.isEmpty()) {
+      for (Entry<String, Map<String, Object>> entry : rawServices.entrySet()) {
+        try {
+          services.put(entry.getKey(), jsonMapper.convertValue(entry.getValue(), DruidService.class));
+        }
+        catch (IllegalArgumentException e) {
+          if (e.getCause().getClass() == InvalidTypeIdException.class) {
+            LOG.info("Ingore unparseable DruidService: %s", entry.getValue());
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+    return new DiscoveryDruidNode(druidNode, nodeRole, services);
   }
 
   @JsonProperty
