@@ -964,13 +964,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         useDefault ? ImmutableList.of(
             new Object[]{ImmutableList.of(0L), 4L},
-            new Object[]{ImmutableList.of(325323L), 1L},
-            new Object[]{ImmutableList.of(7L), 1L}
+            new Object[]{ImmutableList.of(7L), 1L},
+            new Object[]{ImmutableList.of(325323L), 1L}
         ) : ImmutableList.of(
             new Object[]{NULL_LIST, 3L},
             new Object[]{ImmutableList.of(0L), 1L},
-            new Object[]{ImmutableList.of(325323L), 1L},
-            new Object[]{ImmutableList.of(7L), 1L}
+            new Object[]{ImmutableList.of(7L), 1L},
+            new Object[]{ImmutableList.of(325323L), 1L}
         )
     );
   }
