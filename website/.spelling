@@ -1894,6 +1894,7 @@ protobuf
 Golang
 multiValueHandling
  - ../docs/operations/spark.md
+AggregatorFactoryRegistry
 SaveMode
 SaveModes
 partitioners

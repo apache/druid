@@ -131,6 +131,7 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
 
     // Having killed all segments, we should have deleted the directory structure up to the data source directory
     logInfo(tempDir.list().toSeq.mkString(", "))
+    logInfo(tempDir.listFiles().toSeq.map(_.list().toSeq.mkString(", ")).mkString("; "))
     tempDir.list().toSeq shouldBe 'isEmpty
 
     FileUtils.deleteDirectory(tempDir)
