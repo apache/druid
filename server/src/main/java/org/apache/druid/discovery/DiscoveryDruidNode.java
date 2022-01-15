@@ -21,11 +21,9 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
@@ -89,12 +87,8 @@ public class DiscoveryDruidNode
         try {
           services.put(entry.getKey(), jsonMapper.convertValue(entry.getValue(), DruidService.class));
         }
-        catch (IllegalArgumentException e) {
-          if (e.getCause().getClass() == InvalidTypeIdException.class) {
-            LOG.info("Ingore unparseable DruidService: %s", entry.getValue());
-          } else {
-            throw e;
-          }
+        catch (RuntimeException e) {
+          LOG.warn("Ingore unparseable DruidService: %s", entry.getValue());
         }
       }
     }
