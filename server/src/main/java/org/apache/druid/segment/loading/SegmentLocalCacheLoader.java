@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -66,115 +67,8 @@ public class SegmentLocalCacheLoader implements SegmentLoader
   {
     Segment segmentObject;
     if (segment.isTombstone()) {
-
       log.debug("Segment [%s] is a tombstone!", segment);
-
-      // Create a no-op queryable index that indicates that it was created from a tombstone...then the
-      // server manager will use the information to short-circuit and create a no-op query runner for
-      // it since it has no data:
-      final QueryableIndex queryableIndex =
-          new QueryableIndex()
-          {
-            @Override
-            public Interval getDataInterval()
-            {
-              return segment.getInterval();
-            }
-
-            @Override
-            public int getNumRows()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public Indexed<String> getAvailableDimensions()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public BitmapFactory getBitmapFactoryForDimensions()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Nullable
-            @Override
-            public Metadata getMetadata()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public Map<String, DimensionHandler> getDimensionHandlers()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void close()
-            {
-
-            }
-
-            @Override
-            public List<String> getColumnNames()
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            @Nullable
-            @Override
-            public ColumnHolder getColumnHolder(String columnName)
-            {
-              throw new UnsupportedOperationException();
-            }
-
-            // mark this index to indicate that it comes from a tombstone:
-            @Override
-            public boolean isFromTombstone()
-            {
-              return true;
-            }
-          };
-
-      final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
-
-      segmentObject = new Segment()
-      {
-        @Override
-        public SegmentId getId()
-        {
-          return segment.getId();
-        }
-
-        @Override
-        public Interval getDataInterval()
-        {
-          return asQueryableIndex().getDataInterval();
-        }
-
-        @Nullable
-        @Override
-        public QueryableIndex asQueryableIndex()
-        {
-          return queryableIndex;
-        }
-
-        @Override
-        public StorageAdapter asStorageAdapter()
-        {
-          return storageAdapter;
-        }
-
-        @Override
-        public void close()
-        {
-
-        }
-      };
-
+      segmentObject = segmentForTombstone(segment);
     } else {
       final File segmentFiles = cacheManager.getSegmentFiles(segment);
       File factoryJson = new File(segmentFiles, "factory.json");
@@ -204,4 +98,115 @@ public class SegmentLocalCacheLoader implements SegmentLoader
     cacheManager.cleanup(segment);
   }
 
+  public static Segment segmentForTombstone(DataSegment tombstone)
+  {
+    Preconditions.checkArgument(tombstone.isTombstone());
+
+    // Create a no-op queryable index that indicates that it was created from a tombstone...then the
+    // server manager will use the information to short-circuit and create a no-op query runner for
+    // it since it has no data:
+    final QueryableIndex queryableIndex =
+        new QueryableIndex()
+        {
+          @Override
+          public Interval getDataInterval()
+          {
+            return tombstone.getInterval();
+          }
+
+          @Override
+          public int getNumRows()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public Indexed<String> getAvailableDimensions()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public BitmapFactory getBitmapFactoryForDimensions()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Nullable
+          @Override
+          public Metadata getMetadata()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public Map<String, DimensionHandler> getDimensionHandlers()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public void close()
+          {
+
+          }
+
+          @Override
+          public List<String> getColumnNames()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Nullable
+          @Override
+          public ColumnHolder getColumnHolder(String columnName)
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          // mark this index to indicate that it comes from a tombstone:
+          @Override
+          public boolean isFromTombstone()
+          {
+            return true;
+          }
+        };
+
+    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+
+    Segment segmentObject = new Segment()
+    {
+      @Override
+      public SegmentId getId()
+      {
+        return tombstone.getId();
+      }
+
+      @Override
+      public Interval getDataInterval()
+      {
+        return asQueryableIndex().getDataInterval();
+      }
+
+      @Nullable
+      @Override
+      public QueryableIndex asQueryableIndex()
+      {
+        return queryableIndex;
+      }
+
+      @Override
+      public StorageAdapter asStorageAdapter()
+      {
+        return storageAdapter;
+      }
+
+      @Override
+      public void close()
+      {
+
+      }
+    };
+    return segmentObject;
+  }
 }

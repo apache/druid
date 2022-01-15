@@ -34,7 +34,7 @@ public class SegmentLocalCacheLoaderTest
   SegmentLocalCacheLoader segmentLocalCacheLoader;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     segmentLocalCacheLoader = new SegmentLocalCacheLoader(null, null, null);
   }
