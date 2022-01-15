@@ -1918,6 +1918,9 @@ LoadSpecs
 ComplexTypeRegistry
 SegmentWriterRegistry
 SegmentReaderRegistry
+ShardSpec
+ShardSpecs
+ShardSpecRegistry
 SQLConnectorRegistry
 IllegalArgumentException
 keyId

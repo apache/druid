@@ -22,6 +22,7 @@ package org.apache.druid.spark.v2.writer
 import org.apache.druid.java.util.common.{FileUtils, StringUtils}
 import org.apache.druid.spark.clients.DruidMetadataClient
 import org.apache.druid.spark.configuration.Configuration
+import org.apache.druid.spark.mixins.Logging
 import org.apache.druid.spark.v2.DruidDataSourceV2TestUtils
 import org.apache.druid.spark.{MAPPER, SparkFunSuite}
 import org.apache.druid.timeline.DataSegment
@@ -32,7 +33,7 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 
 class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with BeforeAndAfterEach
-  with DruidDataSourceV2TestUtils {
+  with DruidDataSourceV2TestUtils with Logging {
   var uri: String = _
 
   test("commit should correctly record segment data in the metadata database") {
@@ -110,6 +111,8 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
   test("abort should delete segments") {
     val tempDir = FileUtils.createTempDir()
     org.apache.commons.io.FileUtils.copyDirectory(segmentsDir, tempDir, false)
+    logInfo(tempDir.getAbsolutePath)
+    logInfo(tempDir.list().toSeq.mkString(", "))
 
     // Segments should have been copied, starting from the root directory named for the data source
     tempDir.list() should contain theSameElementsInOrderAs Seq(dataSource)
@@ -127,6 +130,7 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
     druidDataSourceWriter.abort(Array(commitMessages.asInstanceOf[WriterCommitMessage]))
 
     // Having killed all segments, we should have deleted the directory structure up to the data source directory
+    logInfo(tempDir.list().toSeq.mkString(", "))
     tempDir.list().toSeq shouldBe 'isEmpty
 
     FileUtils.deleteDirectory(tempDir)
