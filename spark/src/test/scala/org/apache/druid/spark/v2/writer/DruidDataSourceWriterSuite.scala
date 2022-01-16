@@ -32,6 +32,8 @@ import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 
+import java.io.File
+
 class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with BeforeAndAfterEach
   with DruidDataSourceV2TestUtils with Logging {
   var uri: String = _
@@ -132,9 +134,14 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
     // Having killed all segments, we should have deleted the directory structure up to the data source directory
     logInfo(tempDir.list().toSeq.mkString(", "))
     logInfo(tempDir.listFiles().toSeq.map(_.list().toSeq.mkString(", ")).mkString("; "))
+    //
     tempDir.list().toSeq shouldBe 'isEmpty
 
     FileUtils.deleteDirectory(tempDir)
+  }
+
+  private def walkDir(file: File): String = {
+    s"${file.getAbsolutePath}: ${file.listFiles().toSeq.map(walkDir).mkString(", ")}"
   }
 
   override def beforeEach(): Unit = {
