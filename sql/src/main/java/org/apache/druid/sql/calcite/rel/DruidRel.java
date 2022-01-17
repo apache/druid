@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
@@ -71,19 +70,20 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   /**
    * Convert this DruidRel to a DruidQuery. This must be an inexpensive operation, since it is done often throughout
    * query planning.
-   * <p>
+   *
    * This method must not return null.
    *
    * @param finalizeAggregations true if this query should include explicit finalization for all of its
    *                             aggregators, where required. Useful for subqueries where Druid's native query layer
    *                             does not do this automatically.
+   *
    * @throws CannotBuildQueryException
    */
   public abstract DruidQuery toDruidQuery(boolean finalizeAggregations);
 
   /**
    * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation.
-   * <p>
+   *
    * This method must not return null.
    *
    * @throws CannotBuildQueryException

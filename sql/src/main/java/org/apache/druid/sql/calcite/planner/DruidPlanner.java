@@ -741,8 +741,7 @@ public class DruidPlanner implements Closeable
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable SqlInsert insert,
-        SqlNode query,
-        @Nullable Map<String, String> contextMap
+        SqlNode query
     )
     {
       this.explain = explain;
@@ -755,7 +754,6 @@ public class DruidPlanner implements Closeable
       SqlExplain explain = null;
       SqlInsert insert = null;
       SqlNode query = node;
-      Map<String, String> contextMap = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -779,7 +777,7 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, insert, query, contextMap);
+      return new ParsedNodes(explain, insert, query);
     }
 
     @Nullable

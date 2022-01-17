@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,7 +47,7 @@ import java.util.stream.Collectors;
  * but rather, it represents the concatenation of a series of native queries in the SQL layer. Therefore,
  * {@link #getPartialDruidQuery()} returns null, and this rel cannot be built on top of. It must be the outer rel in a
  * query plan.
- * <p>
+ *
  * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a {@link UnionDataSource}.
  * In the future we expect that {@link UnionDataSource} will gain the ability to union query datasources together, and
  * then this rel could be replaced by {@link DruidUnionDataSourceRel}.
