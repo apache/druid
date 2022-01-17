@@ -5643,7 +5643,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.14.4
+version: 1.14.7
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---

@@ -213,24 +213,25 @@ public class DruidPlanner implements Closeable
         // Not a CannotPlanningException, rethrow without trying with bindable
         throw e;
       }
-      if (parsed.getInsertNode() != null) {
-        // Cannot INSERT with BINDABLE.
-        throw e;
-      }
-      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-      try {
-        return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
-      }
-      catch (Exception e2) {
-        e.addSuppressed(e2);
-        Logger logger = log;
-        if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
-          logger = log.noStackTrace();
+
+      // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
+      // any error, if it is plannable by the bindable convention
+      if (parsed.getInsertNode() == null) {
+        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
+        try {
+          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
         }
-        String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-        logger.warn(e, errorMessage);
-        throw new UnsupportedSQLQueryException(errorMessage);
+        catch (Exception e2) {
+          e.addSuppressed(e2);
+        }
       }
+      Logger logger = log;
+      if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
+        logger = log.noStackTrace();
+      }
+      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
+      logger.warn(e, errorMessage);
+      throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
 

@@ -1419,28 +1419,33 @@ export function getSecondaryPartitionRelatedFormFields(
           label: 'Partitioning type',
           type: 'string',
           required: true,
-          suggestions: ['dynamic', 'hashed', 'single_dim'],
+          suggestions: ['dynamic', 'hashed', 'range'],
           info: (
             <p>
               For perfect rollup, you should use either <Code>hashed</Code> (partitioning based on
-              the hash of dimensions in each row) or <Code>single_dim</Code> (based on ranges of a
-              single dimension). For best-effort rollup, you should use <Code>dynamic</Code>.
+              the hash of dimensions in each row) or <Code>range</Code> (based on several
+              dimensions). For best-effort rollup, you should use <Code>dynamic</Code>.
             </p>
           ),
           adjustment: s => {
-            if (
-              deepGet(s, 'spec.tuningConfig.partitionsSpec.type') !== 'single_dim' ||
-              !Array.isArray(dimensionSuggestions) ||
-              !dimensionSuggestions.length
-            ) {
-              return s;
+            if (Array.isArray(dimensionSuggestions) && dimensionSuggestions.length) {
+              const partitionsSpecType = deepGet(s, 'spec.tuningConfig.partitionsSpec.type');
+              if (partitionsSpecType === 'range') {
+                return deepSet(s, 'spec.tuningConfig.partitionsSpec.partitionDimensions', [
+                  dimensionSuggestions[0],
+                ]);
+              }
+
+              if (partitionsSpecType === 'single_dim') {
+                return deepSet(
+                  s,
+                  'spec.tuningConfig.partitionsSpec.partitionDimension',
+                  dimensionSuggestions[0],
+                );
+              }
             }
 
-            return deepSet(
-              s,
-              'spec.tuningConfig.partitionsSpec.partitionDimension',
-              dimensionSuggestions[0],
-            );
+            return s;
           },
         },
         // partitionsSpec type: dynamic
@@ -1508,9 +1513,19 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'string-array',
           placeholder: '(all dimensions)',
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'hashed',
-          info: <p>The dimensions to partition on. Leave blank to select all dimensions.</p>,
+          info: (
+            <>
+              <p>The dimensions to partition on.</p>
+              <p>Leave blank to select all dimensions.</p>
+              <p>
+                If you want to partition on specific dimensions then you would likely be better off
+                using <Code>range</Code> partitioning instead.
+              </p>
+            </>
+          ),
+          hideInMore: true,
         },
-        // partitionsSpec type: single_dim
+        // partitionsSpec type: single_dim, range
         {
           name: 'spec.tuningConfig.partitionsSpec.partitionDimension',
           type: 'string',
@@ -1535,6 +1550,15 @@ export function getSecondaryPartitionRelatedFormFields(
           type: 'string-array',
           defined: s => deepGet(s, 'spec.tuningConfig.partitionsSpec.type') === 'range',
           required: true,
+          suggestions: dimensionSuggestions
+            ? s => {
+                const existingDimensions =
+                  deepGet(s, 'spec.tuningConfig.partitionsSpec.partitionDimensions') || [];
+                return dimensionSuggestions.filter(
+                  dimensionSuggestion => !existingDimensions.includes(dimensionSuggestion),
+                );
+              }
+            : undefined,
           info: <p>The dimensions to partition on.</p>,
         },
         {

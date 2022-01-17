@@ -32,6 +32,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class TypeStrategiesTest
 {
@@ -469,7 +470,7 @@ public class TypeStrategiesTest
     // string arrays
     strategy = new TypeStrategies.ArrayTypeStrategy(ColumnType.STRING_ARRAY);
     final String[] someStringArray = new String[]{"hello", "hi", null, "hey"};
-    final Object[] someObjectStringArray = new String[]{"hello", "hi", null, "hey"};
+    final Object[] someObjectStringArray = new Object[]{"hello", "hi", null, "hey"};
 
     assertArrayStrategy(strategy, empty);
     assertArrayStrategy(strategy, someStringArray);
@@ -491,6 +492,20 @@ public class TypeStrategiesTest
 
     assertArrayStrategy(strategy, empty);
     assertArrayStrategy(strategy, nester);
+  }
+
+  @Test
+  public void testArrayTypeStrategyCloseToTheLimit()
+  {
+    TypeStrategy strategy = new TypeStrategies.ArrayTypeStrategy(ColumnType.STRING_ARRAY);
+    String filler = "AAAAAAAAAA";
+    // test runs at offset 10, and 5 bytes for array null byte and size int, so
+    int size = (int) Math.floor(
+        (double) (buffer.capacity() - 5) / (double) ColumnType.STRING.getNullableStrategy().estimateSizeBytes(filler)
+    );
+    Object[] filler_array = new Object[size];
+    Arrays.fill(filler_array, filler);
+    assertArrayStrategy(strategy, filler_array, buffer.capacity(), 0);
   }
 
   private <T> void assertStrategy(TypeStrategy strategy, @Nullable T value)
@@ -549,8 +564,34 @@ public class TypeStrategiesTest
     final int expectedLength = strategy.estimateSizeBytes(value);
     Assert.assertNotEquals(0, expectedLength);
 
+    // basic tests at some position and offset
+    assertArrayStrategy(strategy, value, maxSize, 10);
+
+    buffer.position(0);
+
+    // test buffer offset when with different position
+    NullableTypeStrategy nullableTypeStrategy = new NullableTypeStrategy(strategy);
+    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, maxSize));
+    Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer, 1024));
+    Assert.assertEquals(0, buffer.position());
+
+    // test buffer offset nullable write read value
+    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, maxSize));
+    Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer, 1024));
+    Assert.assertEquals(0, buffer.position());
+
+    // test buffer offset nullable write read null
+    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, maxSize));
+    Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
+    Assert.assertEquals(0, buffer.position());
+  }
+
+  private void assertArrayStrategy(TypeStrategy strategy, @Nullable Object[] value, int maxSize, int offset)
+  {
+    final int expectedLength = strategy.estimateSizeBytes(value);
+    Assert.assertNotEquals(0, expectedLength);
+
     // test buffer
-    int offset = 10;
     buffer.position(offset);
     Assert.assertEquals(expectedLength, strategy.write(buffer, value, maxSize));
     Assert.assertEquals(expectedLength, buffer.position() - offset);
@@ -574,23 +615,6 @@ public class TypeStrategiesTest
     buffer.position(offset);
     Assert.assertNull(nullableTypeStrategy.read(buffer));
     Assert.assertEquals(1, buffer.position() - offset);
-
-    buffer.position(0);
-
-    // test buffer offset
-    Assert.assertEquals(expectedLength, strategy.write(buffer, 1024, value, maxSize));
-    Assert.assertArrayEquals(value, (Object[]) strategy.read(buffer, 1024));
-    Assert.assertEquals(0, buffer.position());
-
-    // test buffer offset nullable write read value
-    Assert.assertEquals(1 + expectedLength, nullableTypeStrategy.write(buffer, 1024, value, maxSize));
-    Assert.assertArrayEquals(value, (Object[]) nullableTypeStrategy.read(buffer, 1024));
-    Assert.assertEquals(0, buffer.position());
-
-    // test buffer offset nullable write read null
-    Assert.assertEquals(1, nullableTypeStrategy.write(buffer, 1024, null, maxSize));
-    Assert.assertNull(nullableTypeStrategy.read(buffer, 1024));
-    Assert.assertEquals(0, buffer.position());
   }
 
   public static class NullableLongPair extends Pair<Long, Long> implements Comparable<NullableLongPair>
