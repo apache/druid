@@ -1,8 +1,8 @@
 SqlNode DruidSqlInsert() :
 {
- org.apache.calcite.sql.SqlNode insertNode;
- org.apache.calcite.sql.SqlNode partitionBy = null;
- org.apache.calcite.sql.SqlNode clusterBy = null;
+ SqlNode insertNode;
+ SqlNode partitionBy = null;
+ SqlNodeList clusterBy = null;
 }
 {
     insertNode = SqlInsert()
@@ -12,16 +12,35 @@ SqlNode DruidSqlInsert() :
     ]
     [
       <CLUSTER> <BY>
-      clusterBy = StringLiteral()
+      clusterBy = ClusterItems()
     ]
     {
   if(partitionBy == null && clusterBy == null) {
     return insertNode;
   }
-  if(!(insertNode instanceof org.apache.calcite.sql.SqlInsert)) {
+  if(!(insertNode instanceof SqlInsert)) {
     return insertNode;
   }
-  org.apache.calcite.sql.SqlInsert sqlInsert = (org.apache.calcite.sql.SqlInsert) insertNode;
-  return new org.apache.druid.sql.calcite.parser.DruidSqlInsert(sqlInsert, partitionBy, clusterBy);
+  SqlInsert sqlInsert = (SqlInsert) insertNode;
+  return new DruidSqlInsert(sqlInsert, partitionBy, clusterBy);
 }
+}
+
+SqlNodeList ClusterItems() :
+{
+  List<SqlNode> list;
+  final Span s;
+  SqlNode e;
+}
+{
+  e = OrderItem() {
+    s = span();
+    list = startList(e);
+  }
+  (
+    LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
+  )*
+  {
+    return new SqlNodeList(list, s.addAll(list).pos());
+  }
 }

@@ -56,6 +56,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -74,11 +75,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -762,6 +765,14 @@ public class DruidPlanner implements Closeable
       if (query.getKind() == SqlKind.INSERT) {
         insert = (SqlInsert) query;
         query = insert.getSource();
+      }
+
+      if (insert instanceof DruidSqlInsert) {
+        DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
+        if (druidSqlInsert.getClusterBy() != null) {
+          // OFFSET and FETCH would be NULL when specifying CLUSTER BY in the query
+          query = new SqlOrderBy(query.getParserPosition(), query, druidSqlInsert.getClusterBy(), null, null);
+        }
       }
 
       if (!query.isA(SqlKind.QUERY)) {

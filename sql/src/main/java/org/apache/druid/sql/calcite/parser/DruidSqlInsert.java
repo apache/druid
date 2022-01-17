@@ -41,13 +41,13 @@ public class DruidSqlInsert extends SqlInsert
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private SqlNode partitionBy;
-  private SqlNode clusterBy;
+  private SqlNodeList clusterBy;
 
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlNode partitionBy,
-      @Nullable SqlNode clusterBy
+      @Nullable SqlNodeList clusterBy
   )
   {
     super(
@@ -61,6 +61,11 @@ public class DruidSqlInsert extends SqlInsert
     this.clusterBy = clusterBy;
   }
 
+  public SqlNodeList getClusterBy()
+  {
+    return clusterBy;
+  }
+
   @Override
   public SqlOperator getOperator()
   {
@@ -71,12 +76,12 @@ public class DruidSqlInsert extends SqlInsert
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     super.unparse(writer, leftPrec, rightPrec);
-    if(partitionBy != null) {
+    if (partitionBy != null) {
       writer.keyword("PARTITION");
       writer.keyword("BY");
       writer.keyword(SqlLiteral.stringValue(partitionBy));
     }
-    if(clusterBy != null) {
+    if (clusterBy != null) {
       writer.keyword("CLUSTER");
       writer.keyword("BY");
       writer.keyword(SqlLiteral.stringValue(clusterBy));

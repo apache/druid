@@ -41,7 +41,9 @@ data: {
     # List of additional classes and packages to import.
     # Example. "org.apache.calcite.sql.*", "java.util.List".
     imports: [
-      "org.apache.calcite.sql.SqlSelect"
+      "org.apache.calcite.sql.SqlNode"
+      "org.apache.calcite.sql.SqlInsert"
+      "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
