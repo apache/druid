@@ -1314,6 +1314,8 @@
                     </signaturesFiles>
                     <excludes>
                       <exclude>**/SomeAvroDatum.class</exclude>
+                      <exclude>**/DruidSqlParserImpl.class</exclude>
+                      <exclude>**/SimpleCharStream.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
