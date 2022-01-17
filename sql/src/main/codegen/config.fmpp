@@ -47,8 +47,7 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
-      "TEST"
-      "CONTEXT"
+      "CLUSTER"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -367,8 +366,7 @@ data: {
     # Return type of method implementation should be 'SqlNode'.
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
-      "Test()"
-      "DruidSqlSelect()"
+      "DruidSqlInsert()"
     ]
 
     # List of methods for parsing custom literals.
@@ -418,8 +416,7 @@ data: {
     # given as part of "statementParserMethods", "literalParserMethods" or
     # "dataTypeParserMethods".
     implementationFiles: [
-      "test.ftl",
-      "select.ftl"
+      "insert.ftl"
     ]
 
     includePosixOperators: false
