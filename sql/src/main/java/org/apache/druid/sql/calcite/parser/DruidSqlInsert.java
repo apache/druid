@@ -65,6 +65,15 @@ public class DruidSqlInsert extends SqlInsert
     return clusterBy;
   }
 
+  @Nullable
+  public String getPartitionBy()
+  {
+    if (partitionBy == null) {
+      return null;
+    }
+    return SqlLiteral.unchain(partitionBy).toValue();
+  }
+
   @Nonnull
   @Override
   public SqlOperator getOperator()

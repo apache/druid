@@ -763,13 +763,16 @@ public class DruidPlanner implements Closeable
       if (query.getKind() == SqlKind.INSERT) {
         insert = (SqlInsert) query;
         query = insert.getSource();
-      }
 
-      if (insert instanceof DruidSqlInsert) {
-        DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
-        if (druidSqlInsert.getClusterBy() != null) {
-          // OFFSET and FETCH would be NULL when specifying CLUSTER BY in the query
-          query = new SqlOrderBy(query.getParserPosition(), query, druidSqlInsert.getClusterBy(), null, null);
+        if (insert instanceof DruidSqlInsert) {
+          DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
+          if (druidSqlInsert.getClusterBy() != null) {
+            // OFFSET and FETCH would be NULL when specifying CLUSTER BY in the query
+            if (query instanceof SqlOrderBy) {
+              throw new ValidationException("Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query");
+            }
+            query = new SqlOrderBy(query.getParserPosition(), query, druidSqlInsert.getClusterBy(), null, null);
+          }
         }
       }
 
