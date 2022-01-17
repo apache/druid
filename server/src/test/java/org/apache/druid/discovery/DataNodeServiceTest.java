@@ -47,4 +47,89 @@ public class DataNodeServiceTest
 
     Assert.assertEquals(expected, actual);
   }
+
+  @Test
+  public void testDeserializeWithDeprecatedServerTypeProperty() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\" : \"dataNodeService\",\n"
+                  + "  \"tier\" : \"tier\",\n"
+                  + "  \"maxSize\" : 100,\n"
+                  + "  \"type\" : \"historical\",\n"
+                  + "  \"priority\" : 1\n"
+                  + "}";
+
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    DruidService actual = mapper.readValue(
+        json,
+        DruidService.class
+    );
+
+    Assert.assertEquals(
+        new DataNodeService(
+            "tier",
+            100,
+            ServerType.HISTORICAL,
+            1
+        ),
+        actual
+    );
+  }
+
+  @Test
+  public void testDeserializeWithServerTypeProperty() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\" : \"dataNodeService\",\n"
+                  + "  \"tier\" : \"tier\",\n"
+                  + "  \"maxSize\" : 100,\n"
+                  + "  \"serverType\" : \"historical\",\n"
+                  + "  \"priority\" : 1\n"
+                  + "}";
+
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    DruidService actual = mapper.readValue(
+        json,
+        DruidService.class
+    );
+
+    Assert.assertEquals(
+        new DataNodeService(
+            "tier",
+            100,
+            ServerType.HISTORICAL,
+            1
+        ),
+        actual
+    );
+  }
+
+  @Test
+  public void testSerdeDeserializeWithBothDeprecatedAndNewServerTypes() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"type\" : \"dataNodeService\",\n"
+                  + "  \"tier\" : \"tier\",\n"
+                  + "  \"maxSize\" : 100,\n"
+                  + "  \"type\" : \"historical\",\n"
+                  + "  \"serverType\" : \"historical\",\n"
+                  + "  \"priority\" : 1\n"
+                  + "}";
+
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    DruidService actual = mapper.readValue(
+        json,
+        DruidService.class
+    );
+
+    Assert.assertEquals(
+        new DataNodeService(
+            "tier",
+            100,
+            ServerType.HISTORICAL,
+            1
+        ),
+        actual
+    );
+  }
 }
