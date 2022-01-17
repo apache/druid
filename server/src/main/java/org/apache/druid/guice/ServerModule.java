@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.jackson.DruidServiceSerializerModifier;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.jackson.ToStringObjectPairListDeserializer;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -59,7 +60,9 @@ public class ServerModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new SimpleModule().addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer())
+        new SimpleModule()
+            .addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer())
+            .setSerializerModifier(new DruidServiceSerializerModifier())
     );
   }
 }

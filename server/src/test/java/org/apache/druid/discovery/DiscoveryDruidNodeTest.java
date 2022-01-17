@@ -22,13 +22,11 @@ package org.apache.druid.discovery;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.guice.ServerModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.jackson.StringObjectPairList;
-import org.apache.druid.jackson.ToStringObjectPairListDeserializer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
@@ -101,7 +99,7 @@ public class DiscoveryDruidNodeTest
   }
 
   @Test
-  public void testSerdeWithDataNodeService() throws JsonProcessingException
+  public void testSerdeWithDataNodeAndLookupNodeServices() throws JsonProcessingException
   {
     final ObjectMapper mapper = createObjectMapper(ImmutableList.of());
     final DiscoveryDruidNode node = new DiscoveryDruidNode(
@@ -117,8 +115,10 @@ public class DiscoveryDruidNodeTest
         ),
         NodeRole.BROKER,
         ImmutableMap.of(
-            "dataNodeService",
-            new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0)
+            DataNodeService.DISCOVERY_SERVICE_KEY,
+            new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0),
+            LookupNodeService.DISCOVERY_SERVICE_KEY,
+            new LookupNodeService("lookup_tier")
         )
     );
     final String json = mapper.writeValueAsString(node);
@@ -319,7 +319,7 @@ public class DiscoveryDruidNodeTest
   private static ObjectMapper createObjectMapper(Collection<Class<? extends DruidService>> druidServicesToRegister)
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.registerModule(new SimpleModule().addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer()));
+    mapper.registerModules(new ServerModule().getJacksonModules());
     //noinspection unchecked,rawtypes
     mapper.registerSubtypes((Collection) druidServicesToRegister);
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));

@@ -19,8 +19,9 @@
 
 package org.apache.druid.discovery;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +30,8 @@ import org.junit.Test;
  */
 public class DataNodeServiceTest
 {
+  private final ObjectMapper mapper = DruidServiceTestUtils.newJsonMapper();
+
   @Test
   public void testSerde() throws Exception
   {
@@ -39,7 +42,6 @@ public class DataNodeServiceTest
         1
     );
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     DruidService actual = mapper.readValue(
         mapper.writeValueAsString(expected),
         DruidService.class
@@ -59,7 +61,6 @@ public class DataNodeServiceTest
                   + "  \"priority\" : 1\n"
                   + "}";
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     DruidService actual = mapper.readValue(
         json,
         DruidService.class
@@ -87,7 +88,6 @@ public class DataNodeServiceTest
                   + "  \"priority\" : 1\n"
                   + "}";
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     DruidService actual = mapper.readValue(
         json,
         DruidService.class
@@ -116,7 +116,6 @@ public class DataNodeServiceTest
                   + "  \"priority\" : 1\n"
                   + "}";
 
-    ObjectMapper mapper = TestHelper.makeJsonMapper();
     DruidService actual = mapper.readValue(
         json,
         DruidService.class
@@ -131,5 +130,18 @@ public class DataNodeServiceTest
         ),
         actual
     );
+  }
+
+  @Test
+  public void testSerializeSubtypeKeyShouldAppearFirstInJson() throws JsonProcessingException
+  {
+    final DataNodeService dataNodeService = new DataNodeService(
+        "tier",
+        100,
+        ServerType.HISTORICAL,
+        1
+    );
+    final String json = mapper.writeValueAsString(dataNodeService);
+    Assert.assertTrue(json.startsWith(StringUtils.format("{\"type\":\"%s\"", DataNodeService.DISCOVERY_SERVICE_KEY)));
   }
 }

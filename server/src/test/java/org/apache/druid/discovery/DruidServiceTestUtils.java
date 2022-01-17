@@ -20,29 +20,19 @@
 package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.guice.ServerModule;
+import org.apache.druid.jackson.DefaultObjectMapper;
 
-/**
- */
-public class WorkerNodeServiceTest
+public final class DruidServiceTestUtils
 {
-  @Test
-  public void testSerde() throws Exception
+  public static ObjectMapper newJsonMapper()
   {
-    DruidService expected = new WorkerNodeService(
-        "1.1.1.1",
-        100,
-        "v1",
-        "c1"
-    );
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerModules(new ServerModule().getJacksonModules());
+    return mapper;
+  }
 
-    ObjectMapper mapper = DruidServiceTestUtils.newJsonMapper();
-    DruidService actual = mapper.readValue(
-        mapper.writeValueAsString(expected),
-        DruidService.class
-    );
-
-    Assert.assertEquals(expected, actual);
+  private DruidServiceTestUtils()
+  {
   }
 }

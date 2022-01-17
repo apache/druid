@@ -97,18 +97,18 @@ public class DiscoveryDruidNode
   }
 
   /**
-   * A serialized {@link DataNodeService} can have duplicate "type" keys
-   * as {@link DruidService} uses the same name of property as the subtype key
-   * while DataNodeService has a property of the same name for {@link org.apache.druid.server.coordination.ServerType}.
-   * As a result, if we directly deserialize a JSON to a map, we will lose one of the "type" property.
-   * This is definitely a bug of DataNodeService, but things seems to happen to be working
-   * because the subtype key seems to always appear first in the serialized JSON
-   * and Jackson always picks up the first appeared "type" key as the subtype key.
-   * To fix this, we should renmae one of those duplicate keys, but, since the rename will break compatibility,
-   * DataNodeService still has the deprecated "type" property.
+   * A JSON of a {@link DruidService} is deserialized to a Map and then converted to aDruidService
+   * to ignore any "unknown" DruidServices to the current node. However, directly deserializing a JSON to a Map
+   * is problematic for {@link DataNodeService} as it has duplicate "type" keys in its serialized form.
+   * Because of the duplicate key, if we directly deserialize a JSON to a Map, we will lose one of the "type" property.
+   * This is definitely a bug of DataNodeService, but, since renaming one of those duplicate keys will
+   * break compatibility, DataNodeService still has the deprecated "type" property.
+   * See the Javadoc of DataNodeService for more details.
    *
-   * This function catches such duplicate keys and rename one of them properly, so that we don't lose any properties.
-   * This method can be removed together when we entirely remove the "type" property from DataNodeService.
+   * This function catches such duplicate keys and rewrites the deprecated "type" to "serverType",
+   * so that we don't lose any properties.
+   *
+   * This method can be removed together when we entirely remove the deprecated "type" property from DataNodeService.
    */
   @Deprecated
   private static Map<String, Object> toMap(List<NonnullPair<String, Object>> pairs)

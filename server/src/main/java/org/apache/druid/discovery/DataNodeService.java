@@ -31,6 +31,31 @@ import java.util.Objects;
 
 /**
  * Metadata announced by any node that serves segments.
+ *
+ * Note for JSON serialization and deserialization.
+ *
+ * This class has a bug that it has the "type" property which is the duplicate name
+ * with the subtype key of {@link DruidService}. It seems to happen to work
+ * if the "type" subtype key appears first in the serialized JSON since
+ * Jackson uses the first "type" property as the subtype key.
+ * To always enforce this property order, this class does not use the {@link JsonProperty} annotation for serialization,
+ * but uses {@link org.apache.druid.jackson.DruidServiceSerializer}.
+ * Since this is a hacky-way to not break compatibility, a new "serverType" field is added
+ * to replace the deprecated "type" field. Once we completely remove the "type" field from this class,
+ * we can remove DruidServiceSerializer as well.
+ *
+ * The set of properties to serialize is hard-coded in DruidServiceSerializer.
+ * If you want to add a new field in this class before we remove the "type" field,
+ * you must add a proper handling of that new field in DruidServiceSerializer as well.
+ *
+ * For deserialization, DruidServices are deserialized as a part of {@link DiscoveryDruidNode}.
+ * To handle the bug of the duplicate "type" key, DiscoveryDruidNode first deserializes
+ * the JSON to {@link org.apache.druid.jackson.StringObjectPairList},
+ * handles the duplicate "type" keys in the StringObjectPairList,
+ * and then finally converts it to a DruidService. See {@link DiscoveryDruidNode#toMap(List)}.
+ *
+ * @see org.apache.druid.jackson.DruidServiceSerializer
+ * @see DiscoveryDruidNode#toMap(List)
  */
 public class DataNodeService extends DruidService
 {
@@ -44,17 +69,15 @@ public class DataNodeService extends DruidService
   private final boolean isDiscoverable;
 
   /**
-   * This JSON creator requires the subtype key of {@link DruidService} to appear first
-   * in the serialized JSON. Deserialization can fail otherwise. As a result,
-   * {@link DiscoveryDruidNode} does not deserialize this class directly.
-   * Instead, it deserializes the JSON to {@link org.apache.druid.jackson.StringObjectPairList} first,
-   * and then DataNodeService. See {@link DiscoveryDruidNode#toMap(List)} for more details.
+   * This JSON creator requires for the "type" subtype key of {@link DruidService} to appear before
+   * the "type" property of this class in the serialized JSON. Deserialization can fail otherwise.
+   * See the Javadoc of this class for more details.
    */
   @JsonCreator
   public static DataNodeService fromJson(
       @JsonProperty("tier") String tier,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty("type") @Deprecated @Nullable ServerType type, // see getType() for deprecation.
+      @JsonProperty("type") @Deprecated @Nullable ServerType type,
       @JsonProperty(SERVER_TYPE_PROP_KEY) @Nullable ServerType serverType,
       @JsonProperty("priority") int priority
   )
@@ -97,48 +120,28 @@ public class DataNodeService extends DruidService
     return DISCOVERY_SERVICE_KEY;
   }
 
-  @JsonProperty
   public String getTier()
   {
     return tier;
   }
 
-  @JsonProperty
   public long getMaxSize()
   {
     return maxSize;
   }
 
-  @JsonProperty
   public ServerType getServerType()
   {
     return serverType;
   }
 
-  @JsonProperty
   public int getPriority()
   {
     return priority;
   }
 
-  /**
-   * Use {@link #getServerType()} instead.
-   *
-   * This method is deprecated as its JSON property key is duplicated with the subtype key of {@link DruidService}.
-   * This seems to happen to work because the subtype key "type" always appears first in the serialized JSON,
-   * which Jackson always picks up as the subtype key. This is not safe though since it will stop working
-   * if Jackson behavior changes in the future. See also {@link DiscoveryDruidNode#toMap(List)}.
-   *
-   * Since entirely removing this property can break compatibility, we just deprecate it for now.
-   * However, we should remove it as soon as possible in a future release.
-   */
-  @Deprecated
-  @JsonProperty
-  public ServerType getType()
-  {
-    return serverType;
-  }
-
+  // leaving the "JsonIgnore" annotation to remember that "discoverable" is ignored in serialization,
+  // even though the annotation is not actually used.
   @Override
   @JsonIgnore
   public boolean isDiscoverable()
