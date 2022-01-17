@@ -114,17 +114,7 @@ public class NativeQueryMaker implements QueryMaker
   @Override
   public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    return runQuery(druidQuery, null);
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery(final DruidQuery druidQuery, @Nullable final Map<String, Object> sqlContext)
-  {
     Query<?> query = druidQuery.getQuery();
-
-    if (sqlContext != null) {
-      query = query.withOverriddenContext(sqlContext);
-    }
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {

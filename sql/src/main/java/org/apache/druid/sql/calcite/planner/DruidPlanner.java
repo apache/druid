@@ -79,8 +79,6 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.parser.DruidSqlOrderBy;
-import org.apache.druid.sql.calcite.parser.DruidSqlSelect;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -208,13 +206,7 @@ public class DruidPlanner implements Closeable
     final RelRoot rootQueryRel = planner.rel(validatedQueryNode);
 
     try {
-      Map<String, Object> sqlContext = null;
-      if (parsed.getContextMap() != null) {
-        sqlContext = parsed.getContextMap().entrySet().stream().collect(
-            Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
-        );
-      }
-      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode(), sqlContext);
+      return planWithDruidConvention(rootQueryRel, parsed.getExplainNode(), parsed.getInsertNode());
     }
     catch (Exception e) {
       Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
@@ -281,8 +273,7 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final RelRoot root,
       @Nullable final SqlExplain explain,
-      @Nullable final SqlInsert insert,
-      @Nullable final Map<String, Object> sqlContext
+      @Nullable final SqlInsert insert
   ) throws ValidationException, RelConversionException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(root);
@@ -319,7 +310,7 @@ public class DruidPlanner implements Closeable
             "Authorization sanity check failed"
         );
 
-        return druidRel.runQuery(sqlContext);
+        return druidRel.runQuery();
       };
 
       return new PlannerResult(resultsSupplier, queryMaker.getResultType());
@@ -744,9 +735,6 @@ public class DruidPlanner implements Closeable
 
     private SqlNode query;
 
-    @Nullable
-    private Map<String, String> contextMap;
-
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable SqlInsert insert,
@@ -757,7 +745,6 @@ public class DruidPlanner implements Closeable
       this.explain = explain;
       this.insert = insert;
       this.query = query;
-      this.contextMap = contextMap;
     }
 
     static ParsedNodes create(final SqlNode node) throws ValidationException
@@ -775,16 +762,6 @@ public class DruidPlanner implements Closeable
       if (query.getKind() == SqlKind.INSERT) {
         insert = (SqlInsert) query;
         query = insert.getSource();
-      }
-
-      if (query instanceof DruidSqlSelect) {
-        DruidSqlSelect druidSqlSelect = (DruidSqlSelect) query;
-        contextMap = druidSqlSelect.getContext();
-      }
-
-      if (query instanceof DruidSqlOrderBy) {
-        DruidSqlOrderBy druidSqlOrderBy = (DruidSqlOrderBy) query;
-        contextMap = druidSqlOrderBy.getContext();
       }
 
       if (!query.isA(SqlKind.QUERY)) {
@@ -809,12 +786,6 @@ public class DruidPlanner implements Closeable
     public SqlNode getQueryNode()
     {
       return query;
-    }
-
-    @Nullable
-    public Map<String, String> getContextMap()
-    {
-      return contextMap;
     }
   }
 }

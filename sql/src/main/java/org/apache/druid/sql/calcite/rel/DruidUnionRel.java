@@ -102,24 +102,18 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
 
   @Override
   @SuppressWarnings("unchecked")
-  public Sequence<Object[]> runQuery(@Nullable Map<String, Object> sqlContext)
+  public Sequence<Object[]> runQuery()
   {
     // Lazy: run each query in sequence, not all at once.
     if (limit == 0) {
       return Sequences.empty();
     } else {
       final Sequence baseSequence = Sequences.concat(
-          FluentIterable.from(rels).transform(rel -> ((DruidRel) rel).runQuery(sqlContext))
+          FluentIterable.from(rels).transform(rel -> ((DruidRel) rel).runQuery())
       );
 
       return limit > 0 ? baseSequence.limit(limit) : baseSequence;
     }
-  }
-
-  @Override
-  public Sequence<Object[]> runQuery()
-  {
-    return runQuery(null);
   }
 
   @Override

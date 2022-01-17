@@ -43,8 +43,4 @@ public interface QueryMaker extends QueryFeatureInspector
    */
   Sequence<Object[]> runQuery(DruidQuery druidQuery);
 
-  default Sequence<Object[]> runQuery(DruidQuery druidQuery, Map<String, Object> sqlContext)
-  {
-    return runQuery(druidQuery);
-  }
 }
