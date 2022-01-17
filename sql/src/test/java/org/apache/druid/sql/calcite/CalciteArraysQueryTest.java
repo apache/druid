@@ -930,7 +930,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsLongArray() throws Exception
   {
-    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
     testQuery(
         "SELECT ARRAY[l1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
