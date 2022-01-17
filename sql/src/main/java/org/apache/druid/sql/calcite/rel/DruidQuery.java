@@ -157,11 +157,14 @@ public class DruidQuery
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
-      final boolean finalizeAggregations
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    if (virtualColumnRegistry == null) {
+      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    }
 
     // Now the fun begins.
     final DimFilter filter;
@@ -656,6 +659,14 @@ public class DruidQuery
     if (sorting != null && sorting.getProjection() != null && grouping == null) {
       // Sorting without grouping means we might have some post-sort Projection virtual columns.
       virtualColumns.addAll(sorting.getProjection().getVirtualColumns());
+    }
+
+    if (dataSource instanceof JoinDataSource) {
+      for (String expression : ((JoinDataSource) dataSource).getVirtualColumnCandidates()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
+        }
+      }
     }
 
     // sort for predictable output

@@ -144,6 +144,7 @@
         "ids": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
+          "operations/mixed-workloads",
           "operations/http-compression",
           "operations/clean-metadata-store"
         ]
