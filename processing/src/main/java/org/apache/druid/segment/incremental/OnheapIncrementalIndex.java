@@ -78,6 +78,32 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
+
+  /**
+   * Flag denoting if max possible values should be used to estimate on-heap mem
+   * usage.
+   * <p>
+   * There is one instance of Aggregator per metric per row key.
+   * <p>
+   * <b>Old Method:</b> {@code useMaxMemoryEstimates = true} (default)
+   * <ul>
+   *   <li>Aggregator: For a given metric, compute the max memory an aggregator
+   *   can use and multiply that by number of aggregators (same as number of
+   *   aggregated rows or number of unique row keys)</li>
+   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
+   *   size of original dimension values</li>
+   * </ul>
+   *
+   * <b>New Method:</b> {@code useMaxMemoryEstimates = false}
+   * <ul>
+   *   <li>Aggregator: Get the initialize of an Aggregator instance, and add the
+   *   incremental size required in each aggregation step.</li>
+   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
+   *   size of dimension values only if they are newly added to the dictionary</li>
+   * </ul>
+   * <p>
+   * Thus the new method eliminates over-estimations.
+   */
   private final boolean useMaxMemoryEstimates;
 
   @Nullable
@@ -106,6 +132,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
+   * Old method of memory estimation. Used only when {@link #useMaxMemoryEstimates} is true.
+   *
    * Gives estimated max size per aggregator. It is assumed that every aggregator will have enough overhead for its own
    * object header and for a pointer to a selector. We are adding a overhead-factor for each object as additional 16
    * bytes.
@@ -251,6 +279,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     long totalInitialSizeBytes = 0L;
     rowContainer.set(row);
+
+    final long aggReferenceSize = Long.BYTES;
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
 
@@ -261,6 +291,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
             agg.factorizeWithSize(selectors.get(agg.getName()));
         aggs[i] = aggregatorAndSize.getAggregator();
         totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+        totalInitialSizeBytes += aggReferenceSize;
       }
     }
     rowContainer.set(null);

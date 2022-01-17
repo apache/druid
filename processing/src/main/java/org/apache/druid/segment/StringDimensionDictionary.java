@@ -17,38 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation;
+package org.apache.druid.segment;
 
 /**
- * Encapsulates an {@link Aggregator} and the initial size in bytes required by
- * the Aggregator.
+ * DimensionDictionary for String dimension values.
  */
-public class AggregatorAndSize
+public class StringDimensionDictionary extends DimensionDictionary<String>
 {
-  private final Aggregator aggregator;
-  private final long initialSizeBytes;
-
-  /**
-   * @param aggregator       Aggregator
-   * @param initialSizeBytes Initial size in bytes (including JVM object overheads)
-   *                         required by the aggregator.
-   */
-  public AggregatorAndSize(Aggregator aggregator, long initialSizeBytes)
+  @Override
+  public long estimateSizeOfValue(String value)
   {
-    this.aggregator = aggregator;
-    this.initialSizeBytes = initialSizeBytes;
-  }
-
-  public Aggregator getAggregator()
-  {
-    return aggregator;
-  }
-
-  /**
-   * Initial size of the aggregator in bytes including JVM object overheads.
-   */
-  public long getInitialSizeBytes()
-  {
-    return initialSizeBytes;
+    // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
+    // Total string size = 28B (string metadata) + 16B (char array metadata) + 2B * num letters
+    return 28 + 16 + (2L * value.length());
   }
 }

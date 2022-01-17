@@ -64,13 +64,14 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
 
   public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
   {
+    super(new StringDimensionDictionary());
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
   }
 
   @Override
-  public EncodedDimensionValue<int[]> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<int[]> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
@@ -126,7 +127,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     // incremental size = increase in size of dimension dict + size of encoded array
     long keyComponentSizeBytes = (dimLookup.sizeInBytes() - oldDictSizeInBytes)
                                  + (long) encodedDimensionValues.length * Integer.BYTES;
-    return new EncodedDimensionValue<>(encodedDimensionValues, keyComponentSizeBytes);
+    return new EncodedKeyComponent<>(encodedDimensionValues, keyComponentSizeBytes);
   }
 
   @Override

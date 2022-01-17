@@ -40,8 +40,19 @@ import java.io.Closeable;
 @ExtensionPoint
 public interface Aggregator extends Closeable
 {
+  /**
+   * Performs aggregation.
+   */
   void aggregate();
 
+  /**
+   * Performs aggregation and returns the increase in required on-heap memory
+   * caused by this aggregation step.
+   * <p>
+   * The default implementation of this method calls {@link #aggregate()} and returns 0.
+   *
+   * @return Increase in required on-heap memory caused by this aggregation step.
+   */
   default long aggregateWithSize()
   {
     aggregate();

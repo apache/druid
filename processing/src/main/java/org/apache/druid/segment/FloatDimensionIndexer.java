@@ -45,7 +45,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Nullable
   @Override
-  public EncodedDimensionValue<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -55,7 +55,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     if (f == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return new EncodedDimensionValue<>(f, Float.BYTES);
+    return new EncodedKeyComponent<>(f, Float.BYTES);
   }
 
   @Override

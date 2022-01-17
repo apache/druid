@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -123,9 +122,8 @@ public class DimensionDictionary<T extends Comparable<T>>
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
 
-      long sizeOfString = getObjectSize(originalValue);
-      long sizeOfReference = Long.BYTES;
-      sizeInBytes.addAndGet(sizeOfString + 2 * sizeOfReference);
+      // Add size of new dim value and 2 references (valueToId and idToValue)
+      sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2 * Long.BYTES);
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
@@ -174,15 +172,15 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
-  private long getObjectSize(@Nonnull T object)
+  /**
+   * Estimates the size of a dimension value in bytes. This method is called
+   * only when a new dimension value is being added to the lookup.
+   *
+   * @return 0 by default
+   */
+  public long estimateSizeOfValue(T value)
   {
-    // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
-    // String has the following memory usuage...
-    // 28 bytes of data for String metadata (class pointer, flags, locks, hash, count, offset, reference to char array)
-    // 16 bytes of data for the char array metadata (class pointer, flags, locks, size)
-    // 2 bytes for every letter of the string
-    String val = object.toString();
-    return 28 + 16 + (2L * val.length());
+    return 0;
   }
 
 }

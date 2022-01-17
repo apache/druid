@@ -22,25 +22,41 @@ package org.apache.druid.segment;
 import javax.annotation.Nullable;
 
 /**
+ * Represents the encoded component of a row key corresponding to a single dimension.
+ * The row key contains a component for each dimension.
+ * <p>
+ * Contains:
+ * <ul>
+ *   <li>the encoded dimension value(s)</li>
+ *    <li>the increase in size (in bytes) caused by adding the dimension value(s)</li>
+ * </ul>
+ *
  * @param <K> Encoded key component type
  */
-public class EncodedDimensionValue<K>
+public class EncodedKeyComponent<K>
 {
   @Nullable
-  private final K value;
+  private final K component;
   private final long incrementalSizeBytes;
 
-  EncodedDimensionValue(@Nullable K value, long incrementalSizeBytes)
+  EncodedKeyComponent(@Nullable K component, long incrementalSizeBytes)
   {
-    this.value = value;
+    this.component = component;
     this.incrementalSizeBytes = incrementalSizeBytes;
   }
 
-  public K getValue()
+  /**
+   * The encoded dimension value(s) to be used a component for a row key.
+   */
+  @Nullable
+  public K getComponent()
   {
-    return value;
+    return component;
   }
 
+  /**
+   * Increase in size (in bytes) caused by adding the dimension value(s).
+   */
   public long getIncrementalSizeBytes()
   {
     return incrementalSizeBytes;

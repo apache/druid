@@ -45,7 +45,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
   @Nullable
   @Override
-  public EncodedDimensionValue<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -54,7 +54,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
     if (d == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return new EncodedDimensionValue<>(d, Double.BYTES);
+    return new EncodedKeyComponent<>(d, Double.BYTES);
   }
 
   @Override

@@ -57,7 +57,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
-import org.apache.druid.segment.EncodedDimensionValue;
+import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
@@ -476,11 +476,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
-    return add(row, false);
-  }
-
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
-  {
     return add(row, false, true);
   }
 
@@ -573,9 +568,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          final EncodedDimensionValue<?> encodedDimensionValue
+          final EncodedKeyComponent<?> encodedDimensionValue
               = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
-          dimsKey = encodedDimensionValue.getValue();
+          dimsKey = encodedDimensionValue.getComponent();
           final long keySizeDelta = useMaxMemoryEstimates
                                     ? indexer.estimateEncodedKeyComponentSize(dimsKey)
                                     : encodedDimensionValue.getIncrementalSizeBytes();

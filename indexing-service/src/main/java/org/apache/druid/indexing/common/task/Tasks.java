@@ -52,6 +52,15 @@ public class Tasks
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String USE_SHARED_LOCK = "useSharedLock";
+
+  /**
+   * Context flag denoting if maximum possible values should be used to estimate
+   * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
+   * more details.
+   *
+   * The value of this flag is true by default which corresponds to the old method
+   * of estimation.
+   */
   public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**

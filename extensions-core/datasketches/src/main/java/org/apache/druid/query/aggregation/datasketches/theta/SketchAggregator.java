@@ -45,12 +45,13 @@ public class SketchAggregator implements Aggregator
   private Sketch sketch;
 
   @Nullable
-  private static final Field sketchField;
+  private static final Field SKETCH_FIELD;
+
   static {
     try {
-      sketchField = Class.forName("org.apache.datasketches.theta.UnionImpl")
-                         .getDeclaredField("gadget_");
-      sketchField.setAccessible(true);
+      SKETCH_FIELD = Class.forName("org.apache.datasketches.theta.UnionImpl")
+                          .getDeclaredField("gadget_");
+      SKETCH_FIELD.setAccessible(true);
     }
     catch (NoSuchFieldException | ClassNotFoundException e) {
       throw new ISE(e, "Could not initialize SketchAggregator");
@@ -71,7 +72,7 @@ public class SketchAggregator implements Aggregator
   private void initSketch()
   {
     try {
-        sketch = (Sketch) sketchField.get(union);
+      sketch = (Sketch) SKETCH_FIELD.get(union);
     }
     catch (IllegalAccessException e) {
       throw new ISE(e, "Could not initialize sketch field in SketchAggregator");
@@ -105,8 +106,9 @@ public class SketchAggregator implements Aggregator
       if (union == null) {
         initUnion();
 
-        // Fields in UnionImpl: a sketch reference, a short, a long and a boolean
-        unionSizeDelta = Long.BYTES + Short.BYTES + Long.BYTES + 1;
+        // Size of UnionImpl = 16B (object header) + 8B (sketch ref) + 2B (short)
+        // + 8B (long) + 1B (boolean) + 5B (padding) = 40B
+        unionSizeDelta = 40L;
       }
 
       long initialSketchSize = 0;
@@ -198,8 +200,10 @@ public class SketchAggregator implements Aggregator
    */
   public long getInitialSizeBytes()
   {
-    // SketchAggregator has 3 references and an int
-    return 3L * Long.BYTES + Integer.BYTES;
+    // Size = 16B (object header) + 24B (3 refs) + 4B (int size) = 44B
+    // Due to 8-byte alignment, size = 48B
+    // (see https://www.baeldung.com/java-memory-layout)
+    return 48L;
   }
 
 }
