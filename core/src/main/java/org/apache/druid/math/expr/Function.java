@@ -31,8 +31,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -59,7 +58,7 @@ import java.util.stream.Stream;
 /**
  * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}. All {@link Function} implementations
  * are immutable.
- * <p>
+ *
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
@@ -1977,9 +1976,9 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
-                                                                                      .getLiteralValue()
-                                                                                      .toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case ARRAY:
             return Collections.emptySet();
@@ -1995,9 +1994,9 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
-                                                                                      .getLiteralValue()
-                                                                                      .toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case LONG:
           case DOUBLE:
@@ -3679,14 +3678,16 @@ public interface Function
             name()
         );
       }
-      ExpressionType complexType = ExpressionTypeFactory.getInstance()
-                                                        .ofComplex((String) args.get(0).getLiteralValue());
-      ObjectByteStrategy strategy = Types.getStrategy(complexType.getComplexTypeName());
-      if (strategy == null) {
+      ExpressionType type = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
+      TypeStrategy strategy;
+      try {
+        strategy = type.getStrategy();
+      }
+      catch (IAE illegal) {
         throw new IAE(
             "Function[%s] first argument must be a valid complex type name, unknown complex type [%s]",
             name(),
-            complexType.asTypeString()
+            type.asTypeString()
         );
       }
       ExprEval base64String = args.get(1).eval(bindings);
@@ -3697,11 +3698,11 @@ public interface Function
         );
       }
       if (base64String.value() == null) {
-        return ExprEval.ofComplex(complexType, null);
+        return ExprEval.ofComplex(type, null);
       }
 
       final byte[] base64 = StringUtils.decodeBase64String(base64String.asString());
-      return ExprEval.ofComplex(complexType, strategy.fromByteBuffer(ByteBuffer.wrap(base64), base64.length));
+      return ExprEval.ofComplex(type, strategy.read(ByteBuffer.wrap(base64)));
     }
 
     @Override

@@ -40,6 +40,7 @@ export * from './rule-editor/rule-editor';
 export * from './segment-timeline/segment-timeline';
 export * from './show-json/show-json';
 export * from './show-log/show-log';
+export * from './suggestion-menu/suggestion-menu';
 export * from './table-cell/table-cell';
 export * from './table-column-selector/table-column-selector';
 export * from './timed-button/timed-button';

@@ -37,6 +37,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.joda.time.DateTime;
@@ -95,6 +96,7 @@ public class PlannerContext
   @Nullable
   private String planningError;
   private QueryMaker queryMaker;
+  private VirtualColumnRegistry joinExpressionVirtualColumnRegistry;
 
   private PlannerContext(
       final String sql,
@@ -391,5 +393,15 @@ public class PlannerContext
   public QueryMaker getQueryMaker()
   {
     return Preconditions.checkNotNull(queryMaker, "QueryMaker not available");
+  }
+
+  public VirtualColumnRegistry getJoinExpressionVirtualColumnRegistry()
+  {
+    return joinExpressionVirtualColumnRegistry;
+  }
+
+  public void setJoinExpressionVirtualColumnRegistry(VirtualColumnRegistry joinExpressionVirtualColumnRegistry)
+  {
+    this.joinExpressionVirtualColumnRegistry = joinExpressionVirtualColumnRegistry;
   }
 }

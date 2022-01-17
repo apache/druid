@@ -39,7 +39,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -331,7 +330,7 @@ public class InputRowSerde
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(RowSignature.empty(), VirtualColumns.EMPTY, aggFactory, supplier, true)
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
         )) {
           try {
             agg.aggregate();

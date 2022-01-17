@@ -19,17 +19,11 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Objects;
 
 public class ExpressionLambdaAggregator implements Aggregator
 {
@@ -55,7 +49,15 @@ public class ExpressionLambdaAggregator implements Aggregator
   public void aggregate()
   {
     final ExprEval<?> eval = lambda.eval(bindings);
-    estimateAndCheckMaxBytes(eval, maxSizeBytes);
+    final int estimatedSize = eval.type().getNullableStrategy().estimateSizeBytes(eval.value());
+    if (estimatedSize > maxSizeBytes) {
+      throw new ISE(
+          "Exceeded memory usage when aggregating type [%s], size [%s] is larger than max [%s]",
+          eval.type().asTypeString(),
+          estimatedSize,
+          maxSizeBytes
+      );
+    }
     bindings.accumulate(eval);
     hasValue = true;
   }
@@ -95,89 +97,5 @@ public class ExpressionLambdaAggregator implements Aggregator
   public void close()
   {
     // nothing to close
-  }
-
-  /**
-   * Tries to mimic the byte serialization of {@link Types} binary methods use to write expression values for the
-   * {@link ExpressionLambdaBufferAggregator} in an attempt to provide consistent size limits when using the heap
-   * based algorithm.
-   */
-  @VisibleForTesting
-  public static void estimateAndCheckMaxBytes(ExprEval eval, int maxSizeBytes)
-  {
-    final int estimated;
-    switch (eval.type().getType()) {
-      case STRING:
-        String stringValue = eval.asString();
-        estimated = Integer.BYTES + (stringValue == null ? 0 : StringUtils.estimatedBinaryLengthAsUTF8(stringValue));
-        break;
-      case LONG:
-      case DOUBLE:
-        estimated = Long.BYTES;
-        break;
-      case ARRAY:
-        switch (eval.type().getElementType().getType()) {
-          case STRING:
-            String[] stringArray = eval.asStringArray();
-            if (stringArray == null) {
-              estimated = Integer.BYTES;
-            } else {
-              final int elementsSize = Arrays.stream(stringArray)
-                                             .filter(Objects::nonNull)
-                                             .mapToInt(StringUtils::estimatedBinaryLengthAsUTF8)
-                                             .sum();
-              // since each value is variably sized, there is a null byte, and an integer length per element
-              estimated = Integer.BYTES + (Integer.BYTES * stringArray.length) + elementsSize;
-            }
-            break;
-          case LONG:
-            Long[] longArray = eval.asLongArray();
-            if (longArray == null) {
-              estimated = Integer.BYTES;
-            } else {
-              final int elementsSize = Arrays.stream(longArray)
-                                             .filter(Objects::nonNull)
-                                             .mapToInt(x -> Long.BYTES)
-                                             .sum();
-              // null byte + length int + byte per element + size per element
-              estimated = Integer.BYTES + longArray.length + elementsSize;
-            }
-            break;
-          case DOUBLE:
-            Double[] doubleArray = eval.asDoubleArray();
-            if (doubleArray == null) {
-              estimated = Integer.BYTES;
-            } else {
-              final int elementsSize = Arrays.stream(doubleArray)
-                                             .filter(Objects::nonNull)
-                                             .mapToInt(x -> Long.BYTES)
-                                             .sum();
-              // null byte + length int + byte per element + size per element
-              estimated = Integer.BYTES + doubleArray.length + elementsSize;
-            }
-            break;
-          default:
-            throw new ISE("Unsupported array type: %s", eval.type());
-        }
-        break;
-      case COMPLEX:
-        final ObjectByteStrategy strategy = Types.getStrategy(eval.type().getComplexTypeName());
-        if (strategy != null) {
-          if (eval.value() != null) {
-            // | null (byte) | length (int) | complex type bytes |
-            final byte[] complexBytes = strategy.toBytes(eval.value());
-            estimated = Integer.BYTES + complexBytes.length;
-          } else {
-            estimated = Integer.BYTES;
-          }
-        } else {
-          throw new ISE("Unsupported type: %s", eval.type());
-        }
-        break;
-      default:
-        throw new ISE("Unsupported type: %s", eval.type());
-    }
-    // +1 for the null byte
-    Types.checkMaxBytes(eval.type(), 1 + estimated, maxSizeBytes);
   }
 }

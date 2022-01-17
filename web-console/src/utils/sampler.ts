@@ -40,7 +40,7 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap, oneOf } from './general';
+import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -65,7 +65,6 @@ export interface SampleResponse {
 export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
-  queryGranularity?: any;
   rollup?: boolean;
   columns?: Record<string, any>;
   aggregators?: Record<string, any>;
@@ -236,26 +235,6 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
-function cleanupQueryGranularity(queryGranularity: any): any {
-  let queryGranularityType = deepGet(queryGranularity, 'type');
-  if (typeof queryGranularityType !== 'string') return queryGranularity;
-  queryGranularityType = queryGranularityType.toUpperCase();
-
-  const knownGranularity = oneOf(
-    queryGranularityType,
-    'NONE',
-    'SECOND',
-    'MINUTE',
-    'HOUR',
-    'DAY',
-    'WEEK',
-    'MONTH',
-    'YEAR',
-  );
-
-  return knownGranularity ? queryGranularityType : queryGranularity;
-}
-
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -305,14 +284,11 @@ export async function sampleForConnect(
       intervals: [deepGet(ioConfig, 'inputSource.interval')],
       merge: true,
       lenientAggregatorMerge: true,
-      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+      analysisTypes: ['aggregators', 'rollup'],
     });
 
     if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
       const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.queryGranularity = cleanupQueryGranularity(
-        segmentMetadataResponse0.queryGranularity,
-      );
       samplerResponse.rollup = segmentMetadataResponse0.rollup;
       samplerResponse.columns = segmentMetadataResponse0.columns;
       samplerResponse.aggregators = segmentMetadataResponse0.aggregators;

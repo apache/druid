@@ -46,6 +46,7 @@ public class ExternalTableScanRule extends RelOptRule
     if (plannerContext.getQueryMaker().feature(QueryFeature.CAN_READ_EXTERNAL_DATA)) {
       return super.matches(call);
     } else {
+      plannerContext.setPlanningError("SQL query requires scanning external datasources that is not suported.");
       return false;
     }
   }
