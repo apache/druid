@@ -427,14 +427,65 @@ describe('spec utils', () => {
     },
   };
 
-  it('guessTypeFromSample', () => {
-    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
+  describe('guessTypeFromSample', () => {
+    it('works for empty', () => {
+      expect(guessTypeFromSample([])).toEqual('string');
+    });
+
+    it('works for long', () => {
+      expect(guessTypeFromSample([1, 2, 3])).toEqual('long');
+    });
+
+    it('works for double', () => {
+      expect(guessTypeFromSample([1, 2.1, 3])).toEqual('double');
+    });
+
+    it('works for multi-value', () => {
+      expect(guessTypeFromSample(['a', ['b'], 'c'])).toEqual('string');
+      expect(guessTypeFromSample([1, [2], 3])).toEqual('string');
+    });
   });
 
-  it('getColumnTypeFromHeaderAndRows', () => {
-    expect(
-      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
-    ).toMatchInlineSnapshot(`"string"`);
+  describe('getColumnTypeFromHeaderAndRows', () => {
+    it('works in empty dataset', () => {
+      expect(getColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0')).toEqual('string');
+    });
+
+    it('works for generic dataset', () => {
+      const headerAndRows = {
+        header: ['c0', 'c1', 'c2'],
+        rows: [
+          {
+            input: {
+              c0: 'Honda',
+              c1: 1,
+              c2: [],
+            },
+            parsed: {
+              c0: 'Honda',
+              c1: 1,
+              c2: '',
+            },
+          },
+          {
+            input: {
+              c0: 'Toyota',
+              c1: 2.1,
+              c2: ['1'],
+            },
+            parsed: {
+              c0: 'Honda',
+              c1: 2.1,
+              c2: '1',
+            },
+          },
+        ],
+      };
+
+      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c0')).toEqual('string');
+      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c1')).toEqual('double');
+      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c2')).toEqual('string');
+    });
   });
 
   it('updateSchemaWithSample', () => {

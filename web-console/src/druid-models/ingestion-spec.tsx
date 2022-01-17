@@ -2199,9 +2199,9 @@ export function getColumnTypeFromHeaderAndRows(
   headerAndRows: HeaderAndRows,
   column: string,
 ): string {
-  return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
-  );
+  // If we see any arrays in the input this is a multi-value dimension that must be a string
+  if (headerAndRows.rows.some((r: any) => Array.isArray(r.input?.[column]))) return 'string';
+  return guessTypeFromSample(filterMap(headerAndRows.rows, (r: any) => r.parsed?.[column]));
 }
 
 function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
