@@ -42,6 +42,10 @@ export interface MetricSpec {
   readonly isInputHyperUnique?: boolean;
   readonly filter?: any;
   readonly aggregator?: MetricSpec;
+  readonly size?: number;
+  readonly lgK?: number;
+  readonly tgtHllType?: string;
+  readonly k?: number;
 }
 
 export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
