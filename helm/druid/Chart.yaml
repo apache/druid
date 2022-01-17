@@ -17,6 +17,10 @@ apiVersion: v2
 appVersion: 0.22.0
 description: Apache Druid is a high performance real-time analytics database.
 name: druid
+maintainers:
+  - name: isandeep41
+    email: isandeep41@gmail.com
+    url: https://github.com/isandeep41
 dependencies:
   - name: zookeeper
     version: 2.1.4
