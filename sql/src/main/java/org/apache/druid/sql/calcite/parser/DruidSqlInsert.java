@@ -24,7 +24,6 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriter;
 
 import javax.annotation.Nonnull;
@@ -39,8 +38,8 @@ public class DruidSqlInsert extends SqlInsert
   // Unsure if this should be kept as is, but this allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
-  final private SqlNode partitionBy;
-  final private SqlNodeList clusterBy;
+  private final SqlNode partitionBy;
+  private final SqlNodeList clusterBy;
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
@@ -88,7 +87,7 @@ public class DruidSqlInsert extends SqlInsert
     if (partitionBy != null) {
       writer.keyword("PARTITION");
       writer.keyword("BY");
-      writer.keyword(SqlLiteral.stringValue(partitionBy));
+      writer.keyword(getPartitionBy());
     }
     if (clusterBy != null) {
       writer.sep("CLUSTER BY");
