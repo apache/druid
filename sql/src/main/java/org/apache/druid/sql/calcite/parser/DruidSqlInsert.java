@@ -31,18 +31,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Extends the Select call to have custom context parameters specific to Druid
- * These custom parameters are to be manually extracted.
- * This class extends {@link SqlSelect} so that the node can be used further for conversions (Sql to Rel)
+ * Extends the Insert call to hold custom paramaters specific to druid i.e. PARTITION BY and CLUSTER BY
+ * This class extends the {@link SqlInsert} so that the node can be used for further conversion
  */
 public class DruidSqlInsert extends SqlInsert
 {
   // Unsure if this should be kept as is, but this allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
-  private SqlNode partitionBy;
-  private SqlNodeList clusterBy;
-
+  final private SqlNode partitionBy;
+  final private SqlNodeList clusterBy;
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
@@ -61,11 +59,13 @@ public class DruidSqlInsert extends SqlInsert
     this.clusterBy = clusterBy;
   }
 
+  @Nullable
   public SqlNodeList getClusterBy()
   {
     return clusterBy;
   }
 
+  @Nonnull
   @Override
   public SqlOperator getOperator()
   {
@@ -82,9 +82,12 @@ public class DruidSqlInsert extends SqlInsert
       writer.keyword(SqlLiteral.stringValue(partitionBy));
     }
     if (clusterBy != null) {
-      writer.keyword("CLUSTER");
-      writer.keyword("BY");
-      writer.keyword(SqlLiteral.stringValue(clusterBy));
+      writer.sep("CLUSTER BY");
+      SqlWriter.Frame frame = writer.startList("", "");
+      for (SqlNode clusterByOpts : clusterBy.getList()) {
+        clusterByOpts.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endList(frame);
     }
   }
 

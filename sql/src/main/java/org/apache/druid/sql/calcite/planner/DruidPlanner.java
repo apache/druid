@@ -75,7 +75,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -161,7 +160,7 @@ public class DruidPlanner implements Closeable
   /**
    * Prepare an SQL query for execution, including some initial parsing and validation and any dynamic parameter type
    * resolution, to support prepared statements via JDBC.
-   * <p>
+   *
    * In some future this could perhaps re-use some of the work done by {@link #validate()}
    * instead of repeating it, but that day is not today.
    */
@@ -189,10 +188,10 @@ public class DruidPlanner implements Closeable
 
   /**
    * Plan an SQL query for execution, returning a {@link PlannerResult} which can be used to actually execute the query.
-   * <p>
+   *
    * Ideally, the query can be planned into a native Druid query, using {@link #planWithDruidConvention}, but will
    * fall-back to {@link #planWithBindableConvention} if this is not possible.
-   * <p>
+   *
    * In some future this could perhaps re-use some of the work done by {@link #validate()}
    * instead of repeating it, but that day is not today.
    */
@@ -254,12 +253,12 @@ public class DruidPlanner implements Closeable
    * {@link #planner} since we do not re-use artifacts or keep track of state between
    * {@link #validate}, {@link #prepare}, and {@link #plan} and instead repeat parsing and validation
    * for each step.
-   * <p>
+   *
    * Currently, that state tracking is done in {@link org.apache.druid.sql.SqlLifecycle}, which will create a new
    * planner for each of the corresponding steps so this isn't strictly necessary at this time, this method is here as
    * much to make this situation explicit and provide context for a future refactor as anything else (and some tests
    * do re-use the planner between validate, prepare, and plan, which will run into this issue).
-   * <p>
+   *
    * This could be improved by tying {@link org.apache.druid.sql.SqlLifecycle} and {@link DruidPlanner} states more
    * closely with the state of {@link #planner}, instead of repeating parsing and validation between each of these
    * steps.
@@ -323,7 +322,7 @@ public class DruidPlanner implements Closeable
   /**
    * Construct a {@link PlannerResult} for a fall-back 'bindable' rel, for things that are not directly translatable
    * to native Druid queries such as system tables and just a general purpose (but definitely not optimized) fall-back.
-   * <p>
+   *
    * See {@link #planWithDruidConvention} which will handle things which are directly translatable
    * to native Druid queries.
    */
@@ -478,10 +477,10 @@ public class DruidPlanner implements Closeable
    * node
    * For eg, a DruidRel structure of kind:
    * DruidUnionRel
-   * DruidUnionRel
-   * DruidRel (A)
-   * DruidRel (B)
-   * DruidRel(C)
+   *  DruidUnionRel
+   *    DruidRel (A)
+   *    DruidRel (B)
+   *  DruidRel(C)
    * will return [DruidRel(A), DruidRel(B), DruidRel(C)]
    *
    * @param outermostDruidRel The outermost rel which is to be flattened
@@ -519,7 +518,7 @@ public class DruidPlanner implements Closeable
    * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
-   * <p>
+   *
    * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
