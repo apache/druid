@@ -35,7 +35,7 @@ jobs:
             echo "::set-output name=changed::true"
           fi
         env:
-          CT_CHART_DIRS: helm/druid
+          CT_CHART_DIRS: helm
           CT_SINCE: HEAD
 
       - name: Run chart-testing (lint)

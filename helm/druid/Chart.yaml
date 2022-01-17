@@ -18,6 +18,16 @@ appVersion: 0.22.0
 description: Apache Druid is a high performance real-time analytics database.
 name: druid
 maintainers:
+maintainers:
+  - name: asdf2014
+    email: asdf2014@apache.org
+    url: https://github.com/asdf2014
+  - name: AWaterColorPen
+    email: hellis@foxmail.com
+    url: https://github.com/AWaterColorPen
+  - name: maver1ck
+    email: maciek@brynski.pl
+    url: https://github.com/maver1ck
   - name: isandeep41
     email: isandeep41@gmail.com
     url: https://github.com/isandeep41
