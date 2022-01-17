@@ -361,7 +361,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         ofText={hasMoreResults ? '' : 'of'}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={queryResult.rows.length > SMALL_TABLE_PAGE_SIZE}
+        showPagination={
+          queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
+        }
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
           return {
