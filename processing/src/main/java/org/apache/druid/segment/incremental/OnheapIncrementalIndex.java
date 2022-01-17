@@ -194,6 +194,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   @Override
+  protected DimensionDesc initDimension(
+      int dimensionIndex,
+      String dimensionName,
+      DimensionHandler dimensionHandler
+  )
+  {
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
+  }
+
+  @Override
   protected AddToFactsResult addToFacts(
       InputRow row,
       IncrementalIndexRow key,

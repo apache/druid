@@ -476,7 +476,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
-    return add(row, false, true);
+    return add(row, false);
   }
 
   /**
@@ -489,17 +489,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    *
    * @param row                      the row of data to add
    * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows limit
-   * @param useMaxMemoryEstimates    whether or not to use maximum values to estimate memory
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(
-      InputRow row,
-      boolean skipMaxRowsInMemoryCheck,
-      boolean useMaxMemoryEstimates
-  ) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
+      throws IndexSizeExceededException
   {
-    IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row, useMaxMemoryEstimates);
+    IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
         row,
         incrementalIndexRowResult.getIncrementalIndexRow(),
@@ -522,11 +518,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
   @VisibleForTesting
   IncrementalIndexRowResult toIncrementalIndexRow(InputRow row)
-  {
-    return toIncrementalIndexRow(row, true);
-  }
-
-  private IncrementalIndexRowResult toIncrementalIndexRow(InputRow row, boolean useMaxMemoryEstimates)
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
@@ -568,13 +559,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          final EncodedKeyComponent<?> encodedDimensionValue
+          final EncodedKeyComponent<?> encodedKeyComponent
               = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
-          dimsKey = encodedDimensionValue.getComponent();
-          final long keySizeDelta = useMaxMemoryEstimates
-                                    ? indexer.estimateEncodedKeyComponentSize(dimsKey)
-                                    : encodedDimensionValue.getIncrementalSizeBytes();
-          dimsKeySize += keySizeDelta;
+          dimsKey = encodedKeyComponent.getComponent();
+          dimsKeySize += encodedKeyComponent.getEffectiveSizeBytes();
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
@@ -879,10 +867,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, DimensionHandler handler)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, handler);
+    DimensionDesc desc = initDimension(dimensionDescs.size(), dim, handler);
     dimensionDescs.put(dim, desc);
     dimensionDescsList.add(desc);
     return desc;
+  }
+
+  protected DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
+  {
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler);
   }
 
   public List<String> getMetricNames()
@@ -943,10 +936,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
 
     public DimensionDesc(int index, String name, DimensionHandler handler)
     {
+      this(index, name, handler, true);
+    }
+
+    public DimensionDesc(int index, String name, DimensionHandler handler, boolean useMaxMemoryEstimates)
+    {
       this.index = index;
       this.name = name;
       this.handler = handler;
-      this.indexer = handler.makeIndexer();
+      this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
     }
 
     public int getIndex()

@@ -24,12 +24,6 @@ import javax.annotation.Nullable;
 /**
  * Represents the encoded component of a row key corresponding to a single dimension.
  * The row key contains a component for each dimension.
- * <p>
- * Contains:
- * <ul>
- *   <li>the encoded dimension value(s)</li>
- *    <li>the increase in size (in bytes) caused by adding the dimension value(s)</li>
- * </ul>
  *
  * @param <K> Encoded key component type
  */
@@ -37,16 +31,25 @@ public class EncodedKeyComponent<K>
 {
   @Nullable
   private final K component;
-  private final long incrementalSizeBytes;
+  private final long effectiveSizeBytes;
 
-  EncodedKeyComponent(@Nullable K component, long incrementalSizeBytes)
+  /**
+   * Creates an EncodedKeyComponent corresponding to a single dimension.
+   *
+   * @param component          The encoded dimension value(s)
+   * @param effectiveSizeBytes Effective size of the key component in bytes. This
+   *                           value is used to estimate on-heap memory usage and
+   *                           must account for the footprint of both the original
+   *                           and encoded dimension values, as applicable.
+   */
+  EncodedKeyComponent(@Nullable K component, long effectiveSizeBytes)
   {
     this.component = component;
-    this.incrementalSizeBytes = incrementalSizeBytes;
+    this.effectiveSizeBytes = effectiveSizeBytes;
   }
 
   /**
-   * The encoded dimension value(s) to be used a component for a row key.
+   * Encoded dimension value(s) to be used as a component for a row key.
    */
   @Nullable
   public K getComponent()
@@ -55,10 +58,12 @@ public class EncodedKeyComponent<K>
   }
 
   /**
-   * Increase in size (in bytes) caused by adding the dimension value(s).
+   * Effective size of the key component in bytes. This value is used to estimate
+   * on-heap memory usage and accounts for the memory footprint of both the
+   * original and encoded dimension values, as applicable.
    */
-  public long getIncrementalSizeBytes()
+  public long getEffectiveSizeBytes()
   {
-    return incrementalSizeBytes;
+    return effectiveSizeBytes;
   }
 }

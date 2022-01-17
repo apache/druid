@@ -127,8 +127,8 @@ public interface DimensionIndexer<
    * @param reportParseExceptions true if parse exceptions should be reported,
    *                              false otherwise
    * @return Encoded dimension value(s) to be used as a component for the row key.
-   * Contains an object of the {@link EncodedKeyComponentType} and the increase
-   * in size of the DimensionIndexer due to any newly added dimension value.
+   * Contains an object of the {@link EncodedKeyComponentType} and the effective
+   * size of the key component in bytes.
    */
   @Nullable
   EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
@@ -148,15 +148,6 @@ public interface DimensionIndexer<
    * null or default value.
    */
   void setSparseIndexed();
-
-  /**
-   * Gives the estimated size in bytes for the given key
-   *
-   * @param key dimension value array from a TimeAndDims key
-   *
-   * @return the estimated size in bytes of the key
-   */
-  long estimateEncodedKeyComponentSize(EncodedKeyComponentType key);
 
   /**
    * Given an encoded value that was ordered by associated actual value, return the equivalent

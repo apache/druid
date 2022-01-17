@@ -21,9 +21,17 @@ package org.apache.druid.segment;
 
 /**
  * DimensionDictionary for String dimension values.
+ * <p>
+ * With StringDimensionDictionary, on-heap memory estimation of the dictionary
+ * size is always enabled.
  */
 public class StringDimensionDictionary extends DimensionDictionary<String>
 {
+  public StringDimensionDictionary()
+  {
+    super(true);
+  }
+
   @Override
   public long estimateSizeOfValue(String value)
   {

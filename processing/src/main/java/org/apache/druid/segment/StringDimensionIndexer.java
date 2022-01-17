@@ -60,14 +60,21 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
+  private final boolean useMaxMemoryEstimates;
   private volatile boolean hasMultipleValues = false;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
+  public StringDimensionIndexer(
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      boolean useMaxMemoryEstimates
+  )
   {
-    super(new StringDimensionDictionary());
+    super(useMaxMemoryEstimates ? new DimensionDictionary<>() : new StringDimensionDictionary());
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
@@ -75,7 +82,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
-    final long oldDictSizeInBytes = dimLookup.sizeInBytes();
+    final long oldDictSizeInBytes = useMaxMemoryEstimates ? 0 : dimLookup.sizeInBytes();
 
     if (dimValues == null) {
       final int nullId = dimLookup.getId(null);
@@ -125,13 +132,23 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     }
 
     // incremental size = increase in size of dimension dict + size of encoded array
-    long keyComponentSizeBytes = (dimLookup.sizeInBytes() - oldDictSizeInBytes)
-                                 + (long) encodedDimensionValues.length * Integer.BYTES;
+    long keyComponentSizeBytes;
+    if (useMaxMemoryEstimates) {
+      keyComponentSizeBytes = estimateEncodedKeyComponentSize(encodedDimensionValues);
+    } else {
+      keyComponentSizeBytes = (dimLookup.sizeInBytes() - oldDictSizeInBytes)
+                              + (long) encodedDimensionValues.length * Integer.BYTES;
+    }
     return new EncodedKeyComponent<>(encodedDimensionValues, keyComponentSizeBytes);
   }
 
-  @Override
-  public long estimateEncodedKeyComponentSize(int[] key)
+  /**
+   * Estimates size of the given key component.
+   * <p>
+   * Deprecated method. Use {@link #processRowValsToUnsortedEncodedKeyComponent(Object, boolean)}
+   * and {@link EncodedKeyComponent#getEffectiveSizeBytes()}.
+   */
+  long estimateEncodedKeyComponentSize(int[] key)
   {
     // string length is being accounted for each time they are referenced, based on dimension handler interface,
     // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave

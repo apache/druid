@@ -49,7 +49,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
    * Creates a new DictionaryEncodedColumnIndexer with the default implementation
    * of {@link DimensionDictionary}.
    * <p>
-   * Using this constructor may cause incorrect memory estimations of the dictionary size.
+   * Using this constructor disables memory estimations of the dictionary size.
    */
   public DictionaryEncodedColumnIndexer()
   {

@@ -46,6 +46,8 @@ public class DimensionDictionary<T extends Comparable<T>>
   private volatile int idForNull = ABSENT_VALUE_ID;
 
   private final AtomicLong sizeInBytes = new AtomicLong(0L);
+  private final boolean computeOnheapSize;
+
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
@@ -53,8 +55,19 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public DimensionDictionary()
   {
+    this(false);
+  }
+
+  /**
+   * Creates a DimensionDictionary.
+   *
+   * @param computeOnheapSize true if on-heap size of the dictionary should be maintained, false otherwise
+   */
+  public DimensionDictionary(boolean computeOnheapSize)
+  {
     this.lock = new ReentrantReadWriteLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
+    this.computeOnheapSize = computeOnheapSize;
   }
 
   public int getId(@Nullable T value)
@@ -98,8 +111,17 @@ public class DimensionDictionary<T extends Comparable<T>>
     }
   }
 
+  /**
+   * Gets the current size of this dictionary in bytes.
+   *
+   * @throws IllegalStateException if size computation is disabled.
+   */
   public long sizeInBytes()
   {
+    if (!computeOnheapSize) {
+      throw new IllegalStateException("On-heap size computation is disabled");
+    }
+
     return sizeInBytes.get();
   }
 
@@ -122,8 +144,10 @@ public class DimensionDictionary<T extends Comparable<T>>
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
 
-      // Add size of new dim value and 2 references (valueToId and idToValue)
-      sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2 * Long.BYTES);
+      if (computeOnheapSize) {
+        // Add size of new dim value and 2 references (valueToId and idToValue)
+        sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
+      }
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
@@ -173,14 +197,15 @@ public class DimensionDictionary<T extends Comparable<T>>
   }
 
   /**
-   * Estimates the size of a dimension value in bytes. This method is called
+   * Estimates the size of the dimension value in bytes. This method is called
    * only when a new dimension value is being added to the lookup.
    *
-   * @return 0 by default
+   * @throws UnsupportedOperationException Implementations that want to estimate
+   *                                       memory must override this method.
    */
   public long estimateSizeOfValue(T value)
   {
-    return 0;
+    throw new UnsupportedOperationException();
   }
 
 }

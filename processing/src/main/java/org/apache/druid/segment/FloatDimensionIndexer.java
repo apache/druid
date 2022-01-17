@@ -65,12 +65,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public long estimateEncodedKeyComponentSize(Float key)
-  {
-    return Float.BYTES;
-  }
-
-  @Override
   public Float getUnsortedEncodedValueFromSorted(Float sortedIntermediateValue)
   {
     return sortedIntermediateValue;

@@ -181,7 +181,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return Plumber.DUPLICATE;
       }
 
-      return index.add(row, skipMaxRowsInMemoryCheck, useMaxMemoryEstimates);
+      return index.add(row, skipMaxRowsInMemoryCheck);
     }
   }
 
