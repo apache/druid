@@ -30,15 +30,19 @@ import com.amazonaws.services.kinesis.model.AddTagsToStreamResult;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
+import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ScalingType;
+import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
 import java.io.FileInputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -107,6 +111,9 @@ public class KinesisAdminClient implements StreamAdminClient
   public void updatePartitionCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
     int originalShardCount = getStreamPartitionCount(streamName);
+    if (originalShardCount == newShardCount) {
+      return;
+    }
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
     updateShardCountRequest.setTargetShardCount(newShardCount);
@@ -119,13 +126,14 @@ public class KinesisAdminClient implements StreamAdminClient
       // Wait until the resharding started (or finished)
       ITRetryUtil.retryUntil(
           () -> {
-            StreamDescription streamDescription = getStreamDescription(streamName);
-            int updatedShardCount = getStreamShardCount(streamDescription);
-            return verifyStreamStatus(streamDescription, StreamStatus.UPDATING) ||
-                (verifyStreamStatus(streamDescription, StreamStatus.ACTIVE) && updatedShardCount > originalShardCount);
+            String streamStatus = getStreamStatus(streamName);
+            int updatedShardCount = getStreamPartitionCount(streamName);
+            return (streamStatus.equals(StreamStatus.UPDATING.toString()) ||
+                    streamStatus.equals(StreamStatus.ACTIVE.toString()))
+                   && updatedShardCount > originalShardCount; // since closed shards are still present
           },
           true,
-          30,
+          300, // higher value to avoid exceeding kinesis TPS limit
           30,
           "Kinesis stream resharding to start (or finished)"
       );
@@ -135,15 +143,13 @@ public class KinesisAdminClient implements StreamAdminClient
   @Override
   public boolean isStreamActive(String streamName)
   {
-    StreamDescription streamDescription = getStreamDescription(streamName);
-    return verifyStreamStatus(streamDescription, StreamStatus.ACTIVE);
+    return getStreamStatus(streamName).equals(StreamStatus.ACTIVE.toString());
   }
 
   @Override
   public int getStreamPartitionCount(String streamName)
   {
-    StreamDescription streamDescription = getStreamDescription(streamName);
-    return getStreamShardCount(streamDescription);
+    return listShards(streamName).size();
   }
 
   @Override
@@ -156,15 +162,16 @@ public class KinesisAdminClient implements StreamAdminClient
     return actualShardCount == oldShardCount + newShardCount;
   }
 
-
-  private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck)
+  private List<Shard> listShards(String streamName)
   {
-    return streamStatusToCheck.toString().equals(streamDescription.getStreamStatus());
+    ListShardsRequest listShardsRequest = new ListShardsRequest();
+    listShardsRequest.setStreamName(streamName);
+    return amazonKinesis.listShards(listShardsRequest).getShards();
   }
 
-  private int getStreamShardCount(StreamDescription streamDescription)
+  private String getStreamStatus(String streamName)
   {
-    return streamDescription.getShards().size();
+    return getStreamDescription(streamName).getStreamStatus();
   }
 
   private StreamDescription getStreamDescription(String streamName)

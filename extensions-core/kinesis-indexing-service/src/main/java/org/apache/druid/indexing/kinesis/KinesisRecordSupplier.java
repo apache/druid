@@ -26,24 +26,21 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
-import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
+import com.amazonaws.services.kinesis.model.ListShardsRequest;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
-import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSClientUtil;
@@ -669,25 +666,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return wrapExceptions(
         () -> {
           final Set<String> retVal = new HashSet<>();
-          DescribeStreamRequest request = new DescribeStreamRequest();
+          ListShardsRequest request = new ListShardsRequest();
           request.setStreamName(stream);
-
-          while (request != null) {
-            final DescribeStreamResult result = kinesis.describeStream(request);
-            final StreamDescription streamDescription = result.getStreamDescription();
-            final List<Shard> shards = streamDescription.getShards();
-
-            for (Shard shard : shards) {
-              retVal.add(shard.getShardId());
-            }
-
-            if (streamDescription.isHasMoreShards()) {
-              request.setExclusiveStartShardId(Iterables.getLast(shards).getShardId());
-            } else {
-              request = null;
-            }
+          List<Shard> shards = kinesis.listShards(request).getShards();
+          for (Shard shard : shards) {
+            retVal.add(shard.getShardId());
           }
-
           return retVal;
         }
     );
