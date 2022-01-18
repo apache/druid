@@ -130,7 +130,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
         return deserializeMap(responseContent, Map.class, getPartitionType(), getSequenceType());
       } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
         // The task received the pause request, but its status hasn't been changed yet.
-        RetryPolicy retryPolicy = newRetryPolicy();
+        final RetryPolicy retryPolicy = newRetryPolicy();
         while (true) {
           final SeekableStreamIndexTaskRunner.Status status = getStatus(id);
           if (status == SeekableStreamIndexTaskRunner.Status.PAUSED) {
