@@ -282,7 +282,6 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
 
-    // Test correctness of the query when only PARTITION BY clause is present
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITION BY 'day'")
@@ -360,6 +359,84 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         )
         .verify();
   }
+
+  @Test
+  public void testInsertWithPartitionByAndLimitOffset()
+  {
+    RowSignature targetRowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("floor_m1", ColumnType.FLOAT)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+
+    testInsertQuery()
+        .sql(
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITION BY 'day'")
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0")
+                .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
+                .limit(10)
+                .offset(20)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithPartitionByAndOrderBy()
+  {
+    RowSignature targetRowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("floor_m1", ColumnType.FLOAT)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+    testInsertQuery()
+        .sql(
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo ORDER BY 2, dim1 PARTITION BY 'day'")
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0")
+                .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithClusterByAndOrderBy()
+  {
+
+    // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
+    Assert.assertThrows(
+        SqlPlanningException.class,
+        () ->
+            testQuery(
+                StringUtils.format(
+                    "INSERT INTO dst SELECT * FROM %s ORDER BY 2 CLUSTER BY 3",
+                    externSql(externalDataSource)
+                ),
+                ImmutableList.of(),
+                ImmutableList.of()
+            )
+    );
+    didTest = true;
+  }
+
 
   // Currently EXPLAIN PLAN FOR doesn't work with the modified syntax
   @Ignore

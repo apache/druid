@@ -56,6 +56,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -67,6 +68,7 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -763,14 +765,45 @@ public class DruidPlanner implements Closeable
         insert = (SqlInsert) query;
         query = insert.getSource();
 
+        // Processing to be done when the original query has either of the PARTITION BY or CLUSTER BY clause
         if (insert instanceof DruidSqlInsert) {
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
+
+          if (druidSqlInsert.getPartitionBy() != null) {
+            // TODO: Pass the PARTITION BY clause in the query context
+          }
+
           if (druidSqlInsert.getClusterBy() != null) {
-            // OFFSET and FETCH would be NULL when specifying CLUSTER BY in the query
+            // If we have a CLUSTER BY clause, extract the information in that CLUSTER BY and create a new SqlOrderBy
+            // node
+            SqlNode offset = null;
+            SqlNode fetch = null;
+            SqlNodeList orderByList = null;
+
             if (query instanceof SqlOrderBy) {
-              throw new ValidationException("Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query");
+              SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+              // Extract the query present inside the SqlOrderBy (which is free of ORDER BY, OFFSET and FETCH clauses)
+              query = sqlOrderBy.query;
+
+              offset = sqlOrderBy.offset;
+              fetch = sqlOrderBy.fetch;
+              orderByList = sqlOrderBy.orderList;
+              // If the orderList is non-empty (i.e. there existed an ORDER BY clause in the query) and CLUSTER BY clause
+              // is also non-empty, throw an error
+              if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))
+                  && druidSqlInsert.getClusterBy() != null) {
+                throw new ValidationException(
+                    "Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query");
+              }
             }
-            query = new SqlOrderBy(query.getParserPosition(), query, druidSqlInsert.getClusterBy(), null, null);
+            // Creates a new SqlOrderBy query, which may have our CLUSTER BY overwritten
+            query = new SqlOrderBy(
+                query.getParserPosition(),
+                query,
+                GuavaUtils.firstNonNull(orderByList, druidSqlInsert.getClusterBy()),
+                offset,
+                fetch
+            );
           }
         }
       }
