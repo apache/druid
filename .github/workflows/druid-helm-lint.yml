@@ -39,7 +39,7 @@ jobs:
           CT_SINCE: HEAD
 
       - name: Run chart-testing (lint)
-        run: ct lint --charts helm/druid --print-config
+        run: ct lint --charts helm/druid --print-config --validate-maintainers=false
         env:
           CT_CHART_DIRS: helm/druid
           CT_SINCE: HEAD
