@@ -430,26 +430,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // For example time boundary query filtering ... (which does not work with tombstones)
       List<TimelineObjectHolder<String, ServerSelector>> timelineObjectHolders =
           intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
-      List<TimelineObjectHolder<String, ServerSelector>> holdersNoTombstones = new ArrayList<>();
-      for (TimelineObjectHolder<String, ServerSelector> timelineObjectHolder : timelineObjectHolders) {
-        boolean allEmpty = false;
-        for (ServerSelector ss : timelineObjectHolder.getObject().payloads()) {
-          if (ss.getSegment().isTombstone()) {
-            allEmpty = true;
-          } else {
-            allEmpty = false;
-            break;
-          }
-        }
-        if (!allEmpty) {
-          // This segment is not empty since some of its segments are not tombstones
-          holdersNoTombstones.add(timelineObjectHolder);
-        }
-      }
-      // pass holders w/o tombstones to toolchest:
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
-          holdersNoTombstones
+          timelineObjectHolders
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();

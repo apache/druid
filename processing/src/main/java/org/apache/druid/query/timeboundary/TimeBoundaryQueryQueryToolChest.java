@@ -85,8 +85,24 @@ public class TimeBoundaryQueryQueryToolChest
       return segments;
     }
 
-    final T min = query.isMaxTime() ? null : segments.get(0);
-    final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
+    // find first segment that is not empty
+    final T min = query.isMaxTime() ? null : segments.stream()
+                                                     .filter(s -> s.getStatus() == LogicalSegment.Status.READY)
+                                                     .findFirst()
+                                                     .orElse(null);
+    // find last segment that is not empty
+    T maxTemp = null;
+    if (!query.isMinTime()) {
+      for (int i = segments.size(); i > 0; i--) {
+        if (segments.get(i - 1).getStatus() != LogicalSegment.Status.READY) {
+          continue;
+        } else {
+          maxTemp = segments.get(i - 1);
+          break;
+        }
+      }
+    }
+    final T max = maxTemp;
 
     return segments.stream()
                    .filter(input -> (min != null && input.getInterval().overlaps(min.getTrueInterval())) ||

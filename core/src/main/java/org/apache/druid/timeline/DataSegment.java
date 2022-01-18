@@ -622,4 +622,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       );
     }
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return !isTombstone();
+  }
+
 }

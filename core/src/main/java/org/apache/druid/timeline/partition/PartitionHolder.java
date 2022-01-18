@@ -161,4 +161,16 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
            "overshadowableManager=" + overshadowableManager +
            '}';
   }
+
+  public boolean hasData()
+  {
+    // it has data as long as one of the payloads has data, otherwise it does not
+    for (T payload : payloads()) {
+      if (payload.hasData()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 }
