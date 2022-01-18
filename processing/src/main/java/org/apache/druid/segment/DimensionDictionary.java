@@ -46,8 +46,6 @@ public class DimensionDictionary<T extends Comparable<T>>
   private volatile int idForNull = ABSENT_VALUE_ID;
 
   private final AtomicLong sizeInBytes = new AtomicLong(0L);
-  private final boolean computeOnheapSize;
-
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
@@ -55,19 +53,8 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public DimensionDictionary()
   {
-    this(false);
-  }
-
-  /**
-   * Creates a DimensionDictionary.
-   *
-   * @param computeOnheapSize true if on-heap size of the dictionary should be maintained, false otherwise
-   */
-  public DimensionDictionary(boolean computeOnheapSize)
-  {
     this.lock = new ReentrantReadWriteLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
-    this.computeOnheapSize = computeOnheapSize;
   }
 
   public int getId(@Nullable T value)
@@ -118,7 +105,7 @@ public class DimensionDictionary<T extends Comparable<T>>
    */
   public long sizeInBytes()
   {
-    if (!computeOnheapSize) {
+    if (!computeOnHeapSize()) {
       throw new IllegalStateException("On-heap size computation is disabled");
     }
 
@@ -144,7 +131,7 @@ public class DimensionDictionary<T extends Comparable<T>>
       valueToId.put(originalValue, index);
       idToValue.add(originalValue);
 
-      if (computeOnheapSize) {
+      if (computeOnHeapSize()) {
         // Add size of new dim value and 2 references (valueToId and idToValue)
         sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
       }
@@ -206,6 +193,17 @@ public class DimensionDictionary<T extends Comparable<T>>
   public long estimateSizeOfValue(T value)
   {
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Whether on-heap size of this dictionary should be computed.
+   *
+   * @return false, by default. Implementations that want to estimate memory
+   * must override this method.
+   */
+  public boolean computeOnHeapSize()
+  {
+    return false;
   }
 
 }

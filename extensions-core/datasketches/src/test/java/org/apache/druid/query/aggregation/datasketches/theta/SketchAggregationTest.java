@@ -546,6 +546,31 @@ public class SketchAggregationTest
     Assert.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
+  @Test
+  public void testAggregateWithSize()
+  {
+    final String[] columnValues = new String[]{"a", "b", "c", "a"};
+    final TestObjectColumnSelector<String> selector = new TestObjectColumnSelector<>(columnValues);
+    final SketchAggregator agg = new SketchAggregator(selector, 16);
+
+    // Verify initial size of sketch
+    Assert.assertEquals(48L, agg.getInitialSizeBytes());
+    Assert.assertEquals(328L, agg.aggregateWithSize());
+
+    // Verify that subsequent size deltas are zero
+    for (int i = 1; i < columnValues.length; ++i) {
+      selector.increment();
+      long sizeDelta = agg.aggregateWithSize();
+      Assert.assertEquals(0, sizeDelta);
+    }
+
+    // Verify unique count estimate
+    SketchHolder sketchHolder = (SketchHolder) agg.get();
+    Assert.assertEquals(3, sketchHolder.getEstimate(), 0);
+    Assert.assertNotNull(sketchHolder.getSketch());
+    Assert.assertEquals(3, sketchHolder.getSketch().getEstimate(), 0);
+  }
+
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
   {
     Assert.assertEquals(

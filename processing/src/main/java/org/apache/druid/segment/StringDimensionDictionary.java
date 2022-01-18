@@ -27,16 +27,17 @@ package org.apache.druid.segment;
  */
 public class StringDimensionDictionary extends DimensionDictionary<String>
 {
-  public StringDimensionDictionary()
-  {
-    super(true);
-  }
-
   @Override
   public long estimateSizeOfValue(String value)
   {
     // According to https://www.ibm.com/developerworks/java/library/j-codetoheap/index.html
     // Total string size = 28B (string metadata) + 16B (char array metadata) + 2B * num letters
     return 28 + 16 + (2L * value.length());
+  }
+
+  @Override
+  public boolean computeOnHeapSize()
+  {
+    return true;
   }
 }
