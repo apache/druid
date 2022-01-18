@@ -89,7 +89,7 @@ public class DiscoveryDruidNode
           services.put(entry.getKey(), jsonMapper.convertValue(toMap(val), DruidService.class));
         }
         catch (RuntimeException e) {
-          LOG.warn("Ingore unparseable DruidService: %s", entry.getValue());
+          LOG.warn("Ignore unparseable DruidService for [%s]: %s", druidNode.getHostAndPortToUse(), val);
         }
       }
     }
