@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -84,6 +85,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
@@ -108,6 +110,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
+        metricsSpec,
         transformSpec,
         context
     );

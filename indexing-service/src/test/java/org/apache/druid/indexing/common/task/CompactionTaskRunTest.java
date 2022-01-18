@@ -61,6 +61,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -110,6 +111,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -194,9 +196,15 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     // Expected compaction state to exist after compaction as we store compaction state by default
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
     return new CompactionState(
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
       new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+      ImmutableList.of(expectedLongSumMetric),
       null,
       mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
       mapper.readValue(
@@ -341,9 +349,15 @@ public class CompactionTaskRunTest extends IngestionTestBase
             interval,
             segments.get(segmentIdx).getInterval()
         );
+        Map<String, String> expectedLongSumMetric = new HashMap<>();
+        expectedLongSumMetric.put("type", "longSum");
+        expectedLongSumMetric.put("name", "val");
+        expectedLongSumMetric.put("fieldName", "val");
+        expectedLongSumMetric.put("expression", null);
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+            ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
             getObjectMapper().readValue(
@@ -628,9 +642,77 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
     ObjectMapper mapper = new DefaultObjectMapper();
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        ImmutableList.of(expectedLongSumMetric),
+        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
+        mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
+        mapper.readValue(
+            mapper.writeValueAsString(
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    true,
+                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
+                )
+            ),
+            Map.class
+        )
+    );
+    Assert.assertEquals(
+        expectedCompactionState,
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
+  public void testCompactionWithNewMetricInMetricsSpec() throws Exception
+  {
+    runIndexTask();
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
+        .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")})
+        .build();
+
+    Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    List<DataSegment> segments = resultPair.rhs;
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Map<String, String> expectedCountMetric = new HashMap<>();
+    expectedCountMetric.put("type", "count");
+    expectedCountMetric.put("name", "cnt");
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("fieldName", "val");
+    expectedLongSumMetric.put("expression", null);
+    CompactionState expectedCompactionState = new CompactionState(
+        new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), null, null),
+        ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class),
         mapper.readValue(

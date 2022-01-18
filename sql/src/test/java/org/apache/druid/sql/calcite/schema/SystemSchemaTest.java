@@ -278,6 +278,7 @@ public class SystemSchemaTest extends CalciteTestBase
       new DynamicPartitionsSpec(null, null),
       null,
       null,
+      null,
       Collections.singletonMap("test", "map"),
       Collections.singletonMap("test2", "map2")
   );
