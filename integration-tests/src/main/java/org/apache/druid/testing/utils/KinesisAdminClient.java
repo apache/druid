@@ -31,6 +31,7 @@ import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
+import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ScalingType;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
@@ -39,12 +40,14 @@ import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import static com.amazonaws.services.kinesis.model.StreamStatus.UPDATING;
 
 public class KinesisAdminClient implements StreamAdminClient
 {
@@ -128,8 +131,7 @@ public class KinesisAdminClient implements StreamAdminClient
           () -> {
             String streamStatus = getStreamStatus(streamName);
             int updatedShardCount = getStreamPartitionCount(streamName);
-            return (streamStatus.equals(StreamStatus.UPDATING.toString()) ||
-                    streamStatus.equals(StreamStatus.ACTIVE.toString()))
+            return (verifyStreamStatus(streamName, StreamStatus.ACTIVE) || verifyStreamStatus(streamName, UPDATING))
                    && updatedShardCount > originalShardCount; // since closed shards are still present
           },
           true,
@@ -164,9 +166,21 @@ public class KinesisAdminClient implements StreamAdminClient
 
   private List<Shard> listShards(String streamName)
   {
-    ListShardsRequest listShardsRequest = new ListShardsRequest();
-    listShardsRequest.setStreamName(streamName);
-    return amazonKinesis.listShards(listShardsRequest).getShards();
+    ListShardsRequest listShardsRequest = new ListShardsRequest().withStreamName(streamName);
+    List<Shard> shards = new ArrayList<>();
+    while (true) {
+      ListShardsResult listShardsResult =  amazonKinesis.listShards(listShardsRequest);
+      List<Shard> newShards = listShardsResult.getShards();
+      if (newShards.isEmpty()) {
+        return shards;
+      }
+      shards.addAll(newShards);
+      listShardsRequest = new ListShardsRequest().withNextToken(listShardsResult.getNextToken());
+    }
+  }
+
+  private boolean verifyStreamStatus(String streamName, StreamStatus streamStatus) {
+    return getStreamStatus(streamName).equals(streamStatus.toString());
   }
 
   private String getStreamStatus(String streamName)

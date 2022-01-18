@@ -31,6 +31,7 @@ import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
 import com.amazonaws.services.kinesis.model.ListShardsRequest;
+import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
@@ -660,19 +661,33 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     return getSequenceNumber(partition, ShardIteratorType.TRIM_HORIZON);
   }
 
+  /**
+   * Use the API listShards which is the recommended way instead of describeStream
+   * listShards can return 1000 shards per call and has a limit of 100TPS
+   * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
+   *
+   * @param stream name of stream
+   *
+   * @return Set of Shard ids
+   */
   @Override
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(
         () -> {
           final Set<String> retVal = new HashSet<>();
-          ListShardsRequest request = new ListShardsRequest();
-          request.setStreamName(stream);
-          List<Shard> shards = kinesis.listShards(request).getShards();
-          for (Shard shard : shards) {
-            retVal.add(shard.getShardId());
+          ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
+          while (true) {
+            ListShardsResult result = kinesis.listShards(request);
+            List<Shard> shards = kinesis.listShards(request).getShards();
+            for (Shard shard : shards) {
+              retVal.add(shard.getShardId());
+            }
+            if (shards.isEmpty()) {
+              return retVal;
+            }
+            request = new ListShardsRequest().withNextToken(result.getNextToken());
           }
-          return retVal;
         }
     );
   }
