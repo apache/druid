@@ -19,9 +19,9 @@
 import {
   adjustId,
   cleanSpec,
-  getColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromInput,
   guessInputFormat,
-  guessTypeFromSample,
   IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
@@ -427,44 +427,54 @@ describe('spec utils', () => {
     },
   };
 
-  describe('guessTypeFromSample', () => {
+  describe('guessColumnTypeFromInput', () => {
     it('works for empty', () => {
-      expect(guessTypeFromSample([])).toEqual('string');
+      expect(guessColumnTypeFromInput([], false)).toEqual('string');
     });
 
     it('works for long', () => {
-      expect(guessTypeFromSample([1, 2, 3])).toEqual('long');
+      expect(guessColumnTypeFromInput([1, 2, 3], false)).toEqual('long');
+      expect(guessColumnTypeFromInput([1, 2, 3], true)).toEqual('long');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], true)).toEqual('long');
     });
 
     it('works for double', () => {
-      expect(guessTypeFromSample([1, 2.1, 3])).toEqual('double');
+      expect(guessColumnTypeFromInput([1, 2.1, 3], false)).toEqual('double');
+      expect(guessColumnTypeFromInput([1, 2.1, 3], true)).toEqual('double');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], true)).toEqual('double');
     });
 
     it('works for multi-value', () => {
-      expect(guessTypeFromSample(['a', ['b'], 'c'])).toEqual('string');
-      expect(guessTypeFromSample([1, [2], 3])).toEqual('string');
+      expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
     });
   });
 
-  describe('getColumnTypeFromHeaderAndRows', () => {
+  describe('guessColumnTypeFromHeaderAndRows', () => {
     it('works in empty dataset', () => {
-      expect(getColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0')).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0', false)).toEqual(
+        'string',
+      );
     });
 
     it('works for generic dataset', () => {
       const headerAndRows = {
-        header: ['c0', 'c1', 'c2'],
+        header: ['c0', 'c1', 'c2', 'c3'],
         rows: [
           {
             input: {
               c0: 'Honda',
               c1: 1,
               c2: [],
+              c3: '10',
             },
             parsed: {
               c0: 'Honda',
               c1: 1,
               c2: '',
+              c3: '10',
             },
           },
           {
@@ -472,19 +482,23 @@ describe('spec utils', () => {
               c0: 'Toyota',
               c1: 2.1,
               c2: ['1'],
+              c3: '20',
             },
             parsed: {
               c0: 'Honda',
               c1: 2.1,
               c2: '1',
+              c3: '20',
             },
           },
         ],
       };
 
-      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c0')).toEqual('string');
-      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c1')).toEqual('double');
-      expect(getColumnTypeFromHeaderAndRows(headerAndRows, 'c2')).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c0', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c1', false)).toEqual('double');
+      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c2', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c3', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c3', true)).toEqual('long');
     });
   });
 

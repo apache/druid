@@ -20,7 +20,7 @@ import { getMetricSpecs } from './metric-spec';
 
 describe('metric-spec', () => {
   it('getMetricSecs', () => {
-    expect(getMetricSpecs({ header: ['header'], rows: [] }, {})).toMatchInlineSnapshot(`
+    expect(getMetricSpecs({ header: ['header'], rows: [] }, {}, false)).toMatchInlineSnapshot(`
       Array [
         Object {
           "name": "count",

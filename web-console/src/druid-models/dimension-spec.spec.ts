@@ -20,7 +20,8 @@ import { getDimensionSpecs } from './dimension-spec';
 
 describe('dimension-spec', () => {
   it('getDimensionSpecs', () => {
-    expect(getDimensionSpecs({ header: ['header'], rows: [] }, {}, true)).toMatchInlineSnapshot(`
+    expect(getDimensionSpecs({ header: ['header'], rows: [] }, {}, false, true))
+      .toMatchInlineSnapshot(`
       Array [
         "header",
       ]

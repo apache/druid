@@ -20,7 +20,7 @@ import { Field } from '../components';
 import { filterMap, typeIs } from '../utils';
 import { HeaderAndRows } from '../utils/sampler';
 
-import { getColumnTypeFromHeaderAndRows } from './ingestion-spec';
+import { guessColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
 export interface DimensionsSpec {
   readonly dimensions?: (string | DimensionSpec)[];
@@ -80,11 +80,14 @@ export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): Dim
 export function getDimensionSpecs(
   headerAndRows: HeaderAndRows,
   typeHints: Record<string, string>,
+  guessNumericStringsAsNumbers: boolean,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(headerAndRows.header, h => {
     if (h === '__time') return;
-    const type = typeHints[h] || getColumnTypeFromHeaderAndRows(headerAndRows, h);
+    const type =
+      typeHints[h] ||
+      guessColumnTypeFromHeaderAndRows(headerAndRows, h, guessNumericStringsAsNumbers);
     if (type === 'string') return h;
     if (hasRollup) return;
     return {
