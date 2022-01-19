@@ -407,6 +407,7 @@ public class CompactSegments implements CoordinatorDuty
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             granularitySpec,
             dimensionsSpec,
+            config.getMetricsSpec(),
             transformSpec,
             dropExisting,
             newAutoCompactionContext(config.getTaskContext())

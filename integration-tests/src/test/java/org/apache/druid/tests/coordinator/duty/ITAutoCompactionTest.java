@@ -36,6 +36,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -181,7 +184,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, false);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -196,7 +199,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, false);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -625,6 +628,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -637,6 +641,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -659,6 +664,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -671,6 +677,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
       forceTriggerAutoCompaction(2);
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -699,6 +706,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Result is not rollup
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -711,12 +719,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
           null,
+          null,
           false
       );
       forceTriggerAutoCompaction(2);
 
       // Result should rollup on language dimension
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516.0))))
       );
@@ -744,6 +754,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
@@ -756,16 +767,74 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           null,
           new UserCompactionTaskTransformConfig(new SelectorDimFilter("page", "Striker Eureka", null)),
+          null,
           false
       );
       forceTriggerAutoCompaction(2);
 
       // For dim "page", result should only contain value "Striker Eureka"
       expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 1,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(459.0))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify compacted segments does not get compacted again
+      forceTriggerAutoCompaction(2);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test
+  public void testAutoCompactionDutyWithMetricsSpec() throws Exception
+  {
+    loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+
+      // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
+      Map<String, Object> expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      // Compact and add longSum and doubleSum metrics
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          null,
+          null,
+          null,
+          new AggregatorFactory[] {new DoubleSumAggregatorFactory("double_sum_added", "added"), new LongSumAggregatorFactory("long_sum_added", "added")},
+          false
+      );
+      forceTriggerAutoCompaction(2);
+
+      // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
+      // These new metrics should have the same value as the input field "added"
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "double_sum_added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
+      expectedResult = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "long_sum_added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57), ImmutableList.of(459))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
+
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
@@ -793,16 +862,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
       Map<String, Object> expectedResult = ImmutableMap.of(
-          "%%EXPECTED_COUNT_RESULT%%",
-          2,
-          "%%EXPECTED_SCAN_RESULT%%",
-          ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(57.0), ImmutableList.of(459.0))))
       );
       verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, expectedResult);
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
+          null,
           null,
           null,
           null,
@@ -865,7 +934,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     verifyQuery(queryResource, ImmutableMap.of());
   }
 
-  private void verifyQuery(String queryResource, Map<String, Object> expectedResults) throws Exception
+  private void verifyQuery(String queryResource, Map<String, Object> keyValueToReplace) throws Exception
   {
     String queryResponseTemplate;
     try {
@@ -880,7 +949,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         "%%DATASOURCE%%",
         fullDatasourceName
     );
-    for (Map.Entry<String, Object> entry : expectedResults.entrySet()) {
+    for (Map.Entry<String, Object> entry : keyValueToReplace.entrySet()) {
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           entry.getKey(),
@@ -902,12 +971,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, boolean dropExisting) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, dropExisting);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, null, dropExisting);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, UserCompactionTaskTransformConfig transformSpec, boolean dropExisting) throws Exception
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, UserCompactionTaskTransformConfig transformSpec, AggregatorFactory[] metricsSpec, boolean dropExisting) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, transformSpec, dropExisting);
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, transformSpec, metricsSpec, dropExisting);
   }
 
   private void submitCompactionConfig(
@@ -917,6 +986,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
       UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
       boolean dropExisting
   ) throws Exception
   {
@@ -947,6 +1017,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         ),
         granularitySpec,
         dimensionsSpec,
+        metricsSpec,
         transformSpec,
         !dropExisting ? null : new UserCompactionTaskIOConfig(true),
         null

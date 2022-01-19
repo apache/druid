@@ -665,7 +665,7 @@ public class SystemSchema extends AbstractSchema
             druidNode.getHostAndPort(),
             druidNode.getHostAndTlsPort(),
             dataNodeService.getMaxSize(),
-            dataNodeService.getType(),
+            dataNodeService.getServerType(),
             dataNodeService.getTier(),
             dataNodeService.getPriority()
         );
