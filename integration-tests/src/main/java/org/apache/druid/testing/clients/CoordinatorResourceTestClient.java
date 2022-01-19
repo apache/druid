@@ -138,12 +138,28 @@ public class CoordinatorResourceTestClient
   }
 
   // return a list of the segment dates for the specified datasource
+  // returns null if datasource is not found
+  @Nullable
   public List<String> getSegmentIntervals(final String dataSource)
   {
     List<String> segments;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
-
+      String url = getIntervalsURL(dataSource);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+      if (response.getStatus().equals(HttpResponseStatus.NO_CONTENT)) {
+        return null;
+      }
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
       segments = jsonMapper.readValue(
           response.getContent(), new TypeReference<List<String>>()
           {
