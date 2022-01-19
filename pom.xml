@@ -1315,6 +1315,7 @@
                     <excludes>
                       <exclude>**/SomeAvroDatum.class</exclude>
                       <exclude>**/DruidSqlParserImpl.class</exclude>
+                      <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
                     </excludes>
                     <suppressAnnotations>
@@ -1890,6 +1891,7 @@
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>.editorconfig</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>
+                                <exclude>**/codegen/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
