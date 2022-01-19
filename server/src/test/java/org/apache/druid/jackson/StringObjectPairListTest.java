@@ -17,32 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.discovery;
+package org.apache.druid.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
-/**
- */
-public class WorkerNodeServiceTest
+public class StringObjectPairListTest
 {
   @Test
-  public void testSerde() throws Exception
+  public void testEquals()
   {
-    DruidService expected = new WorkerNodeService(
-        "1.1.1.1",
-        100,
-        "v1",
-        "c1"
-    );
-
-    ObjectMapper mapper = DruidServiceTestUtils.newJsonMapper();
-    DruidService actual = mapper.readValue(
-        mapper.writeValueAsString(expected),
-        DruidService.class
-    );
-
-    Assert.assertEquals(expected, actual);
+    EqualsVerifier.forClass(StringObjectPairList.class).usingGetClass().withNonnullFields("pairs").verify();
   }
 }
