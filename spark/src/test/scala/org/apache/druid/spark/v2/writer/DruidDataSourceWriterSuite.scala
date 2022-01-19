@@ -139,7 +139,8 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
   }
 
   private def walkDir(file: File): String = {
-    s"${file.getAbsolutePath}: ${file.listFiles().toSeq.map(walkDir).mkString(", ")}"
+    val files = Option(file.listFiles())
+    s"${file.getAbsolutePath}: ${files.getOrElse(Array.empty[File]).toSeq.map(walkDir).mkString(", ")}"
   }
 
   override def beforeEach(): Unit = {
