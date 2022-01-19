@@ -180,6 +180,11 @@
       <artifactId>validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.25</version>
+    </dependency>
 
     <!-- Tests -->
     <dependency>
@@ -259,7 +264,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.1</version>
         <executions>
           <execution>
             <!-- Extract parser grammar template from Apache Calcite and put
