@@ -378,6 +378,7 @@ public class DataSegmentTest
                                             .size(0)
                                             .build();
     Assert.assertTrue(segment1.isTombstone());
+    Assert.assertFalse(segment1.hasData());
 
     final DataSegment segment2 = DataSegment.builder()
                                             .dataSource("foo")
@@ -392,6 +393,7 @@ public class DataSegmentTest
                                             .build();
 
     Assert.assertFalse(segment2.isTombstone());
+    Assert.assertTrue(segment2.hasData());
 
     final DataSegment segment3 = DataSegment.builder()
                                             .dataSource("foo")
@@ -402,6 +404,7 @@ public class DataSegmentTest
                                             .build();
 
     Assert.assertFalse(segment3.isTombstone());
+    Assert.assertTrue(segment3.hasData());
 
   }
 

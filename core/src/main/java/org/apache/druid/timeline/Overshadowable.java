@@ -78,6 +78,6 @@ public interface Overshadowable<T extends Overshadowable>
 
   default boolean hasData()
   {
-    return false;
+    return true;
   }
 }
