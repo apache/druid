@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Creates pseudo distributed hadoop 3.3.1 with java 8
-FROM centos:7
+FROM public.ecr.aws/docker/library/centos:7
 
 USER root
 

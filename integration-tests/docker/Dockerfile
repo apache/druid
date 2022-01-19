@@ -14,7 +14,7 @@
 # limitations under the License.
 
 ARG JDK_VERSION=8-slim-buster
-FROM openjdk:$JDK_VERSION as druidbase
+FROM public.ecr.aws/docker/library/openjdk:$JDK_VERSION as druidbase
 
 # Bundle everything into one script so cleanup can reduce image size.
 # Otherwise docker's layered images mean that things are not actually deleted.
