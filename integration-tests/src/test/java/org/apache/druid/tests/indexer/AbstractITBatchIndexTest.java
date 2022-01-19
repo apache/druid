@@ -409,11 +409,42 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int segmentCount = coordinator.getAvailableSegments(
+          List<DataSegment> segments = coordinator.getAvailableSegments(
               dataSource + config.getExtraDatasourceNameSuffix()
-          ).size();
+          );
+          int segmentCount = segments.size();
           LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+
           return segmentCount == numExpectedSegments;
+        },
+        "Segment count check"
+    );
+  }
+
+  void verifySegmentsCountAndLoaded(String dataSource, int numExpectedSegments, int numExpectedTombstones)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
+        "Segment load check"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          List<DataSegment> segments = coordinator.getAvailableSegments(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          );
+          int segmentCount = segments.size();
+          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+
+          int tombstoneCount = 0;
+          for (DataSegment segment : segments) {
+            if (segment.isTombstone()) {
+              tombstoneCount++;
+            }
+          }
+
+          LOG.info("Current tombstone count: %d, expected: %d", tombstoneCount, numExpectedTombstones);
+
+          return segmentCount == numExpectedSegments && tombstoneCount == numExpectedTombstones;
         },
         "Segment count check"
     );

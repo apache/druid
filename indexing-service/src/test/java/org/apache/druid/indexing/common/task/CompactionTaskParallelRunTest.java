@@ -716,12 +716,17 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     final Set<DataSegment> compactedSegments = runTask(compactionTask);
 
     usedSegments = getCoordinatorClient().fetchUsedSegmentsInDataSourceForIntervals(DATA_SOURCE, ImmutableList.of(INTERVAL_TO_INDEX));
-    // All the HOUR segments got dropped even if we do not have all MINUTES segments fully covering the 3 HOURS interval.
+    // All the HOUR segments got covered by tombstones even if we do not have all MINUTES segments fully covering the 3 HOURS interval.
     // In fact, we only have 3 minutes of data out of the 3 hours interval.
-    Assert.assertEquals(3, usedSegments.size());
+    Assert.assertEquals(180, usedSegments.size());
+    int tombstonesCount = 0;
     for (DataSegment segment : usedSegments) {
       Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+      if (segment.isTombstone()) {
+        tombstonesCount++;
+      }
     }
+    Assert.assertEquals(177, tombstonesCount);
   }
 
   @Test
