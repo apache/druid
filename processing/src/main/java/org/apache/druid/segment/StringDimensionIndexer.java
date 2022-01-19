@@ -131,15 +131,15 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       sortedLookup = null;
     }
 
-    // incremental size = increase in size of dimension dict + size of encoded array
-    long keyComponentSizeBytes;
+    long effectiveSizeBytes;
     if (useMaxMemoryEstimates) {
-      keyComponentSizeBytes = estimateEncodedKeyComponentSize(encodedDimensionValues);
+      effectiveSizeBytes = estimateEncodedKeyComponentSize(encodedDimensionValues);
     } else {
-      keyComponentSizeBytes = (dimLookup.sizeInBytes() - oldDictSizeInBytes)
-                              + (long) encodedDimensionValues.length * Integer.BYTES;
+      // size of encoded array + dictionary size change
+      effectiveSizeBytes = 16L + (long) encodedDimensionValues.length * Integer.BYTES
+                           + (dimLookup.sizeInBytes() - oldDictSizeInBytes);
     }
-    return new EncodedKeyComponent<>(encodedDimensionValues, keyComponentSizeBytes);
+    return new EncodedKeyComponent<>(encodedDimensionValues, effectiveSizeBytes);
   }
 
   /**
