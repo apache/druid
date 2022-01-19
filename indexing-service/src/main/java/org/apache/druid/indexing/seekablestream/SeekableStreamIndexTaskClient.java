@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
+import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -129,13 +130,14 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
         return deserializeMap(responseContent, Map.class, getPartitionType(), getSequenceType());
       } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
         // The task received the pause request, but its status hasn't been changed yet.
+        final RetryPolicy retryPolicy = newRetryPolicy();
         while (true) {
           final SeekableStreamIndexTaskRunner.Status status = getStatus(id);
           if (status == SeekableStreamIndexTaskRunner.Status.PAUSED) {
             return getCurrentOffsets(id, true);
           }
 
-          final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
+          final Duration delay = retryPolicy.getAndIncrementRetryDelay();
           if (delay == null) {
             throw new ISE(
                 "Task [%s] failed to change its status from [%s] to [%s], aborting",
