@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -93,12 +94,12 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(final String columnName, final int maxNumValues)
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, final int maxNumValues)
   {
     final int columnPosition = table.rowSignature().indexOf(columnName);
 
     if (columnPosition < 0) {
-      return Optional.empty();
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
     }
 
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
@@ -108,6 +109,7 @@ public class IndexedTableJoinable implements Joinable
       // Note: we are using Comparators.naturalNullsFirst() because it prevents the need for lambda-wrapping in
       // InDimFilter's "createStringPredicate" method.
       final Set<String> allValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      boolean allUnique = true;
 
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
@@ -115,16 +117,16 @@ public class IndexedTableJoinable implements Joinable
         if (!NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
             // Duplicate found. Since the values are not all unique, we must return an empty Optional.
-            return Optional.empty();
+            allUnique = false;
           }
 
           if (allValues.size() > maxNumValues) {
-            return Optional.empty();
+            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), true);
           }
         }
       }
 
-      return Optional.of(allValues);
+      return new ColumnValuesWithUniqueFlag(allValues, allUnique);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

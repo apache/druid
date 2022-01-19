@@ -86,13 +86,14 @@ public interface Joinable extends ReferenceCountedObject
   );
 
   /**
-   * Returns all nonnull values from a particular column if they are all unique, if there are "maxNumValues" or fewer,
-   * and if the column exists and supports this operation. Otherwise, returns an empty Optional.
+   * Returns all nonnull values from a particular column along with a flag to tell if they are all unique,
+   * if there are "maxNumValues" or fewer, and if the column exists and supports this operation.
+   * Otherwise, returns an empty Optional.
    *
    * @param columnName   name of the column
    * @param maxNumValues maximum number of values to return
    */
-  Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues);
+  ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues);
 
   /**
    * Searches a column from this Joinable for a particular value, finds rows that match,
@@ -116,4 +117,27 @@ public interface Joinable extends ReferenceCountedObject
       long maxCorrelationSetSize,
       boolean allowNonKeyColumnSearch
   );
+
+
+  class ColumnValuesWithUniqueFlag
+  {
+    final Set<String> columnValues;
+    final boolean allUnique;
+
+    public ColumnValuesWithUniqueFlag(Set<String> columnValues, boolean allUnique)
+    {
+      this.columnValues = columnValues;
+      this.allUnique = allUnique;
+    }
+
+    public Set<String> getColumnValues()
+    {
+      return columnValues;
+    }
+
+    public boolean isAllUnique()
+    {
+      return allUnique;
+    }
+  }
 }

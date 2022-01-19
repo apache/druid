@@ -28,7 +28,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
@@ -228,27 +228,21 @@ public class JoinableFactoryWrapper
           columnsRequiredByJoinClauses.remove(column, 1);
         }
 
-        final Optional<Filter> filter =
+        final NonnullPair<Optional<Filter>, Boolean> filter =
             convertJoinToFilter(
                 clause,
                 Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
                 maxNumFilterValues
             );
 
-        if (filter.isPresent()) {
-          filterList.add(filter.get());
-        } else {
+        filter.lhs.ifPresent(filterList::add);
+        if (!filter.rhs) {
           clausesToUse.add(clause);
           atStart = false;
         }
       } else {
         clausesToUse.add(clause);
       }
-    }
-
-    // Sanity check. If this exception is ever thrown, it's a bug.
-    if (filterList.size() + clausesToUse.size() != clauses.size()) {
-      throw new ISE("Lost a join clause during planning");
     }
 
     return Pair.of(filterList, clausesToUse);
@@ -262,9 +256,11 @@ public class JoinableFactoryWrapper
    * - it must be an INNER equi-join
    * - the right-hand columns referenced by the condition must not have any duplicate values
    * - no columns from the right-hand side can appear in "requiredColumns"
+   * @return a pair of filter extracted from the joinable clause, and a boolean to indicate whether the filter encompasses
+   * the whole joinable clause
    */
   @VisibleForTesting
-  static Optional<Filter> convertJoinToFilter(
+  static NonnullPair<Optional<Filter>, Boolean> convertJoinToFilter(
       final JoinableClause clause,
       final Set<String> requiredColumns,
       final int maxNumFilterValues
@@ -276,28 +272,31 @@ public class JoinableFactoryWrapper
         && clause.getCondition().getEquiConditions().size() > 0) {
       final List<Filter> filters = new ArrayList<>();
       int numValues = maxNumFilterValues;
+      boolean dropClause = true;
 
       for (final Equality condition : clause.getCondition().getEquiConditions()) {
         final String leftColumn = condition.getLeftExpr().getBindingIfIdentifier();
 
         if (leftColumn == null) {
-          return Optional.empty();
+          return new NonnullPair<>(Optional.empty(), false);
         }
 
-        final Optional<Set<String>> columnValuesForFilter =
-            clause.getJoinable().getNonNullColumnValuesIfAllUnique(condition.getRightColumn(), numValues);
+        Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag = clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), numValues);
+        if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
+          dropClause = false;
+          continue;
+        }
 
-        if (columnValuesForFilter.isPresent()) {
-          numValues -= columnValuesForFilter.get().size();
-          filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesForFilter.get())));
-        } else {
-          return Optional.empty();
+        numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
+        filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
+        if (!columnValuesWithUniqueFlag.isAllUnique()) {
+          dropClause = false;
         }
       }
 
-      return Optional.of(Filters.and(filters));
+      return new NonnullPair<>(filters.isEmpty() ? Optional.empty() : Optional.of(Filters.and(filters)), dropClause);
     }
 
-    return Optional.empty();
+    return new NonnullPair<>(Optional.empty(), false);
   }
 }
