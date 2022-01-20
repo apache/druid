@@ -261,11 +261,11 @@ To use the Parquet input format load the Druid Parquet extension ([`druid-parque
 
 Configure the Parquet `inputFormat` to load Parquet data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| Set value to `parquet`.| yes |
-|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+| Field | Type | Description                                                                                                                                                   | Required |
+|-------|------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `parquet`.                                                                                                                                       | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). | no (default will auto-discover 'root' level properties) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string.                     | no (default = false) |
 
 For example:
 ```json
@@ -509,12 +509,12 @@ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section 
 
 Configure the Avro OCF `inputFormat` to load Avro OCF data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String|  Set value to `avro_ocf`. | yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|schema| JSON Object |Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data. | no (default will decode using the writer schema contained in the OCF file) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+| Field | Type | Description                                                                                                                                                 | Required |
+|-------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `avro_ocf`.                                                                                                                                    | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). | no (default will auto-discover 'root' level properties) |
+|schema| JSON Object | Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data.                           | no (default will decode using the writer schema contained in the OCF file) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string.                   | no (default = false) |
 
 For example:
 ```json
@@ -558,11 +558,11 @@ For example:
 
 Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| Set value to `protobuf`. | yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
+| Field | Type | Description                                                                                                                                                            | Required |
+|-------|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `protobuf`.                                                                                                                                               | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' and 'tree'is unavailable). | no (default will auto-discover 'root' level properties) |
+|`protoBytesDecoder`| JSON Object | Specifies how to decode bytes to Protobuf record.                                                                                                                      | yes |
 
 For example:
 ```json
@@ -692,7 +692,8 @@ See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Reso
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
 An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
+field types, which can be used to read nested Avro records. The "jq" and "tree" field type is not currently supported
+for Avro.
 
 For example, using Avro Hadoop parser with custom reader's schema file:
 
@@ -1210,7 +1211,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Avro data 
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
 An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
+field types, which can be used to read nested Avro records. The "jq" and "tree" field type is not currently supported for Avro.
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
 
