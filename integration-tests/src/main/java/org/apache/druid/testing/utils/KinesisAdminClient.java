@@ -57,16 +57,22 @@ public class KinesisAdminClient implements StreamAdminClient
     Properties prop = new Properties();
     prop.load(new FileInputStream(pathToConfigFile));
 
-    AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(new BasicAWSCredentials(prop.getProperty(
-        "druid_kinesis_accessKey"), prop.getProperty("druid_kinesis_secretKey")));
+    AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
+        new BasicAWSCredentials(
+            prop.getProperty("druid_kinesis_accessKey"),
+            prop.getProperty("druid_kinesis_secretKey")
+        )
+    );
     amazonKinesis = AmazonKinesisClientBuilder.standard()
-                                              .withCredentials(credentials)
-                                              .withClientConfiguration(new ClientConfiguration())
-                                              .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                                                  endpoint,
-                                                  AwsHostNameUtils.parseRegion(endpoint, null)
-                                              ))
-                                              .build();
+                              .withCredentials(credentials)
+                              .withClientConfiguration(new ClientConfiguration())
+                              .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                                  endpoint,
+                                  AwsHostNameUtils.parseRegion(
+                                      endpoint,
+                                      null
+                                  )
+                              )).build();
   }
 
   @Override
@@ -119,14 +125,15 @@ public class KinesisAdminClient implements StreamAdminClient
     }
     if (blocksUntilStarted) {
       // Wait until the resharding started (or finished)
-      ITRetryUtil.retryUntil(() -> {
-                               int updatedShardCount = getStreamPartitionCount(streamName);
-                               // Stream should be in active or updating state AND
-                               // the number of shards must have increased irrespective
-                               return verifyStreamStatus(streamName, StreamStatus.ACTIVE, StreamStatus.UPDATING)
-                                      && updatedShardCount > originalShardCount;
-                             }, true, 300, // higher value to avoid exceeding kinesis TPS limit
-                             30, "Kinesis stream resharding to start (or finished)"
+      ITRetryUtil.retryUntil(
+          () -> {
+            int updatedShardCount = getStreamPartitionCount(streamName);
+            // Stream should be in active or updating state AND
+            // the number of shards must have increased irrespective
+            return verifyStreamStatus(streamName, StreamStatus.ACTIVE, StreamStatus.UPDATING)
+                   && updatedShardCount > originalShardCount;
+          }, true, 300, // higher value to avoid exceeding kinesis TPS limit
+          30, "Kinesis stream resharding to start (or finished)"
       );
     }
   }
@@ -171,7 +178,7 @@ public class KinesisAdminClient implements StreamAdminClient
   private boolean verifyStreamStatus(String streamName, StreamStatus... streamStatuses)
   {
     String status = getStreamStatus(streamName);
-    for (StreamStatus streamStatus: streamStatuses) {
+    for (StreamStatus streamStatus : streamStatuses) {
       if (status.equals(streamStatus.toString())) {
         return true;
       }
