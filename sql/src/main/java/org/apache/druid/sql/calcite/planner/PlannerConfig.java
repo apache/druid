@@ -63,7 +63,7 @@ public class PlannerConfig
   private long metadataSegmentPollPeriod = 60000;
 
   @JsonProperty
-  private boolean useGroupingSetForExactDistinct = false;
+  private boolean useGroupingSetForExactDistinct = true;
 
   @JsonProperty
   private boolean computeInnerJoinCostAsFilter = true;
