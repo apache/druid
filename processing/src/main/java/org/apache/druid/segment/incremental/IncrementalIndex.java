@@ -236,6 +236,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
+  private final boolean useMaxMemoryEstimates;
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -255,11 +256,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
+   * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final boolean useMaxMemoryEstimates
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -269,6 +272,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -875,9 +879,9 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return desc;
   }
 
-  protected DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
+  private DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
   {
-    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler);
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
   public List<String> getMetricNames()

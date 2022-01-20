@@ -121,7 +121,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean useMaxMemoryEstimates
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, useMaxMemoryEstimates);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
@@ -191,16 +191,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           )
       );
     }
-  }
-
-  @Override
-  protected DimensionDesc initDimension(
-      int dimensionIndex,
-      String dimensionName,
-      DimensionHandler dimensionHandler
-  )
-  {
-    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
   @Override
