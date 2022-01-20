@@ -199,7 +199,7 @@ public class QueryResource implements QueryCountStatsProvider
       query = queryLifecycle.getQuery();
       final String queryId = query.getId();
 
-      //Special handling for Walmart case
+      //Special handling for one corner case
       int numFilters;
       if (query.getContextValue(MAX_NUMERIC_IN_FILTERS) != null) {
         numFilters = Math.min(DEFAULT_MAX_NUMFILTERS, Integer.parseInt(query.getContextValue(MAX_NUMERIC_IN_FILTERS)));
@@ -213,13 +213,13 @@ public class QueryResource implements QueryCountStatsProvider
         OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
         if (orDimFilter.getFields().size() > numFilters) {
           String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-          throw new UOE(StringUtils.format("Cast values in column [%s] to String", dimension));
+          throw new UOE(StringUtils.format("Filters for column [%s] exceeds configured filter limit of [%s]. Cast [%s] values to String", dimension, numFilters, orDimFilter.getFields().size()));
         }
       } else if (query.getFilter() instanceof AndDimFilter) {
         AndDimFilter andDimFilter = (AndDimFilter) query.getFilter();
         if (andDimFilter.getFields().size() > numFilters) {
           String dimension = ((BoundDimFilter) (andDimFilter.getFields().get(0))).getDimension();
-          throw new UOE(StringUtils.format("Cast values in column [%s] to String", dimension));
+          throw new UOE(StringUtils.format("Filters for column [%s] exceeds configured filter limit of [%s]. Cast [%s] values to String", dimension, numFilters, andDimFilter.getFields().size()));
         }
       }
 
