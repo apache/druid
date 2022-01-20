@@ -105,9 +105,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   private final Comparator<? super VersionType> versionComparator;
 
+  // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
+  private boolean skipObjectsWithNoData = false;
+
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
     this.versionComparator = versionComparator;
+  }
+
+  public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData)
+  {
+    this(versionComparator);
+    this.skipObjectsWithNoData = skipObjectsWithNoData;
   }
 
   public static void addSegments(
@@ -743,7 +752,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       Interval timelineInterval = entry.getKey();
       TimelineEntry val = entry.getValue();
 
-      if (timelineInterval.overlaps(interval)) {
+      // exclude empty partition holders (i.e. tombstones) since they do not add value
+      // for higher level code...they have no data rows...
+      if ((!skipObjectsWithNoData || val.partitionHolder.hasData()) && timelineInterval.overlaps(interval)) {
         retVal.add(
             new TimelineObjectHolder<>(
                 timelineInterval,

@@ -22,7 +22,6 @@ package org.apache.druid.query.timeboundary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -37,16 +36,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
  */
 public class TimeBoundaryQueryQueryToolChestTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private static final TimeBoundaryQuery TIME_BOUNDARY_QUERY = new TimeBoundaryQuery(
       new TableDataSource("test"),
@@ -77,27 +72,12 @@ public class TimeBoundaryQueryQueryToolChestTest
                                                                          .filters("foo", "bar")
                                                                          .build();
 
-  private static LogicalSegment createEmptyLogicalSegment(final Interval interval)
-  {
-    return createLogicalSegment(interval, interval, true);
-  }
-
-  private static LogicalSegment createLogicalSegment(final Interval interval, boolean empty)
-  {
-    return createLogicalSegment(interval, interval, empty);
-  }
-
   private static LogicalSegment createLogicalSegment(final Interval interval)
   {
-    return createLogicalSegment(interval, interval, false);
+    return createLogicalSegment(interval, interval);
   }
 
   private static LogicalSegment createLogicalSegment(final Interval interval, final Interval trueInterval)
-  {
-    return createLogicalSegment(interval, trueInterval, false);
-  }
-
-  private static LogicalSegment createLogicalSegment(final Interval interval, final Interval trueInterval, boolean empty)
   {
     return new LogicalSegment()
     {
@@ -111,16 +91,6 @@ public class TimeBoundaryQueryQueryToolChestTest
       public Interval getTrueInterval()
       {
         return trueInterval;
-      }
-
-      @Override
-      public Status getStatus()
-      {
-        if (empty) {
-          return Status.EMPTY;
-        } else {
-          return Status.READY;
-        }
       }
     };
   }
@@ -355,68 +325,5 @@ public class TimeBoundaryQueryQueryToolChestTest
     Result<TimeBoundaryResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
-  }
-
-  @Test
-  public void testFilterSomeEmptySegments()
-  {
-
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        TIME_BOUNDARY_QUERY,
-        Arrays.asList(
-            createEmptyLogicalSegment(Intervals.of("2013-01-01/2013-01-02")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-02/2013-01-03")),
-            createLogicalSegment(Intervals.of("2013-01-04/2013-01-05")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-05/2013-01-06")),
-            createLogicalSegment(Intervals.of("2013-01-06/2013-01-07")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-08/2013-01-09"))
-        )
-    );
-
-    Assert.assertEquals(2, segments.size());
-
-    List<LogicalSegment> expected = Arrays.asList(
-        createLogicalSegment(Intervals.of("2013-01-04/2013-01-05")),
-        createLogicalSegment(Intervals.of("2013-01-06/2013-01-07"))
-    );
-
-    for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
-    }
-  }
-
-  @Test
-  public void testFilterAllEmptySegments()
-  {
-
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        TIME_BOUNDARY_QUERY,
-        Arrays.asList(
-            createEmptyLogicalSegment(Intervals.of("2013-01-01/2013-01-02")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-02/2013-01-03")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-04/2013-01-05")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-05/2013-01-06")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-06/2013-01-07")),
-            createEmptyLogicalSegment(Intervals.of("2013-01-08/2013-01-09"))
-        )
-    );
-
-    Assert.assertEquals(0, segments.size());
-
-  }
-
-  @Test
-  public void testSingleEmptySegments()
-  {
-
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        TIME_BOUNDARY_QUERY,
-        Collections.singletonList(
-            createEmptyLogicalSegment(Intervals.of("2013-01-01/2013-01-02"))
-        )
-    );
-
-    Assert.assertEquals(0, segments.size());
-
   }
 }

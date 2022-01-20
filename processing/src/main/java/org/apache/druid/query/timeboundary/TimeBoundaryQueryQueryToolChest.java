@@ -45,7 +45,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BinaryOperator;
@@ -82,30 +81,12 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if (segments.size() == 1 && segments.get(0).getStatus() == LogicalSegment.Status.EMPTY) {
-      return Collections.emptyList();
-    } else if (segments.size() <= 1 || query.hasFilters()) {
+    if (segments.size() <= 1 || query.hasFilters()) {
       return segments;
     }
 
-    // find first segment that is not empty
-    final T min = query.isMaxTime() ? null : segments.stream()
-                                                     .filter(s -> s.getStatus() == LogicalSegment.Status.READY)
-                                                     .findFirst()
-                                                     .orElse(null);
-    // find last segment that is not empty
-    T maxTemp = null;
-    if (!query.isMinTime()) {
-      for (int i = segments.size(); i > 0; i--) {
-        if (segments.get(i - 1).getStatus() != LogicalSegment.Status.READY) {
-          continue;
-        } else {
-          maxTemp = segments.get(i - 1);
-          break;
-        }
-      }
-    }
-    final T max = maxTemp;
+    final T min = query.isMaxTime() ? null : segments.get(0);
+    final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
 
     return segments.stream()
                    .filter(input -> (min != null && input.getInterval().overlaps(min.getTrueInterval())) ||
