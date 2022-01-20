@@ -39,6 +39,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -57,6 +58,9 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -80,7 +84,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -102,6 +105,8 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String HEADER_ETAG = "ETag";
+  public static final String MAX_NUMERIC_IN_FILTERS = "Max-Numeric-In-Filters";
+  public static final int DEFAULT_MAX_NUMFILTERS = 10000;
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
   protected final ObjectMapper jsonMapper;
@@ -193,6 +198,30 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.initialize(readQuery(req, in, ioReaderWriter));
       query = queryLifecycle.getQuery();
       final String queryId = query.getId();
+
+      //Special handling for Walmart case
+      int numFilters;
+      if (query.getContextValue(MAX_NUMERIC_IN_FILTERS) != null) {
+        numFilters = Math.min(DEFAULT_MAX_NUMFILTERS, Integer.parseInt(query.getContextValue(MAX_NUMERIC_IN_FILTERS)));
+      } else {
+        numFilters = DEFAULT_MAX_NUMFILTERS;
+      }
+      if (numFilters < 1) {
+        throw new UnsupportedOperationException("Max-Numeric-In-Filters must be greater than 0");
+      }
+      if (query.getFilter() instanceof OrDimFilter) {
+        OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
+        if (orDimFilter.getFields().size() > numFilters) {
+          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
+          throw new UOE(StringUtils.format("Cast values in column [%s] to String", dimension));
+        }
+      } else if (query.getFilter() instanceof AndDimFilter) {
+        AndDimFilter andDimFilter = (AndDimFilter) query.getFilter();
+        if (andDimFilter.getFields().size() > numFilters) {
+          String dimension = ((BoundDimFilter) (andDimFilter.getFields().get(0))).getDimension();
+          throw new UOE(StringUtils.format("Cast values in column [%s] to String", dimension));
+        }
+      }
 
       final String queryThreadName = StringUtils.format(
           "%s[%s_%s_%s]",
@@ -396,12 +425,24 @@ public class QueryResource implements QueryCountStatsProvider
       );
     }
 
+    String maxNumFilterStr = getOverrideFilter(req);
+    if (maxNumFilterStr != null) {
+      baseQuery = baseQuery.withOverriddenContext(
+          ImmutableMap.of(MAX_NUMERIC_IN_FILTERS, maxNumFilterStr)
+      );
+    }
+
     return baseQuery;
   }
 
   private static String getPreviousEtag(final HttpServletRequest req)
   {
     return req.getHeader(HEADER_IF_NONE_MATCH);
+  }
+
+  private static String getOverrideFilter(final HttpServletRequest req)
+  {
+    return req.getHeader(MAX_NUMERIC_IN_FILTERS);
   }
 
   protected ObjectMapper serializeDataTimeAsLong(ObjectMapper mapper)

@@ -169,6 +169,23 @@ public class QueryResourceTest
       + "    \"context\": { \"priority\": -1 }"
       + "}";
 
+  private static final String SIMPLE_SCAN_QUERY =
+      "{\n"
+      + "    \"queryType\": \"scan\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ],\n"
+      + "    \"context\": { \"Max-Numeric-In-Filters\": -1 }"
+      + "}";
+
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
   private static final DruidNode DRUID_NODE = new DruidNode(
@@ -203,6 +220,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
@@ -245,6 +263,19 @@ public class QueryResourceTest
 
     Response response = queryResource.doPost(
         new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testBadInFilters() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_SCAN_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -416,6 +447,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
     EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
 
     EasyMock.replay(testServletRequest);
@@ -451,6 +483,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
     EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(testServletRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
 
     EasyMock.replay(testServletRequest);
@@ -493,6 +526,7 @@ public class QueryResourceTest
     // Set Accept to Smile
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
     EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(smileRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
 
     EasyMock.replay(smileRequest);
@@ -537,6 +571,7 @@ public class QueryResourceTest
     // Set Accept to Smile
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
     EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(smileRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
 
     EasyMock.replay(smileRequest);
@@ -582,6 +617,7 @@ public class QueryResourceTest
     // DO NOT set Accept to Smile, Content-Type in response will be default to Content-Type in request
     EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(null).anyTimes();
     EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
+    EasyMock.expect(smileRequest.getHeader(QueryResource.MAX_NUMERIC_IN_FILTERS)).andReturn("10").anyTimes();
     EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
 
     EasyMock.replay(smileRequest);
