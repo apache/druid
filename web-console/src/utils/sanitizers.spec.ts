@@ -16,6 +16,11 @@
  * limitations under the License.
  */
 
-export function durationSanitizer(str: string): string {
-  return str.toUpperCase().replace(/[^0-9PYMWDTHS.,]/g, '');
-}
+import { durationSanitizer } from './sanitizers';
+
+describe('sanitizers', () => {
+  it('works on durationSanitizer', () => {
+    expect(durationSanitizer('P2W')).toEqual('P2W');
+    expect(durationSanitizer('p1m%')).toEqual('P1M');
+  });
+});
