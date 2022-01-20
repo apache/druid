@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Creates pseudo distributed hadoop 2.8.5 with java 8
-FROM public.ecr.aws/docker/library/centos:7
+FROM centos:7
 
 USER root
 

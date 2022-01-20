@@ -28,6 +28,7 @@ jdk:
 cache:
   directories:
     - $HOME/.m2
+    - docker_images
 
 env:
   global:
@@ -47,6 +48,12 @@ addons:
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
 # output.  To compensate, use travis_wait to extend the timeout.
 install: ./check_test_suite.py && travis_terminate 0  || echo 'Running maven install...' && MAVEN_OPTS='-Xmx3000m' travis_wait 15 ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C && ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+before_cache:
+  - test -f docker_images/openjdk8.tar || docker save -o docker_images/openjdk8.tar openjdk:8-slim-buster || true
+  - test -f docker_images/openjdk11.tar || docker save -o docker_images/openjdk11.tar openjdk:11-slim-buster || true
+  - test -f docker_images/openjdk15.tar || docker save -o docker_images/openjdk15.tar openjdk:15-slim-buster || true
+  - test -f docker_images/centos7.tar || docker save -o docker_images/centos7.tar centos:7 || true
 
 # There are 3 stages of tests
 # 1. Tests - phase 1
@@ -415,6 +422,11 @@ jobs:
     - &integration_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) batch index integration test"
       stage: Tests - phase 2
+      before_install: &load_docker_images
+        - docker load -i docker_images/openjdk8.tar || true
+        - docker load -i docker_images/openjdk11.tar || true
+        - docker load -i docker_images/openjdk15.tar || true
+        - docker load -i docker_images/centos7.tar || true
       jdk: openjdk8
       services: &integration_test_services
         - docker
@@ -437,6 +449,7 @@ jobs:
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -450,6 +463,7 @@ jobs:
     - &integration_input_source
       name: "(Compile=openjdk8, Run=openjdk8) input source integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -463,6 +477,7 @@ jobs:
     - &integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
       jdk: openjdk8
+      before_install: *load_docker_images
       stage: Tests - phase 2
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -484,6 +499,7 @@ jobs:
     - &integration_kafka_index
       name: "(Compile=openjdk8, Run=openjdk8) kafka index integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -514,6 +530,7 @@ jobs:
     - &integration_kafka_transactional_index
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -523,6 +540,7 @@ jobs:
     - &integration_kafka_transactional_index_slow
       name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test slow"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-transactional-index-slow' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -536,6 +554,7 @@ jobs:
     - &integration_kafka_format_tests
       name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -549,6 +568,7 @@ jobs:
     - &integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
@@ -558,6 +578,7 @@ jobs:
     - &integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk8) query retry integration test for missing segments"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query-retry' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
@@ -567,6 +588,7 @@ jobs:
     - &integration_query_error
       name: "(Compile=openjdk8, Run=openjdk8) query error integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=query-error' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
@@ -576,6 +598,7 @@ jobs:
     - &integration_security
       name: "(Compile=openjdk8, Run=openjdk8) security integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
@@ -585,6 +608,7 @@ jobs:
     - &integration_ldap_security
       name: "(Compile=openjdk8, Run=openjdk8) ldap security integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=ldap-security' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -594,6 +618,7 @@ jobs:
     - &integration_realtime_index
       name: "(Compile=openjdk8, Run=openjdk8) realtime index integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=realtime-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -603,6 +628,7 @@ jobs:
     - &integration_append_ingestion
       name: "(Compile=openjdk8, Run=openjdk8) append ingestion integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=append-ingestion' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -616,6 +642,7 @@ jobs:
     - &integration_compaction_tests
       name: "(Compile=openjdk8, Run=openjdk8) compaction integration test"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-Dgroups=compaction' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
@@ -629,6 +656,7 @@ jobs:
     - &integration_tests
       name: "(Compile=openjdk8, Run=openjdk8) other integration tests"
       stage: Tests - phase 2
+      before_install: *load_docker_images
       jdk: openjdk8
       services: *integration_test_services
       env: TESTNG_GROUPS='-DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
