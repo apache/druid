@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -30,14 +29,8 @@ import java.util.Arrays;
 /**
  * Unit tests for {@link StringDimensionIndexer}.
  */
-public class StringDimensionIndexerTest
+public class StringDimensionIndexerTest extends InitializedNullHandlingTest
 {
-  @Before
-  public void setup()
-  {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testProcessRowValsToEncodedKeyComponent_usingAvgEstimates()
   {
