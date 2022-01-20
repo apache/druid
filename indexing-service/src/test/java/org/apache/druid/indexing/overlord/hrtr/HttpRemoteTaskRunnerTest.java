@@ -187,19 +187,16 @@ public class HttpRemoteTaskRunnerTest
   }
 
   /*
-  Simulates startup of Overlord and Workers being discovered with no previously known tasks. Fresh tasks are given
-  and expected to be completed.
+  Simulates startup of Overlord. Overlord is then stopped and is expected to close down certain things.
    */
   @Test(timeout = 60_000L)
-  public void testFreshStartAndStop() throws Exception
+  public void testFreshStartAndStop()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
     ProvisioningStrategy provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     ProvisioningService provisioningService = EasyMock.createNiceMock(ProvisioningService.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
-            .andReturn(druidNodeDiscovery);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
             .andReturn(druidNodeDiscovery);
     EasyMock.expect(provisioningStrategy.makeProvisioningService(isA(HttpRemoteTaskRunner.class)))
@@ -253,6 +250,79 @@ public class HttpRemoteTaskRunnerTest
         );
       }
     };
+
+    taskRunner.start();
+    taskRunner.stop();
+    EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy, provisioningService);
+  }
+
+  /*
+  Simulates startup of Overlord with no provisoner. Overlord is then stopped and is expected to close down certain
+  things.
+   */
+  @Test(timeout = 60_000L)
+  public void testFreshStartAndStopNoProvisioner()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    ProvisioningStrategy provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.expect(provisioningStrategy.makeProvisioningService(isA(HttpRemoteTaskRunner.class)))
+            .andReturn(null);
+    EasyMock.expectLastCall();
+    EasyMock.replay(druidNodeDiscoveryProvider, provisioningStrategy);
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig()
+        {
+          @Override
+          public int getPendingTasksRunnerNumThreads()
+          {
+            return 3;
+          }
+        },
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        provisioningStrategy,
+        druidNodeDiscoveryProvider,
+        EasyMock.createNiceMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return HttpRemoteTaskRunnerTest.createWorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            ImmutableMap.of(),
+            new AtomicInteger(),
+            ImmutableSet.of()
+        );
+      }
+    };
+
+    taskRunner.start();
+    taskRunner.stop();
+    EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy);
   }
 
   /*
