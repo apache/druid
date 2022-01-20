@@ -426,8 +426,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
           = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
 
-      // filter out tombstones (this facilitates correct procesing of sub-sequent filtering)
-      // For example time boundary query filtering ... (which does not work with tombstones)
       List<TimelineObjectHolder<String, ServerSelector>> timelineObjectHolders =
           intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(

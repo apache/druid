@@ -45,6 +45,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BinaryOperator;
@@ -81,7 +82,9 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if (segments.size() <= 1 || query.hasFilters()) {
+    if (segments.size() == 1 && segments.get(0).getStatus() == LogicalSegment.Status.EMPTY) {
+      return Collections.emptyList();
+    } else if (segments.size() <= 1 || query.hasFilters()) {
       return segments;
     }
 

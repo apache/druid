@@ -37,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -384,4 +385,38 @@ public class TimeBoundaryQueryQueryToolChestTest
     }
   }
 
+  @Test
+  public void testFilterAllEmptySegments()
+  {
+
+    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        TIME_BOUNDARY_QUERY,
+        Arrays.asList(
+            createEmptyLogicalSegment(Intervals.of("2013-01-01/2013-01-02")),
+            createEmptyLogicalSegment(Intervals.of("2013-01-02/2013-01-03")),
+            createEmptyLogicalSegment(Intervals.of("2013-01-04/2013-01-05")),
+            createEmptyLogicalSegment(Intervals.of("2013-01-05/2013-01-06")),
+            createEmptyLogicalSegment(Intervals.of("2013-01-06/2013-01-07")),
+            createEmptyLogicalSegment(Intervals.of("2013-01-08/2013-01-09"))
+        )
+    );
+
+    Assert.assertEquals(0, segments.size());
+
+  }
+
+  @Test
+  public void testSingleEmptySegments()
+  {
+
+    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        TIME_BOUNDARY_QUERY,
+        Collections.singletonList(
+            createEmptyLogicalSegment(Intervals.of("2013-01-01/2013-01-02"))
+        )
+    );
+
+    Assert.assertEquals(0, segments.size());
+
+  }
 }
