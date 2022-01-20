@@ -37,6 +37,7 @@ import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -46,7 +47,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
-public class DataSourceCompactionConfigTest
+public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
