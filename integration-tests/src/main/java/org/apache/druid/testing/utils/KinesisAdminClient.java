@@ -39,13 +39,14 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.FileInputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class KinesisAdminClient implements StreamAdminClient
 {
@@ -129,11 +130,13 @@ public class KinesisAdminClient implements StreamAdminClient
           () -> {
             int updatedShardCount = getStreamPartitionCount(streamName);
             // Stream should be in active or updating state AND
-            // the number of shards must have increased irrespective
+            // the number of shards must have increased irrespective of the value of newShardCount
             return verifyStreamStatus(streamName, StreamStatus.ACTIVE, StreamStatus.UPDATING)
                    && updatedShardCount > originalShardCount;
-          }, true, 300, // higher value to avoid exceeding kinesis TPS limit
-          30, "Kinesis stream resharding to start (or finished)"
+          }, true,
+          300, // higher value to avoid exceeding kinesis TPS limit
+          30,
+          "Kinesis stream resharding to start (or finished)"
       );
     }
   }
@@ -141,7 +144,7 @@ public class KinesisAdminClient implements StreamAdminClient
   @Override
   public boolean isStreamActive(String streamName)
   {
-    return getStreamStatus(streamName).equals(StreamStatus.ACTIVE.toString());
+    return verifyStreamStatus(streamName, StreamStatus.ACTIVE);
   }
 
   @Override
@@ -160,16 +163,16 @@ public class KinesisAdminClient implements StreamAdminClient
     return actualShardCount == oldShardCount + newShardCount;
   }
 
-  private List<Shard> listShards(String streamName)
+  private Set<Shard> listShards(String streamName)
   {
     ListShardsRequest listShardsRequest = new ListShardsRequest().withStreamName(streamName);
-    List<Shard> shards = new ArrayList<>();
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
     while (true) {
       ListShardsResult listShardsResult = amazonKinesis.listShards(listShardsRequest);
       shards.addAll(listShardsResult.getShards());
       String nextToken = listShardsResult.getNextToken();
       if (nextToken == null) {
-        return shards;
+        return shards.build();
       }
       listShardsRequest = new ListShardsRequest().withNextToken(listShardsResult.getNextToken());
     }
@@ -177,13 +180,9 @@ public class KinesisAdminClient implements StreamAdminClient
 
   private boolean verifyStreamStatus(String streamName, StreamStatus... streamStatuses)
   {
-    String status = getStreamStatus(streamName);
-    for (StreamStatus streamStatus : streamStatuses) {
-      if (status.equals(streamStatus.toString())) {
-        return true;
-      }
-    }
-    return false;
+    return Arrays.stream(streamStatuses)
+                 .map(StreamStatus::toString)
+                 .anyMatch(getStreamStatus(streamName)::equals);
   }
 
   private String getStreamStatus(String streamName)

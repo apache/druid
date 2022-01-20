@@ -35,6 +35,7 @@ import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
+import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.util.AwsHostNameUtils;
@@ -67,11 +68,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -673,13 +674,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      final Set<String> retVal = new HashSet<>();
+      final Set<String> retVal = new TreeSet<>();
       ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
       while (true) {
         ListShardsResult result = kinesis.listShards(request);
         retVal.addAll(result.getShards()
                             .stream()
-                            .map(x -> x.getShardId())
+                            .map(Shard::getShardId)
                             .collect(Collectors.toList())
         );
         String nextToken = result.getNextToken();
