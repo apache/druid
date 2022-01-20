@@ -32,10 +32,8 @@ import org.apache.spark.sql.sources.v2.writer.WriterCommitMessage
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 
-import java.io.File
-
 class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with BeforeAndAfterEach
-  with DruidDataSourceV2TestUtils with Logging {
+  with DruidDataSourceV2TestUtils {
   var uri: String = _
 
   test("commit should correctly record segment data in the metadata database") {
@@ -113,8 +111,6 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
   test("abort should delete segments") {
     val tempDir = FileUtils.createTempDir()
     org.apache.commons.io.FileUtils.copyDirectory(segmentsDir, tempDir, false)
-    logInfo(tempDir.getAbsolutePath)
-    logInfo(tempDir.list().toSeq.mkString(", "))
 
     // Segments should have been copied, starting from the root directory named for the data source
     tempDir.list() should contain theSameElementsInOrderAs Seq(dataSource)
@@ -132,15 +128,9 @@ class DruidDataSourceWriterSuite extends SparkFunSuite with Matchers with Before
     druidDataSourceWriter.abort(Array(commitMessages.asInstanceOf[WriterCommitMessage]))
 
     // Having killed all segments, we should have deleted the directory structure up to the data source directory
-    logInfo(walkDir(tempDir))
     tempDir.list().toSeq shouldBe 'isEmpty
 
     FileUtils.deleteDirectory(tempDir)
-  }
-
-  private def walkDir(file: File): String = {
-    val files = Option(file.listFiles())
-    s"${file.getAbsolutePath}: ${files.getOrElse(Array.empty[File]).toSeq.map(walkDir).mkString(", ")}"
   }
 
   override def beforeEach(): Unit = {
