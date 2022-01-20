@@ -330,6 +330,7 @@ public class HttpIndexingServiceClientTest
           null,
           null,
           null,
+          null,
           null
       );
     }
