@@ -486,22 +486,18 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
     FactorizePlan(ColumnSelectorFactory metricFactory)
     {
-      final List<String> columns;
-
       if (fields != null) {
         // if fields are set, we are accumulating from raw inputs, use fold expression
         plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), foldExpression.get());
         seed = initialValue.get();
-        columns = plan.getAnalysis().getRequiredBindingsList();
       } else {
         // else we are merging intermediary results, use combine expression
         plan = ExpressionPlanner.plan(inspectorWithAccumulator(metricFactory), combineExpression.get());
         seed = initialCombineValue.get();
-        columns = plan.getAnalysis().getRequiredBindingsList();
       }
 
       bindings = new ExpressionLambdaAggregatorInputBindings(
-          ExpressionSelectors.createBindings(metricFactory, columns),
+          ExpressionSelectors.createBindings(metricFactory, plan),
           accumulatorId,
           seed
       );

@@ -338,8 +338,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{useDefault ? "" : null}
+            new Object[]{"[\"a\",\"b\"]"}
         )
     );
   }
@@ -364,9 +363,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"b\"]"},
             new Object[]{"[\"c\"]"},
             new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"}
+            new Object[]{useDefault ? NULL_STRING : "[]"},
+            new Object[]{NULL_STRING},
+            new Object[]{NULL_STRING}
         )
     );
   }
@@ -423,8 +422,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
           new Object[]{"", 3L},
+          new Object[]{"foo", 3L},
           new Object[]{"b", 2L},
           new Object[]{"a", 1L},
           new Object[]{"c", 1L},
@@ -432,7 +431,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
+          new Object[]{"foo", 4L},
           new Object[]{null, 2L},
           new Object[]{"b", 2L},
           new Object[]{"", 1L},
@@ -483,8 +482,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
           new Object[]{"", 3L},
+          new Object[]{"foo", 3L},
           new Object[]{"b", 2L},
           new Object[]{"a", 1L},
           new Object[]{"c", 1L},
@@ -492,7 +491,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
+          new Object[]{"foo", 4L},
           new Object[]{null, 2L},
           new Object[]{"b", 2L},
           new Object[]{"", 1L},
@@ -607,16 +606,16 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"", 6L},
           new Object[]{"b", 4L},
+          new Object[]{"", 3L},
           new Object[]{"a", 2L},
           new Object[]{"c", 2L},
           new Object[]{"d", 2L}
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{null, 4L},
           new Object[]{"b", 4L},
+          new Object[]{null, 2L},
           new Object[]{"", 2L},
           new Object[]{"a", 2L},
           new Object[]{"c", 2L},
@@ -1297,13 +1296,13 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         useDefault ? ImmutableList.of(
-            new Object[]{NULL_LIST, 3L},
+            new Object[]{null, 3L},
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
         ) :
         ImmutableList.of(
-            new Object[]{NULL_LIST, 2L},
+            new Object[]{null, 2L},
             new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},

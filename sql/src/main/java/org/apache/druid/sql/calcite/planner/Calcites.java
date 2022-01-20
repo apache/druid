@@ -29,7 +29,10 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
@@ -84,6 +87,9 @@ public class Calcites
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
+
+  public static SqlReturnTypeInference ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
+  public static SqlReturnTypeInference ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
   private Calcites()
   {
@@ -463,6 +469,40 @@ public class Calcites
         return Timestamp.class;
       default:
         return Object.class;
+    }
+  }
+
+  public static class Arg0NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(0);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
+    }
+  }
+
+  public static class Arg1NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(1);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
     }
   }
 }
