@@ -65,7 +65,8 @@ public class CoordinatorDynamicConfig
   /**
    * If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources.
    */
-  private final boolean killUnusedSegmentsInAllDataSources;
+  @Nullable
+  private final Boolean killUnusedSegmentsInAllDataSources;
 
   /**
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
@@ -131,7 +132,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killDataSourceWhitelist") Object specificDataSourcesToKillUnusedSegmentsIn,
       // Keeping the legacy 'killAllDataSources' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
-      @JsonProperty("killAllDataSources") boolean killUnusedSegmentsInAllDataSources,
+      @JsonProperty("killAllDataSources") Boolean killUnusedSegmentsInAllDataSources,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
       // strings in the update request, as well as for specificDataSourcesToKillUnusedSegmentsIn.
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
@@ -172,8 +173,8 @@ public class CoordinatorDynamicConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.emitBalancingStats = emitBalancingStats;
-    this.killUnusedSegmentsInAllDataSources = killUnusedSegmentsInAllDataSources;
     this.specificDataSourcesToKillUnusedSegmentsIn = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
+    this.killUnusedSegmentsInAllDataSources = killUnusedSegmentsInAllDataSources;
     this.dataSourcesToNotKillStalePendingSegmentsIn =
         parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue == null
@@ -186,7 +187,9 @@ public class CoordinatorDynamicConfig
     );
     this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
 
-    if (this.killUnusedSegmentsInAllDataSources && !this.specificDataSourcesToKillUnusedSegmentsIn.isEmpty()) {
+    if (this.killUnusedSegmentsInAllDataSources != null &&
+        this.killUnusedSegmentsInAllDataSources &&
+        !this.specificDataSourcesToKillUnusedSegmentsIn.isEmpty()) {
       throw new IAE(
           "can't have killUnusedSegmentsInAllDataSources and non-empty specificDataSourcesToKillUnusedSegmentsIn"
       );
@@ -315,7 +318,9 @@ public class CoordinatorDynamicConfig
   @JsonProperty("killAllDataSources")
   public boolean isKillUnusedSegmentsInAllDataSources()
   {
-    return killUnusedSegmentsInAllDataSources;
+    return killUnusedSegmentsInAllDataSources != null
+           ? killUnusedSegmentsInAllDataSources
+           : specificDataSourcesToKillUnusedSegmentsIn.isEmpty();
   }
 
   @JsonProperty("killPendingSegmentsSkipList")
@@ -453,7 +458,7 @@ public class CoordinatorDynamicConfig
     if (emitBalancingStats != that.emitBalancingStats) {
       return false;
     }
-    if (killUnusedSegmentsInAllDataSources != that.killUnusedSegmentsInAllDataSources) {
+    if (!Objects.equals(killUnusedSegmentsInAllDataSources, that.killUnusedSegmentsInAllDataSources)) {
       return false;
     }
     if (maxSegmentsInNodeLoadingQueue != that.maxSegmentsInNodeLoadingQueue) {
@@ -523,7 +528,6 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = false;
-    private static final boolean DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
@@ -727,9 +731,7 @@ public class CoordinatorDynamicConfig
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
           emitBalancingStats == null ? DEFAULT_EMIT_BALANCING_STATS : emitBalancingStats,
           specificDataSourcesToKillUnusedSegmentsIn,
-          killUnusedSegmentsInAllDataSources == null
-          ? DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES
-          : killUnusedSegmentsInAllDataSources,
+          killUnusedSegmentsInAllDataSources,
           dataSourcesToNotKillStalePendingSegmentsIn,
           maxSegmentsInNodeLoadingQueue == null
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
@@ -766,7 +768,7 @@ public class CoordinatorDynamicConfig
           ? defaults.getSpecificDataSourcesToKillUnusedSegmentsIn()
           : specificDataSourcesToKillUnusedSegmentsIn,
           killUnusedSegmentsInAllDataSources == null
-          ? defaults.isKillUnusedSegmentsInAllDataSources()
+          ? defaults.killUnusedSegmentsInAllDataSources
           : killUnusedSegmentsInAllDataSources,
           dataSourcesToNotKillStalePendingSegmentsIn == null
           ? defaults.getDataSourcesToNotKillStalePendingSegmentsIn()
