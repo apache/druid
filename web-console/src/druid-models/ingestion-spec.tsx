@@ -34,7 +34,7 @@ import {
   oneOf,
   typeIs,
 } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import {
   DimensionsSpec,
@@ -2180,12 +2180,18 @@ function inputFormatFromType(
 // ------------------------
 
 export function guessColumnTypeFromInput(
-  sample: any[],
+  sampleValues: any[],
   guessNumericStringsAsNumbers: boolean,
 ): string {
-  const definedValues = sample.filter(v => v != null);
+  const definedValues = sampleValues.filter(v => v != null);
+
+  // If we have no usable sample, assume string
+  if (!definedValues.length) return 'string';
+
+  // If we see any arrays in the input this is a multi-value dimension that must be a string
+  if (definedValues.some(v => Array.isArray(v))) return 'string';
+
   if (
-    definedValues.length &&
     definedValues.every(
       v =>
         !isNaN(v) &&
@@ -2199,14 +2205,12 @@ export function guessColumnTypeFromInput(
 }
 
 export function guessColumnTypeFromHeaderAndRows(
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   column: string,
   guessNumericStringsAsNumbers: boolean,
 ): string {
-  // If we see any arrays in the input this is a multi-value dimension that must be a string
-  if (headerAndRows.rows.some((r: any) => Array.isArray(r.input?.[column]))) return 'string';
   return guessColumnTypeFromInput(
-    filterMap(headerAndRows.rows, (r: any) => r.parsed?.[column]),
+    filterMap(headerAndRows.rows, r => r.input?.[column]),
     guessNumericStringsAsNumbers,
   );
 }
@@ -2232,7 +2236,7 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,

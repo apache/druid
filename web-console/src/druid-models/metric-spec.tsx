@@ -22,7 +22,7 @@ import React from 'react';
 import { ExternalLink, Field } from '../components';
 import { getLink } from '../links';
 import { filterMap, typeIs } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import { guessColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
@@ -345,7 +345,7 @@ export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefi
 }
 
 export function getMetricSpecs(
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   typeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
 ): MetricSpec[] {

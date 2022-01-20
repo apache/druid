@@ -26,6 +26,7 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
+import { CSV_SAMPLE } from './test-fixtures';
 
 describe('ingestion-spec', () => {
   it('upgrades / downgrades task spec 1', () => {
@@ -460,45 +461,12 @@ describe('spec utils', () => {
     });
 
     it('works for generic dataset', () => {
-      const headerAndRows = {
-        header: ['c0', 'c1', 'c2', 'c3'],
-        rows: [
-          {
-            input: {
-              c0: 'Honda',
-              c1: 1,
-              c2: [],
-              c3: '10',
-            },
-            parsed: {
-              c0: 'Honda',
-              c1: 1,
-              c2: '',
-              c3: '10',
-            },
-          },
-          {
-            input: {
-              c0: 'Toyota',
-              c1: 2.1,
-              c2: ['1'],
-              c3: '20',
-            },
-            parsed: {
-              c0: 'Honda',
-              c1: 2.1,
-              c2: '1',
-              c3: '20',
-            },
-          },
-        ],
-      };
-
-      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c0', false)).toEqual('string');
-      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c1', false)).toEqual('double');
-      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c2', false)).toEqual('string');
-      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c3', false)).toEqual('string');
-      expect(guessColumnTypeFromHeaderAndRows(headerAndRows, 'c3', true)).toEqual('long');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'user', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', true)).toEqual('long');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'spend', true)).toEqual('double');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', true)).toEqual('string');
     });
   });
 

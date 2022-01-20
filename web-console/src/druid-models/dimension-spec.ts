@@ -18,7 +18,7 @@
 
 import { Field } from '../components';
 import { filterMap, typeIs } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import { guessColumnTypeFromHeaderAndRows } from './ingestion-spec';
 
@@ -78,7 +78,7 @@ export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): Dim
 }
 
 export function getDimensionSpecs(
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   typeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
   hasRollup: boolean,
