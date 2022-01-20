@@ -66,7 +66,7 @@ public class ObjectFlatteners
           extractor = flattenerMaker.makeJsonQueryExtractor(fieldSpec.getExpr());
           break;
         case TREE:
-          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getExprs());
+          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getNodes());
           break;
         default:
           throw new UOE("Unsupported field type[%s]", fieldSpec.getType());
@@ -238,7 +238,7 @@ public class ObjectFlatteners
     /**
      * Create a "field" extractor for nested json expressions
      */
-    Function<T, Object> makeJsonTreeExtractor(List<String> exprs);
+    Function<T, Object> makeJsonTreeExtractor(List<String> nodes);
 
     /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to

@@ -92,10 +92,10 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   }
 
   @Override
-  public Function<OrcStruct, Object> makeJsonTreeExtractor(List<String> exprs)
+  public Function<OrcStruct, Object> makeJsonTreeExtractor(List<String> nodes)
   {
-    if (exprs.size() == 1) {
-      return (OrcStruct record) -> getRootField(record, exprs.get(0));
+    if (nodes.size() == 1) {
+      return (OrcStruct record) -> getRootField(record, nodes.get(0));
     }
 
     throw new UnsupportedOperationException("ORC flattener does not support nested root queries");

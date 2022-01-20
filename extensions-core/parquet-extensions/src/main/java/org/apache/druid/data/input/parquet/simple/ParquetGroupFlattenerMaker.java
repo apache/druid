@@ -89,10 +89,10 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   }
 
   @Override
-  public Function<Group, Object> makeJsonTreeExtractor(List<String> exprs)
+  public Function<Group, Object> makeJsonTreeExtractor(List<String> nodes)
   {
-    if (exprs.size() == 1) {
-      return (Group group) -> getRootField(group, exprs.get(0));
+    if (nodes.size() == 1) {
+      return (Group group) -> getRootField(group, nodes.get(0));
     }
 
     throw new UnsupportedOperationException("Parque does not support nested tree extraction");
