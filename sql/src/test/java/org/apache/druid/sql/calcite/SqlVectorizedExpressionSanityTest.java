@@ -93,7 +93,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
       "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
   );
 
-  private static final int ROWS_PER_SEGMENT = 100_000;
+  private static final int ROWS_PER_SEGMENT = 10_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
