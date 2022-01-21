@@ -280,8 +280,9 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
 
-    // Short-circuit when the index comes from a tombstone (it has no data by definition)
-    if (segment.asQueryableIndex().isFromTombstone()) {
+    // Short-circuit when the index comes from a tombstone (it has no data by definition),
+    // check for null also since no all segments (higher level ones) will have QueryableIndex...
+    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
       return new NoopQueryRunner<>();
     }
 
