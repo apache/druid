@@ -381,31 +381,60 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    if (preserveExistingMetrics) {
+      final AggregatorFactory[] metrics = getMetricAggs();
+      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
+      return (float) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].getFloat();
+    }
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    if (preserveExistingMetrics) {
+      final AggregatorFactory[] metrics = getMetricAggs();
+      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
+      return (long) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].getLong();
+    }
   }
 
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    if (preserveExistingMetrics) {
+      final AggregatorFactory[] metrics = getMetricAggs();
+      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
+      return aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].get();
+    }
   }
 
   @Override
   protected double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getDouble();
+    if (preserveExistingMetrics) {
+      final AggregatorFactory[] metrics = getMetricAggs();
+      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
+      return (double) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].getDouble();
+    }
   }
 
   @Override
   public boolean isNull(int rowOffset, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].isNull();
+    if (preserveExistingMetrics) {
+      final AggregatorFactory[] metrics = getMetricAggs();
+      return concurrentGet(rowOffset)[aggOffset].isNull() && concurrentGet(rowOffset)[aggOffset + metrics.length].isNull();
+    } else {
+      return concurrentGet(rowOffset)[aggOffset].isNull();
+    }
   }
 
   @Override

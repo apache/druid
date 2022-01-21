@@ -94,8 +94,9 @@ public class InputRowSchemas
         }
       }
 
-      // Add all aggregator inputs that are *not* transform outputs.
+      // Add all aggregator inputs that are *not* transform outputs and aggregator name.
       for (AggregatorFactory aggregator : aggregators) {
+        inclusions.add(aggregator.getName());
         for (String column : aggregator.requiredFields()) {
           if (!transformOutputNames.contains(column)) {
             inclusions.add(column);
