@@ -2185,7 +2185,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(expressionVirtualColumn(
                                                 "v0",
-                                                "(\"cnt\" == 1)",
+                                                NullHandling.replaceWithDefault()
+                                                ? "(\"cnt\" == 1)"
+                                                : "((\"cnt\" == 1) > 0)",
                                                 ColumnType.LONG
                                             ))
                                             .setDimensions(dimensions(
@@ -2229,7 +2231,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{5L, 6L}
+            new Object[]{NullHandling.replaceWithDefault() ? 5L : 6L, 6L}
         )
     );
   }
