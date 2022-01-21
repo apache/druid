@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -77,6 +79,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
+  private final boolean preserveExistingMetrics;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -89,7 +92,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      long maxBytesInMemory
+      long maxBytesInMemory,
+      boolean preserveExistingMetrics
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
@@ -98,6 +102,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts, dimsComparator());
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+    this.preserveExistingMetrics = preserveExistingMetrics;
   }
 
   /**
@@ -157,6 +162,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               concurrentEventAdd
           )
       );
+      if (preserveExistingMetrics) {
+        AggregatorFactory combiningAgg = agg.getCombiningFactory();
+        selectors.put(
+            combiningAgg.getName(),
+            new CachingColumnSelectorFactory(
+                makeColumnSelectorFactory(combiningAgg, rowSupplier, deserializeComplexMetrics),
+                concurrentEventAdd
+            )
+        );
+      }
     }
   }
 
@@ -180,7 +195,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
     } else {
-      aggs = new Aggregator[metrics.length];
+      if (preserveExistingMetrics) {
+        aggs = new Aggregator[metrics.length * 2];
+      } else {
+        aggs = new Aggregator[metrics.length];
+      }
       factorizeAggs(metrics, aggs, rowContainer, row);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
 
@@ -251,6 +270,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
       aggs[i] = agg.factorize(selectors.get(agg.getName()));
+      if (preserveExistingMetrics) {
+        AggregatorFactory combiningAgg = agg.getCombiningFactory();
+        aggs[i + metrics.length] = combiningAgg.factorize(selectors.get(combiningAgg.getName()));
+      }
     }
     rowContainer.set(null);
   }
@@ -265,8 +288,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     rowContainer.set(row);
 
-    for (int i = 0; i < aggs.length; i++) {
-      final Aggregator agg = aggs[i];
+    for (int i = 0; i < metrics.length; i++) {
+      final Aggregator agg;
+      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow)row).getEvent().containsKey(metrics[i].getName())) {
+        agg = aggs[i + metrics.length];
+      } else {
+        agg = aggs[i];
+      }
       synchronized (agg) {
         try {
           agg.aggregate();
@@ -419,7 +447,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
               Aggregator[] aggs = getAggsForRow(rowOffset);
               for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), aggs[i].get());
+                if (preserveExistingMetrics) {
+                  AggregatorFactory aggregatorFactory = metrics[i];
+                  theVals.put(metrics[i].getName(), aggregatorFactory.combine(aggs[i].get(), aggs[i + metrics.length].get()));
+                } else {
+                  theVals.put(metrics[i].getName(), aggs[i].get());
+                }
               }
 
               if (postAggs != null) {
@@ -504,6 +537,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   public static class Builder extends AppendableIndexBuilder
   {
+    private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
+    private boolean preserveExistingMetrics = DEFAULT_PRESERVE_EXISTING_METRICS;
+
+    public Builder setPreserveExistingMetrics(boolean preserveExistingMetrics)
+    {
+      this.preserveExistingMetrics = preserveExistingMetrics;
+      return this;
+    }
+
     @Override
     protected OnheapIncrementalIndex buildInner()
     {
@@ -513,19 +555,42 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          preserveExistingMetrics
       );
     }
   }
 
   public static class Spec implements AppendableIndexSpec
   {
+    private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
     public static final String TYPE = "onheap";
+
+    final boolean preserveExistingMetrics;
+
+    public Spec()
+    {
+      this.preserveExistingMetrics = DEFAULT_PRESERVE_EXISTING_METRICS;
+    }
+
+    @JsonCreator
+    public Spec(
+        final @JsonProperty("preserveExistingMetrics") @Nullable Boolean preserveExistingMetrics
+    )
+    {
+      this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : DEFAULT_PRESERVE_EXISTING_METRICS;
+    }
+
+    @JsonProperty
+    public boolean isPreserveExistingMetrics()
+    {
+      return preserveExistingMetrics;
+    }
 
     @Override
     public AppendableIndexBuilder builder()
     {
-      return new Builder();
+      return new Builder().setPreserveExistingMetrics(preserveExistingMetrics);
     }
 
     @Override
@@ -538,15 +603,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
 
     @Override
-    public boolean equals(Object that)
+    public boolean equals(Object o)
     {
-      return that.getClass().equals(this.getClass());
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Spec spec = (Spec) o;
+      return preserveExistingMetrics == spec.preserveExistingMetrics;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(this.getClass());
+      return Objects.hash(preserveExistingMetrics);
     }
   }
 }
