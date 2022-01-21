@@ -22,6 +22,7 @@ package org.apache.druid.testing.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 
@@ -42,5 +43,27 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
   public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
+  }
+
+  public boolean isDatasourceLoadedInSQL(String datasource)
+  {
+    final SqlQuery query = new SqlQuery(
+        "SELECT 1 FROM \"" + datasource + "\"",
+        null,
+        false,
+        false,
+        false,
+        null,
+        null
+    );
+
+    try {
+      //noinspection unchecked
+      queryClient.query(getQueryURL(broker), query);
+      return true;
+    }
+    catch (Exception e) {
+      return false;
+    }
   }
 }
