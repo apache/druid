@@ -159,7 +159,7 @@ public class QueryScheduler implements QueryWatcher
     Optional<Integer> priority = prioritizationStrategy.computePriority(queryPlus, segments);
     query = priority.map(query::withPriority).orElse(query);
     Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
-    log.info("[%s] lane assigned to [%s] query with [%,d] priority", lane.orElse("default"), query.getType(), priority.orElse(Integer.valueOf(0)));
+    LOGGER.info("[%s] lane assigned to [%s] query with [%,d] priority", lane.orElse("default"), query.getType(), priority.orElse(Integer.valueOf(0)));
     final ServiceMetricEvent.Builder builderUsr = ServiceMetricEvent.builder().setFeed("metrics")
                                                                     .setDimension("lane", lane.orElse("default"))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
