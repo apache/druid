@@ -2152,12 +2152,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
     try {
       testQuery(
-          PLANNER_CONFIG_NO_HLL, // Enable exact count distinct
+          PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
+              PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+              "false"
+          )), // Enable exact count distinct
           sqlQuery,
           CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(),
           ImmutableList.of()
       );
+      Assert.fail("query execution should fail");
     }
     catch (RuntimeException e) {
       Assert.assertTrue(e.getMessage().contains("Error while applying rule AggregateExpandDistinctAggregatesRule"));
