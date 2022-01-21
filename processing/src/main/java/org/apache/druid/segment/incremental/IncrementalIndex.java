@@ -940,11 +940,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     private final DimensionHandler handler;
     private final DimensionIndexer indexer;
 
-    public DimensionDesc(int index, String name, DimensionHandler handler)
-    {
-      this(index, name, handler, true);
-    }
-
     public DimensionDesc(int index, String name, DimensionHandler handler, boolean useMaxMemoryEstimates)
     {
       this.index = index;
