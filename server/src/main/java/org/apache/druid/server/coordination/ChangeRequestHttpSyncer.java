@@ -22,6 +22,7 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -412,6 +413,12 @@ public class ChangeRequestHttpSyncer<T>
     }
 
     return false;
+  }
+
+  @VisibleForTesting
+  public boolean isExecutorTerminated()
+  {
+    return executor.isTerminated();
   }
 
   /**
