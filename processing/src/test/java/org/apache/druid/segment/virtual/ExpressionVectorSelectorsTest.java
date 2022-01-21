@@ -95,7 +95,7 @@ public class ExpressionVectorSelectorsTest
       "concat(string1, nonexistent)"
   );
 
-  private static final int ROWS_PER_SEGMENT = 100_000;
+  private static final int ROWS_PER_SEGMENT = 10_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
