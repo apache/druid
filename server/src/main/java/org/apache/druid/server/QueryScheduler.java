@@ -62,7 +62,7 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
-  private static final Logger log = new Logger(QueryScheduler.class);
+  private static final Logger LOGGER = new Logger(QueryScheduler.class);
   public static final int UNAVAILABLE = -1;
   public static final String TOTAL = "total";
   private final int totalCapacity;
