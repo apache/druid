@@ -290,7 +290,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
     for (int i = 0; i < metrics.length; i++) {
       final Aggregator agg;
-      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow)row).getEvent().containsKey(metrics[i].getName())) {
+      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
         agg = aggs[i + metrics.length];
       } else {
         agg = aggs[i];
