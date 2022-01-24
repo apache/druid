@@ -447,6 +447,25 @@ public class CompactionTaskTest
     );
   }
 
+  @Test
+  public void testCreateCompactionTaskWithMetricsSpec()
+  {
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.tuningConfig(createTuningConfig());
+    builder.metricsSpec(aggregatorFactories);
+    final CompactionTask taskCreatedWithTransformSpec = builder.build();
+    Assert.assertArrayEquals(
+        aggregatorFactories,
+        taskCreatedWithTransformSpec.getMetricsSpec()
+    );
+  }
+
   @Test(expected = IAE.class)
   public void testCreateCompactionTaskWithNullSegmentGranularityInGranularitySpecAndSegmentGranularityShouldSucceed()
   {
@@ -892,7 +911,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         Granularities.NONE,
@@ -966,7 +985,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         tuningConfig,
         Granularities.MONTH,
@@ -1041,7 +1060,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         tuningConfig,
         Granularities.MONTH,
@@ -1116,7 +1135,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         tuningConfig,
         Granularities.MONTH,
@@ -1182,7 +1201,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         dimensionsSpecs,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         Granularities.NONE,
@@ -1264,7 +1283,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         Granularities.NONE,
@@ -1372,7 +1391,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         Collections.singletonList(COMPACTION_INTERVAL),
         new PeriodGranularity(Period.months(3), null, null),
         Granularities.NONE,
@@ -1409,7 +1428,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         new PeriodGranularity(Period.months(3), null, null),
@@ -1452,7 +1471,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         Collections.singletonList(COMPACTION_INTERVAL),
         new PeriodGranularity(Period.months(3), null, null),
         new PeriodGranularity(Period.months(3), null, null),
@@ -1489,7 +1508,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         Granularities.NONE,
@@ -1527,7 +1546,7 @@ public class CompactionTaskTest
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
-        AGGREGATORS,
+        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
         SEGMENT_INTERVALS,
         Granularities.MONTH,
         Granularities.NONE,
@@ -1879,11 +1898,7 @@ public class CompactionTaskTest
       );
 
       // metrics
-      final List<AggregatorFactory> expectedAggregators = expectedMetricsSpec
-          .stream()
-          .map(AggregatorFactory::getCombiningFactory)
-          .collect(Collectors.toList());
-      Assert.assertEquals(expectedAggregators, Arrays.asList(dataSchema.getAggregators()));
+      Assert.assertEquals(expectedMetricsSpec, Arrays.asList(dataSchema.getAggregators()));
       Assert.assertEquals(
           new UniformGranularitySpec(
               expectedSegmentGranularity,

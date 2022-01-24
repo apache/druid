@@ -29,6 +29,7 @@ describe('ArrayInput', () => {
         className="test"
         placeholder="test"
         onChange={() => {}}
+        suggestions={['dog', 'cat', 'skunk']}
       />
     );
 

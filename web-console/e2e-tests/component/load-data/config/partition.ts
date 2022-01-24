@@ -20,7 +20,13 @@
 
 import * as playwright from 'playwright-chromium';
 
-import { getLabeledInput, selectSuggestibleInput, setLabeledInput } from '../../../util/playwright';
+import {
+  getLabeledInput,
+  getLabeledTextarea,
+  selectSuggestibleInput,
+  setLabeledInput,
+  setLabeledTextarea,
+} from '../../../util/playwright';
 
 /**
  * Possible values for partition step segment granularity.
@@ -44,8 +50,8 @@ export async function readPartitionSpec(page: playwright.Page): Promise<Partitio
   switch (type) {
     case HashedPartitionsSpec.TYPE:
       return HashedPartitionsSpec.read(page);
-    case SingleDimPartitionsSpec.TYPE:
-      return SingleDimPartitionsSpec.read(page);
+    case RangePartitionsSpec.TYPE:
+      return RangePartitionsSpec.read(page);
   }
   return null;
 }
@@ -86,76 +92,81 @@ async function getLabeledInputAsNumber(
   return valueString === '' ? null : Number(valueString);
 }
 
+async function getLabeledTextareaAsArray(page: playwright.Page, label: string): Promise<string[]> {
+  const valueString = await getLabeledTextarea(page, label);
+  return valueString === '' ? [] : valueString.split(',').map(v => v.trim());
+}
+
 interface HashedPartitionsSpecProps {
   readonly numShards: number | null;
 }
 
 export interface HashedPartitionsSpec extends HashedPartitionsSpecProps {}
 
-export class SingleDimPartitionsSpec implements PartitionsSpec {
-  public static TYPE = 'single_dim';
-  private static readonly PARTITION_DIMENSION = 'Partition dimension';
+export class RangePartitionsSpec implements PartitionsSpec {
+  public static TYPE = 'range';
+  private static readonly PARTITION_DIMENSIONS = 'Partition dimensions';
   private static readonly TARGET_ROWS_PER_SEGMENT = 'Target rows per segment';
   private static readonly MAX_ROWS_PER_SEGMENT = 'Max rows per segment';
 
   readonly type: string;
 
-  static async read(page: playwright.Page): Promise<SingleDimPartitionsSpec> {
-    const partitionDimension = await getLabeledInput(
+  static async read(page: playwright.Page): Promise<RangePartitionsSpec> {
+    const partitionDimensions = await getLabeledTextareaAsArray(
       page,
-      SingleDimPartitionsSpec.PARTITION_DIMENSION,
+      RangePartitionsSpec.PARTITION_DIMENSIONS,
     );
     const targetRowsPerSegment = await getLabeledInputAsNumber(
       page,
-      SingleDimPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+      RangePartitionsSpec.TARGET_ROWS_PER_SEGMENT,
     );
     const maxRowsPerSegment = await getLabeledInputAsNumber(
       page,
-      SingleDimPartitionsSpec.MAX_ROWS_PER_SEGMENT,
+      RangePartitionsSpec.MAX_ROWS_PER_SEGMENT,
     );
-    return new SingleDimPartitionsSpec({
-      partitionDimension,
+    return new RangePartitionsSpec({
+      partitionDimensions,
       targetRowsPerSegment,
       maxRowsPerSegment,
     });
   }
 
-  constructor(props: SingleDimPartitionsSpecProps) {
+  constructor(props: RangePartitionsSpecProps) {
     Object.assign(this, props);
-    this.type = SingleDimPartitionsSpec.TYPE;
+    this.type = RangePartitionsSpec.TYPE;
   }
 
   async apply(page: playwright.Page): Promise<void> {
     await selectSuggestibleInput(page, PARTITIONING_TYPE, this.type);
-    await setLabeledInput(
+    await setLabeledTextarea(
       page,
-      SingleDimPartitionsSpec.PARTITION_DIMENSION,
-      this.partitionDimension,
+      RangePartitionsSpec.PARTITION_DIMENSIONS,
+      this.partitionDimensions.join(', '),
     );
     if (this.targetRowsPerSegment) {
       await setLabeledInput(
         page,
-        SingleDimPartitionsSpec.TARGET_ROWS_PER_SEGMENT,
+        RangePartitionsSpec.TARGET_ROWS_PER_SEGMENT,
         String(this.targetRowsPerSegment),
       );
     }
     if (this.maxRowsPerSegment) {
       await setLabeledInput(
         page,
-        SingleDimPartitionsSpec.MAX_ROWS_PER_SEGMENT,
+        RangePartitionsSpec.MAX_ROWS_PER_SEGMENT,
         String(this.maxRowsPerSegment),
       );
     }
   }
 }
 
-interface SingleDimPartitionsSpecProps {
-  readonly partitionDimension: string;
+interface RangePartitionsSpecProps {
+  readonly partitionDimensions: string[];
   readonly targetRowsPerSegment: number | null;
   readonly maxRowsPerSegment: number | null;
 }
 
-export interface SingleDimPartitionsSpec extends SingleDimPartitionsSpecProps {}
+export interface RangePartitionsSpec extends RangePartitionsSpecProps {}
 
 /**
  * Data loader partition step configuration.
