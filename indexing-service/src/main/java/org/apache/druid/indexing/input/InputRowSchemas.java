@@ -29,6 +29,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -56,7 +57,10 @@ public class InputRowSchemas
             dataSchema.getDimensionsSpec(),
             dataSchema.getTransformSpec(),
             dataSchema.getAggregators()
-        )
+        ),
+        Arrays.stream(dataSchema.getAggregators())
+              .map(AggregatorFactory::getName)
+              .collect(Collectors.toList())
     );
   }
 
@@ -94,9 +98,8 @@ public class InputRowSchemas
         }
       }
 
-      // Add all aggregator inputs that are *not* transform outputs and aggregator name.
+      // Add all aggregator inputs that are *not* transform outputs.
       for (AggregatorFactory aggregator : aggregators) {
-        inclusions.add(aggregator.getName());
         for (String column : aggregator.requiredFields()) {
           if (!transformOutputNames.contains(column)) {
             inclusions.add(column);

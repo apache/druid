@@ -22,6 +22,9 @@ package org.apache.druid.data.input;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
+import javax.annotation.Nullable;
+import java.util.List;
+
 /**
  * Schema of {@link InputRow}.
  */
@@ -30,6 +33,12 @@ public class InputRowSchema
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
   private final ColumnsFilter columnsFilter;
+
+  /**
+   * List of metric names for further downstream processing by {@link InputSource}
+   */
+  @Nullable
+  private final List<String> metricNames;
 
   public InputRowSchema(
       final TimestampSpec timestampSpec,
@@ -40,6 +49,25 @@ public class InputRowSchema
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
     this.columnsFilter = columnsFilter;
+    this.metricNames = null;
+  }
+
+  public InputRowSchema(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter,
+      final List<String> metricNames
+  )
+  {
+    this.timestampSpec = timestampSpec;
+    this.dimensionsSpec = dimensionsSpec;
+    this.columnsFilter = columnsFilter;
+    this.metricNames = metricNames;
+  }
+
+  public List<String> getMetricNames()
+  {
+    return metricNames;
   }
 
   public TimestampSpec getTimestampSpec()

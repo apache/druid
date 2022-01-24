@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -242,6 +243,13 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final InputRowSchema inputRowSchemaToUse;
 
+    final ColumnsFilter columnsFilterToUse = inputRowSchema.getColumnsFilter();
+    if (inputRowSchema.getMetricNames() != null) {
+      for (String metricName : inputRowSchema.getMetricNames()) {
+        columnsFilterToUse.plus(metricName);
+      }
+    }
+
     if (taskConfig.isIgnoreTimestampSpecForDruidInputSource()) {
       // Legacy compatibility mode; see https://github.com/apache/druid/pull/10267.
       LOG.warn("Ignoring the provided timestampSpec and reading the __time column instead. To use timestampSpecs with "
@@ -250,10 +258,14 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       inputRowSchemaToUse = new InputRowSchema(
           new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, STANDARD_TIME_COLUMN_FORMATS.iterator().next(), null),
           inputRowSchema.getDimensionsSpec(),
-          inputRowSchema.getColumnsFilter().plus(ColumnHolder.TIME_COLUMN_NAME)
+          columnsFilterToUse.plus(ColumnHolder.TIME_COLUMN_NAME)
       );
     } else {
-      inputRowSchemaToUse = inputRowSchema;
+      inputRowSchemaToUse = new InputRowSchema(
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          columnsFilterToUse
+      );
     }
 
     if (ColumnHolder.TIME_COLUMN_NAME.equals(inputRowSchemaToUse.getTimestampSpec().getTimestampColumn())
