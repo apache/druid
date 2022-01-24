@@ -34,6 +34,8 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
+  public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final int DEFAULT_MAX_NUMFILTERS = 10000;
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -74,9 +76,17 @@ public class PlannerConfig
   @JsonProperty
   private boolean useNativeQueryExplain = false;
 
+  @JsonProperty
+  private int maxNumericInFilters = DEFAULT_MAX_NUMFILTERS;
+
   public long getMetadataSegmentPollPeriod()
   {
     return metadataSegmentPollPeriod;
+  }
+
+  public int getMaxNumericInFilters()
+  {
+    return maxNumericInFilters;
   }
 
   public boolean isMetadataSegmentCacheEnable()
@@ -180,6 +190,7 @@ public class PlannerConfig
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
+    newConfig.maxNumericInFilters = getContextInt(context, CTX_MAX_NUMERIC_IN_FILTERS, getMaxNumericInFilters());
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
@@ -188,6 +199,24 @@ public class PlannerConfig
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
     newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
+  }
+
+  private static int getContextInt(
+      final Map<String, Object> context,
+      final String parameter,
+      final int defaultValue
+  )
+  {
+    final Object value = context.get(parameter);
+    if (value == null) {
+      return defaultValue;
+    } else if (value instanceof String) {
+      return Integer.parseInt((String) value);
+    } else if (value instanceof Integer) {
+      return (Integer) value;
+    } else {
+      throw new IAE("Expected parameter[%s] to be integer", parameter);
+    }
   }
 
   private static boolean getContextBoolean(

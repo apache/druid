@@ -6904,6 +6904,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testZeroMaxNumericInFilter() throws Exception
+  {
+    expectedException.expect(CannotBuildQueryException.class);
+    expectedException.expectMessage("maxNumericInFilters must be greater than 0");
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0),
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE l1 IN (\n"
+        + "1,2,3\n"
+        + ")\n",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+
+  @Test
   public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.

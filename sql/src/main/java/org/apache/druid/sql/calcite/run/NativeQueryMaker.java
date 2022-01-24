@@ -35,12 +35,15 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -122,6 +125,24 @@ public class NativeQueryMaker implements QueryMaker
         );
       }
     }
+    int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
+    if (numFilters < 1) {
+      throw new CannotBuildQueryException("maxNumericInFilters must be greater than 0");
+    }
+    //special corner case handling for numeric IN filters
+    if (query.getFilter() instanceof OrDimFilter) {
+      OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
+      if (orDimFilter.getFields().size() > numFilters) {
+        String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
+        throw new CannotBuildQueryException(StringUtils.format(
+            "Filters for column [%s] exceeds configured filter limit of [%s]. Cast [%s] values to String",
+            dimension,
+            numFilters,
+            orDimFilter.getFields().size()
+        ));
+      }
+    }
+
 
     final List<String> rowOrder;
     if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
