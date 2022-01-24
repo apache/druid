@@ -401,7 +401,7 @@ Sample specs:
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
 However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
 If you want to use a non-hdfs protocol with the HDFS input source, include the protocol
-in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security configuration](../configuration/index.md#hdfs-input-source) for more details.
+in `druid.ingestion.hdfs.allowedProtocols`. See [Ingestion security configuration](../configuration/index.md#ingestion-security-configuration) for more details.
 
 ## HTTP Input Source
 
@@ -486,7 +486,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 
 You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP input sources.
-The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
+The `http` and `https` protocols are allowed by default. See [Ingestion security configuration](../configuration/index.md#ingestion-security-configuration) for more details.
 
 ## Inline Input Source
 

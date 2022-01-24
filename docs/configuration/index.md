@@ -549,25 +549,6 @@ Using `allowPrefixList` offers more higher security than `denyPrefixList`.
 Prefix matching works by matching prefix of the URI instead of exact path boundaries.
 e.g.  `http://example.com/f` will match `http://example.com/foo` and `http://example.com/f/b` both.
 
-#### HDFS input source (deprecated)
-
-You can set the following property to specify permissible protocols for
-the [HDFS input source](../ingestion/native-batch-input-source.md#hdfs-input-source) and the [HDFS firehose](../ingestion/native-batch-firehose.md#hdfsfirehose).
-
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols for the HDFS input source and HDFS firehose.|["hdfs"]|
-
-
-#### HTTP input source (deprecated)
-
-You can set the following property to specify permissible protocols for
-the [HTTP input source](../ingestion/native-batch-input-source.md#http-input-source) and the [HTTP firehose](../ingestion/native-batch-firehose.md#httpfirehose).
-
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
-
 ### External Data Access Security Configuration
 
 #### JDBC Connections to External Databases

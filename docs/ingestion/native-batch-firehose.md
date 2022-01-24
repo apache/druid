@@ -145,7 +145,7 @@ Note that prefetching or caching isn't that useful in the Parallel task.
 You can also ingest from other storage using the HDFS firehose if the HDFS client supports that storage.
 However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
 If you want to use a non-hdfs protocol with the HDFS firehose, you need to include the protocol you want
-in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS firehose security configuration](../configuration/index.md#hdfs-input-source) for more details.
+in `druid.ingestion.hdfs.allowedProtocols`. See [Ingestion security configuration](../configuration/index.md#ingestion-security-configuration) for more details.
 
 ## LocalFirehose
 
@@ -185,7 +185,7 @@ A sample HTTP Firehose spec is shown below:
 ```
 
 You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP firehose input sources.
-The `http` and `https` protocols are allowed by default. See [HTTP firehose security configuration](../configuration/index.md#http-input-source) for more details.
+The `http` and `https` protocols are allowed by default. See [Ingestion security configuration](../configuration/index.md#ingestion-security-configuration) for more details.
 
 The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
 Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
