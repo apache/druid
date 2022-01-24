@@ -203,6 +203,10 @@ public class DruidPlanner implements Closeable
 
     final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
 
+    if (parsed.getIngestionGranularity() != null) {
+      plannerContext.getQueryContext().put(QueryContexts.INGESTION_GRANULARITY, parsed.getIngestionGranularity());
+    }
+
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
     final SqlNode parameterizedQueryNode = rewriteDynamicParameters(parsed.getQueryNode());
@@ -750,15 +754,20 @@ public class DruidPlanner implements Closeable
 
     private SqlNode query;
 
+    @Nullable
+    private String ingestionGranularity;
+
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable SqlInsert insert,
-        SqlNode query
+        SqlNode query,
+        @Nullable String ingestionGranularity
     )
     {
       this.explain = explain;
       this.insert = insert;
       this.query = query;
+      this.ingestionGranularity = ingestionGranularity;
     }
 
     static ParsedNodes create(final SqlNode node) throws ValidationException
@@ -766,6 +775,7 @@ public class DruidPlanner implements Closeable
       SqlExplain explain = null;
       SqlInsert insert = null;
       SqlNode query = node;
+      String ingestionGranularity = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -780,9 +790,7 @@ public class DruidPlanner implements Closeable
         if (insert instanceof DruidSqlInsert) {
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
 
-          if (druidSqlInsert.getPartitionBy() != null) {
-            // TODO: Pass the PARTITION BY clause in the query context
-          }
+          ingestionGranularity = druidSqlInsert.getPartitionBy();
 
           if (druidSqlInsert.getClusterBy() != null) {
             // If we have a CLUSTER BY clause, extract the information in that CLUSTER BY and create a new SqlOrderBy
@@ -823,7 +831,7 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, insert, query);
+      return new ParsedNodes(explain, insert, query, ingestionGranularity);
     }
 
     @Nullable
@@ -841,6 +849,12 @@ public class DruidPlanner implements Closeable
     public SqlNode getQueryNode()
     {
       return query;
+    }
+
+    @Nullable
+    public String getIngestionGranularity()
+    {
+      return ingestionGranularity;
     }
   }
 }

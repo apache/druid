@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -66,6 +67,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -291,6 +293,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
 
+    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
+    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
+
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITION BY 'day'")
@@ -302,6 +307,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "v0")
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
+                .context(queryContext)
                 .build()
         )
         .verify();
@@ -347,6 +353,10 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
+
+    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
+    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
+
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITION BY 'day' CLUSTER BY 2, dim1")
@@ -364,6 +374,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                         new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
                     )
                 )
+                .context(queryContext)
                 .build()
         )
         .verify();
@@ -378,6 +389,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
 
+    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
+    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
+
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITION BY 'day'")
@@ -391,6 +405,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .limit(10)
                 .offset(20)
+                .context(queryContext)
                 .build()
         )
         .verify();
@@ -404,6 +419,10 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
+
+    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
+    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
+
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo ORDER BY 2, dim1 PARTITION BY 'day'")
@@ -421,6 +440,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                         new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
                     )
                 )
+                .context(queryContext)
                 .build()
         )
         .verify();
