@@ -68,6 +68,7 @@ import {
   QueryState,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Rule, RuleUtil } from '../../utils/load-rule';
@@ -138,16 +139,6 @@ const formatTotalRows = formatInteger;
 const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
 const formatLeftToBeCompacted = formatBytes;
-
-function twoLines(line1: string, line2: string) {
-  return (
-    <>
-      {line1}
-      <br />
-      {line2}
-    </>
-  );
-}
 
 function progress(done: number, awaiting: number): number {
   const d = done + awaiting;
