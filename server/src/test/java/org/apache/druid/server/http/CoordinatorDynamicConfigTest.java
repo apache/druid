@@ -266,7 +266,6 @@ public class CoordinatorDynamicConfigTest
         null,
         null,
         null,
-        null,
         ImmutableSet.of("host1"),
         5,
         true,
@@ -292,7 +291,6 @@ public class CoordinatorDynamicConfigTest
                                                                    ImmutableSet.of("test1"),
                                                                    null,
                                                                    null,
-                                                                   null,
                                                                    ImmutableSet.of("host1"),
                                                                    5,
                                                                    true,
@@ -316,7 +314,6 @@ public class CoordinatorDynamicConfigTest
                                                                    10,
                                                                    true,
                                                                    ImmutableSet.of("test1"),
-                                                                   true,
                                                                    null,
                                                                    null,
                                                                    ImmutableSet.of("host1"),
@@ -733,7 +730,6 @@ public class CoordinatorDynamicConfigTest
   {
     CoordinatorDynamicConfig defaultConfig =
         CoordinatorDynamicConfig.builder()
-                                .withKillUnusedSegmentsInAllDataSources(false)
                                 .build();
     CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build(defaultConfig);
     assertConfig(
@@ -799,7 +795,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig.Builder(
-            null,
             null,
             null,
             null,
