@@ -40,9 +40,7 @@ If you have a high datasource churn rate, meaning you frequently create and dele
 To maintain metadata store performance, you can configure Apache Druid to automatically remove records associated with deleted entities from the metadata store.
 
 By default, Druid automatically cleans up metadata older than 90 days.
-This applies to all metadata entities in this topic except compaction configuration records, which do not have a retention period, and indexer task logs, for which cleanup is disabled by default.
-Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
-
+This applies to all metadata entities in this topic except compaction configuration records and indexer task logs, for which cleanup is disabled by default.
 You can configure the retention period for each metadata type, when available, through the record's `durationToRetain` property.
 Certain records may require additional conditions be satisfied before clean up occurs.
 
@@ -52,7 +50,7 @@ See the [example](#example) for how you can customize the automated metadata cle
 ## Automated cleanup strategies
 
 There are several cases when you should consider automated cleanup of the metadata related to deleted datasources:
-- If you know you have many high-churn datasources,  for example, you have scripts that create and delete supervisors regularly.
+- If you know you have many high-churn datasources, for example, you have scripts that create and delete supervisors regularly.
 - If you have issues with the hard disk for your metadata database filling up.
 - If you run into performance issues with the metadata database. For example, API calls are very slow or fail to execute.
 
@@ -117,11 +115,18 @@ Rule cleanup uses the following configuration:
 
 ### Compaction configuration records
 
+Druid retains all compaction configuration records by default, which should be suitable for most use cases.
+If you have a high datasource churn rate, that is, you create and delete short-lived datasources with high frequency, consider turning on automated cleanup of compaction configuration records.
+With this feature turned on, when you create a compaction configuration for some datasource before the datasource exists, for example if ingestion is ongoing, Druid may remove the compaction configuration.
+To prevent the configuration from being prematurely removed, wait to set `druid.coordinator.kill.compaction.on=true` until after the datasource is created.
+
 Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
 Compaction configuration cleanup uses the following configuration:
- - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction  configuration records.
+ - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction configuration records.
  - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records. Defaults to `P1D`.
+
+Compaction configuration records do not have a retention period. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
 
 >If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
 
@@ -150,19 +155,22 @@ For more detail, see [Task logging](../configuration/index.md#task-logging).
 
 ## Disable automated metadata cleanup
 
-Druid enables automated metadata cleanup by default. To disable this feature, set the following properties in the `coordinator/runtime.properties` file:
+Druid automatically cleans up metadata records, excluding compaction configuration records and indexer task logs.
+To disable automated metadata cleanup, set the following properties in the `coordinator/runtime.properties` file:
 
 ```
 # Keep unused segments
 druid.coordinator.kill.on=false
+
 # Keep audit records
 druid.coordinator.kill.audit.on=false
+
 # Keep supervisor records
 druid.coordinator.kill.supervisor.on=false
+
 # Keep rules records
 druid.coordinator.kill.rule.on=false
-# Keep compaction configuration records
-druid.coordinator.kill.compaction.on=false
+
 # Keep datasource records created by supervisors
 druid.coordinator.kill.datasource.on=false
 ```
