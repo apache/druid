@@ -70,7 +70,6 @@ class CheckTestSuite(unittest.TestCase):
 
         some_java_job = "spotbugs checks"
         some_non_java_diffs = [
-            ['.travis.yml'],
             ['check_test_suite_test.py'],
             ['website/core/Footer.js'],
             ['web-console/src/views/index.ts'],
