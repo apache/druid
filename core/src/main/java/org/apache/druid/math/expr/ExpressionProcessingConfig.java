@@ -28,7 +28,9 @@ public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
-  public static final String CAST_ARRAY_TO_STRING_CONFIG_STRING = "druid.expressions.allowArrayToStringCast";
+  // Coerce arrays to multi value strings
+  public static final String
+      PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING = "druid.expressions.processArraysAsMultiValueStrings";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
@@ -36,14 +38,14 @@ public class ExpressionProcessingConfig
   @JsonProperty("useStrictBooleans")
   private final boolean useStrictBooleans;
 
-  @JsonProperty("allowArrayToStringCast")
-  private final boolean allowArrayToStringCast;
+  @JsonProperty("processArraysAsMultiValueStrings")
+  private final boolean processArraysAsMultiValueStrings;
 
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
       @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
-      @JsonProperty("allowArrayToStringCast") @Nullable Boolean allowArrayToStringCast
+      @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings
   )
   {
     this.allowNestedArrays = allowNestedArrays == null
@@ -56,10 +58,10 @@ public class ExpressionProcessingConfig
     } else {
       this.useStrictBooleans = useStrictBooleans;
     }
-    this.allowArrayToStringCast
-        = allowArrayToStringCast == null
-          ? Boolean.valueOf(System.getProperty(CAST_ARRAY_TO_STRING_CONFIG_STRING, "false"))
-          : allowArrayToStringCast;
+    this.processArraysAsMultiValueStrings
+        = processArraysAsMultiValueStrings == null
+          ? Boolean.valueOf(System.getProperty(PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING, "false"))
+          : processArraysAsMultiValueStrings;
   }
 
   public boolean allowNestedArrays()
@@ -72,8 +74,8 @@ public class ExpressionProcessingConfig
     return useStrictBooleans;
   }
 
-  public boolean allowArrayToStringCast()
+  public boolean processArraysAsMultiValueStrings()
   {
-    return allowArrayToStringCast;
+    return processArraysAsMultiValueStrings;
   }
 }

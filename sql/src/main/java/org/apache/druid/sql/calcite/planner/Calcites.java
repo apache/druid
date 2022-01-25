@@ -143,15 +143,18 @@ public class Calcites
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
   {
     ColumnType valueType = getValueTypeForRelDataTypeFull(type);
-    // coerce array to string
-    if (ExpressionProcessing.allowArrayToStringCast() && valueType != null && valueType.isArray()) {
+    // coerce array to multi value string
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && valueType != null && valueType.isArray()) {
       return ColumnType.STRING;
     }
     return valueType;
   }
 
+  /**
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   */
   @Nullable
-  private static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
+  public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
   {
     final SqlTypeName sqlTypeName = type.getSqlTypeName();
     if (SqlTypeName.FLOAT == sqlTypeName) {

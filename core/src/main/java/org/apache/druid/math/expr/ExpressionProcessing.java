@@ -83,7 +83,7 @@ public class ExpressionProcessing
   }
 
 
-  public static boolean allowArrayToStringCast()
+  public static boolean processArraysAsMultiValueStrings()
   {
     // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
@@ -91,6 +91,6 @@ public class ExpressionProcessing
           "ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()"
       );
     }
-    return INSTANCE.allowArrayToStringCast();
+    return INSTANCE.processArraysAsMultiValueStrings();
   }
 }

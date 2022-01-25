@@ -113,7 +113,7 @@ public class ArraySqlAggregator implements SqlAggregator
 
     final String fieldName;
     final String initialvalue;
-    final ColumnType druidType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
+    final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
     final ColumnType elementType;
     if (druidType == null || !druidType.isArray()) {
       initialvalue = "[]";
