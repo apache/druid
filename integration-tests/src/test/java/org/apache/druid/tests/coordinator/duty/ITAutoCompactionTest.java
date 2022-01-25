@@ -1000,6 +1000,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             null,
             null,
             null,
+            null,
             new MaxSizeSplitHintSpec(null, 1),
             partitionsSpec,
             null,
