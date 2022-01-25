@@ -9,7 +9,8 @@
       },
       "inputFormat": {
         "type": "json"
-      }
+      },
+      "appendToExisting": true
     },
     "dataSchema": {
       "granularitySpec": {
@@ -73,9 +74,8 @@
     "tuningConfig": {
       "type": "index_parallel",
       "partitionsSpec": {
-        "type": "hashed"
-      },
-      "forceGuaranteedRollup": true
+        "type": "dynamic"
+      }
     }
   }
 }
