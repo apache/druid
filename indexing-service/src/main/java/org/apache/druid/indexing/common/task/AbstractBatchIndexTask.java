@@ -47,6 +47,7 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -79,6 +80,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -114,6 +116,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   private TaskLockHelper taskLockHelper;
 
   private final int maxAllowedLockCount;
+
+  protected final Map<Interval, String> intervalToLockVersion = new HashMap<>();
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
@@ -431,6 +435,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
       }
       locksAcquired++;
+      intervalToLockVersion.put(cur, lock.getVersion());
     }
     return true;
   }
@@ -703,6 +708,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
       );
     }
+  }
+
+  // Get the version from one of the segments to be published (which all should have the same version) or
+  // for the case of a completely empty replace interval (all input data has been filtered out) just create
+  // a new version...
+  protected String findVersionForNewTombstones(Collection<DataSegment> segmentsToBePublished)
+  {
+    return segmentsToBePublished.stream()
+                                .findFirst()
+                                .map(DataSegment::getVersion)
+                                .orElse(DateTimes.nowUtc().toString());
   }
 
   private static class LockGranularityDetermineResult

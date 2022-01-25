@@ -1074,9 +1074,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Set<DataSegment> tombStones;
     if (ingestionSchema.getIOConfig().isDropExisting()) {
-      TombstoneHelper tombstoneHelper = new TombstoneHelper(newSegments,
-                                                            ingestionSchema,
-                                                            toolbox.getTaskActionClient());
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(
+          newSegments,
+          ingestionSchema.getDataSchema(),
+          intervalToLockVersion,
+          toolbox.getTaskActionClient()
+      );
       tombStones = tombstoneHelper.computeTombstones();
       newSegments.addAll(tombStones);
       LOG.debugSegments(tombStones, "To publish tombstones");

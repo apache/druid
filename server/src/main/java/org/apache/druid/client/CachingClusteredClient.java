@@ -862,7 +862,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
     {
       final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-          new VersionedIntervalTimeline<>(Ordering.natural());
+          new VersionedIntervalTimeline<>(Ordering.natural(), true);
       Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
           Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
       Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(

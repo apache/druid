@@ -23,8 +23,9 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -41,35 +42,30 @@ import java.util.Set;
 public class TombstoneHelper
 {
 
-  private final IngestionSpec ingestionSpec;
+  private final DataSchema dataSchema;
   private final TaskActionClient taskActionClient;
   private final Collection<DataSegment> pushedSegments;
+  private final Map<Interval, String> intervalToLockVersion;
 
   public TombstoneHelper(
       Collection<DataSegment> pushedSegments,
-      IngestionSpec ingestionSpec,
+      DataSchema dataSchema,
+      Map<Interval, String> intervalToLockVersion,
       TaskActionClient taskActionClient
   )
   {
-    this.ingestionSpec = ingestionSpec;
+
+    Preconditions.checkNotNull(pushedSegments, "pushedSegments");
+    Preconditions.checkNotNull(dataSchema, "dataSchema");
+    Preconditions.checkNotNull(intervalToLockVersion, "intervalToLockVersion");
+    Preconditions.checkNotNull(taskActionClient, "taskActionClient");
+
+    this.dataSchema = dataSchema;
     this.taskActionClient = taskActionClient;
     this.pushedSegments = pushedSegments;
+    this.intervalToLockVersion = intervalToLockVersion;
   }
 
-  public String getDataSource()
-  {
-    return ingestionSpec.getDataSchema().getDataSource();
-  }
-
-  public GranularitySpec getGranularitySpec()
-  {
-    return ingestionSpec.getDataSchema().getGranularitySpec();
-  }
-
-  public List<Interval> getInputIntervals()
-  {
-    return getGranularitySpec().inputIntervals();
-  }
 
   private List<Interval> getPushedSegmentsIntervals()
   {
@@ -85,73 +81,80 @@ public class TombstoneHelper
 
     Set<DataSegment> retVal = new HashSet<>();
 
-    if (pushedSegments.isEmpty()) {
-      return retVal;
-    }
+    String dataSource = dataSchema.getDataSource();
 
-    // pick an element of the set to be the prototype for building the
-    // tombstones... they will share many similar properties
-    DataSegment pushedSegmentPrototype = null;
-    for (DataSegment pushedSegment : pushedSegments) {
-      pushedSegmentPrototype = pushedSegment;
-      break;
-    }
-
-    GranularitySpec granularitySpec = getGranularitySpec();
+    GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     List<Interval> pushedSegmentsIntervals = getPushedSegmentsIntervals();
 
     // create tombstones for the empty time chunks
     List<Interval> intervalsForUsedSegments = getUsedIntervals();
-    for (Interval timeChunk : granularitySpec.sortedBucketIntervals()) {
+    for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
+
       // is time chunk empty?
       boolean isEmpty = true;
       for (Interval pushedSegmentCondensedInterval : pushedSegmentsIntervals) {
-        if (timeChunk.overlaps(pushedSegmentCondensedInterval)) {
+        if (timeChunkInterval.overlaps(pushedSegmentCondensedInterval)) {
           isEmpty = false;
           break;
         }
       }
 
       if (isEmpty) {
-        boolean buildTombstone = false;
-        // only build tombstone that covers an existing used segment (avoid
+        // this timeChunk interval is a tombstone candidate
+
+        // only build tombstone that will overshadow an existing used segment (avoid
         // unecessary tombstones... this is a space optimization)
+        boolean buildTombstone = false;
         for (Interval usedSegmentInterval : intervalsForUsedSegments) {
-          if (timeChunk.overlaps(usedSegmentInterval)) {
+          if (timeChunkInterval.overlaps(usedSegmentInterval)) {
             buildTombstone = true;
             break;
           }
         }
         if (buildTombstone) {
-          // create tombstone
-          DataSegment tombstone = createTombstoneForTimeChunk(pushedSegmentPrototype, timeChunk);
+          // Tombstone's version is the locked interval's version
+          String version = null;
+          for (Interval lockInterval : intervalToLockVersion.keySet()) {
+            if (lockInterval.contains(timeChunkInterval)) {
+              version = intervalToLockVersion.get(lockInterval);
+              break;
+            }
+          }
+          if (version == null) {
+            throw new ISE("No lock for tombstone interval [%s], locks [%s]",
+                          timeChunkInterval, intervalsForUsedSegments
+            );
+          }
+          // now we have all the metadata to create the tombstone:
+          DataSegment tombstone = createTombstoneForTimeChunkInterval(dataSource, version, timeChunkInterval);
           retVal.add(tombstone);
         }
+
       }
 
     }
-
     return retVal;
   }
 
-  private DataSegment createTombstoneForTimeChunk(DataSegment prototype, Interval timeChunk)
+  private DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, Interval timeChunkInterval)
   {
 
-    // most of the fields will be the same as prototype...
-    DataSegment.Builder dataSegmentBuilder =
-        DataSegment.builder(prototype);
-
-    // interval is different:
-    dataSegmentBuilder.interval(timeChunk).size(0);
 
     // and the loadSpec is different too:
-    Preconditions.checkNotNull(prototype.getLoadSpec());
-    Map<String, Object> tombstoneLoadSpec = new HashMap<>(prototype.getLoadSpec());
+    Map<String, Object> tombstoneLoadSpec = new HashMap<>();
     // since loadspec comes from prototype it is guaranteed to be non-null
 
     tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
     tombstoneLoadSpec.put("path", null); // tombstones do not have any backing file
-    dataSegmentBuilder.loadSpec(tombstoneLoadSpec);
+
+    // Several fields do not apply to tombstones...
+    DataSegment.Builder dataSegmentBuilder =
+        DataSegment.builder()
+                   .dataSource(dataSource)
+                   .interval(timeChunkInterval) // interval is different
+                   .version(version)
+                   .loadSpec(tombstoneLoadSpec) // load spec is special for tombstone
+                   .size(0); // it is empty
 
     return dataSegmentBuilder.build();
 
@@ -162,18 +165,19 @@ public class TombstoneHelper
    * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
    * since those that not cover used intervals will be redundant.
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
-   * @throws IOException
+   * @throws IOException If used segments cannot be retrieved
    */
   public List<Interval> getUsedIntervals() throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
 
-    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(getInputIntervals());
+    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(dataSchema.getGranularitySpec().inputIntervals());
     if (!condensedInputIntervals.isEmpty()) {
       Collection<DataSegment> usedSegmentsInInputInterval =
-          taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null,
-                                                                 condensedInputIntervals,
-                                                                 Segments.ONLY_VISIBLE
+          taskActionClient.submit(new RetrieveUsedSegmentsAction(
+              dataSchema.getDataSource(), null,
+              condensedInputIntervals,
+              Segments.ONLY_VISIBLE
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

@@ -939,10 +939,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               ingestionSchema
           );
 
-      Set<DataSegment> tombStones = null;
+      Set<DataSegment> tombStones = Collections.emptySet();
       if (ingestionSchema.getIOConfig().isDropExisting()) {
         TombstoneHelper tombstoneHelper = new TombstoneHelper(pushed.getSegments(),
-                                                              ingestionSchema,
+                                                              ingestionSchema.getDataSchema(),
+                                                              intervalToLockVersion,
                                                               toolbox.getTaskActionClient());
         tombStones = tombstoneHelper.computeTombstones();
         log.debugSegments(tombStones, "To publish tombstones");

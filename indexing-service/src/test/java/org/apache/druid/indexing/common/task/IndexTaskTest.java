@@ -2409,6 +2409,84 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void verifyPublishingOnlyTombstones() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-03-01T00:00:10Z,a,1\n");
+      writer.write("2014-03-01T01:00:20Z,b,1\n");
+      writer.write("2014-03-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-01-03/2014-04-01"))
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            false
+        ),
+        null
+    );
+
+    // Ingest data with DAY segment granularity
+    List<DataSegment> segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size());
+    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
+    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
+      Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
+    }
+
+    // create new data but with an ingestion interval appropriate to filter it all out so that only tombstones
+    // are created:
+    tmpDir = temporaryFolder.newFolder();
+    tmpFile = File.createTempFile("druid", "index", tmpDir);
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-12-01T02:00:30Z,c,1\n");
+    }
+
+    indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.MINUTE,
+                Collections.singletonList(Intervals.of("2014-03-01/2014-04-01")) // filter out all data
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(10, true),
+            false,
+            true
+        ),
+        null
+    );
+
+    // Ingest data with overwrite and same segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size()); // one tombstone
+    Assert.assertTrue(segments.get(0).isTombstone());
+  }
+
+  @Test
   public void testOldSegmentNotReplacedWhenDropFlagTrueAndIngestionIntervalEmpty() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
