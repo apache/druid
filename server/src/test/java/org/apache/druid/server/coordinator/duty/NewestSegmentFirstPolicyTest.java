@@ -1688,7 +1688,8 @@ public class NewestSegmentFirstPolicyTest
       UserCompactionTaskDimensionsConfig dimensionsSpec,
       UserCompactionTaskTransformConfig transformSpec,
       AggregatorFactory[] metricsSpec
-  ) {
+  )
+  {
     return createCompactionConfig(inputSegmentSizeBytes, skipOffsetFromLatest, granularitySpec, dimensionsSpec, transformSpec, null, metricsSpec);
   }
 
