@@ -110,7 +110,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testAutoCompactionMetricsSpecWithPreserveExistingMetrics() throws Exception {
+  public void testAutoCompactionMetricsSpecWithPreserveExistingMetrics() throws Exception
+  {
     // added = null, count = 2, sum_added = 62
     loadData(INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS);
     // added = 31, count = null, sum_added = null
