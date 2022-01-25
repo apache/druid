@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
@@ -54,6 +55,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -127,15 +129,27 @@ public class NativeQueryMaker implements QueryMaker
     }
     int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
     if (numFilters < 1) {
-      throw new CannotBuildQueryException("maxNumericInFilters must be greater than 0");
+      throw new UOE("maxNumericInFilters must be greater than 0");
     }
-    //special corner case handling for numeric IN filters
+    if (numFilters > PlannerConfig.DEFAULT_MAX_NUMFILTERS) {
+      throw new UOE("maxNumericFilter can only accept values between 0 and " + PlannerConfig.DEFAULT_MAX_NUMFILTERS);
+    }
+    // special corner case handling for numeric IN filters
+    // in case of query containing IN (v1, v2, v3,...) where Vi is numeric
+    // a BoundFilter is created internally for each of the values
+    // whereas when Vi s are String the Filters are converted as BoundFilter to SelectorFilter to InFilter
+    // which takes lesser processing for bitmaps
+    // So in a case where user executes a query with multiple numeric INs, flame graph shows BoundFilter.getBitmapResult
+    // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
+    // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
+    // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
+
     if (query.getFilter() instanceof OrDimFilter) {
       OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
       if (orDimFilter.getFields().size() > numFilters) {
         String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-        throw new CannotBuildQueryException(StringUtils.format(
-            "Filters for column [%s] exceeds configured filter limit of [%s]. Cast [%s] values to String",
+        throw new UOE(StringUtils.format(
+            "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
             dimension,
             numFilters,
             orDimFilter.getFields().size()
