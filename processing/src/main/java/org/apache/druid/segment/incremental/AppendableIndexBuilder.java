@@ -34,6 +34,7 @@ public abstract class AppendableIndexBuilder
   protected boolean sortFacts = true;
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
+  protected boolean preserveExistingMetrics = false;
 
   protected final Logger log = new Logger(this.getClass());
 
@@ -55,7 +56,7 @@ public abstract class AppendableIndexBuilder
   @VisibleForTesting
   public AppendableIndexBuilder setSimpleTestingIndexSchema(final AggregatorFactory... metrics)
   {
-    return setSimpleTestingIndexSchema(null, metrics);
+    return setSimpleTestingIndexSchema(null, null, metrics);
   }
 
 
@@ -69,10 +70,15 @@ public abstract class AppendableIndexBuilder
    * @return this
    */
   @VisibleForTesting
-  public AppendableIndexBuilder setSimpleTestingIndexSchema(@Nullable Boolean rollup, final AggregatorFactory... metrics)
+  public AppendableIndexBuilder setSimpleTestingIndexSchema(
+      @Nullable Boolean rollup,
+      @Nullable Boolean preserveExistingMetrics,
+      final AggregatorFactory... metrics
+  )
   {
     IncrementalIndexSchema.Builder builder = new IncrementalIndexSchema.Builder().withMetrics(metrics);
     this.incrementalIndexSchema = rollup != null ? builder.withRollup(rollup).build() : builder.build();
+    this.preserveExistingMetrics = preserveExistingMetrics != null ? preserveExistingMetrics : false;
     return this;
   }
 
@@ -103,6 +109,12 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setMaxBytesInMemory(final long maxBytesInMemory)
   {
     this.maxBytesInMemory = maxBytesInMemory;
+    return this;
+  }
+
+  public AppendableIndexBuilder setPreserveExistingMetrics(final boolean preserveExistingMetrics)
+  {
+    this.preserveExistingMetrics = preserveExistingMetrics;
     return this;
   }
 

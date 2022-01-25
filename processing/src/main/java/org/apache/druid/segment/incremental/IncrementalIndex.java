@@ -226,6 +226,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final AggregatorFactory[] metrics;
   private final boolean deserializeComplexMetrics;
   private final Metadata metadata;
+  private final boolean preserveExistingMetrics;
 
   private final Map<String, MetricDesc> metricDescs;
 
@@ -258,7 +259,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final boolean preserveExistingMetrics
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -268,6 +270,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.preserveExistingMetrics = preserveExistingMetrics;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -418,6 +421,11 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   public boolean isRollup()
   {
     return rollup;
+  }
+
+  public boolean isPreserveExistingMetrics()
+  {
+    return preserveExistingMetrics;
   }
 
   @Override

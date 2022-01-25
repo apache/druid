@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -79,10 +80,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
-  private final boolean preserveExistingMetrics;
 
   @Nullable
   private volatile Map<String, ColumnSelectorFactory> selectors;
+  @Nullable
+  private volatile Map<String, ColumnSelectorFactory> combiningAggSelectors;
   @Nullable
   private String outOfRowsReason = null;
 
@@ -96,13 +98,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean preserveExistingMetrics
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, preserveExistingMetrics);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts, dimsComparator());
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
-    this.preserveExistingMetrics = preserveExistingMetrics;
   }
 
   /**
@@ -154,6 +155,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   )
   {
     selectors = new HashMap<>();
+    combiningAggSelectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
@@ -162,9 +164,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               concurrentEventAdd
           )
       );
-      if (preserveExistingMetrics) {
+      if (isPreserveExistingMetrics()) {
         AggregatorFactory combiningAgg = agg.getCombiningFactory();
-        selectors.put(
+        combiningAggSelectors.put(
             combiningAgg.getName(),
             new CachingColumnSelectorFactory(
                 makeColumnSelectorFactory(combiningAgg, rowSupplier, deserializeComplexMetrics),
@@ -195,7 +197,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
     } else {
-      if (preserveExistingMetrics) {
+      if (isPreserveExistingMetrics()) {
         aggs = new Aggregator[metrics.length * 2];
       } else {
         aggs = new Aggregator[metrics.length];
@@ -267,12 +269,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   )
   {
     rowContainer.set(row);
-    for (int i = 0; i < metrics.length; i++) {
+    int aggLength = isPreserveExistingMetrics() ? aggs.length / 2 : aggs.length;
+    for (int i = 0; i < aggLength; i++) {
       final AggregatorFactory agg = metrics[i];
       aggs[i] = agg.factorize(selectors.get(agg.getName()));
-      if (preserveExistingMetrics) {
+      if (isPreserveExistingMetrics()) {
         AggregatorFactory combiningAgg = agg.getCombiningFactory();
-        aggs[i + metrics.length] = combiningAgg.factorize(selectors.get(combiningAgg.getName()));
+        aggs[i + metrics.length] = combiningAgg.factorize(combiningAggSelectors.get(combiningAgg.getName()));
       }
     }
     rowContainer.set(null);
@@ -290,7 +293,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
     for (int i = 0; i < metrics.length; i++) {
       final Aggregator agg;
-      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
+      if (isPreserveExistingMetrics() && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
         agg = aggs[i + metrics.length];
       } else {
         agg = aggs[i];
@@ -381,10 +384,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    if (preserveExistingMetrics) {
-      final AggregatorFactory[] metrics = getMetricAggs();
-      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
-      return (float) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    if (isPreserveExistingMetrics()) {
+      return (float) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
     } else {
       return concurrentGet(rowOffset)[aggOffset].getFloat();
     }
@@ -393,10 +394,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    if (preserveExistingMetrics) {
-      final AggregatorFactory[] metrics = getMetricAggs();
-      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
-      return (long) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    if (isPreserveExistingMetrics()) {
+      return (long) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
     } else {
       return concurrentGet(rowOffset)[aggOffset].getLong();
     }
@@ -405,10 +404,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    if (preserveExistingMetrics) {
-      final AggregatorFactory[] metrics = getMetricAggs();
-      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
-      return aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    if (isPreserveExistingMetrics()) {
+      return getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
     } else {
       return concurrentGet(rowOffset)[aggOffset].get();
     }
@@ -417,10 +414,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    if (preserveExistingMetrics) {
-      final AggregatorFactory[] metrics = getMetricAggs();
-      final AggregatorFactory aggregatorFactory = metrics[aggOffset];
-      return (double) aggregatorFactory.combine(concurrentGet(rowOffset)[aggOffset].get(), concurrentGet(rowOffset)[aggOffset + metrics.length].get());
+    if (isPreserveExistingMetrics()) {
+      return (double) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
     } else {
       return concurrentGet(rowOffset)[aggOffset].getDouble();
     }
@@ -429,9 +424,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public boolean isNull(int rowOffset, int aggOffset)
   {
-    if (preserveExistingMetrics) {
-      final AggregatorFactory[] metrics = getMetricAggs();
-      return concurrentGet(rowOffset)[aggOffset].isNull() && concurrentGet(rowOffset)[aggOffset + metrics.length].isNull();
+    if (isPreserveExistingMetrics()) {
+      return concurrentGet(rowOffset)[aggOffset].isNull() && concurrentGet(rowOffset)[aggOffset + getMetricAggs().length].isNull();
     } else {
       return concurrentGet(rowOffset)[aggOffset].isNull();
     }
@@ -475,10 +469,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               }
 
               Aggregator[] aggs = getAggsForRow(rowOffset);
-              for (int i = 0; i < aggs.length; ++i) {
-                if (preserveExistingMetrics) {
-                  AggregatorFactory aggregatorFactory = metrics[i];
-                  theVals.put(metrics[i].getName(), aggregatorFactory.combine(aggs[i].get(), aggs[i + metrics.length].get()));
+              int aggLength = isPreserveExistingMetrics() ? aggs.length / 2 : aggs.length;
+              for (int i = 0; i < aggLength; ++i) {
+                if (isPreserveExistingMetrics()) {
+                  theVals.put(metrics[i].getName(), getCombinedMetric(metrics, aggs, i));
                 } else {
                   theVals.put(metrics[i].getName(), aggs[i].get());
                 }
@@ -497,6 +491,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
   }
 
+  private Object getCombinedMetric(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset)
+  {
+    if (aggs[aggOffset].isNull()) {
+      return aggs[aggOffset + metrics.length].get();
+    } else if (aggs[aggOffset + metrics.length].isNull()) {
+      return aggs[aggOffset].get();
+    } else {
+      AggregatorFactory aggregatorFactory = metrics[aggOffset];
+      return aggregatorFactory.combine(aggs[aggOffset].get(), aggs[aggOffset + metrics.length].get());
+    }
+  }
+
   /**
    * Clear out maps to allow GC
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
@@ -510,6 +516,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     facts.clear();
     if (selectors != null) {
       selectors.clear();
+    }
+    if (combiningAggSelectors != null) {
+      combiningAggSelectors.clear();
     }
   }
 
@@ -566,15 +575,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   public static class Builder extends AppendableIndexBuilder
   {
-    private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
-    private boolean preserveExistingMetrics = DEFAULT_PRESERVE_EXISTING_METRICS;
-
-    public Builder setPreserveExistingMetrics(boolean preserveExistingMetrics)
-    {
-      this.preserveExistingMetrics = preserveExistingMetrics;
-      return this;
-    }
-
     @Override
     protected OnheapIncrementalIndex buildInner()
     {

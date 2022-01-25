@@ -96,19 +96,22 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IncrementalIndexTest(String indexType, String mode) throws JsonProcessingException
+  public IncrementalIndexTest(String indexType, String mode, boolean preserveExistingMetrics) throws JsonProcessingException
   {
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
-        .setSimpleTestingIndexSchema("rollup".equals(mode), (AggregatorFactory[]) args[0])
+        .setSimpleTestingIndexSchema("rollup".equals(mode), preserveExistingMetrics, (AggregatorFactory[]) args[0])
         .setMaxRowCount(1_000_000)
         .build()
     ));
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}, {1}")
+  @Parameterized.Parameters(name = "{index}: {0}, {1}, {2}")
   public static Collection<?> constructorFeeder()
   {
-    return IncrementalIndexCreator.indexTypeCartesianProduct(ImmutableList.of("rollup", "plain"));
+    return IncrementalIndexCreator.indexTypeCartesianProduct(
+        ImmutableList.of("rollup", "plain"),
+        ImmutableList.of(true, false)
+    );
   }
 
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
@@ -155,7 +158,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     }
 
     return new OnheapIncrementalIndex.Builder()
-        .setSimpleTestingIndexSchema(false, aggregatorFactories)
+        .setSimpleTestingIndexSchema(false, false, aggregatorFactories)
         .setMaxRowCount(1000000)
         .build();
   }
