@@ -53,6 +53,7 @@ public class CompactionUtil
             null,
             null,
             null,
+            null,
             new MaxSizeSplitHintSpec(null, 1),
             new DynamicPartitionsSpec(maxRowsPerSegment, null),
             null,
