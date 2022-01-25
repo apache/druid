@@ -41,6 +41,8 @@ To maintain metadata store performance, you can configure Apache Druid to automa
 
 By default, Druid automatically cleans up metadata older than 90 days.
 This applies to all metadata entities in this topic except compaction configuration records, which do not have a retention period, and indexer task logs, for which cleanup is disabled by default.
+Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
+
 You can configure the retention period for each metadata type, when available, through the record's `durationToRetain` property.
 Certain records may require additional conditions be satisfied before clean up occurs.
 

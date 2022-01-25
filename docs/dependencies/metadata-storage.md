@@ -30,7 +30,7 @@ The metadata store retains all metadata essential for a Druid cluster to work.
 The metadata store includes the following:
 - Segments records
 - Rule records
-- Runtime configuration objects
+- Configuration records
 - Task-related tables
 - Audit records
 
