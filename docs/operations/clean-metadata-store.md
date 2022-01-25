@@ -151,11 +151,17 @@ For more detail, see [Task logging](../configuration/index.md#task-logging).
 Druid enables automated metadata cleanup by default. To disable this feature, set the following properties in the `coordinator/runtime.properties` file:
 
 ```
+# Keep unused segments
 druid.coordinator.kill.on=false
+# Keep audit records
 druid.coordinator.kill.audit.on=false
+# Keep supervisor records
 druid.coordinator.kill.supervisor.on=false
+# Keep rules records
 druid.coordinator.kill.rule.on=false
+# Keep compaction configuration records
 druid.coordinator.kill.compaction.on=false
+# Keep datasource records created by supervisors
 druid.coordinator.kill.datasource.on=false
 ```
 
