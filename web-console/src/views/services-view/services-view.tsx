@@ -180,7 +180,9 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
-  "is_leader",
+  "is_leader"
+FROM sys.servers
+ORDER BY
   (
     CASE "server_type"
     WHEN 'coordinator' THEN 8
@@ -193,9 +195,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
     WHEN 'peon' THEN 1
     ELSE 0
     END
-  ) AS "rank"
-FROM sys.servers
-ORDER BY "rank" DESC, "service" DESC`;
+  ) DESC,
+  "service" DESC`;
 
   static async getServices(): Promise<ServiceQueryResultRow[]> {
     const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
@@ -526,7 +527,7 @@ ORDER BY "rank" DESC, "service" DESC`;
                 }
                 return details.join(' ');
               } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
-                return (row.is_leader || 0) === 1 ? 'leader' : '';
+                return row.is_leader === 1 ? 'Leader' : '';
               } else {
                 return (Number(row.segmentsToLoad) || 0) + (Number(row.segmentsToDrop) || 0);
               }

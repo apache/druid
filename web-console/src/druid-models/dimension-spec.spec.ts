@@ -17,13 +17,68 @@
  */
 
 import { getDimensionSpecs } from './dimension-spec';
+import { CSV_SAMPLE, JSON_SAMPLE } from './test-fixtures';
 
 describe('dimension-spec', () => {
-  it('getDimensionSpecs', () => {
-    expect(getDimensionSpecs({ header: ['header'], rows: [] }, {}, true)).toMatchInlineSnapshot(`
-      Array [
-        "header",
-      ]
-    `);
+  describe('getDimensionSpecs', () => {
+    it('works for empty', () => {
+      expect(getDimensionSpecs({ header: ['header'], rows: [] }, {}, false, true)).toEqual([
+        'header',
+      ]);
+    });
+
+    it('works with json', () => {
+      expect(getDimensionSpecs(JSON_SAMPLE, {}, false, false)).toEqual([
+        'timestamp',
+        'user',
+        {
+          name: 'followers',
+          type: 'long',
+        },
+        {
+          name: 'spend',
+          type: 'double',
+        },
+        'id',
+        'tags',
+        'nums',
+      ]);
+
+      expect(getDimensionSpecs(JSON_SAMPLE, {}, false, true)).toEqual([
+        'timestamp',
+        'user',
+        'id',
+        'tags',
+        'nums',
+      ]);
+    });
+
+    it('works with csv', () => {
+      expect(getDimensionSpecs(CSV_SAMPLE, {}, true, false)).toEqual([
+        'timestamp',
+        'user',
+        {
+          name: 'followers',
+          type: 'long',
+        },
+        {
+          name: 'spend',
+          type: 'double',
+        },
+        {
+          name: 'id',
+          type: 'long',
+        },
+        'tags',
+        'nums',
+      ]);
+
+      expect(getDimensionSpecs(CSV_SAMPLE, {}, true, true)).toEqual([
+        'timestamp',
+        'user',
+        'tags',
+        'nums',
+      ]);
+    });
   });
 });
