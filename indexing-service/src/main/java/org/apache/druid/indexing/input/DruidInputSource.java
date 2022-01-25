@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -241,12 +242,23 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
 
+    return new InputEntityIteratingReader(
+        getInputRowSchemaToUse(inputRowSchema),
+        inputFormat,
+        entityIterator,
+        temporaryDirectory
+    );
+  }
+
+  @VisibleForTesting
+  InputRowSchema getInputRowSchemaToUse(InputRowSchema inputRowSchema)
+  {
     final InputRowSchema inputRowSchemaToUse;
 
-    final ColumnsFilter columnsFilterToUse = inputRowSchema.getColumnsFilter();
+    ColumnsFilter columnsFilterToUse = inputRowSchema.getColumnsFilter();
     if (inputRowSchema.getMetricNames() != null) {
       for (String metricName : inputRowSchema.getMetricNames()) {
-        columnsFilterToUse.plus(metricName);
+        columnsFilterToUse = columnsFilterToUse.plus(metricName);
       }
     }
 
@@ -279,12 +291,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       );
     }
 
-    return new InputEntityIteratingReader(
-        inputRowSchemaToUse,
-        inputFormat,
-        entityIterator,
-        temporaryDirectory
-    );
+    return inputRowSchemaToUse;
   }
 
   private List<TimelineObjectHolder<String, DataSegment>> createTimeline()
