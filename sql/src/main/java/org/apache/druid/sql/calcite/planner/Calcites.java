@@ -88,8 +88,10 @@ public class Calcites
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
 
-  public static SqlReturnTypeInference ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
-  public static SqlReturnTypeInference ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
+  public static final SqlReturnTypeInference
+      ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
+  public static final SqlReturnTypeInference
+      ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
 
   private Calcites()
   {
