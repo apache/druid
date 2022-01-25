@@ -313,6 +313,7 @@ lookback
 lookups
 mapreduce
 masse
+maxNumericInFilters
 maxNumFiles
 maxNumSegments
 max_map_count
