@@ -150,9 +150,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("sum_added", "added")},
           false
       );
+      // should now only have 1 row after compaction
+      // added = null, count = 3, sum_added = 93
       forceTriggerAutoCompaction(1);
 
-      Map<String, Object> expectedResult = ImmutableMap.of(
+      expectedResult = ImmutableMap.of(
           "%%FIELD_TO_QUERY%%", "added",
           "%%EXPECTED_COUNT_RESULT%%", 2,
           "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(nullList)))
