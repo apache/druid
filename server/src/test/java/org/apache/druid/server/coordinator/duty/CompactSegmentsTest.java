@@ -666,6 +666,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -730,6 +731,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -788,6 +790,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -842,6 +845,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -912,6 +916,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -973,6 +978,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1029,6 +1035,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -1130,6 +1137,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -1259,6 +1267,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1316,6 +1325,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -1381,6 +1391,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -1531,6 +1542,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 null,
+                null,
                 partitionsSpec,
                 null,
                 null,
@@ -1623,6 +1635,7 @@ public class CompactSegmentsTest
             null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
+                null,
                 null,
                 null,
                 null,
@@ -1932,6 +1945,7 @@ public class CompactSegmentsTest
               null,
               new Period("PT1H"), // smaller than segment interval
               new UserCompactionTaskQueryTuningConfig(
+                  null,
                   null,
                   null,
                   null,
