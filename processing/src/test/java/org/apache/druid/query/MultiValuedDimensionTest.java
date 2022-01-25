@@ -1112,7 +1112,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
                            {
                              {
                                put("texpr", NullHandling.sqlCompatible() ? "foo" : null);
-                               put("count", 1l);
+                               put("count", 1L);
                              }
                            }
                        )
