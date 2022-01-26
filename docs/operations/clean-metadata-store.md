@@ -116,9 +116,9 @@ Rule cleanup uses the following configuration:
 ### Compaction configuration records
 
 Druid retains all compaction configuration records by default, which should be suitable for most use cases.
-If you have a high datasource churn rate, that is, you create and delete short-lived datasources with high frequency, consider turning on automated cleanup of compaction configuration records.
-With this feature turned on, when you create a compaction configuration for some datasource before the datasource exists, for example if ingestion is ongoing, Druid may remove the compaction configuration.
-To prevent the configuration from being prematurely removed, wait to set `druid.coordinator.kill.compaction.on=true` until after the datasource is created.
+If you have a high datasource churn rate, that is, you create and delete short-lived datasources with high frequency, and set auto compaction configuration on those datasources then consider turning on automated cleanup of compaction configuration records.
+Warning: With this feature turned on, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is stil ongoing, Druid may remove the compaction configuration.
+To prevent the configuration from being prematurely removed, wait to set auto compaction configuration on the datasource after the datasource is created.
 
 Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
