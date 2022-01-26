@@ -934,6 +934,45 @@ public class FunctionTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testMVToArrayWithValidInputs()
+  {
+    assertArrayExpr("mv_to_array(x)", new String[]{"foo"});
+    assertArrayExpr("mv_to_array(a)", new String[]{"foo", "bar", "baz", "foobar"});
+  }
+
+  @Test
+  public void testMVToArrayWithConstantLiteral()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("should be an identifier expression");
+    assertArrayExpr("mv_to_array('1')", null);
+  }
+
+  @Test
+  public void testMVToArrayWithFunction()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("should be an identifier expression");
+    assertArrayExpr("mv_to_array(repeat('hello', 2))", null);
+  }
+
+  @Test
+  public void testMVToArrayWithMoreArgs()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("needs exactly 1 argument of type String");
+    assertArrayExpr("mv_to_array(x,y)", null);
+  }
+
+  @Test
+  public void testMVToArrayWithNoArgs()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("needs exactly 1 argument of type String");
+    assertArrayExpr("mv_to_array()", null);
+  }
+
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());

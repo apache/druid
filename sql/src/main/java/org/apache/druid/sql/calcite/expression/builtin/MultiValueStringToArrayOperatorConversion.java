@@ -25,32 +25,29 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public class ArrayConcatOperatorConversion implements SqlOperatorConversion
+import javax.annotation.Nullable;
+
+/**
+ * Function that converts a String or a Multi Value direct column to an array.
+ * Input expressions are not supported as one should use the array function for such cases.
+ **/
+
+public class MultiValueStringToArrayOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("ARRAY_CONCAT")
+      .operatorBuilder("MV_TO_ARRAY")
       .operandTypeChecker(
-          OperandTypes.sequence(
-              "(array,array)",
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              ),
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              )
-          )
+              OperandTypes.family(SqlTypeFamily.STRING)
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeInference(Calcites.ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE)
+      .returnTypeNullableArray(SqlTypeName.VARCHAR)
       .build();
 
   @Override
@@ -59,12 +56,9 @@ public class ArrayConcatOperatorConversion implements SqlOperatorConversion
     return SQL_FUNCTION;
   }
 
+  @Nullable
   @Override
-  public DruidExpression toDruidExpression(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexNode rexNode
-  )
+  public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
   {
     return OperatorConversions.convertCall(
         plannerContext,
@@ -72,8 +66,9 @@ public class ArrayConcatOperatorConversion implements SqlOperatorConversion
         rexNode,
         druidExpressions -> DruidExpression.of(
             null,
-            DruidExpression.functionCall("array_concat", druidExpressions)
+            DruidExpression.functionCall("mv_to_array", druidExpressions)
         )
     );
   }
+
 }
