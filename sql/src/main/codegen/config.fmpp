@@ -39,9 +39,10 @@
 # Following clauses are modified in the file:
 #   1. data.parser.package & data.parser.class
 #   2. data.parser.imports
-#   3. data.parser.nonReservedKeywords (Added "CLUSTER" at the end of the list)
-#   4. data.parser.statementParserMethods
-#   5. data.parser.implementationFiles
+#   3. data.parser.nonReservedKeywords (Added "CLUSTER")
+#   4. data.parser.keywords (Added "CLUSTER")
+#   5. data.parser.statementParserMethods
+#   6. data.parser.implementationFiles
 data: {
   parser: {
     # Generated parser implementation package and class name.
@@ -59,6 +60,7 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
+      "CLUSTER"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -93,6 +95,7 @@ data: {
         "CHARACTERISTICS"
         "CHARACTERS"
         "CLASS_ORIGIN"
+        "CLUSTER"
         "COBOL"
         "COLLATION"
         "COLLATION_CATALOG"
@@ -366,7 +369,6 @@ data: {
         "WRITE"
         "XML"
         "ZONE"
-        "CLUSTER"
     ]
 
     # List of additional join types. Each is a method with no arguments.
