@@ -109,4 +109,22 @@ public class PrometheusEmitterTest
     emitter.emit(build);
     emitter.flush();
   }
+
+  @Test
+  public void testEmitterStartWithHttpURL()
+  {
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway");
+    PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
+    pushEmitter.start();
+    Assert.assertNotNull(pushEmitter.getPushGateway());
+  }
+
+  @Test
+  public void testEmitterStartWithHttpsURL()
+  {
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway");
+    PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
+    pushEmitter.start();
+    Assert.assertNotNull(pushEmitter.getPushGateway());
+  }
 }
