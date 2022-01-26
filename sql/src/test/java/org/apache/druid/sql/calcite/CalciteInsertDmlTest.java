@@ -447,22 +447,46 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithClusterByAndOrderBy()
+  public void testInsertWithClusterByAndOrderBy() throws Exception
   {
+    try {
+      testQuery(
+          StringUtils.format(
+              "INSERT INTO dst SELECT * FROM %s ORDER BY 2 CLUSTER BY 3",
+              externSql(externalDataSource)
+          ),
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("Exception should be thrown");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertEquals(
+          "Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query",
+          e.getMessage()
+      );
+    }
+    didTest = true;
+  }
 
+  @Test
+  public void testInsertWithPartitionByContainingInvalidGranularity() throws Exception
+  {
     // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
-    Assert.assertThrows(
-        SqlPlanningException.class,
-        () ->
-            testQuery(
-                StringUtils.format(
-                    "INSERT INTO dst SELECT * FROM %s ORDER BY 2 CLUSTER BY 3",
-                    externSql(externalDataSource)
-                ),
-                ImmutableList.of(),
-                ImmutableList.of()
-            )
-    );
+    try {
+      testQuery(
+          "INSERT INTO dst SELECT * FROM foo PARTITION BY 'invalid_granularity'",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("Exception should be thrown");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertEquals(
+          "Granularity passed in PARTITION BY clause is invalid",
+          e.getMessage()
+      );
+    }
     didTest = true;
   }
 

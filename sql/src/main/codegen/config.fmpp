@@ -32,6 +32,16 @@
 # Parser template file (Parser.jj) along with this file are packaged as
 # part of the calcite-core-<version>.jar under "codegen" directory.
 
+# This file is directly copied from calite-core-1.21.0.jar/codegen/config.fmpp, and then modified slightly.
+# While not a necessary requirement, it would be ideal if it is kept in line with calcite-core's version. In the newer
+# Calcite versions, there is a default_config.fmpp which will free us from maintaining this file.
+#
+# Following clauses are modified in the file:
+#   1. data.parser.package & data.parser.class
+#   2. data.parser.imports
+#   3. data.parser.nonReservedKeywords (Added "CLUSTER" at the end of the list)
+#   4. data.parser.statementParserMethods
+#   5. data.parser.implementationFiles
 data: {
   parser: {
     # Generated parser implementation package and class name.
@@ -49,7 +59,6 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
-      "CLUSTER"
     ]
 
     # List of keywords from "keywords" section that are not reserved.
@@ -357,6 +366,7 @@ data: {
         "WRITE"
         "XML"
         "ZONE"
+        "CLUSTER"
     ]
 
     # List of additional join types. Each is a method with no arguments.

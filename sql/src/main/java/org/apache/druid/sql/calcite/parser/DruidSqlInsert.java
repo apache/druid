@@ -31,7 +31,8 @@ import javax.annotation.Nullable;
 
 /**
  * Extends the Insert call to hold custom paramaters specific to druid i.e. PARTITION BY and CLUSTER BY
- * This class extends the {@link SqlInsert} so that the node can be used for further conversion
+ * This class extends the {@link SqlInsert} so that this SqlNode can be used in
+ * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
 public class DruidSqlInsert extends SqlInsert
 {

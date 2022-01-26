@@ -261,13 +261,13 @@
         </executions>
       </plugin>
 
+      <!-- Following plugins and their configurations are used to generate the custom Calcite's SQL parser for Druid -->
+      <!-- Extracts the Parser.jj from Calcite to ${project.build.directory}, where all the Freemarker templates are -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <!-- Extract parser grammar template from Apache Calcite and put
-              it under ${project.build.directory} where all freemarker templates are. -->
             <id>unpack-parser-template</id>
             <phase>initialize</phase>
             <goals>
@@ -284,21 +284,39 @@
                   <outputDirectory>${project.build.directory}/</outputDirectory>
                   <includes>**/Parser.jj</includes>
                 </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.calcite</groupId>
-                  <artifactId>calcite-core</artifactId>
-                  <version>${calcite.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/</outputDirectory>
-                  <includes>**/config.fmpp</includes>
-                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
         </executions>
       </plugin>
 
+      <!-- Copy the templates present in the codegen directory of druid-sql containing custom SQL rules to
+        ${project.build.directory}/codegen -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>copy-fmpp-resources</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/codegen</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/codegen</directory>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- "Plugs in" the Calcite's Parser.jj with the variables present in config.fmpp. These contain the custom rules
+        as well as the class to which the custom implementation will get generated -->
       <plugin>
         <groupId>com.googlecode.fmpp-maven-plugin</groupId>
         <artifactId>fmpp-maven-plugin</artifactId>
@@ -326,7 +344,7 @@
         </executions>
       </plugin>
 
-
+      <!-- Creates a Java class for the custom parser from the Parser.jj -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
@@ -351,30 +369,7 @@
         </executions>
       </plugin>
 
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>copy-fmpp-resources</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/codegen</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>src/main/codegen</directory>
-                  <filtering>false</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-
+      <!-- Adds the path of the generated parser to the classpath -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -396,5 +391,6 @@
       </plugin>
     </plugins>
   </build>
+  <!-- Build for the custom SQL parser complete -->
 
 </project>

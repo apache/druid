@@ -71,6 +71,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -792,6 +793,17 @@ public class DruidPlanner implements Closeable
 
           ingestionGranularity = druidSqlInsert.getPartitionBy();
 
+          // Check if ingestionGranularity is valid
+          if (ingestionGranularity != null) {
+            try {
+              Granularity.fromString(ingestionGranularity);
+            }
+            catch (IllegalArgumentException e) {
+              throw new ValidationException(StringUtils.format(
+                  "Granularity passed in PARTITION BY clause is invalid", ingestionGranularity));
+            }
+          }
+
           if (druidSqlInsert.getClusterBy() != null) {
             // If we have a CLUSTER BY clause, extract the information in that CLUSTER BY and create a new SqlOrderBy
             // node
@@ -801,9 +813,10 @@ public class DruidPlanner implements Closeable
 
             if (query instanceof SqlOrderBy) {
               SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-              // Extract the query present inside the SqlOrderBy (which is free of ORDER BY, OFFSET and FETCH clauses)
+              // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+              // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP BY dim1
+              // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
               query = sqlOrderBy.query;
-
               offset = sqlOrderBy.offset;
               fetch = sqlOrderBy.fetch;
               orderByList = sqlOrderBy.orderList;
