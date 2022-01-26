@@ -116,9 +116,12 @@ Rule cleanup uses the following configuration:
 ### Compaction configuration records
 
 Druid retains all compaction configuration records by default, which should be suitable for most use cases.
-If you have a high datasource churn rate, that is, you create and delete short-lived datasources with high frequency, and set auto compaction configuration on those datasources then consider turning on automated cleanup of compaction configuration records.
-Warning: With this feature turned on, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is stil ongoing, Druid may remove the compaction configuration.
-To prevent the configuration from being prematurely removed, wait to set auto compaction configuration on the datasource after the datasource is created.
+If you create and delete short-lived datasources with high frequency, and you set auto compaction configuration on those datasources, then consider turning on automated cleanup of compaction configuration records.
+
+> With automated cleanup of compaction configuration records, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is stil ongoing, Druid may remove the compaction configuration.
+To prevent the configuration from being prematurely removed, wait for the datasource to be created before applying the compaction configuration to the datasource.
+
+Unlike other metadata records, compaction configuration records do not have a retention period set by `durationToRetain`. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
 
 Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
 
@@ -126,7 +129,6 @@ Compaction configuration cleanup uses the following configuration:
  - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction configuration records.
  - `druid.coordinator.kill.compaction.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible compaction configuration records. Defaults to `P1D`.
 
-Compaction configuration records do not have a retention period. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
 
 >If you already have an extremely large compaction configuration, you may not be able to delete compaction configuration due to size limits with the audit log. In this case you can set `druid.audit.manager.maxPayloadSizeBytes` and `druid.audit.manager.skipNullField` to avoid the auditing issue. See [Audit logging](../configuration/index.md#audit-logging).
 
