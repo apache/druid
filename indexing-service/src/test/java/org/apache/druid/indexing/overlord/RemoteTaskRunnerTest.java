@@ -43,6 +43,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -56,6 +57,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -67,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RemoteTaskRunnerTest
 {
+  private static final Logger LOG = new Logger(RemoteTaskRunnerTest.class);
   private static final Joiner JOINER = RemoteTaskRunnerTestUtils.JOINER;
   private static final String WORKER_HOST = "worker";
   private static final String ANNOUCEMENTS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH, WORKER_HOST);
@@ -79,6 +83,24 @@ public class RemoteTaskRunnerTest
 
   private Task task;
   private Worker worker;
+
+  @Rule
+  public TestRule watcher = new TestWatcher() {
+    @Override
+    protected void starting(Description description)
+    {
+      LOG.info("Starting test: " + description.getMethodName());
+    }
+
+    @Override
+    protected void finished(Description description)
+    {
+      LOG.info("Finishing test: " + description.getMethodName());
+    }
+  };
+
+
+
 
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
