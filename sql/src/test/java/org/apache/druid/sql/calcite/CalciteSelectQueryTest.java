@@ -108,7 +108,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     new ExpressionVirtualColumn(
                         "v0",
                         "array('Hello',null)",
-                        ColumnType.STRING,
+                        ColumnType.STRING_ARRAY,
                         ExprMacroTable.nil()
                     )
                 )

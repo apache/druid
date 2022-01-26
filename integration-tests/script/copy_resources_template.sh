@@ -54,7 +54,7 @@ if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION
 then
   ## We put same version in both commands but as we have an if, correct code path will always be executed as this is generated script.
   ## <TODO> Remove if
-  mkdir $SHARED_DIR/hadoop-dependencies/hadoop-gcs
+  mkdir -p $SHARED_DIR/hadoop-dependencies/hadoop-gcs
   if [ -n "${HADOOP_VERSION}" ] && [ "${HADOOP_VERSION:0:1}" == "3" ]; then
     java -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client-api:${hadoop.compile.version} -h org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version} -h org.apache.hadoop:hadoop-aws:${hadoop.compile.version} -h org.apache.hadoop:hadoop-azure:${hadoop.compile.version}
     curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar --output $SHARED_DIR/hadoop-dependencies/hadoop-gcs/gcs-connector-hadoop3-latest.jar

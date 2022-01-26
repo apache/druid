@@ -34,7 +34,7 @@ import {
   oneOf,
   typeIs,
 } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import {
   DimensionsSpec,
@@ -1821,7 +1821,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 1073741824,
     min: 1000000,
     defined: s =>
-      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputFormat.type') !== 'http',
+      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputSource.type') !== 'http',
     hideInMore: true,
     adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
     info: (
@@ -2179,28 +2179,39 @@ function inputFormatFromType(
 
 // ------------------------
 
-export function guessTypeFromSample(sample: any[]): string {
-  const definedValues = sample.filter(v => v != null);
+export function guessColumnTypeFromInput(
+  sampleValues: any[],
+  guessNumericStringsAsNumbers: boolean,
+): string {
+  const definedValues = sampleValues.filter(v => v != null);
+
+  // If we have no usable sample, assume string
+  if (!definedValues.length) return 'string';
+
+  // If we see any arrays in the input this is a multi-value dimension that must be a string
+  if (definedValues.some(v => Array.isArray(v))) return 'string';
+
   if (
-    definedValues.length &&
-    definedValues.every(v => !isNaN(v) && oneOf(typeof v, 'number', 'string'))
+    definedValues.every(
+      v =>
+        !isNaN(v) &&
+        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')),
+    )
   ) {
-    if (definedValues.every(v => v % 1 === 0)) {
-      return 'long';
-    } else {
-      return 'double';
-    }
+    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
   } else {
     return 'string';
   }
 }
 
-export function getColumnTypeFromHeaderAndRows(
-  headerAndRows: HeaderAndRows,
+export function guessColumnTypeFromHeaderAndRows(
+  headerAndRows: SampleHeaderAndRows,
   column: string,
+  guessNumericStringsAsNumbers: boolean,
 ): string {
-  return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
+  return guessColumnTypeFromInput(
+    filterMap(headerAndRows.rows, r => r.input?.[column]),
+    guessNumericStringsAsNumbers,
   );
 }
 
@@ -2225,12 +2236,13 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
+  const guessNumericStringsAsNumbers = deepGet(spec, 'spec.ioConfig.inputFormat.type') !== 'json';
 
   let newSpec = spec;
 
@@ -2240,7 +2252,12 @@ export function updateSchemaWithSample(
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 
-    const dimensions = getDimensionSpecs(headerAndRows, typeHints, rollup);
+    const dimensions = getDimensionSpecs(
+      headerAndRows,
+      typeHints,
+      guessNumericStringsAsNumbers,
+      rollup,
+    );
     if (dimensions) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
     }
@@ -2249,7 +2266,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(headerAndRows, typeHints);
+    const metrics = getMetricSpecs(headerAndRows, typeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }

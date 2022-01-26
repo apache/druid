@@ -171,7 +171,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
-        objectSelectorFromSupplier(settableSupplier, Object.class)
+        objectSelectorFromSupplier(settableSupplier, Object.class),
+        true
     );
 
     Assert.assertNotNull(supplier);
@@ -195,7 +196,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
-        objectSelectorFromSupplier(settableSupplier, Number.class)
+        objectSelectorFromSupplier(settableSupplier, Number.class),
+        true
     );
 
 
@@ -214,7 +216,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
-        objectSelectorFromSupplier(settableSupplier, String.class)
+        objectSelectorFromSupplier(settableSupplier, String.class),
+        true
     );
 
     Assert.assertNotNull(supplier);
@@ -232,7 +235,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
-        objectSelectorFromSupplier(settableSupplier, List.class)
+        objectSelectorFromSupplier(settableSupplier, List.class),
+        true
     );
 
     Assert.assertNotNull(supplier);

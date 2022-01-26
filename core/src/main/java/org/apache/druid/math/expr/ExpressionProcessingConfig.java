@@ -28,6 +28,9 @@ public class ExpressionProcessingConfig
 {
   public static final String NESTED_ARRAYS_CONFIG_STRING = "druid.expressions.allowNestedArrays";
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
+  // Coerce arrays to multi value strings
+  public static final String
+      PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING = "druid.expressions.processArraysAsMultiValueStrings";
 
   @JsonProperty("allowNestedArrays")
   private final boolean allowNestedArrays;
@@ -35,10 +38,14 @@ public class ExpressionProcessingConfig
   @JsonProperty("useStrictBooleans")
   private final boolean useStrictBooleans;
 
+  @JsonProperty("processArraysAsMultiValueStrings")
+  private final boolean processArraysAsMultiValueStrings;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("allowNestedArrays") @Nullable Boolean allowNestedArrays,
-      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans
+      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
+      @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings
   )
   {
     this.allowNestedArrays = allowNestedArrays == null
@@ -51,6 +58,10 @@ public class ExpressionProcessingConfig
     } else {
       this.useStrictBooleans = useStrictBooleans;
     }
+    this.processArraysAsMultiValueStrings
+        = processArraysAsMultiValueStrings == null
+          ? Boolean.valueOf(System.getProperty(PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING, "false"))
+          : processArraysAsMultiValueStrings;
   }
 
   public boolean allowNestedArrays()
@@ -61,5 +72,10 @@ public class ExpressionProcessingConfig
   public boolean isUseStrictBooleans()
   {
     return useStrictBooleans;
+  }
+
+  public boolean processArraysAsMultiValueStrings()
+  {
+    return processArraysAsMultiValueStrings;
   }
 }

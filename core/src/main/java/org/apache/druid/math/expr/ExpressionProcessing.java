@@ -48,13 +48,13 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests(@Nullable Boolean allowNestedArrays)
   {
-    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null);
+    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForStrictBooleansTests(boolean useStrict)
   {
-    INSTANCE = new ExpressionProcessingConfig(null, useStrict);
+    INSTANCE = new ExpressionProcessingConfig(null, useStrict, null);
   }
 
   /**
@@ -80,5 +80,17 @@ public class ExpressionProcessing
       throw new IllegalStateException("ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()");
     }
     return INSTANCE.isUseStrictBooleans();
+  }
+
+
+  public static boolean processArraysAsMultiValueStrings()
+  {
+    // this should only be null in a unit test context, in production this will be injected by the null handling module
+    if (INSTANCE == null) {
+      throw new IllegalStateException(
+          "ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()"
+      );
+    }
+    return INSTANCE.processArraysAsMultiValueStrings();
   }
 }

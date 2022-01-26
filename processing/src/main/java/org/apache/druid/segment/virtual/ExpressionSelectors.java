@@ -158,7 +158,7 @@ public class ExpressionSelectors
         );
       }
     }
-    final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
+    final Expr.ObjectBinding bindings = createBindings(columnSelectorFactory, plan);
 
     // Optimization for constant expressions
     if (bindings.equals(InputBindings.nilBindings())) {
@@ -244,29 +244,16 @@ public class ExpressionSelectors
   }
 
   /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
-   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
-   * are used as array or scalar inputs
-   */
-  public static Expr.ObjectBinding createBindings(
-      Expr.BindingAnalysis bindingAnalysis,
-      ColumnSelectorFactory columnSelectorFactory
-  )
-  {
-    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
-    return createBindings(columnSelectorFactory, columns);
-  }
-
-  /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link ExpressionPlan} which
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
   public static Expr.ObjectBinding createBindings(
       ColumnSelectorFactory columnSelectorFactory,
-      List<String> columns
+      ExpressionPlan plan
   )
   {
+    final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
     final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
@@ -274,9 +261,15 @@ public class ExpressionSelectors
       final Supplier<Object> supplier;
       final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
 
-      if (columnCapabilities == null || columnCapabilities.isArray()) {
+      if (columnCapabilities == null ||
+          columnCapabilities.isArray() ||
+          (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT) && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED))
+      ) {
         // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+        );
       } else if (columnCapabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
@@ -393,7 +386,10 @@ public class ExpressionSelectors
    * detected as a primitive type
    */
   @Nullable
-  static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
+  static Supplier<Object> supplierFromObjectSelector(
+      final BaseObjectColumnValueSelector<?> selector,
+      boolean homogenizeMultiValue
+  )
   {
     if (selector instanceof NilColumnValueSelector) {
       return null;
@@ -408,7 +404,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -421,7 +417,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, true);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -443,7 +439,10 @@ public class ExpressionSelectors
   public static Object coerceEvalToSelectorObject(ExprEval eval)
   {
     if (eval.type().isArray()) {
-      return Arrays.stream(eval.asArray()).collect(Collectors.toList());
+      final Object[] asArray = eval.asArray();
+      return asArray == null
+             ? null
+             : Arrays.stream(asArray).collect(Collectors.toList());
     }
     return eval.value();
   }

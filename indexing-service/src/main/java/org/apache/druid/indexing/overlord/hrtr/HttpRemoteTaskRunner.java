@@ -1342,6 +1342,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     log.info("Stopping...");
 
+    if (provisioningService != null) {
+      provisioningService.close();
+    }
     pendingTasksExec.shutdownNow();
     workersSyncExec.shutdownNow();
     cleanupExec.shutdown();
