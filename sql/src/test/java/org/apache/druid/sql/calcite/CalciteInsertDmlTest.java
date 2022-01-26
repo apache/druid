@@ -321,22 +321,30 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
+                                                  .add("EXPR$3", ColumnType.DOUBLE)
                                                   .build();
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTER BY 2, dim1")
+            "INSERT INTO druid.dst "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
+            + "CLUSTER BY 2, dim1 DESC, CEIL(m2)"
+        )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "dim1", "v0")
-                .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
+                .columns("__time", "dim1", "v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                    expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                )
                 .orderBy(
                     ImmutableList.of(
                         new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
                     )
                 )
                 .build()
