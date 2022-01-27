@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Since the off-heap incremental index is not yet supported in production ingestion, we define its spec here only
- * for testing purposes.
+ * Oak incremental index spec (describes the in-memory indexing method for data ingestion).
  */
 public class OakIncrementalIndexSpec implements AppendableIndexSpec
 {
@@ -71,6 +71,7 @@ public class OakIncrementalIndexSpec implements AppendableIndexSpec
     return oakChunkMaxItems;
   }
 
+  @Nonnull
   @Override
   public OakIncrementalIndex.Builder builder()
   {
@@ -83,9 +84,11 @@ public class OakIncrementalIndexSpec implements AppendableIndexSpec
   @Override
   public long getDefaultMaxBytesInMemory()
   {
+    // Oak allocates its keys/values directly so the JVM off-heap limitations does not apply on it.
+    // Yet, we want to respect these values if the user did not specify any specific limitation.
     // In the realtime node, the entire JVM's direct memory is utilized for ingestion and persist operations.
     // But maxBytesInMemory only refers to the active index size and not to the index being flushed to disk and the
-    // persist buffer.
+    // persist-buffer.
     // To account for that, we set default to 1/2 of the max jvm's direct memory.
     return JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes() / 2;
   }
