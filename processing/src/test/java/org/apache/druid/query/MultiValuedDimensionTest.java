@@ -85,6 +85,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -426,7 +427,14 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     );
 
     List<ResultRow> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
+            "1970",
+            "texpr",
+            NullHandling.sqlCompatible() ? "foo" : null,
+            "count",
+            2L
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1foo", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2foo", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3foo", "count", 4L),
@@ -473,13 +481,23 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         query
     );
 
-    List<ResultRow> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
-    );
+    List<ResultRow>
+        expectedResults =
+        NullHandling.sqlCompatible() ?
+        Arrays.asList(
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
+        ) :
+        Arrays.asList(
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", null, "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L)
+        );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
   }
@@ -1089,7 +1107,15 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
           ImmutableList.<Map<String, Object>>builder()
                        .add(ImmutableMap.of("texpr", "t3foo", "count", 2L))
                        .add(ImmutableMap.of("texpr", "t5foo", "count", 2L))
-                       .add(ImmutableMap.of("texpr", "foo", "count", 1L))
+                       .add(
+                           new HashMap<String, Object>()
+                           {
+                             {
+                               put("texpr", NullHandling.sqlCompatible() ? "foo" : null);
+                               put("count", 1L);
+                             }
+                           }
+                       )
                        .add(ImmutableMap.of("texpr", "t1foo", "count", 1L))
                        .add(ImmutableMap.of("texpr", "t2foo", "count", 1L))
                        .add(ImmutableMap.of("texpr", "t4foo", "count", 1L))

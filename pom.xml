@@ -1298,9 +1298,8 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.1</version>
+                <version>3.2</version>
                 <configuration>
-                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
@@ -1311,6 +1310,7 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/guava16-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>

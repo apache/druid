@@ -110,7 +110,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -893,6 +892,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           results.get(i)
       );
     }
+  }
+
+  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
+      throws Exception
+  {
+    testQueryThrows(sql, new HashMap<>(QUERY_CONTEXT_DEFAULT), ImmutableList.of(), expectedExceptionInitializer);
   }
 
   public void testQueryThrows(

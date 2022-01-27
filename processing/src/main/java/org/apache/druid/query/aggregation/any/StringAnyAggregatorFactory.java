@@ -86,7 +86,8 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   {
 
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()) {
+    // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
+    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringAnyVectorAggregator(
           null,
           selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),

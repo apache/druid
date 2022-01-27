@@ -29,7 +29,10 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
@@ -38,6 +41,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
@@ -84,6 +88,11 @@ public class Calcites
 
   private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
 
+  public static final SqlReturnTypeInference
+      ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
+  public static final SqlReturnTypeInference
+      ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
+
   private Calcites()
   {
     // No instantiation.
@@ -128,17 +137,16 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}, coercing all ARRAY types to STRING (until
-   * the time is right and we are more comfortable handling Druid ARRAY types in all parts of the engine).
-   *
-   * Callers who are not scared of ARRAY types should isntead call {@link #getValueTypeForRelDataTypeFull(RelDataType)},
-   * which returns the most accurate conversion of {@link RelDataType} to {@link ValueType}.
+   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
+   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
   {
     ColumnType valueType = getValueTypeForRelDataTypeFull(type);
-    if (valueType != null && valueType.isArray()) {
+    // coerce array to multi value string
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && valueType != null && valueType.isArray()) {
       return ColumnType.STRING;
     }
     return valueType;
@@ -466,6 +474,40 @@ public class Calcites
         return Timestamp.class;
       default:
         return Object.class;
+    }
+  }
+
+  public static class Arg0NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(0);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
+    }
+  }
+
+  public static class Arg1NullableArrayTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding)
+    {
+      RelDataType type = opBinding.getOperandType(1);
+      if (SqlTypeUtil.isArray(type)) {
+        return type;
+      }
+      return Calcites.createSqlArrayTypeWithNullability(
+          opBinding.getTypeFactory(),
+          type.getSqlTypeName(),
+          true
+      );
     }
   }
 }
