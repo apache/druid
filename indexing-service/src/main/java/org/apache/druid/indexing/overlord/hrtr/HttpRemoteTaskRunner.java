@@ -1368,7 +1368,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           try {
             w.stop();
           }
-          catch (ISE e) {
+          catch (Exception e) {
             log.error(e, e.getMessage());
           }
         });

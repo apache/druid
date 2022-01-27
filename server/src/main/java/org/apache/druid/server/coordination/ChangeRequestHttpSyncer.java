@@ -121,14 +121,20 @@ public class ChangeRequestHttpSyncer<T>
 
   public void start()
   {
+
     synchronized (startStopLock) {
+
       if (!startStopLock.canStart()) {
         throw new ISE("Can't start ChangeRequestHttpSyncer[%s].", logIdentity);
       }
+      try {
 
-      log.info("Starting ChangeRequestHttpSyncer[%s].", logIdentity);
-      startStopLock.started();
-      startStopLock.exitStart();
+        log.info("Starting ChangeRequestHttpSyncer[%s].", logIdentity);
+        startStopLock.started();
+      }
+      finally {
+        startStopLock.exitStart();
+      }
 
       addNextSyncToWorkQueue();
     }
@@ -139,6 +145,12 @@ public class ChangeRequestHttpSyncer<T>
     synchronized (startStopLock) {
       if (!startStopLock.canStop()) {
         throw new ISE("Can't stop ChangeRequestHttpSyncer[%s].", logIdentity);
+      }
+      try {
+        log.info("Stopping ChangeRequestHttpSyncer[%s].", logIdentity);
+      }
+      finally {
+        startStopLock.exitStop();
       }
 
       log.info("Stopped ChangeRequestHttpSyncer[%s].", logIdentity);
@@ -416,9 +428,9 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   @VisibleForTesting
-  public boolean isExecutorTerminated()
+  public boolean isExecutorShutdown()
   {
-    return executor.isTerminated();
+    return executor.isShutdown();
   }
 
   /**

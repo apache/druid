@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
+import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -186,11 +187,12 @@ public class HttpRemoteTaskRunnerTest
     druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1, druidNode2));
     ConcurrentMap<String, WorkerHolder> workers = taskRunner.getWorkersForTestingReadOnly();
     Assert.assertEquals(2, workers.size());
-    Assert.assertTrue(workers.values().stream().noneMatch(w -> w.getUnderlyingSyncer().isExecutorTerminated()));
+    Assert.assertTrue(workers.values().stream().noneMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
+    workers.values().iterator().next().stop();
     taskRunner.stop();
     Assert.assertTrue(druidNodeDiscovery.getListeners().isEmpty());
     Assert.assertEquals(2, workers.size());
-    Assert.assertTrue(workers.values().stream().allMatch(w -> w.getUnderlyingSyncer().isExecutorTerminated()));
+    Assert.assertTrue(workers.values().stream().allMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
     EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy, provisioningService);
   }
 
@@ -1686,6 +1688,7 @@ public class HttpRemoteTaskRunnerTest
     {
       private final String workerHost;
       private final int workerPort;
+      private final LifecycleLock startStopLock = new LifecycleLock();
 
       {
         String hostAndPort = worker.getHost();
@@ -1700,25 +1703,45 @@ public class HttpRemoteTaskRunnerTest
       @Override
       public void start()
       {
-        disabled.set(false);
+        synchronized (startStopLock) {
+          if (!startStopLock.canStart()) {
+            throw new ISE("Can't start worker[%s:%s].", workerHost, workerPort);
+          }
+          try {
+            disabled.set(false);
 
-        if (!preExistingTaskAnnouncements.isEmpty()) {
-          workersSyncExec.execute(
-              () -> {
-                for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
-                  tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
-                  listener.taskAddedOrUpdated(announcement, this);
-                }
-                ticks.incrementAndGet();
-              }
-          );
+            if (!preExistingTaskAnnouncements.isEmpty()) {
+              workersSyncExec.execute(
+                  () -> {
+                    for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
+                      tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
+                      listener.taskAddedOrUpdated(announcement, this);
+                    }
+                    ticks.incrementAndGet();
+                  }
+              );
+            }
+            startStopLock.started();
+          }
+          finally {
+            startStopLock.exitStart();
+          }
         }
       }
 
       @Override
       public void stop()
       {
-
+        synchronized (startStopLock) {
+          if (!startStopLock.canStop()) {
+            throw new ISE("Can't stop worker[%s:%s].", workerHost, workerPort);
+          }
+          try {
+          }
+          finally {
+            startStopLock.exitStop();
+          }
+        }
       }
 
       @Override
