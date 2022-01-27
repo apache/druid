@@ -567,9 +567,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
-    // it is possible to only publish tombstones when it is replace and all the
-    // input data was filtered out...
-    if (tombstones.isEmpty() && segmentsAndCommitMetadata.getSegments().isEmpty()) {
+    final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+    pushedAndTombstones.addAll(tombstones);
+    if (pushedAndTombstones.isEmpty()) {
+      // no tombstones and no pushed segments, so nothing to publish...
       if (!publisher.supportsEmptyPublish()) {
         log.info("Nothing to publish, skipping publish step.");
         final SettableFuture<SegmentsAndCommitMetadata> retVal = SettableFuture.create();
@@ -592,12 +593,6 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
-
-    Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
-    if (!tombstones.isEmpty()) {
-      pushedAndTombstones.addAll(tombstones);
-    }
-
     return executor.submit(
         () -> {
           try {

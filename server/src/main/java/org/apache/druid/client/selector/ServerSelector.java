@@ -119,16 +119,6 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
-  @Override
-  public boolean hasData()
-  {
-    if (segment.get() == null) {
-      return false;
-    } else {
-      return segment.get().hasData();
-    }
-  }
-
   public List<DruidServerMetadata> getCandidates(final int numCandidates)
   {
     List<DruidServerMetadata> candidates;
@@ -219,4 +209,11 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   {
     return segment.get().getAtomicUpdateGroupSize();
   }
+
+  @Override
+  public boolean hasData()
+  {
+    return segment.get().hasData();
+  }
+
 }

@@ -114,9 +114,9 @@ public class TombstoneHelper
         if (buildTombstone) {
           // Tombstone's version is the locked interval's version
           String version = null;
-          for (Interval lockInterval : intervalToLockVersion.keySet()) {
-            if (lockInterval.contains(timeChunkInterval)) {
-              version = intervalToLockVersion.get(lockInterval);
+          for (Map.Entry<Interval, String> intervalToStringEntry : intervalToLockVersion.entrySet()) {
+            if (intervalToStringEntry.getKey().contains(timeChunkInterval)) {
+              version = intervalToStringEntry.getValue();
               break;
             }
           }
