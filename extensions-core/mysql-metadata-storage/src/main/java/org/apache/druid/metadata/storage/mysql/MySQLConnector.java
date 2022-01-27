@@ -19,11 +19,11 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +45,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
+  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME = "com.mysql.jdbc.exceptions.MySQLTransientException";
 
   private final DBI dbi;
 
@@ -205,8 +206,7 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    return e instanceof MySQLTransientException
-           || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */);
+    return isTransientException(getClass().getClassLoader(), getDatasource().getDriverClassName(), e);
   }
 
   @Override
@@ -240,5 +240,20 @@ public class MySQLConnector extends SQLMetadataConnector
   public DBI getDBI()
   {
     return dbi;
+  }
+
+  @VisibleForTesting
+  static boolean isTransientException(ClassLoader classLoader, String driverName, Throwable e)
+  {
+    if (driverName.contains("mysql")) {
+      try {
+        Class<?> clazz = Class.forName(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false, classLoader);
+        return e.getClass().equals(clazz)
+               || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
+      }
+      catch (ClassNotFoundException ignored) {
+      }
+    }
+    return false;
   }
 }
