@@ -61,14 +61,6 @@ public class RowSignatures
     for (int i = 0; i < rowOrder.size(); i++) {
       final RelDataType dataType = rowType.getFieldList().get(i).getType();
       final ColumnType valueType = Calcites.getColumnTypeForRelDataType(dataType);
-      if (valueType == null) {
-        throw new ISE(
-            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
-            dataType.getSqlTypeName(),
-            rowOrder.get(i)
-        );
-      }
-
       rowSignatureBuilder.add(rowOrder.get(i), valueType);
     }
 
