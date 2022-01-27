@@ -57,6 +57,7 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
@@ -202,7 +203,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        ingestionSchema.getTuningConfig().getMaxAllowedLockCount()
     );
 
     this.ingestionSchema = ingestionSchema;
@@ -503,7 +505,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (isParallelMode()) {
       currentSubTaskHolder = new CurrentSubTaskHolder((currentRunnerObject, taskConfig) -> {
         final ParallelIndexTaskRunner runner = (ParallelIndexTaskRunner) currentRunnerObject;
-        runner.stopGracefully();
+        runner.stopGracefully(null);
       });
     } else {
       currentSubTaskHolder = new CurrentSubTaskHolder((taskObject, taskConfig) -> {
@@ -581,10 +583,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       // there is only success or failure after running....
       Preconditions.checkState(state.isFailure(), "Unrecognized state after task is complete[%s]", state);
-      final String errorMessage = StringUtils.format(
-          TASK_PHASE_FAILURE_MSG,
-          parallelSinglePhaseRunner.getName()
-      );
+      final String errorMessage;
+      if (parallelSinglePhaseRunner.getStopReason() != null) {
+        errorMessage = parallelSinglePhaseRunner.getStopReason();
+      } else {
+        errorMessage = StringUtils.format(
+            TASK_PHASE_FAILURE_MSG,
+            parallelSinglePhaseRunner.getName()
+        );
+      }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
     toolbox.getTaskReportFileWriter().write(
@@ -1089,7 +1096,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getIngestionSchema().getIOConfig(),
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
-        getContext()
+        getContext(),
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
@@ -1219,6 +1227,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
 
       return Response.ok(toolbox.getJsonMapper().writeValueAsBytes(segmentIdentifier)).build();
+    }
+    catch (MaxAllowedLocksExceededException malee) {
+      getCurrentRunner().stopGracefully(malee.getMessage());
+      return Response.status(Response.Status.BAD_REQUEST).entity(malee.getMessage()).build();
     }
     catch (IOException | IllegalStateException e) {
       return Response.serverError().entity(Throwables.getStackTraceAsString(e)).build();

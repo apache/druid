@@ -68,6 +68,7 @@
       "querying/sql",
       "querying/querying",
       "querying/query-execution",
+      "querying/troubleshooting",
       {
         "type": "subcategory",
         "label": "Concepts",
@@ -143,6 +144,7 @@
         "ids": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
+          "operations/mixed-workloads",
           "operations/http-compression",
           "operations/clean-metadata-store"
         ]

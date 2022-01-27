@@ -25,6 +25,9 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -76,6 +79,16 @@ public abstract class ComplexMetricSerde
    */
   @Deprecated
   public abstract ObjectStrategy getObjectStrategy();
+
+  /**
+   * Get a {@link TypeStrategy} to assist with writing individual complex values to a {@link ByteBuffer}.
+   *
+   * @see TypeStrategy
+   */
+  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(getObjectStrategy(), ColumnType.ofComplex(getTypeName()));
+  }
 
   /**
    * Returns a function that can convert the Object provided by the ComplexColumn created through deserializeColumn

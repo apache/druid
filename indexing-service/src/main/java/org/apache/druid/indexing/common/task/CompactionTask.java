@@ -106,7 +106,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -195,7 +194,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
+    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -754,7 +753,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                : dimensionsSpec;
     final AggregatorFactory[] finalMetricsSpec = metricsSpec == null
                                                  ? createMetricsSpec(queryableIndexAndSegments)
-                                                 : convertToCombiningFactories(metricsSpec);
+                                                 : metricsSpec;
 
     return new DataSchema(
         dataSource,
@@ -838,13 +837,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       throw new ISE("Failed to merge aggregators[%s]", aggregatorFactories);
     }
     return mergedAggregators;
-  }
-
-  private static AggregatorFactory[] convertToCombiningFactories(AggregatorFactory[] metricsSpec)
-  {
-    return Arrays.stream(metricsSpec)
-                 .map(AggregatorFactory::getCombiningFactory)
-                 .toArray(AggregatorFactory[]::new);
   }
 
   private static DimensionsSpec createDimensionsSpec(List<NonnullPair<QueryableIndex, DataSegment>> queryableIndices)
@@ -1271,7 +1263,8 @@ public class CompactionTask extends AbstractBatchIndexTask
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          null
       );
 
       Preconditions.checkArgument(

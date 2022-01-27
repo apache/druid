@@ -87,7 +87,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -157,11 +156,14 @@ public class DruidQuery
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
-      final boolean finalizeAggregations
+      final boolean finalizeAggregations,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    if (virtualColumnRegistry == null) {
+      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+    }
 
     // Now the fun begins.
     final DimFilter filter;
@@ -412,7 +414,6 @@ public class DruidQuery
 
       final VirtualColumn virtualColumn;
 
-
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
         virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -658,6 +659,14 @@ public class DruidQuery
       virtualColumns.addAll(sorting.getProjection().getVirtualColumns());
     }
 
+    if (dataSource instanceof JoinDataSource) {
+      for (String expression : ((JoinDataSource) dataSource).getVirtualColumnCandidates()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
+        }
+      }
+    }
+
     // sort for predictable output
     List<VirtualColumn> columns = new ArrayList<>(virtualColumns);
     columns.sort(Comparator.comparing(VirtualColumn::getOutputName));
@@ -856,7 +865,9 @@ public class DruidQuery
     // An aggregation query should return one row per group, with no grouping (e.g. ALL granularity), the entire table
     // is the group, so we should not skip empty buckets. When there are no results, this means we return the
     // initialized state for given aggregators instead of nothing.
-    if (!Granularities.ALL.equals(queryGranularity)) {
+    // Alternatively, the timeseries query should return empty buckets, even with ALL granularity when timeseries query
+    // was originally a groupBy query, but with the grouping dimensions removed away in Grouping#applyProject
+    if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
       theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
     }
     theContext.putAll(plannerContext.getQueryContext());
@@ -920,6 +931,10 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
+    // grouping col cannot be type array
+    if (dimensionSpec.getOutputType().isArray()) {
+      return null;
+    }
     final OrderByColumnSpec limitColumn;
     if (sorting.getOrderBys().isEmpty()) {
       limitColumn = new OrderByColumnSpec(

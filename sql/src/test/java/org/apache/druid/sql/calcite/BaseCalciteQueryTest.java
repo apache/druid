@@ -88,6 +88,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -109,7 +110,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -894,6 +894,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
+      throws Exception
+  {
+    testQueryThrows(sql, new HashMap<>(QUERY_CONTEXT_DEFAULT), ImmutableList.of(), expectedExceptionInitializer);
+  }
+
   public void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
@@ -995,6 +1001,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         walker,
         plannerConfig,
         viewManager,
+        new NoopDruidSchemaManager(),
         authorizerMapper
     );
 

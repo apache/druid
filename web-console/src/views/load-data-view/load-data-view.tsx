@@ -139,6 +139,7 @@ import {
   LocalStorageKeys,
   localStorageSet,
   moveElement,
+  moveToIndex,
   oneOf,
   parseJson,
   pluralIfNeeded,
@@ -149,7 +150,6 @@ import {
   ExampleManifest,
   getCacheRowsFromSampleResponse,
   getProxyOverlordModules,
-  HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
   sampleForConnect,
@@ -159,6 +159,7 @@ import {
   sampleForSchema,
   sampleForTimestamp,
   sampleForTransform,
+  SampleHeaderAndRows,
   SampleResponse,
   SampleResponseWithExtraInfo,
   SampleStrategy,
@@ -232,7 +233,7 @@ function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolea
   }
 }
 
-function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
+function getTimestampSpec(headerAndRows: SampleHeaderAndRows | null): TimestampSpec {
   if (!headerAndRows) return CONSTANT_TIMESTAMP_SPEC;
 
   const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
@@ -346,28 +347,28 @@ export interface LoadDataViewState {
   inputQueryState: QueryState<SampleResponseWithExtraInfo>;
 
   // for parser
-  parserQueryState: QueryState<HeaderAndRows>;
+  parserQueryState: QueryState<SampleHeaderAndRows>;
 
   // for flatten
   selectedFlattenField?: SelectedIndex<FlattenField>;
 
   // for timestamp
   timestampQueryState: QueryState<{
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     spec: Partial<IngestionSpec>;
   }>;
 
   // for transform
-  transformQueryState: QueryState<HeaderAndRows>;
+  transformQueryState: QueryState<SampleHeaderAndRows>;
   selectedTransform?: SelectedIndex<Transform>;
 
   // for filter
-  filterQueryState: QueryState<HeaderAndRows>;
+  filterQueryState: QueryState<SampleHeaderAndRows>;
   selectedFilter?: SelectedIndex<DruidFilter>;
 
   // for schema
   schemaQueryState: QueryState<{
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     dimensions: (string | DimensionSpec)[] | undefined;
     metricsSpec: MetricSpec[] | undefined;
   }>;
@@ -1277,13 +1278,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
               }
 
-              if (inputData.queryGranularity) {
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.dataSchema.granularitySpec.queryGranularity',
-                  inputData.queryGranularity,
-                );
-              }
+              newSpec = deepSet(
+                newSpec,
+                'spec.dataSchema.granularitySpec.queryGranularity',
+                'none',
+              );
 
               if (inputData.columns) {
                 const aggregators = inputData.aggregators || {};
@@ -2811,65 +2810,129 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       spec,
       'spec.dataSchema.dimensionsSpec.dimensions',
     );
-    const dimensionNames = dimensions ? dimensions.map(getDimensionSpecName) : undefined;
+    const dimensionNames = dimensions?.map(getDimensionSpecName);
 
     let nonsensicalSingleDimPartitioningMessage: JSX.Element | undefined;
-    const partitionDimension = deepGet(tuningConfig, 'partitionsSpec.partitionDimension');
-    if (
-      dimensions &&
-      Array.isArray(dimensionNames) &&
-      dimensionNames.length &&
-      deepGet(tuningConfig, 'partitionsSpec.type') === 'single_dim' &&
-      typeof partitionDimension === 'string' &&
-      partitionDimension !== dimensionNames[0]
-    ) {
-      const firstDimensionName = dimensionNames[0];
-      nonsensicalSingleDimPartitioningMessage = (
-        <FormGroup>
-          <Callout intent={Intent.WARNING}>
-            <p>Your partitioning and sorting configuration does not make sense.</p>
-            <p>
-              For best performance the first dimension in your schema (
-              <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted
-              on, should match the partitioning dimension (<Code>{partitionDimension}</Code>).
-            </p>
-            <p>
-              <Button
-                intent={Intent.WARNING}
-                text={`Put '${partitionDimension}' first in the dimensions list`}
-                onClick={() => {
-                  this.updateSpec(
-                    deepSet(
-                      spec,
-                      'spec.dataSchema.dimensionsSpec.dimensions',
-                      moveElement(
-                        dimensions,
-                        dimensions.findIndex(d => getDimensionSpecName(d) === partitionDimension),
-                        0,
+    if (dimensions && Array.isArray(dimensionNames) && dimensionNames.length) {
+      const partitionDimensions = deepGet(tuningConfig, 'partitionsSpec.partitionDimensions');
+      if (
+        deepGet(tuningConfig, 'partitionsSpec.type') === 'range' &&
+        Array.isArray(partitionDimensions) &&
+        partitionDimensions.join(',') !==
+          dimensionNames.slice(0, partitionDimensions.length).join(',')
+      ) {
+        const dimensionNamesPrefix = dimensionNames.slice(0, partitionDimensions.length);
+        nonsensicalSingleDimPartitioningMessage = (
+          <FormGroup>
+            <Callout intent={Intent.WARNING}>
+              <p>Your partitioning and sorting configuration is uncommon.</p>
+              <p>
+                For best performance the leading dimensions in your schema (
+                <Code>{dimensionNamesPrefix.join(', ')}</Code>), which is what the data will be
+                primarily sorted on, commonly matches the partitioning dimensions (
+                <Code>{partitionDimensions.join(', ')}</Code>).
+              </p>
+              <p>
+                <Button
+                  intent={Intent.WARNING}
+                  onClick={() =>
+                    this.updateSpec(
+                      deepSet(
+                        spec,
+                        'spec.dataSchema.dimensionsSpec.dimensions',
+                        moveToIndex(dimensions, d =>
+                          partitionDimensions.indexOf(getDimensionSpecName(d)),
+                        ),
                       ),
-                    ),
-                  );
-                }}
-              />
-            </p>
-            <p>
-              <Button
-                intent={Intent.WARNING}
-                text={`Partition on '${firstDimensionName}' instead`}
-                onClick={() => {
-                  this.updateSpec(
-                    deepSet(
-                      spec,
-                      'spec.tuningConfig.partitionsSpec.partitionDimension',
-                      firstDimensionName,
-                    ),
-                  );
-                }}
-              />
-            </p>
-          </Callout>
-        </FormGroup>
-      );
+                    )
+                  }
+                >
+                  {`Put `}
+                  <strong>{partitionDimensions.join(', ')}</strong>
+                  {` first in the dimensions list`}
+                </Button>
+              </p>
+              <p>
+                <Button
+                  intent={Intent.WARNING}
+                  onClick={() =>
+                    this.updateSpec(
+                      deepSet(
+                        spec,
+                        'spec.tuningConfig.partitionsSpec.partitionDimensions',
+                        dimensionNamesPrefix,
+                      ),
+                    )
+                  }
+                >
+                  {`Partition on `}
+                  <strong>{dimensionNames.slice(0, partitionDimensions.length).join(', ')}</strong>
+                  {` instead`}
+                </Button>
+              </p>
+            </Callout>
+          </FormGroup>
+        );
+      }
+
+      const partitionDimension = deepGet(tuningConfig, 'partitionsSpec.partitionDimension');
+      if (
+        deepGet(tuningConfig, 'partitionsSpec.type') === 'single_dim' &&
+        typeof partitionDimension === 'string' &&
+        partitionDimension !== dimensionNames[0]
+      ) {
+        const firstDimensionName = dimensionNames[0];
+        nonsensicalSingleDimPartitioningMessage = (
+          <FormGroup>
+            <Callout intent={Intent.WARNING}>
+              <p>Your partitioning and sorting configuration is uncommon.</p>
+              <p>
+                For best performance the first dimension in your schema (
+                <Code>{firstDimensionName}</Code>), which is what the data will be primarily sorted
+                on, commonly matches the partitioning dimension (<Code>{partitionDimension}</Code>).
+              </p>
+              <p>
+                <Button
+                  intent={Intent.WARNING}
+                  onClick={() =>
+                    this.updateSpec(
+                      deepSet(
+                        spec,
+                        'spec.dataSchema.dimensionsSpec.dimensions',
+                        moveToIndex(dimensions, d =>
+                          getDimensionSpecName(d) === partitionDimension ? 0 : -1,
+                        ),
+                      ),
+                    )
+                  }
+                >
+                  {`Put `}
+                  <strong>{partitionDimension}</strong>
+                  {` first in the dimensions list`}
+                </Button>
+              </p>
+              <p>
+                <Button
+                  intent={Intent.WARNING}
+                  onClick={() =>
+                    this.updateSpec(
+                      deepSet(
+                        spec,
+                        'spec.tuningConfig.partitionsSpec.partitionDimension',
+                        firstDimensionName,
+                      ),
+                    )
+                  }
+                >
+                  {`Partition on `}
+                  <strong>{firstDimensionName}</strong>
+                  {` instead`}
+                </Button>
+              </p>
+            </Callout>
+          </FormGroup>
+        );
+      }
     }
 
     return (

@@ -21,7 +21,7 @@ import React from 'react';
 
 import { LearnMore } from './learn-more';
 
-describe('learn more', () => {
+describe('LearnMore', () => {
   it('matches snapshot', () => {
     const learnMore = <LearnMore href="https://druid.apache.org/docs" />;
 

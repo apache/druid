@@ -25,6 +25,7 @@ import {
   formatMillions,
   formatPercent,
   moveElement,
+  moveToIndex,
   sqlQueryCustomTableFilter,
   swapElements,
 } from './general';
@@ -100,6 +101,18 @@ describe('general', () => {
       expect(moveElement(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'b', 'c']);
       expect(moveElement(['F', 'B', 'W', 'B'], 2, 1)).toEqual(['F', 'W', 'B', 'B']);
       expect(moveElement([1, 2, 3], 2, 1)).toEqual([1, 3, 2]);
+    });
+  });
+
+  describe('moveToIndex', () => {
+    it('works', () => {
+      expect(moveToIndex(['a', 'b', 'c', 'd', 'e'], x => ['e', 'c'].indexOf(x))).toEqual([
+        'e',
+        'c',
+        'a',
+        'b',
+        'd',
+      ]);
     });
   });
 

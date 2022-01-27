@@ -89,6 +89,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/overlord
+      - ${OVERRIDE_ENV}
 
   druid-overlord-two:
     image: druid/cluster
@@ -108,6 +109,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/overlord
+      - ${OVERRIDE_ENV}
 
 ### coordinators
   druid-coordinator:
@@ -128,6 +130,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/coordinator
+      - ${OVERRIDE_ENV}
 
   druid-coordinator-two:
     image: druid/cluster
@@ -147,6 +150,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/coordinator
+      - ${OVERRIDE_ENV}
 
 ### historicals
   druid-historical:
@@ -167,6 +171,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/historical
+      - ${OVERRIDE_ENV}
 
 ### middle managers
   druid-middlemanager:
@@ -200,6 +205,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/middlemanager
+      - ${OVERRIDE_ENV}
 
 ### indexers
   druid-indexer:
@@ -221,6 +227,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/indexer
+      - ${OVERRIDE_ENV}
 
 ### brokers
   druid-broker:
@@ -241,6 +248,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/broker
+      - ${OVERRIDE_ENV}
 
 ### routers
   druid-router:
@@ -261,6 +269,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router
+      - ${OVERRIDE_ENV}
 
   druid-router-permissive-tls:
     image: druid/cluster
@@ -279,6 +288,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-permissive-tls
+      - ${OVERRIDE_ENV}
 
   druid-router-no-client-auth-tls:
     image: druid/cluster
@@ -297,6 +307,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-no-client-auth-tls
+      - ${OVERRIDE_ENV}
 
   druid-router-custom-check-tls:
     image: druid/cluster
@@ -315,6 +326,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-custom-check-tls
+      - ${OVERRIDE_ENV}
 
 ### optional supporting infra
 

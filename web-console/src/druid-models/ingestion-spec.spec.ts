@@ -19,70 +19,213 @@
 import {
   adjustId,
   cleanSpec,
-  downgradeSpec,
-  getColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromInput,
   guessInputFormat,
-  guessTypeFromSample,
   IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
+import { CSV_SAMPLE } from './test-fixtures';
 
 describe('ingestion-spec', () => {
-  const oldSpec = {
-    type: 'index_parallel',
-    spec: {
+  it('upgrades / downgrades task spec 1', () => {
+    const oldTaskSpec = {
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          firehose: {
+            type: 'http',
+            uris: ['https://website.com/wikipedia.json.gz'],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+        dataSchema: {
+          dataSource: 'wikipedia',
+          granularitySpec: {
+            segmentGranularity: 'day',
+            queryGranularity: 'hour',
+            rollup: true,
+          },
+          parser: {
+            type: 'string',
+            parseSpec: {
+              format: 'json',
+              timestampSpec: {
+                column: 'timestamp',
+                format: 'iso',
+              },
+              dimensionsSpec: {
+                dimensions: ['channel', 'cityName', 'comment'],
+              },
+              flattenSpec: {
+                fields: [
+                  {
+                    type: 'path',
+                    name: 'cityNameAlt',
+                    expr: '$.cityName',
+                  },
+                ],
+              },
+            },
+          },
+          transformSpec: {
+            transforms: [
+              {
+                type: 'expression',
+                name: 'channel',
+                expression: 'concat("channel", \'lol\')',
+              },
+            ],
+            filter: {
+              type: 'selector',
+              dimension: 'commentLength',
+              value: '35',
+            },
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              name: 'sum_added',
+              type: 'longSum',
+              fieldName: 'added',
+            },
+          ],
+        },
+      },
+    };
+
+    expect(upgradeSpec(oldTaskSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'wikipedia',
+          dimensionsSpec: {
+            dimensions: ['channel', 'cityName', 'comment'],
+          },
+          granularitySpec: {
+            queryGranularity: 'hour',
+            rollup: true,
+            segmentGranularity: 'day',
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              fieldName: 'added',
+              name: 'sum_added',
+              type: 'longSum',
+            },
+          ],
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'iso',
+          },
+          transformSpec: {
+            filter: {
+              dimension: 'commentLength',
+              type: 'selector',
+              value: '35',
+            },
+            transforms: [
+              {
+                expression: 'concat("channel", \'lol\')',
+                name: 'channel',
+                type: 'expression',
+              },
+            ],
+          },
+        },
+        ioConfig: {
+          inputFormat: {
+            flattenSpec: {
+              fields: [
+                {
+                  expr: '$.cityName',
+                  name: 'cityNameAlt',
+                  type: 'path',
+                },
+              ],
+            },
+            type: 'json',
+          },
+          inputSource: {
+            type: 'http',
+            uris: ['https://website.com/wikipedia.json.gz'],
+          },
+          type: 'index_parallel',
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+      },
+      type: 'index_parallel',
+    });
+  });
+
+  it('upgrades / downgrades task spec (without parser)', () => {
+    const oldTaskSpec = {
+      type: 'index_parallel',
       ioConfig: {
         type: 'index_parallel',
-        firehose: {
-          type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
-        },
+        firehose: { type: 'http', uris: ['https://website.com/wikipedia.json.gz'] },
       },
-      tuningConfig: {
-        type: 'index_parallel',
-      },
+      tuningConfig: { type: 'index_parallel' },
       dataSchema: {
-        dataSource: 'wikipedia',
-        granularitySpec: {
-          segmentGranularity: 'day',
-          queryGranularity: 'hour',
-          rollup: true,
+        dataSource: 'new-data-source',
+        granularitySpec: { type: 'uniform', segmentGranularity: 'DAY', queryGranularity: 'HOUR' },
+      },
+    };
+
+    expect(upgradeSpec(oldTaskSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'new-data-source',
+          granularitySpec: {
+            queryGranularity: 'HOUR',
+            segmentGranularity: 'DAY',
+            type: 'uniform',
+          },
         },
+        ioConfig: {
+          inputSource: {
+            type: 'http',
+            uris: ['https://website.com/wikipedia.json.gz'],
+          },
+          type: 'index_parallel',
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+      },
+      type: 'index_parallel',
+    });
+  });
+
+  it('upgrades / downgrades supervisor spec', () => {
+    const oldSupervisorSpec = {
+      type: 'kafka',
+      dataSchema: {
+        dataSource: 'metrics-kafka',
         parser: {
           type: 'string',
           parseSpec: {
             format: 'json',
             timestampSpec: {
               column: 'timestamp',
-              format: 'iso',
+              format: 'auto',
             },
             dimensionsSpec: {
-              dimensions: ['channel', 'cityName', 'comment'],
+              dimensions: [],
+              dimensionExclusions: ['timestamp', 'value'],
             },
-            flattenSpec: {
-              fields: [
-                {
-                  type: 'path',
-                  name: 'cityNameAlt',
-                  expr: '$.cityName',
-                },
-              ],
-            },
-          },
-        },
-        transformSpec: {
-          transforms: [
-            {
-              type: 'expression',
-              name: 'channel',
-              expression: 'concat("channel", \'lol\')',
-            },
-          ],
-          filter: {
-            type: 'selector',
-            dimension: 'commentLength',
-            value: '35',
           },
         },
         metricsSpec: [
@@ -91,21 +234,100 @@ describe('ingestion-spec', () => {
             type: 'count',
           },
           {
-            name: 'sum_added',
-            type: 'longSum',
-            fieldName: 'added',
+            name: 'value_sum',
+            fieldName: 'value',
+            type: 'doubleSum',
+          },
+          {
+            name: 'value_min',
+            fieldName: 'value',
+            type: 'doubleMin',
+          },
+          {
+            name: 'value_max',
+            fieldName: 'value',
+            type: 'doubleMax',
           },
         ],
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'HOUR',
+          queryGranularity: 'NONE',
+        },
       },
-    },
-  };
+      tuningConfig: {
+        type: 'kafka',
+        maxRowsPerSegment: 5000000,
+      },
+      ioConfig: {
+        topic: 'metrics',
+        consumerProperties: {
+          'bootstrap.servers': 'localhost:9092',
+        },
+        taskCount: 1,
+        replicas: 1,
+        taskDuration: 'PT1H',
+      },
+    };
 
-  it('upgrades', () => {
-    expect(upgradeSpec(oldSpec)).toMatchSnapshot();
-  });
-
-  it('round trips', () => {
-    expect(downgradeSpec(upgradeSpec(oldSpec))).toMatchObject(oldSpec);
+    expect(upgradeSpec(oldSupervisorSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'metrics-kafka',
+          dimensionsSpec: {
+            dimensionExclusions: ['timestamp', 'value'],
+            dimensions: [],
+          },
+          granularitySpec: {
+            queryGranularity: 'NONE',
+            segmentGranularity: 'HOUR',
+            type: 'uniform',
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_sum',
+              type: 'doubleSum',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_min',
+              type: 'doubleMin',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_max',
+              type: 'doubleMax',
+            },
+          ],
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+        },
+        ioConfig: {
+          consumerProperties: {
+            'bootstrap.servers': 'localhost:9092',
+          },
+          inputFormat: {
+            type: 'json',
+          },
+          replicas: 1,
+          taskCount: 1,
+          taskDuration: 'PT1H',
+          topic: 'metrics',
+        },
+        tuningConfig: {
+          maxRowsPerSegment: 5000000,
+          type: 'kafka',
+        },
+      },
+      type: 'kafka',
+    });
   });
 
   it('cleanSpec', () => {
@@ -182,7 +404,7 @@ describe('spec utils', () => {
         type: 'index_parallel',
         inputSource: {
           type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
         inputFormat: {
           type: 'json',
@@ -206,14 +428,46 @@ describe('spec utils', () => {
     },
   };
 
-  it('guessTypeFromSample', () => {
-    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromInput', () => {
+    it('works for empty', () => {
+      expect(guessColumnTypeFromInput([], false)).toEqual('string');
+    });
+
+    it('works for long', () => {
+      expect(guessColumnTypeFromInput([1, 2, 3], false)).toEqual('long');
+      expect(guessColumnTypeFromInput([1, 2, 3], true)).toEqual('long');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], true)).toEqual('long');
+    });
+
+    it('works for double', () => {
+      expect(guessColumnTypeFromInput([1, 2.1, 3], false)).toEqual('double');
+      expect(guessColumnTypeFromInput([1, 2.1, 3], true)).toEqual('double');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], true)).toEqual('double');
+    });
+
+    it('works for multi-value', () => {
+      expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+    });
   });
 
-  it('getColumnTypeFromHeaderAndRows', () => {
-    expect(
-      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
-    ).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromHeaderAndRows', () => {
+    it('works in empty dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0', false)).toEqual(
+        'string',
+      );
+    });
+
+    it('works for generic dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'user', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', true)).toEqual('long');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'spend', true)).toEqual('double');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', true)).toEqual('string');
+    });
   });
 
   it('updateSchemaWithSample', () => {
@@ -257,7 +511,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
@@ -308,7 +562,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
