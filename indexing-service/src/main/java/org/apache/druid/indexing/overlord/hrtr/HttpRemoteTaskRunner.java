@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.hrtr;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -191,6 +192,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Nullable // Null, if zk is disabled
   private final ScheduledExecutorService zkCleanupExec;
   private final IndexerZkConfig indexerZkConfig;
+  private volatile DruidNodeDiscovery.Listener nodeDiscoveryListener;
 
   public HttpRemoteTaskRunner(
       ObjectMapper smileMapper,
@@ -512,29 +514,28 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final CountDownLatch workerViewInitialized = new CountDownLatch(1);
     DruidNodeDiscovery druidNodeDiscovery =
         druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY);
-    druidNodeDiscovery.registerListener(
-        new DruidNodeDiscovery.Listener()
-        {
-          @Override
-          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
-          {
-            nodes.forEach(node -> addWorker(toWorker(node)));
-          }
+    this.nodeDiscoveryListener = new DruidNodeDiscovery.Listener()
+    {
+      @Override
+      public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
+      {
+        nodes.forEach(node -> addWorker(toWorker(node)));
+      }
 
-          @Override
-          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
-          {
-            nodes.forEach(node -> removeWorker(toWorker(node)));
-          }
+      @Override
+      public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
+      {
+        nodes.forEach(node -> removeWorker(toWorker(node)));
+      }
 
-          @Override
-          public void nodeViewInitialized()
-          {
-            //CountDownLatch.countDown() does nothing when count has already reached 0.
-            workerViewInitialized.countDown();
-          }
-        }
-    );
+      @Override
+      public void nodeViewInitialized()
+      {
+        //CountDownLatch.countDown() does nothing when count has already reached 0.
+        workerViewInitialized.countDown();
+      }
+    };
+    druidNodeDiscovery.registerListener(nodeDiscoveryListener);
 
     long workerDiscoveryStartTime = System.currentTimeMillis();
     while (!workerViewInitialized.await(30, TimeUnit.SECONDS)) {
@@ -876,6 +877,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public Collection<ImmutableWorkerInfo> getWorkers()
   {
     return workers.values().stream().map(worker -> worker.toImmutable()).collect(Collectors.toList());
+  }
+
+  @VisibleForTesting
+  ConcurrentMap<String, WorkerHolder> getWorkersForTestingReadOnly()
+  {
+    return workers;
   }
 
   @Override
@@ -1340,14 +1347,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       throw new ISE("can't stop.");
     }
 
-    log.info("Stopping...");
+    try {
+      log.info("Stopping...");
 
-    if (provisioningService != null) {
-      provisioningService.close();
+      if (provisioningService != null) {
+        provisioningService.close();
+      }
+      pendingTasksExec.shutdownNow();
+      workersSyncExec.shutdownNow();
+      cleanupExec.shutdown();
+
+      log.info("Removing listener");
+      DruidNodeDiscovery druidNodeDiscovery =
+          druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY);
+      druidNodeDiscovery.removeListener(nodeDiscoveryListener);
+
+      log.info("Stopping worker holders");
+      synchronized (workers) {
+        workers.values().forEach(w -> {
+          try {
+            w.stop();
+          }
+          catch (Exception e) {
+            log.error(e, e.getMessage());
+          }
+        });
+      }
     }
-    pendingTasksExec.shutdownNow();
-    workersSyncExec.shutdownNow();
-    cleanupExec.shutdown();
+    finally {
+      lifecycleLock.exitStop();
+    }
 
     log.info("Stopped.");
   }
