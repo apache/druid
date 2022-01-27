@@ -154,6 +154,12 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-indexing-service</artifactId>
             <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Extensions included since we won't be running in a Druid cluster and can't use injection -->
