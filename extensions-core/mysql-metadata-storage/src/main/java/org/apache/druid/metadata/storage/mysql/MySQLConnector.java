@@ -48,6 +48,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
   private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME = "com.mysql.jdbc.exceptions.MySQLTransientException";
 
+  @Nullable
   private final Class<?> myTransientExceptionClass;
   private final DBI dbi;
 
