@@ -307,7 +307,6 @@ public class CliCoordinator extends ServerRunnable
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.compaction.on",
-                "true",
                 Predicates.equalTo("true"),
                 KillCompactionConfig.class
             );
