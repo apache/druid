@@ -22,8 +22,11 @@ package org.apache.druid.storage.hdfs;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.firehose.hdfs.HdfsFirehoseFactory;
@@ -36,6 +39,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -81,7 +85,7 @@ public class HdfsStorageDruidModule implements DruidModule
              .in(LazySingleton.class);
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).toProvider(DataSegmentKillerProvider.class).in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
 
@@ -121,5 +125,24 @@ public class HdfsStorageDruidModule implements DruidModule
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
 
     JsonConfigProvider.bind(binder, "druid.ingestion.hdfs", HdfsInputSourceConfig.class);
+  }
+
+  private static class DataSegmentKillerProvider implements Provider<Supplier<DataSegmentKiller>>
+  {
+    private final Configuration config;
+    private final HdfsDataSegmentPusherConfig pusherConfig;
+
+    @Inject
+    public DataSegmentKillerProvider(@Hdfs final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
+    {
+      this.config = config;
+      this.pusherConfig = pusherConfig;
+    }
+
+    @Override
+    public Supplier<DataSegmentKiller> get()
+    {
+      return Suppliers.memoize(() -> new HdfsDataSegmentKiller(config, pusherConfig));
+    }
   }
 }

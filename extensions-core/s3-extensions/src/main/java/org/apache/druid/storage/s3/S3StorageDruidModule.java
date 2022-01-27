@@ -28,8 +28,12 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.commons.lang.StringUtils;
@@ -44,6 +48,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -148,7 +153,7 @@ public class S3StorageDruidModule implements DruidModule
              .addBinding(SCHEME_S3N)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentKiller.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME_S3_ZIP).toProvider(DataSegmentKillerProvider.class).in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
@@ -165,6 +170,31 @@ public class S3StorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
+  }
+
+  private static class DataSegmentKillerProvider implements Provider<Supplier<DataSegmentKiller>>
+  {
+    private final ServerSideEncryptingAmazonS3 s3Client;
+    private final S3DataSegmentPusherConfig segmentPusherConfig;
+    private final S3InputDataConfig inputDataConfig;
+
+    @Inject
+    public DataSegmentKillerProvider(
+        ServerSideEncryptingAmazonS3 s3Client,
+        S3DataSegmentPusherConfig segmentPusherConfig,
+        S3InputDataConfig inputDataConfig
+    )
+    {
+      this.s3Client = s3Client;
+      this.segmentPusherConfig = segmentPusherConfig;
+      this.inputDataConfig = inputDataConfig;
+    }
+
+    @Override
+    public Supplier<DataSegmentKiller> get()
+    {
+      return Suppliers.memoize(() -> new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig));
+    }
   }
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.

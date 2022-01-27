@@ -22,8 +22,10 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
@@ -32,6 +34,7 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.segment.loading.DataSegmentKiller;
 
 import java.util.List;
 
@@ -76,7 +79,7 @@ public class OssStorageDruidModule implements DruidModule
              .in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME_ZIP)
-           .to(OssDataSegmentKiller.class)
+           .toProvider(DataSegmentKillerProvder.class)
            .in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder)
            .addBinding(SCHEME_ZIP)
@@ -95,6 +98,30 @@ public class OssStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs.oss", OssTaskLogsConfig.class);
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
+  }
+
+  private static class DataSegmentKillerProvder implements Provider<Supplier<DataSegmentKiller>>
+  {
+    private final OSS client;
+    private final OssStorageConfig segmentPusherConfig;
+    private final OssInputDataConfig inputDataConfig;
+
+    public DataSegmentKillerProvder(
+        OSS client,
+        OssStorageConfig segmentPusherConfig,
+        OssInputDataConfig inputDataConfig
+    )
+    {
+      this.client = client;
+      this.segmentPusherConfig = segmentPusherConfig;
+      this.inputDataConfig = inputDataConfig;
+    }
+
+    @Override
+    public Supplier<DataSegmentKiller> get()
+    {
+      return null;
+    }
   }
 
   @Provides

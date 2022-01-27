@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -29,11 +30,11 @@ import java.util.Map;
  */
 public class OmniDataSegmentKiller implements DataSegmentKiller
 {
-  private final Map<String, DataSegmentKiller> killers;
+  private final Map<String, Supplier<DataSegmentKiller>> killers;
 
   @Inject
   public OmniDataSegmentKiller(
-      Map<String, DataSegmentKiller> killers
+      Map<String, Supplier<DataSegmentKiller>> killers
   )
   {
     this.killers = killers;
@@ -48,13 +49,13 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   private DataSegmentKiller getKiller(DataSegment segment) throws SegmentLoadingException
   {
     String type = MapUtils.getString(segment.getLoadSpec(), "type");
-    DataSegmentKiller loader = killers.get(type);
+    Supplier<DataSegmentKiller> loader = killers.get(type);
 
     if (loader == null) {
       throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, killers.keySet());
     }
 
-    return loader;
+    return loader.get();
   }
 
   @Override

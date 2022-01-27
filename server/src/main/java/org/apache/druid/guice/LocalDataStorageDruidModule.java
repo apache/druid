@@ -21,9 +21,13 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.Provider;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.initialization.DruidModule;
@@ -77,10 +81,12 @@ public class LocalDataStorageDruidModule implements DruidModule
              .to(LocalFileTimestampVersionFinder.class)
              .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
-            .addBinding(SCHEME)
-            .to(LocalDataSegmentKiller.class)
-            .in(LazySingleton.class);
+//    PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
+//            .addBinding(SCHEME)
+//            .to(LocalDataSegmentKiller.class)
+//            .in(LazySingleton.class);
+
+    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).toProvider(DataSegmentKillerProvider.class).in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
             .addBinding(SCHEME)
@@ -88,6 +94,23 @@ public class LocalDataStorageDruidModule implements DruidModule
             .in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);
+  }
+
+  private static class DataSegmentKillerProvider implements Provider<Supplier<DataSegmentKiller>>
+  {
+    private final LocalDataSegmentPusherConfig config;
+
+    @Inject
+    public DataSegmentKillerProvider(LocalDataSegmentPusherConfig config)
+    {
+      this.config = config;
+    }
+
+    @Override
+    public Supplier<DataSegmentKiller> get()
+    {
+      return Suppliers.memoize(() -> new LocalDataSegmentKiller(config));
+    }
   }
 
   @Override
