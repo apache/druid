@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
+import com.mysql.jdbc.exceptions.MySQLTransactionRollbackException;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,18 +32,34 @@ public class MySQLConnectorTest
   @Test
   public void testIsExceptionTransient()
   {
-    final String driver = "com.mysql.jdbc.Driver";
-    final ClassLoader loader = getClass().getClassLoader();
-    Assert.assertTrue(MySQLConnector.isTransientException(loader, driver, new MySQLTransientException()));
+    final Class<?> clazz = MySQLTransientException.class;
+    Assert.assertTrue(MySQLConnector.isTransientException(clazz, new MySQLTransientException()));
+    Assert.assertTrue(MySQLConnector.isTransientException(clazz, new MySQLTransactionRollbackException()));
     Assert.assertTrue(
-        MySQLConnector.isTransientException(loader, driver, new SQLException("some transient failure", "wtf", 1317))
+        MySQLConnector.isTransientException(clazz, new SQLException("some transient failure", "wtf", 1317))
     );
     Assert.assertFalse(
-        MySQLConnector.isTransientException(loader, driver, new SQLException("totally realistic test data", "wtf", 1337))
+        MySQLConnector.isTransientException(clazz, new SQLException("totally realistic test data", "wtf", 1337))
     );
     // this method does not specially handle normal transient exceptions either, since it is not vendor specific
     Assert.assertFalse(
-        MySQLConnector.isTransientException(loader, driver, new SQLTransientConnectionException("transient"))
+        MySQLConnector.isTransientException(clazz, new SQLTransientConnectionException("transient"))
+    );
+  }
+
+  @Test
+  public void testIsExceptionTransientNoMySqlClazz()
+  {
+    // no vendor specific for MariaDb, so should always be false
+    Assert.assertFalse(MySQLConnector.isTransientException(null, new MySQLTransientException()));
+    Assert.assertFalse(
+        MySQLConnector.isTransientException(null, new SQLException("some transient failure", "wtf", 1317))
+    );
+    Assert.assertFalse(
+        MySQLConnector.isTransientException(null, new SQLException("totally realistic test data", "wtf", 1337))
+    );
+    Assert.assertFalse(
+        MySQLConnector.isTransientException(null, new SQLTransientConnectionException("transient"))
     );
   }
 }
