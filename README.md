@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
+[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://druid.apache.org/community/join-slack)
 [![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://app.travis-ci.com/github/apache/druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/druid)](https://codecov.io/gh/apache/druid)
@@ -32,7 +32,7 @@
 [Documentation](https://druid.apache.org/docs/latest/design/) |
 [Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
 [User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
-[Slack](https://s.apache.org/slack-invite) |
+[Slack](https://druid.apache.org/community/join-slack) |
 [Twitter](https://twitter.com/druidio) |
 [Download](https://druid.apache.org/downloads.html)
 
@@ -86,7 +86,7 @@ is hosted at Google Groups.
 Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
 you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
-Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
+Chat with Druid committers and users in real-time on the Apache Druid Slack channel. Please use [this invitation link to join and invite others](https://druid.apache.org/community/join-slack).
 
 ### Building from source
 
