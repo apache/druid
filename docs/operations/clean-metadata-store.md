@@ -118,7 +118,7 @@ Rule cleanup uses the following configuration:
 Druid retains all compaction configuration records by default, which should be suitable for most use cases.
 If you create and delete short-lived datasources with high frequency, and you set auto compaction configuration on those datasources, then consider turning on automated cleanup of compaction configuration records.
 
-> With automated cleanup of compaction configuration records, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is stil ongoing, Druid may remove the compaction configuration.
+> With automated cleanup of compaction configuration records, if you create a compaction configuration for some datasource before the datasource exists, for example if initial ingestion is still ongoing, Druid may remove the compaction configuration.
 To prevent the configuration from being prematurely removed, wait for the datasource to be created before applying the compaction configuration to the datasource.
 
 Unlike other metadata records, compaction configuration records do not have a retention period set by `durationToRetain`. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
