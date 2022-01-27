@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
@@ -38,6 +39,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
@@ -58,6 +60,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -487,6 +490,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           );
           return true;
         }
+      }
+    }
+
+    if (ArrayUtils.isNotEmpty(config.getMetricsSpec())) {
+      final AggregatorFactory[] existingMetricsSpec = lastCompactionState.getMetricsSpec() == null || lastCompactionState.getMetricsSpec().isEmpty() ?
+                                                      null :
+                                                      objectMapper.convertValue(lastCompactionState.getMetricsSpec(), AggregatorFactory[].class);
+      if (existingMetricsSpec == null || !Arrays.deepEquals(config.getMetricsSpec(), existingMetricsSpec)) {
+        log.info(
+            "Configured metricsSpec[%s] is different from the metricsSpec[%s] of segments. Needs compaction",
+            Arrays.toString(config.getMetricsSpec()),
+            Arrays.toString(existingMetricsSpec)
+        );
+        return true;
       }
     }
 

@@ -108,7 +108,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     new ExpressionVirtualColumn(
                         "v0",
                         "array('Hello',null)",
-                        ColumnType.STRING,
+                        ColumnType.STRING_ARRAY,
                         ExprMacroTable.nil()
                     )
                 )
@@ -119,6 +119,90 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(new Object[]{"[\"Hello\",null]"})
+    );
+  }
+
+  @Test
+  public void testValuesContainingNull() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", null)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{null, "United States"})
+    );
+  }
+
+  @Test
+  public void testMultipleValuesContainingNull() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'), ('Delhi', 'India'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{"Delhi", "India"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", ColumnType.STRING)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{NULL_STRING, "United States"}, new Object[]{"Delhi", "India"})
+    );
+  }
+
+  @Test
+  public void testMultipleValuesContainingNullAndIntegerValues() throws Exception
+  {
+    testQuery(
+        "SELECT * FROM (VALUES (NULL, 'United States'), (50, 'India'))",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{50L, "India"}),
+                        RowSignature
+                            .builder()
+                            .add("EXPR$0", ColumnType.LONG)
+                            .add("EXPR$1", ColumnType.STRING)
+                            .build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "EXPR$1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{null, "United States"}, new Object[]{50, "India"})
     );
   }
 

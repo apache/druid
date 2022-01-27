@@ -198,6 +198,7 @@
         <module>extensions-contrib/gce-extensions</module>
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
+        <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/oak-incremental-index</module>
         <!-- distribution packaging -->
         <module>distribution</module>
@@ -1297,7 +1298,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.1</version>
+                <version>3.2</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -1309,6 +1310,7 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/guava16-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
@@ -1568,7 +1570,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>2.2</version>
+                    <version>3.2.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

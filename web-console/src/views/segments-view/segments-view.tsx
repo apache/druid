@@ -49,6 +49,7 @@ import {
   formatBytes,
   formatInteger,
   getNeedleAndMode,
+  isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   makeBooleanFilter,
@@ -59,6 +60,7 @@ import {
   sqlQueryCustomTableFilter,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -76,6 +78,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Partition',
     'Size',
     'Num rows',
+    'Avg. row size',
     'Replicas',
     'Is published',
     'Is realtime',
@@ -103,6 +106,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Partition',
     'Size',
     'Num rows',
+    'Avg. row size',
     'Replicas',
     'Is published',
     'Is realtime',
@@ -148,6 +152,7 @@ interface SegmentQueryResultRow {
   size: number;
   partition_num: number;
   num_rows: NumberLike;
+  avg_row_size: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
@@ -200,6 +205,8 @@ END AS "partitioning"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
       visibleColumns.shown('Num rows') && `"num_rows"`,
+      visibleColumns.shown('Avg. row size') &&
+        `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
       visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is available') && `"is_available"`,
@@ -390,6 +397,7 @@ END AS "partitioning"`,
                 partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
                 size: segment.size,
                 num_rows: -1,
+                avg_row_size: -1,
                 num_replicas: -1,
                 is_available: -1,
                 is_published: -1,
@@ -465,6 +473,8 @@ END AS "partitioning"`,
     const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
 
     const numRowsValues = segments.map(d => formatInteger(d.num_rows)).concat('(unknown)');
+
+    const avgRowSizeValues = segments.map(d => formatInteger(d.avg_row_size));
 
     const renderFilterableCell = (field: string) => {
       return (row: { value: any }) => {
@@ -625,6 +635,23 @@ END AS "partitioning"`,
                 unselectableThousandsSeparator
               />
             ),
+          },
+          {
+            Header: twoLines('Avg. row size', '(bytes)'),
+            show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
+            accessor: 'avg_row_size',
+            filterable: false,
+            width: 100,
+            Cell: ({ value }) => {
+              if (isNumberLikeNaN(value)) return '-';
+              return (
+                <BracedText
+                  text={formatInteger(value)}
+                  braces={avgRowSizeValues}
+                  unselectableThousandsSeparator
+                />
+              );
+            },
           },
           {
             Header: 'Replicas',

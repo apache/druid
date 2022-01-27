@@ -159,7 +159,7 @@ public class ExpressionPlanner
       outputType = expression.getOutputType(inspector);
     }
 
-    // if analysis predicts output, or inferred output type is array, output will be multi-valued
+    // if analysis predicts output, or inferred output type, is array, output will be arrays
     if (analysis.isOutputArray() || (outputType != null && outputType.isArray())) {
       traits.add(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
 

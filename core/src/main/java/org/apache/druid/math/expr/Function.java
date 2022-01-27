@@ -31,8 +31,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -59,7 +58,7 @@ import java.util.stream.Stream;
 /**
  * Base interface describing the mechanism used to evaluate a {@link FunctionExpr}. All {@link Function} implementations
  * are immutable.
- * <p>
+ *
  * Do NOT remove "unused" members in this class. They are used by generated Antlr
  */
 @SuppressWarnings("unused")
@@ -1977,9 +1976,9 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
-                                                                                      .getLiteralValue()
-                                                                                      .toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case ARRAY:
             return Collections.emptySet();
@@ -1995,9 +1994,9 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExpressionType castTo = ExpressionType.fromString(StringUtils.toUpperCase(args.get(1)
-                                                                                      .getLiteralValue()
-                                                                                      .toString()));
+        ExpressionType castTo = ExpressionType.fromString(
+            StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())
+        );
         switch (castTo.getType()) {
           case LONG:
           case DOUBLE:
@@ -2977,6 +2976,67 @@ public interface Function
     }
   }
 
+  class MVToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "mv_to_array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
+      }
+      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
+
+      if (expr == null) {
+        throw new IAE(
+            "Arg %s should be an identifier expression ie refer to columns directaly. Use array() instead",
+            args.get(0).toString()
+        );
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
   class ArrayConstructorFunction implements Function
   {
     @Override
@@ -2994,6 +3054,7 @@ public interface Function
       Object[] out = new Object[length];
 
       ExpressionType arrayType = null;
+
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
         arrayType = setArrayOutput(arrayType, out, i, evaluated);
@@ -3679,14 +3740,16 @@ public interface Function
             name()
         );
       }
-      ExpressionType complexType = ExpressionTypeFactory.getInstance()
-                                                        .ofComplex((String) args.get(0).getLiteralValue());
-      ObjectByteStrategy strategy = Types.getStrategy(complexType.getComplexTypeName());
-      if (strategy == null) {
+      ExpressionType type = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
+      TypeStrategy strategy;
+      try {
+        strategy = type.getStrategy();
+      }
+      catch (IAE illegal) {
         throw new IAE(
             "Function[%s] first argument must be a valid complex type name, unknown complex type [%s]",
             name(),
-            complexType.asTypeString()
+            type.asTypeString()
         );
       }
       ExprEval base64String = args.get(1).eval(bindings);
@@ -3697,11 +3760,11 @@ public interface Function
         );
       }
       if (base64String.value() == null) {
-        return ExprEval.ofComplex(complexType, null);
+        return ExprEval.ofComplex(type, null);
       }
 
       final byte[] base64 = StringUtils.decodeBase64String(base64String.asString());
-      return ExprEval.ofComplex(complexType, strategy.fromByteBuffer(ByteBuffer.wrap(base64), base64.length));
+      return ExprEval.ofComplex(type, strategy.read(ByteBuffer.wrap(base64)));
     }
 
     @Override

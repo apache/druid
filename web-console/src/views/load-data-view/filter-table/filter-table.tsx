@@ -28,12 +28,12 @@ import {
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
 export function filterTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   selectedFilter: Partial<DruidFilter> | undefined,
 ): string | undefined {
   if (!selectedFilter) return;
@@ -43,7 +43,7 @@ export function filterTableSelectedColumnName(
 }
 
 export interface FilterTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
   selectedFilterName: string | undefined;

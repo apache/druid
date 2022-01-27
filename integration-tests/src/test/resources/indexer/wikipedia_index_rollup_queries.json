@@ -46,7 +46,7 @@
         "extractionFn": null
       },
       "columns": [
-        "added"
+        %%FIELD_TO_QUERY%%
       ],
       "resultFormat":"compactedList"
     },

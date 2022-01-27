@@ -62,7 +62,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
       @JsonProperty("elementType") @Nullable ExpressionType elementType
   )
   {
-    super(exprType, complexTypeName, elementType);
+    super(ExpressionTypeFactory.getInstance(), exprType, complexTypeName, elementType);
   }
 
   @Nullable

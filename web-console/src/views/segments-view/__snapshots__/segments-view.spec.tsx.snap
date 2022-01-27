@@ -59,6 +59,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Partition",
             "Size",
             "Num rows",
+            "Avg. row size",
             "Replicas",
             "Is published",
             "Is realtime",
@@ -229,6 +230,18 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": <React.Fragment>
+              Avg. row size
+              <br />
+              (bytes)
+            </React.Fragment>,
+            "accessor": "avg_row_size",
+            "filterable": false,
+            "show": true,
+            "width": 100,
           },
           Object {
             "Header": "Replicas",

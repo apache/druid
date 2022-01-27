@@ -19,16 +19,17 @@
 import {
   adjustId,
   cleanSpec,
-  getColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromInput,
   guessInputFormat,
-  guessTypeFromSample,
   IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
+import { CSV_SAMPLE } from './test-fixtures';
 
 describe('ingestion-spec', () => {
-  it('upgrades / downgrades task spec', () => {
+  it('upgrades / downgrades task spec 1', () => {
     const oldTaskSpec = {
       type: 'index_parallel',
       spec: {
@@ -36,7 +37,7 @@ describe('ingestion-spec', () => {
           type: 'index_parallel',
           firehose: {
             type: 'http',
-            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+            uris: ['https://website.com/wikipedia.json.gz'],
           },
         },
         tuningConfig: {
@@ -157,7 +158,46 @@ describe('ingestion-spec', () => {
           },
           inputSource: {
             type: 'http',
-            uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+            uris: ['https://website.com/wikipedia.json.gz'],
+          },
+          type: 'index_parallel',
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+        },
+      },
+      type: 'index_parallel',
+    });
+  });
+
+  it('upgrades / downgrades task spec (without parser)', () => {
+    const oldTaskSpec = {
+      type: 'index_parallel',
+      ioConfig: {
+        type: 'index_parallel',
+        firehose: { type: 'http', uris: ['https://website.com/wikipedia.json.gz'] },
+      },
+      tuningConfig: { type: 'index_parallel' },
+      dataSchema: {
+        dataSource: 'new-data-source',
+        granularitySpec: { type: 'uniform', segmentGranularity: 'DAY', queryGranularity: 'HOUR' },
+      },
+    };
+
+    expect(upgradeSpec(oldTaskSpec)).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'new-data-source',
+          granularitySpec: {
+            queryGranularity: 'HOUR',
+            segmentGranularity: 'DAY',
+            type: 'uniform',
+          },
+        },
+        ioConfig: {
+          inputSource: {
+            type: 'http',
+            uris: ['https://website.com/wikipedia.json.gz'],
           },
           type: 'index_parallel',
         },
@@ -364,7 +404,7 @@ describe('spec utils', () => {
         type: 'index_parallel',
         inputSource: {
           type: 'http',
-          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+          uris: ['https://website.com/wikipedia.json.gz'],
         },
         inputFormat: {
           type: 'json',
@@ -388,14 +428,46 @@ describe('spec utils', () => {
     },
   };
 
-  it('guessTypeFromSample', () => {
-    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromInput', () => {
+    it('works for empty', () => {
+      expect(guessColumnTypeFromInput([], false)).toEqual('string');
+    });
+
+    it('works for long', () => {
+      expect(guessColumnTypeFromInput([1, 2, 3], false)).toEqual('long');
+      expect(guessColumnTypeFromInput([1, 2, 3], true)).toEqual('long');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], true)).toEqual('long');
+    });
+
+    it('works for double', () => {
+      expect(guessColumnTypeFromInput([1, 2.1, 3], false)).toEqual('double');
+      expect(guessColumnTypeFromInput([1, 2.1, 3], true)).toEqual('double');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], true)).toEqual('double');
+    });
+
+    it('works for multi-value', () => {
+      expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+    });
   });
 
-  it('getColumnTypeFromHeaderAndRows', () => {
-    expect(
-      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
-    ).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromHeaderAndRows', () => {
+    it('works in empty dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0', false)).toEqual(
+        'string',
+      );
+    });
+
+    it('works for generic dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'user', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', true)).toEqual('long');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'spend', true)).toEqual('double');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', true)).toEqual('string');
+    });
   });
 
   it('updateSchemaWithSample', () => {
@@ -439,7 +511,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",
@@ -490,7 +562,7 @@ describe('spec utils', () => {
             "inputSource": Object {
               "type": "http",
               "uris": Array [
-                "https://static.imply.io/data/wikipedia.json.gz",
+                "https://website.com/wikipedia.json.gz",
               ],
             },
             "type": "index_parallel",

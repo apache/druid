@@ -66,6 +66,7 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -213,24 +214,25 @@ public class DruidPlanner implements Closeable
         // Not a CannotPlanningException, rethrow without trying with bindable
         throw e;
       }
-      if (parsed.getInsertNode() != null) {
-        // Cannot INSERT with BINDABLE.
-        throw e;
-      }
-      // Try again with BINDABLE convention. Used for querying Values and metadata tables.
-      try {
-        return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
-      }
-      catch (Exception e2) {
-        e.addSuppressed(e2);
-        Logger logger = log;
-        if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
-          logger = log.noStackTrace();
+
+      // If there isn't any INSERT clause, then we should try again with BINDABLE convention. And return without
+      // any error, if it is plannable by the bindable convention
+      if (parsed.getInsertNode() == null) {
+        // Try again with BINDABLE convention. Used for querying Values and metadata tables.
+        try {
+          return planWithBindableConvention(rootQueryRel, parsed.getExplainNode());
         }
-        String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-        logger.warn(e, errorMessage);
-        throw new UnsupportedSQLQueryException(errorMessage);
+        catch (Exception e2) {
+          e.addSuppressed(e2);
+        }
       }
+      Logger logger = log;
+      if (!QueryContexts.isDebug(plannerContext.getQueryContext())) {
+        logger = log.noStackTrace();
+      }
+      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
+      logger.warn(e, errorMessage);
+      throw new UnsupportedSQLQueryException(errorMessage);
     }
   }
 
@@ -662,26 +664,36 @@ public class DruidPlanner implements Closeable
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
+    final String dataSource;
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
       throw new ValidationException("INSERT requires target table.");
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
-      return Iterables.getOnlyElement(tableIdentifier.names);
+      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
     } else {
       // Qualified name.
       final String defaultSchemaName =
           Iterables.getOnlyElement(CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null));
 
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
-        return tableIdentifier.names.get(1);
+        dataSource = tableIdentifier.names.get(1);
       } else {
         throw new ValidationException(
             StringUtils.format("Cannot INSERT into [%s] because it is not a Druid datasource.", tableIdentifier)
         );
       }
     }
+
+    try {
+      IdUtils.validateId("INSERT dataSource", dataSource);
+    }
+    catch (IllegalArgumentException e) {
+      throw new ValidationException(e.getMessage());
+    }
+
+    return dataSource;
   }
 
   private String buildSQLPlanningErrorMessage(Throwable exception)
