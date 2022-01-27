@@ -799,8 +799,7 @@ public class DruidPlanner implements Closeable
               Granularity.fromString(ingestionGranularity);
             }
             catch (IllegalArgumentException e) {
-              throw new ValidationException(StringUtils.format(
-                  "Granularity passed in PARTITION BY clause is invalid", ingestionGranularity));
+              throw new ValidationException("Granularity passed in PARTITION BY clause is invalid");
             }
           }
 
