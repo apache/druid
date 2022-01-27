@@ -23,16 +23,14 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
+import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
@@ -102,7 +100,7 @@ public class AzureStorageDruidModule implements DruidModule
 
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME)
-           .toProvider(DataSegmentKillerProvider.class).in(LazySingleton.class);
+           .to(DataSegmentKillerSupplier.class).in(LazySingleton.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
@@ -120,16 +118,10 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(ListBlobItemHolderFactory.class));
   }
 
-  private static class DataSegmentKillerProvider implements Provider<Supplier<DataSegmentKiller>>
+  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
   {
-    private final AzureDataSegmentConfig segmentConfig;
-    private final AzureInputDataConfig inputDataConfig;
-    private final AzureAccountConfig accountConfig;
-    private final AzureStorage azureStorage;
-    private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-
     @Inject
-    public DataSegmentKillerProvider(
+    public DataSegmentKillerSupplier(
         AzureDataSegmentConfig segmentConfig,
         AzureInputDataConfig inputDataConfig,
         AzureAccountConfig accountConfig,
@@ -137,17 +129,7 @@ public class AzureStorageDruidModule implements DruidModule
         AzureCloudBlobIterableFactory azureCloudBlobIterableFactory
     )
     {
-      this.segmentConfig = segmentConfig;
-      this.inputDataConfig = inputDataConfig;
-      this.accountConfig = accountConfig;
-      this.azureStorage = azureStorage;
-      this.azureCloudBlobIterableFactory = azureCloudBlobIterableFactory;
-    }
-
-    @Override
-    public Supplier<DataSegmentKiller> get()
-    {
-      return Suppliers.memoize(
+      super(
           () -> new AzureDataSegmentKiller(
               segmentConfig,
               inputDataConfig,

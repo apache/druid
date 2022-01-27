@@ -39,17 +39,29 @@ public class Binders
 
   public static MapBinder<String, Supplier<DataSegmentKiller>> dataSegmentKillerBinder(Binder binder)
   {
-    return MapBinder.newMapBinder(binder, new TypeLiteral<String>(){}, new TypeLiteral<Supplier<DataSegmentKiller>>(){});
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<String>(){},
+        new TypeLiteral<Supplier<DataSegmentKiller>>(){}
+    );
   }
 
-  public static MapBinder<String, DataSegmentMover> dataSegmentMoverBinder(Binder binder)
+  public static MapBinder<String, Supplier<DataSegmentMover>> dataSegmentMoverBinder(Binder binder)
   {
-    return MapBinder.newMapBinder(binder, String.class, DataSegmentMover.class);
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<String>(){},
+        new TypeLiteral<Supplier<DataSegmentMover>>(){}
+    );
   }
 
-  public static MapBinder<String, DataSegmentArchiver> dataSegmentArchiverBinder(Binder binder)
+  public static MapBinder<String, Supplier<DataSegmentArchiver>> dataSegmentArchiverBinder(Binder binder)
   {
-    return MapBinder.newMapBinder(binder, String.class, DataSegmentArchiver.class);
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<String>(){},
+        new TypeLiteral<Supplier<DataSegmentArchiver>>(){}
+    );
   }
 
   public static MapBinder<String, DataSegmentPusher> dataSegmentPusherBinder(Binder binder)

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
@@ -62,5 +63,11 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @VisibleForTesting
+  Map<String, Supplier<DataSegmentKiller>> getKillers()
+  {
+    return killers;
   }
 }
