@@ -20,28 +20,28 @@
 SqlNode DruidSqlInsert() :
 {
  SqlNode insertNode;
- SqlNode partitionBy = null;
- SqlNodeList clusterBy = null;
+ SqlNode partitionedBy = null;
+ SqlNodeList clusteredBy = null;
 }
 {
     insertNode = SqlInsert()
     [
-      <PARTITION> <BY>
-      partitionBy = StringLiteral()
+      <PARTITIONED> <BY>
+      partitionedBy = StringLiteral()
     ]
     [
-      <CLUSTER> <BY>
-      clusterBy = ClusterItems()
+      <CLUSTERED> <BY>
+      clusteredBy = ClusterItems()
     ]
     {
-      if(partitionBy == null && clusterBy == null) {
+      if(partitionedBy == null && clusteredBy == null) {
         return insertNode;
       }
       if(!(insertNode instanceof SqlInsert)) {
         return insertNode;
       }
       SqlInsert sqlInsert = (SqlInsert) insertNode;
-      return new DruidSqlInsert(sqlInsert, partitionBy, clusterBy);
+      return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
     }
 }
 

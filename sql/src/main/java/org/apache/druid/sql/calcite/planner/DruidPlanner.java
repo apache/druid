@@ -787,11 +787,11 @@ public class DruidPlanner implements Closeable
         insert = (SqlInsert) query;
         query = insert.getSource();
 
-        // Processing to be done when the original query has either of the PARTITION BY or CLUSTER BY clause
+        // Processing to be done when the original query has either of the PARTITIONED BY or CLUSTERED BY clause
         if (insert instanceof DruidSqlInsert) {
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
 
-          ingestionGranularity = druidSqlInsert.getPartitionBy();
+          ingestionGranularity = druidSqlInsert.getPartitionedBy();
 
           // Check if ingestionGranularity is valid
           if (ingestionGranularity != null) {
@@ -799,12 +799,12 @@ public class DruidPlanner implements Closeable
               Granularity.fromString(ingestionGranularity);
             }
             catch (IllegalArgumentException e) {
-              throw new ValidationException("Granularity passed in PARTITION BY clause is invalid");
+              throw new ValidationException("Granularity passed in PARTITIONED BY clause is invalid");
             }
           }
 
-          if (druidSqlInsert.getClusterBy() != null) {
-            // If we have a CLUSTER BY clause, extract the information in that CLUSTER BY and create a new SqlOrderBy
+          if (druidSqlInsert.getClusteredBy() != null) {
+            // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
             // node
             SqlNode offset = null;
             SqlNode fetch = null;
@@ -819,19 +819,19 @@ public class DruidPlanner implements Closeable
               offset = sqlOrderBy.offset;
               fetch = sqlOrderBy.fetch;
               orderByList = sqlOrderBy.orderList;
-              // If the orderList is non-empty (i.e. there existed an ORDER BY clause in the query) and CLUSTER BY clause
+              // If the orderList is non-empty (i.e. there existed an ORDER BY clause in the query) and CLUSTERED BY clause
               // is also non-empty, throw an error
               if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))
-                  && druidSqlInsert.getClusterBy() != null) {
+                  && druidSqlInsert.getClusteredBy() != null) {
                 throw new ValidationException(
-                    "Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query");
+                    "Cannot have both ORDER BY and CLUSTERED BY clauses in the same INSERT query");
               }
             }
-            // Creates a new SqlOrderBy query, which may have our CLUSTER BY overwritten
+            // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
             query = new SqlOrderBy(
                 query.getParserPosition(),
                 query,
-                GuavaUtils.firstNonNull(orderByList, druidSqlInsert.getClusterBy()),
+                GuavaUtils.firstNonNull(orderByList, druidSqlInsert.getClusteredBy()),
                 offset,
                 fetch
             );

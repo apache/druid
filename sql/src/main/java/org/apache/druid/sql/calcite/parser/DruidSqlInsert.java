@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Extends the Insert call to hold custom paramaters specific to druid i.e. PARTITION BY and CLUSTER BY
+ * Extends the Insert call to hold custom paramaters specific to druid i.e. PARTITIONED BY and CLUSTERED BY
  * This class extends the {@link SqlInsert} so that this SqlNode can be used in
  * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
@@ -39,13 +39,13 @@ public class DruidSqlInsert extends SqlInsert
   // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
-  private final SqlNode partitionBy;
-  private final SqlNodeList clusterBy;
+  private final SqlNode partitionedBy;
+  private final SqlNodeList clusteredBy;
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
-      @Nullable SqlNode partitionBy,
-      @Nullable SqlNodeList clusterBy
+      @Nullable SqlNode partitionedBy,
+      @Nullable SqlNodeList clusteredBy
   )
   {
     super(
@@ -55,23 +55,23 @@ public class DruidSqlInsert extends SqlInsert
         insertNode.getSource(),
         insertNode.getTargetColumnList()
     );
-    this.partitionBy = partitionBy;
-    this.clusterBy = clusterBy;
+    this.partitionedBy = partitionedBy;
+    this.clusteredBy = clusteredBy;
   }
 
   @Nullable
-  public SqlNodeList getClusterBy()
+  public SqlNodeList getClusteredBy()
   {
-    return clusterBy;
+    return clusteredBy;
   }
 
   @Nullable
-  public String getPartitionBy()
+  public String getPartitionedBy()
   {
-    if (partitionBy == null) {
+    if (partitionedBy == null) {
       return null;
     }
-    return SqlLiteral.unchain(partitionBy).toValue();
+    return SqlLiteral.unchain(partitionedBy).toValue();
   }
 
   @Nonnull
@@ -85,15 +85,14 @@ public class DruidSqlInsert extends SqlInsert
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     super.unparse(writer, leftPrec, rightPrec);
-    if (partitionBy != null) {
-      writer.keyword("PARTITION");
-      writer.keyword("BY");
-      writer.keyword(getPartitionBy());
+    if (partitionedBy != null) {
+      writer.keyword("PARTITIONED BY");
+      writer.keyword(getPartitionedBy());
     }
-    if (clusterBy != null) {
-      writer.sep("CLUSTER BY");
+    if (clusteredBy != null) {
+      writer.sep("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
-      for (SqlNode clusterByOpts : clusterBy.getList()) {
+      for (SqlNode clusterByOpts : getClusteredBy().getList()) {
         clusterByOpts.unparse(writer, leftPrec, rightPrec);
       }
       writer.endList(frame);

@@ -39,7 +39,7 @@
 # Following clauses are modified in the file:
 #   1. data.parser.package & data.parser.class
 #   2. data.parser.imports
-#   3. data.parser.keywords (Added "CLUSTER")
+#   3. data.parser.keywords (Added "CLUSTERED", "PARTITIONED")
 #   4. data.parser.statementParserMethods
 #   5. data.parser.implementationFiles
 data: {
@@ -59,7 +59,8 @@ data: {
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
-      "CLUSTER"
+      "CLUSTERED"
+      "PARTITIONED"
     ]
 
     # List of keywords from "keywords" section that are not reserved.

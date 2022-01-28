@@ -284,9 +284,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionBy()
+  public void testInsertWithPartitionedBy()
   {
-    // Test correctness of the query when only PARTITION BY clause is present
+    // Test correctness of the query when only PARTITIONED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
@@ -298,7 +298,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITION BY 'day'")
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITIONED BY 'day'")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -314,9 +314,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithClusterBy()
+  public void testInsertWithClusteredBy()
   {
-    // Test correctness of the query when only CLUSTER BY clause is present
+    // Test correctness of the query when only CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
@@ -327,7 +327,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
-            + "CLUSTER BY 2, dim1 DESC, CEIL(m2)"
+            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -353,9 +353,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionByAndClusterBy()
+  public void testInsertWithPartitionedByAndClusteredBy()
   {
-    // Test correctness of the query when both PARTITION BY and CLUSTER BY clause is present
+    // Test correctness of the query when both PARTITIONED BY and CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
@@ -367,7 +367,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITION BY 'day' CLUSTER BY 2, dim1")
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITIONED BY 'day' CLUSTERED BY 2, dim1")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -389,7 +389,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionByAndLimitOffset()
+  public void testInsertWithPartitionedByAndLimitOffset()
   {
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -402,7 +402,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITION BY 'day'")
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY 'day'")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -420,7 +420,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionByAndOrderBy()
+  public void testInsertWithPartitionedByAndOrderBy()
   {
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -433,7 +433,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
 
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo ORDER BY 2, dim1 PARTITION BY 'day'")
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo ORDER BY 2, dim1 PARTITIONED BY 'day'")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -455,12 +455,12 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithClusterByAndOrderBy() throws Exception
+  public void testInsertWithClusteredByAndOrderBy() throws Exception
   {
     try {
       testQuery(
           StringUtils.format(
-              "INSERT INTO dst SELECT * FROM %s ORDER BY 2 CLUSTER BY 3",
+              "INSERT INTO dst SELECT * FROM %s ORDER BY 2 CLUSTERED BY 3",
               externSql(externalDataSource)
           ),
           ImmutableList.of(),
@@ -470,7 +470,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Cannot have both ORDER BY and CLUSTER BY clauses in the same INSERT query",
+          "Cannot have both ORDER BY and CLUSTERED BY clauses in the same INSERT query",
           e.getMessage()
       );
     }
@@ -478,12 +478,12 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionByContainingInvalidGranularity() throws Exception
+  public void testInsertWithPartitionedByContainingInvalidGranularity() throws Exception
   {
     // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
     try {
       testQuery(
-          "INSERT INTO dst SELECT * FROM foo PARTITION BY 'invalid_granularity'",
+          "INSERT INTO dst SELECT * FROM foo PARTITIONED BY 'invalid_granularity'",
           ImmutableList.of(),
           ImmutableList.of()
       );
@@ -491,7 +491,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Granularity passed in PARTITION BY clause is invalid",
+          "Granularity passed in PARTITIONED BY clause is invalid",
           e.getMessage()
       );
     }
@@ -502,14 +502,14 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   // Currently EXPLAIN PLAN FOR doesn't work with the modified syntax
   @Ignore
   @Test
-  public void testExplainInsertWithPartitionByAndClusterBy()
+  public void testExplainInsertWithPartitionedByAndClusteredBy()
   {
     Assert.assertThrows(
         SqlPlanningException.class,
         () ->
             testQuery(
                 StringUtils.format(
-                    "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITION BY 'day' CLUSTER BY 1",
+                    "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY 'day' CLUSTERED BY 1",
                     externSql(externalDataSource)
                 ),
                 ImmutableList.of(),
