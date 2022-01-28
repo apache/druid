@@ -242,6 +242,7 @@ public class Expressions
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
+      plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
       return null;
     } else {
 
