@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -1077,10 +1078,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       TombstoneHelper tombstoneHelper = new TombstoneHelper(
           newSegments,
           ingestionSchema.getDataSchema(),
-          intervalToLockVersion,
           toolbox.getTaskActionClient()
       );
-      tombStones = tombstoneHelper.computeTombstones();
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      Map<Interval, String> tombstonesAndVersions = new HashMap<>();
+      for (Interval interval : tombstoneIntervals) {
+        NonnullPair<Interval, String> intervalAndVersion =
+            ((SinglePhaseParallelIndexTaskRunner) getCurrentRunner()).findIntervalAndVersion(interval.getStart());
+        tombstonesAndVersions.put(interval, intervalAndVersion.rhs);
+      }
+      tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
       newSegments.addAll(tombStones);
       LOG.debugSegments(tombStones, "To publish tombstones");
     }
@@ -1260,15 +1267,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  @Nullable
-  public static String findVersion(Map<Interval, String> versions, Interval interval)
-  {
-    return versions.entrySet().stream()
-                   .filter(entry -> entry.getKey().contains(interval))
-                   .map(Entry::getValue)
-                   .findFirst()
-                   .orElse(null);
-  }
 
   static InputFormat getInputFormat(ParallelIndexIngestionSpec ingestionSchema)
   {

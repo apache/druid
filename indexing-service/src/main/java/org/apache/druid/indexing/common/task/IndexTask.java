@@ -943,9 +943,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (ingestionSchema.getIOConfig().isDropExisting()) {
         TombstoneHelper tombstoneHelper = new TombstoneHelper(pushed.getSegments(),
                                                               ingestionSchema.getDataSchema(),
-                                                              intervalToLockVersion,
                                                               toolbox.getTaskActionClient());
-        tombStones = tombstoneHelper.computeTombstones();
+
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+        // now find the versions for the tombstone intervals
+        Map<Interval, String> tombstonesAndVersions = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          // ideally we would use the allocator to find the version but the
+          // allocator can only create buckets for the intervals that actually contain data
+          // so the tombstones intervals won't have buckets...so we have to track the
+          // versions when locking and use those versions here:
+          String version = findVersion(intervalToLockVersion, interval);
+          tombstonesAndVersions.put(interval, version);
+        }
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
         log.debugSegments(tombStones, "To publish tombstones");
       }
 

@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,15 +60,16 @@ public class TombstoneHelperTest
     // Assume no used segments :
     Mockito.when(taskActionClient.submit(any(TaskAction.class))).thenReturn(Collections.emptyList());
 
-    Map<Interval, String> intervalToLockVersion = Collections.singletonMap(interval, "testVersion");
     TombstoneHelper tombstoneHelper = new TombstoneHelper(
         pushedSegments,
         dataSchema,
-        intervalToLockVersion,
         taskActionClient
     );
+    List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+    Assert.assertTrue(tombstoneIntervals.isEmpty());
 
-    Set<DataSegment> tombstones = tombstoneHelper.computeTombstones();
+    Map<Interval, String> intervalToLockVersion = Collections.emptyMap();
+    Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(intervalToLockVersion);
 
     Assert.assertEquals(0, tombstones.size());
 
@@ -89,23 +91,25 @@ public class TombstoneHelperTest
     DataSegment existingUsedSegment =
         DataSegment.builder()
                    .dataSource("test")
-                   .interval(interval) // interval is different
-                   .version("oldeVersion")
+                   .interval(interval)
+                   .version("oldVersion")
                    .size(100)
                    .build();
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
-    Map<Interval, String> intervalToLockVersion = Collections.singletonMap(interval, "testVersion");
     TombstoneHelper tombstoneHelper = new TombstoneHelper(
         pushedSegments,
         dataSchema,
-        intervalToLockVersion,
         taskActionClient
     );
 
-    Set<DataSegment> tombstones = tombstoneHelper.computeTombstones();
-
+    List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+    Assert.assertEquals(3, tombstoneIntervals.size());
+    Map<Interval, String> intervalToVersion = new HashMap<>();
+    for (Interval ti : tombstoneIntervals) {
+      intervalToVersion.put(ti, "version");
+    }
+    Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(intervalToVersion);
     Assert.assertEquals(3, tombstones.size());
-
   }
 }

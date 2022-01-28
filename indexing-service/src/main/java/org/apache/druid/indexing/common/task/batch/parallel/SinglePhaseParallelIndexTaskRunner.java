@@ -299,7 +299,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
     return segmentIdHolder.getValue();
   }
 
-  private NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
+  NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
   {
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
     // This method is called whenever subtasks need to allocate a new segment via the supervisor task.

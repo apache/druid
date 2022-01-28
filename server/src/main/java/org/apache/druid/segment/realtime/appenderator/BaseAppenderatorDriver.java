@@ -561,7 +561,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @Nullable Set<DataSegment> segmentsToBeDropped,
-      @Nullable Set<DataSegment> tombstones,
+      Set<DataSegment> tombstones,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction

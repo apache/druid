@@ -47,7 +47,6 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -117,6 +116,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   private final int maxAllowedLockCount;
 
+  // This is used to track the lock versions for the input intervals so
+  // that versions for tombstones can be found
   protected final Map<Interval, String> intervalToLockVersion = new HashMap<>();
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
@@ -709,16 +710,15 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     }
   }
-
-  // Get the version from one of the segments to be published (which all should have the same version) or
-  // for the case of a completely empty replace interval (all input data has been filtered out) just create
-  // a new version...
-  protected String findVersionForNewTombstones(Collection<DataSegment> segmentsToBePublished)
+  
+  @Nullable
+  public static String findVersion(Map<Interval, String> versions, Interval interval)
   {
-    return segmentsToBePublished.stream()
-                                .findFirst()
-                                .map(DataSegment::getVersion)
-                                .orElse(DateTimes.nowUtc().toString());
+    return versions.entrySet().stream()
+                   .filter(entry -> entry.getKey().contains(interval))
+                   .map(Map.Entry::getValue)
+                   .findFirst()
+                   .orElse(null);
   }
 
   private static class LockGranularityDetermineResult

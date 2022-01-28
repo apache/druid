@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -45,25 +44,21 @@ public class TombstoneHelper
   private final DataSchema dataSchema;
   private final TaskActionClient taskActionClient;
   private final Collection<DataSegment> pushedSegments;
-  private final Map<Interval, String> intervalToLockVersion;
 
   public TombstoneHelper(
       Collection<DataSegment> pushedSegments,
       DataSchema dataSchema,
-      Map<Interval, String> intervalToLockVersion,
       TaskActionClient taskActionClient
   )
   {
 
     Preconditions.checkNotNull(pushedSegments, "pushedSegments");
     Preconditions.checkNotNull(dataSchema, "dataSchema");
-    Preconditions.checkNotNull(intervalToLockVersion, "intervalToLockVersion");
     Preconditions.checkNotNull(taskActionClient, "taskActionClient");
 
     this.dataSchema = dataSchema;
     this.taskActionClient = taskActionClient;
     this.pushedSegments = pushedSegments;
-    this.intervalToLockVersion = intervalToLockVersion;
   }
 
 
@@ -76,21 +71,31 @@ public class TombstoneHelper
     return JodaUtils.condenseIntervals(pushedSegmentsIntervals);
   }
 
-  public Set<DataSegment> computeTombstones() throws IOException
+  public Set<DataSegment> computeTombstones(Map<Interval, String> tombstoneIntervalsAndVersions)
   {
-
     Set<DataSegment> retVal = new HashSet<>();
-
     String dataSource = dataSchema.getDataSource();
+    for (Map.Entry<Interval, String> tombstoneIntervalAndVersion : tombstoneIntervalsAndVersions.entrySet()) {
+      // now we have all the metadata to create the tombstone:
+      DataSegment tombstone =
+          createTombstoneForTimeChunkInterval(
+              dataSource,
+              tombstoneIntervalAndVersion.getValue(),
+              tombstoneIntervalAndVersion.getKey()
+          );
+      retVal.add(tombstone);
+    }
+    return retVal;
+  }
 
+  public List<Interval> computeTombstoneIntervals() throws IOException
+  {
+    List<Interval> retVal = new ArrayList<>();
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     List<Interval> pushedSegmentsIntervals = getPushedSegmentsIntervals();
-
-    // create tombstones for the empty time chunks
     List<Interval> intervalsForUsedSegments = getUsedIntervals();
     for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
-
-      // is time chunk empty?
+      // is it an empty time chunk?
       boolean isEmpty = true;
       for (Interval pushedSegmentCondensedInterval : pushedSegmentsIntervals) {
         if (timeChunkInterval.overlaps(pushedSegmentCondensedInterval)) {
@@ -98,40 +103,18 @@ public class TombstoneHelper
           break;
         }
       }
-
       if (isEmpty) {
-        // this timeChunk interval is a tombstone candidate
-
-        // only build tombstone that will overshadow an existing used segment (avoid
-        // unecessary tombstones... this is a space optimization)
-        boolean buildTombstone = false;
+        // this timeChunkInterval has no data, it is empty, thus it is a candidate for tombstone
+        // now check if it actually might overshadow a used segment
         for (Interval usedSegmentInterval : intervalsForUsedSegments) {
           if (timeChunkInterval.overlaps(usedSegmentInterval)) {
-            buildTombstone = true;
+            // yes it does overshadow...
+            retVal.add(timeChunkInterval);
             break;
           }
-        }
-        if (buildTombstone) {
-          // Tombstone's version is the locked interval's version
-          String version = null;
-          for (Map.Entry<Interval, String> intervalToStringEntry : intervalToLockVersion.entrySet()) {
-            if (intervalToStringEntry.getKey().contains(timeChunkInterval)) {
-              version = intervalToStringEntry.getValue();
-              break;
-            }
-          }
-          if (version == null) {
-            throw new ISE("No lock for tombstone interval [%s], locks [%s]",
-                          timeChunkInterval, intervalsForUsedSegments
-            );
-          }
-          // now we have all the metadata to create the tombstone:
-          DataSegment tombstone = createTombstoneForTimeChunkInterval(dataSource, version, timeChunkInterval);
-          retVal.add(tombstone);
-        }
 
+        }
       }
-
     }
     return retVal;
   }
