@@ -420,41 +420,6 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInsertWithPartitionedByAndOrderBy()
-  {
-    RowSignature targetRowSignature = RowSignature.builder()
-                                                  .add("__time", ColumnType.LONG)
-                                                  .add("floor_m1", ColumnType.FLOAT)
-                                                  .add("dim1", ColumnType.STRING)
-                                                  .build();
-
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
-    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
-
-    testInsertQuery()
-        .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo ORDER BY 2, dim1 PARTITIONED BY 'day'")
-        .expectTarget("dst", targetRowSignature)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
-        .expectQuery(
-            newScanQueryBuilder()
-                .dataSource("foo")
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "dim1", "v0")
-                .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
-                .orderBy(
-                    ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
-                    )
-                )
-                .context(queryContext)
-                .build()
-        )
-        .verify();
-  }
-
-  @Test
   public void testInsertWithClusteredByAndOrderBy() throws Exception
   {
     try {
@@ -470,7 +435,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Cannot have both ORDER BY and CLUSTERED BY clauses in the same INSERT query",
+          "Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.",
           e.getMessage()
       );
     }
@@ -498,6 +463,29 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     didTest = true;
   }
 
+  @Test
+  public void testInsertWithOrderBy() throws Exception
+  {
+    try {
+      testQuery(
+          StringUtils.format(
+              "INSERT INTO dst SELECT * FROM %s ORDER BY 2",
+              externSql(externalDataSource)
+          ),
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("Exception should be thrown");
+    }
+    catch (SqlPlanningException e) {
+      Assert.assertEquals(
+          "Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.",
+          e.getMessage()
+      );
+    } finally {
+      didTest = true;
+    }
+  }
 
   // Currently EXPLAIN PLAN FOR doesn't work with the modified syntax
   @Ignore
@@ -593,7 +581,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     // INSERT with a particular column ordering.
 
     testInsertQuery()
-        .sql("INSERT INTO dst SELECT x || y AS xy, z FROM %s ORDER BY 1, 2", externSql(externalDataSource))
+        .sql("INSERT INTO dst SELECT x || y AS xy, z FROM %s CLUSTERED BY 1, 2", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", RowSignature.builder().add("xy", ColumnType.STRING).add("z", ColumnType.LONG).build())
         .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)

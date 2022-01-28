@@ -787,6 +787,15 @@ public class DruidPlanner implements Closeable
         insert = (SqlInsert) query;
         query = insert.getSource();
 
+        // Check if ORDER BY clause is not provided to the underlying query
+        if (query instanceof SqlOrderBy) {
+          SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+          SqlNodeList orderByList = sqlOrderBy.orderList;
+          if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+            throw new ValidationException("Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.");
+          }
+        }
+
         // Processing to be done when the original query has either of the PARTITIONED BY or CLUSTERED BY clause
         if (insert instanceof DruidSqlInsert) {
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
@@ -808,7 +817,6 @@ public class DruidPlanner implements Closeable
             // node
             SqlNode offset = null;
             SqlNode fetch = null;
-            SqlNodeList orderByList = null;
 
             if (query instanceof SqlOrderBy) {
               SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
@@ -818,20 +826,12 @@ public class DruidPlanner implements Closeable
               query = sqlOrderBy.query;
               offset = sqlOrderBy.offset;
               fetch = sqlOrderBy.fetch;
-              orderByList = sqlOrderBy.orderList;
-              // If the orderList is non-empty (i.e. there existed an ORDER BY clause in the query) and CLUSTERED BY clause
-              // is also non-empty, throw an error
-              if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))
-                  && druidSqlInsert.getClusteredBy() != null) {
-                throw new ValidationException(
-                    "Cannot have both ORDER BY and CLUSTERED BY clauses in the same INSERT query");
-              }
             }
             // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
             query = new SqlOrderBy(
                 query.getParserPosition(),
                 query,
-                GuavaUtils.firstNonNull(orderByList, druidSqlInsert.getClusteredBy()),
+                druidSqlInsert.getClusteredBy(),
                 offset,
                 fetch
             );
