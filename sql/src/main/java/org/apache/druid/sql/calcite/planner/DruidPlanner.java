@@ -797,6 +797,7 @@ public class DruidPlanner implements Closeable
         }
 
         // Processing to be done when the original query has either of the PARTITIONED BY or CLUSTERED BY clause
+        // The following condition should always be true however added defensively
         if (insert instanceof DruidSqlInsert) {
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
 

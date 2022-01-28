@@ -24,25 +24,24 @@ SqlNode DruidSqlInsert() :
  SqlNodeList clusteredBy = null;
 }
 {
-    insertNode = SqlInsert()
-    [
-      <PARTITIONED> <BY>
-      partitionedBy = StringLiteral()
-    ]
-    [
-      <CLUSTERED> <BY>
-      clusteredBy = ClusterItems()
-    ]
-    {
-      if(partitionedBy == null && clusteredBy == null) {
-        return insertNode;
-      }
-      if(!(insertNode instanceof SqlInsert)) {
-        return insertNode;
-      }
-      SqlInsert sqlInsert = (SqlInsert) insertNode;
-      return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
+  insertNode = SqlInsert()
+  [
+    <PARTITIONED> <BY>
+    partitionedBy = StringLiteral()
+  ]
+  [
+    <CLUSTERED> <BY>
+    clusteredBy = ClusterItems()
+  ]
+  {
+    if (!(insertNode instanceof SqlInsert)) {
+      // This shouldn't be encountered, but done as a defensive practice. SqlInsert() always returns a node of type
+      // SqlInsert
+      return insertNode;
     }
+    SqlInsert sqlInsert = (SqlInsert) insertNode;
+    return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
+  }
 }
 
 SqlNodeList ClusterItems() :
