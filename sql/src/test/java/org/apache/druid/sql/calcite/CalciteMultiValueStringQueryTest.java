@@ -21,9 +21,9 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -42,11 +42,9 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.List;
 
-@RunWith(JUnitParamsRunner.class)
 public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 {
   // various queries on multi-valued string dimensions using them like strings
@@ -653,6 +651,70 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ),
         results
     );
+  }
+
+  @Test
+  public void testMultiValueStringConcatBackwardsCompat0dot22andOlder() throws Exception
+  {
+    try {
+      ExpressionProcessing.initializeForHomogenizeNullMultiValueStrings();
+      // Cannot vectorize due to usage of expressions.
+      cannotVectorize();
+
+      ImmutableList<Object[]> results;
+      if (useDefault) {
+        results = ImmutableList.of(
+            new Object[]{"", 6L},
+            new Object[]{"b", 4L},
+            new Object[]{"a", 2L},
+            new Object[]{"c", 2L},
+            new Object[]{"d", 2L}
+        );
+      } else {
+        results = ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 4L},
+            new Object[]{"", 2L},
+            new Object[]{"a", 2L},
+            new Object[]{"c", 2L},
+            new Object[]{"d", 2L}
+        );
+      }
+      testQuery(
+          "SELECT MV_CONCAT(dim3, dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+          ImmutableList.of(
+              GroupByQuery.builder()
+                          .setDataSource(CalciteTests.DATASOURCE3)
+                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                          .setGranularity(Granularities.ALL)
+                          .setVirtualColumns(expressionVirtualColumn(
+                              "v0",
+                              "array_concat(\"dim3\",\"dim3\")",
+                              ColumnType.STRING
+                          ))
+                          .setDimensions(
+                              dimensions(
+                                  new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                              )
+                          )
+                          .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                          .setLimitSpec(new DefaultLimitSpec(
+                              ImmutableList.of(new OrderByColumnSpec(
+                                  "a0",
+                                  OrderByColumnSpec.Direction.DESCENDING,
+                                  StringComparators.NUMERIC
+                              )),
+                              Integer.MAX_VALUE
+                          ))
+                          .setContext(QUERY_CONTEXT_DEFAULT)
+                          .build()
+          ),
+          results
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test

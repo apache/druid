@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -500,6 +501,57 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
+  }
+
+  @Test
+  public void testGroupByExpressionMultiMultiBackwardsCompat0dot22andOlder()
+  {
+    try {
+      ExpressionProcessing.initializeForHomogenizeNullMultiValueStrings();
+      if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+        expectedException.expect(RuntimeException.class);
+        expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
+      }
+      GroupByQuery query = GroupByQuery
+          .builder()
+          .setDataSource("xx")
+          .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
+          .setGranularity(Granularities.ALL)
+          .setDimensions(new DefaultDimensionSpec("texpr", "texpr"))
+          .setVirtualColumns(
+              new ExpressionVirtualColumn(
+                  "texpr",
+                  "cartesian_map((x,y) -> concat(x, y), tags, othertags)",
+                  ColumnType.STRING,
+                  TestExprMacroTable.INSTANCE
+              )
+          )
+          .setLimit(5)
+          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+          .setContext(context)
+          .build();
+
+      Sequence<ResultRow> result = helper.runQueryOnSegmentsObjs(
+          ImmutableList.of(
+              new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+              new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+          ),
+          query
+      );
+
+      List<ResultRow> expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
+          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
+      );
+
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
