@@ -413,7 +413,7 @@ public class KafkaLookupExtractorFactoryTest
     );
     Assert.assertThrows(
         "bootstrap.servers required property",
-        IAE.class,
+        NullPointerException.class,
         () -> factory.start()
     );
     Assert.assertTrue(factory.close());
