@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
@@ -334,7 +335,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 
-      version = ParallelIndexSupervisorTask.findVersion(versions, interval);
+      version = AbstractBatchIndexTask.findVersion(versions, interval);
       if (version == null) {
         throw new ISE("Cannot find a version for interval[%s]", interval);
       }
@@ -342,7 +343,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       // We don't have explicit intervals. We can use the segment granularity to figure out what
       // interval we need, but we might not have already locked it.
       interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
-      version = ParallelIndexSupervisorTask.findVersion(versions, interval);
+      version = AbstractBatchIndexTask.findVersion(versions, interval);
       if (version == null) {
         final int maxAllowedLockCount = getIngestionSchema().getTuningConfig().getMaxAllowedLockCount();
         if (maxAllowedLockCount >= 0 && locks.size() >= maxAllowedLockCount) {

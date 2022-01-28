@@ -561,14 +561,16 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       @Nullable Set<DataSegment> segmentsToBeDropped,
-      Set<DataSegment> tombstones,
+      @Nullable Set<DataSegment> tombstones,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
-    pushedAndTombstones.addAll(tombstones);
+    if (tombstones != null) {
+      pushedAndTombstones.addAll(tombstones);
+    }
     if (pushedAndTombstones.isEmpty()) {
       // no tombstones and no pushed segments, so nothing to publish...
       if (!publisher.supportsEmptyPublish()) {
