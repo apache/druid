@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
  */
 public class DruidSqlInsert extends SqlInsert
 {
-  // Unsure if this should be kept as is, but this allows reusing super.unparse
+  // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final SqlNode partitionBy;

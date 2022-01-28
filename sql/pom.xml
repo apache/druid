@@ -183,7 +183,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.25</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Tests -->
@@ -294,7 +294,6 @@
         ${project.build.directory}/codegen -->
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>3.2.0</version>
         <executions>
           <execution>
             <id>copy-fmpp-resources</id>
@@ -320,14 +319,6 @@
       <plugin>
         <groupId>com.googlecode.fmpp-maven-plugin</groupId>
         <artifactId>fmpp-maven-plugin</artifactId>
-        <version>1.0</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.freemarker</groupId>
-            <artifactId>freemarker</artifactId>
-            <version>2.3.25-incubating</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>generate-fmpp-sources</id>
@@ -348,7 +339,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
-        <version>2.4</version>
         <executions>
           <execution>
             <phase>generate-sources</phase>
@@ -373,7 +363,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.1.0</version>
         <executions>
           <execution>
             <id>add-source</id>
@@ -391,6 +380,6 @@
       </plugin>
     </plugins>
   </build>
-  <!-- Build for the custom SQL parser complete -->
+  <!-- Build for Druid's custom SQL parser complete -->
 
 </project>
