@@ -39,8 +39,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
-import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
