@@ -482,7 +482,8 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
           "Cannot have ORDER BY on an INSERT query, use CLUSTERED BY instead.",
           e.getMessage()
       );
-    } finally {
+    }
+    finally {
       didTest = true;
     }
   }

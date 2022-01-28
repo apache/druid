@@ -68,7 +68,6 @@ import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
