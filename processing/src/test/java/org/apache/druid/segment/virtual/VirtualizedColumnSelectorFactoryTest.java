@@ -40,7 +40,7 @@ public class VirtualizedColumnSelectorFactoryTest extends InitializedNullHandlin
       RowBasedColumnSelectorFactory.create(
           RowAdapters.standardRow(),
           () -> new MapBasedRow(0L, ImmutableMap.of("x", 10L, "y", 20.0)),
-          () -> RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.DOUBLE).build(),
+          RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.DOUBLE).build(),
           false
       ),
       VirtualColumns.create(
