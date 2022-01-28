@@ -400,12 +400,6 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartFailsOnMissingConnect()
   {
-    EasyMock.expect(cacheManager.createCache())
-            .andReturn(cacheHandler)
-            .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
-    cacheHandler.close();
-    PowerMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
@@ -417,18 +411,11 @@ public class KafkaLookupExtractorFactoryTest
         () -> factory.start()
     );
     Assert.assertTrue(factory.close());
-    PowerMock.verify(cacheManager);
   }
 
   @Test
   public void testStartFailsOnGroupID()
   {
-    EasyMock.expect(cacheManager.createCache())
-            .andReturn(cacheHandler)
-            .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>());
-    cacheHandler.close();
-    PowerMock.replay(cacheManager, cacheHandler);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
@@ -440,19 +427,11 @@ public class KafkaLookupExtractorFactoryTest
         () -> factory.start()
     );
     Assert.assertTrue(factory.close());
-    PowerMock.verify(cacheManager);
   }
 
   @Test
   public void testStartFailsOnAutoOffset()
   {
-    EasyMock.expect(cacheManager.createCache())
-            .andReturn(cacheHandler)
-            .once();
-    EasyMock.expect(cacheHandler.getCache()).andReturn(new ConcurrentHashMap<>()).once();
-    cacheHandler.close();
-    EasyMock.expectLastCall();
-    PowerMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
@@ -464,7 +443,6 @@ public class KafkaLookupExtractorFactoryTest
         () -> factory.start()
     );
     Assert.assertTrue(factory.close());
-    PowerMock.verify(cacheManager);
   }
 
   @Test
