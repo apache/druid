@@ -66,7 +66,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   }
 
   @VisibleForTesting
-  Map<String, Supplier<DataSegmentKiller>> getKillers()
+  public Map<String, Supplier<DataSegmentKiller>> getKillers()
   {
     return killers;
   }

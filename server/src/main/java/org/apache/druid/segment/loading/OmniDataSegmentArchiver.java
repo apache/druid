@@ -64,7 +64,7 @@ public class OmniDataSegmentArchiver implements DataSegmentArchiver
   }
 
   @VisibleForTesting
-  Map<String, Supplier<DataSegmentArchiver>> getArchivers()
+  public Map<String, Supplier<DataSegmentArchiver>> getArchivers()
   {
     return archivers;
   }

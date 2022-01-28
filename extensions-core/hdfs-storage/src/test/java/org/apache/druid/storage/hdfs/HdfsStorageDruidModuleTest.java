@@ -28,6 +28,7 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
+import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -60,6 +61,14 @@ public class HdfsStorageDruidModuleTest
         ImmutableSet.of("webhdfs"),
         instance.getAllowedProtocols()
     );
+  }
+
+  @Test
+  public void testSegmentKillerBound()
+  {
+    Injector injector = makeInjectorWithProperties(new Properties());
+    OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
+    Assert.assertTrue(killer.getKillers().containsKey(HdfsStorageDruidModule.SCHEME));
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

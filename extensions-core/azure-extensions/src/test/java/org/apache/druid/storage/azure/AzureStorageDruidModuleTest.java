@@ -33,6 +33,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
@@ -220,6 +221,14 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void testSegmentKillerBound()
+  {
+    Injector injector = makeInjectorWithProperties(PROPERTIES);
+    OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
+    Assert.assertTrue(killer.getKillers().containsKey(AzureStorageDruidModule.SCHEME));
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

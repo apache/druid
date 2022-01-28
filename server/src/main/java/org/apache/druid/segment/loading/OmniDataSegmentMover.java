@@ -58,7 +58,7 @@ public class OmniDataSegmentMover implements DataSegmentMover
   }
 
   @VisibleForTesting
-  Map<String, Supplier<DataSegmentMover>> getMovers()
+  public Map<String, Supplier<DataSegmentMover>> getMovers()
   {
     return movers;
   }
