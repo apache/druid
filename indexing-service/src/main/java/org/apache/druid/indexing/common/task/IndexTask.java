@@ -68,6 +68,7 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -949,12 +950,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         // now find the versions for the tombstone intervals
         Map<Interval, String> tombstonesAndVersions = new HashMap<>();
         for (Interval interval : tombstoneIntervals) {
-          // ideally we would use the allocator to find the version but the
-          // allocator can only create buckets for the intervals that actually contain data
-          // so the tombstones intervals won't have buckets...so we have to track the
-          // versions when locking and use those versions here:
-          String version = findVersion(intervalToLockVersion, interval);
-          tombstonesAndVersions.put(interval, version);
+          NonnullPair<Interval, String> intervalAndVersion =
+              findIntervalAndVersion(
+                  toolbox,
+                  ingestionSchema,
+                  interval.getStart()
+              );
+          tombstonesAndVersions.put(interval, intervalAndVersion.rhs);
         }
         tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
         log.debugSegments(tombStones, "To publish tombstones");

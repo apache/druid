@@ -1084,7 +1084,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<Interval, String> tombstonesAndVersions = new HashMap<>();
       for (Interval interval : tombstoneIntervals) {
         NonnullPair<Interval, String> intervalAndVersion =
-            ((SinglePhaseParallelIndexTaskRunner) getCurrentRunner()).findIntervalAndVersion(interval.getStart());
+            findIntervalAndVersion(((ParallelIndexPhaseRunner) getCurrentRunner()).getToolbox(),
+                                   ingestionSchema,
+                                   interval.getStart());
         tombstonesAndVersions.put(interval, intervalAndVersion.rhs);
       }
       tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
