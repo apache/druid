@@ -140,7 +140,7 @@ public class ServerSelectorTest
   {
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()
-                   .dataSource("test_broker_server_view")
+                   .dataSource("another segment") // fool the interner inside the selector
                    .interval(Intervals.of("2012/2013"))
                    .loadSpec(
                        ImmutableMap.of(
