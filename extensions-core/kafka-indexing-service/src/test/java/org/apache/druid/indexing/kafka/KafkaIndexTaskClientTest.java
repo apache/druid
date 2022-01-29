@@ -39,7 +39,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -1064,10 +1063,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
             EasyMock.capture(captured),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-            Futures.immediateFuture(responseHolder)
+            okResponseHolder()
     ).times(numRequests);
     replayAll();
 
