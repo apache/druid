@@ -223,6 +223,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     try {
+      log.info("Starting...");
       final MutableInt waitingFor = new MutableInt(1);
       final Object waitingForMonitor = new Object();
 
@@ -350,6 +351,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     try {
+      log.info("Stopping...");
       provisioningService.close();
 
       Closer closer = Closer.create();
