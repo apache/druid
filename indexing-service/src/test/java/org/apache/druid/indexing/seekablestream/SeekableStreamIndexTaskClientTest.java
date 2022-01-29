@@ -30,11 +30,12 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -167,10 +168,10 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
             EasyMock.capture(captured),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-            Futures.immediateFuture(responseHolder)
+            Futures.immediateFuture(Either.value(responseHolder))
     );
 
     replayAll();
@@ -201,10 +202,10 @@ public class SeekableStreamIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
             EasyMock.capture(captured),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-            Futures.immediateFuture(responseHolder)
+            Futures.immediateFuture(Either.value(responseHolder))
     ).times(numRequests);
     replayAll();
 
