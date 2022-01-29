@@ -62,10 +62,10 @@ public class MySQLConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
-    tryLoadDriverClass(driverConfig.getDriverClassName());
+    tryLoadDriverClass(driverConfig.getDriverClassName(), true);
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
-      myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME);
+      myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false);
     } else {
       myTransientExceptionClass = null;
     }
@@ -241,26 +241,31 @@ public class MySQLConnector extends SQLMetadataConnector
     return dbi;
   }
 
-  private Class<?> tryLoadDriverClass(String className)
+  @Nullable
+  private Class<?> tryLoadDriverClass(String className, boolean failIfNotFound)
   {
     try {
       return Class.forName(className, false, getClass().getClassLoader());
     }
     catch (ClassNotFoundException e) {
-      throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
-                       + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                       + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
-                       + "https://druid.apache.org/downloads for more details.",
-                    className
-      );
+      if (failIfNotFound) {
+        throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
+                         + "distribution but is required to use MySQL. Please download a compatible library (for example "
+                         + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "https://druid.apache.org/downloads for more details.",
+                      className
+        );
+      }
+      log.warn("Could not find %s on the classpath.", className);
+      return null;
     }
   }
 
   @VisibleForTesting
-  static boolean isTransientException(@Nullable Class<?> driverClazz, Throwable e)
+  static boolean isTransientException(@Nullable Class<?> clazz, Throwable e)
   {
-    if (driverClazz != null) {
-      return driverClazz.isAssignableFrom(e.getClass())
+    if (clazz != null) {
+      return clazz.isAssignableFrom(e.getClass())
              || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
     }
     return false;
