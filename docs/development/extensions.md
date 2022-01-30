@@ -95,6 +95,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 |prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (https://prometheus.io/)|[link](./extensions-contrib/prometheus.md)|
+|oak-incremental-index|Ingestion using [OakMap open source library](https://github.com/yahoo/Oak) to store the keys and values outside the JVM heap.|[link](./extensions-contrib/oak-incremental-index.md)|
 
 ## Promoting community extensions to core extensions
 

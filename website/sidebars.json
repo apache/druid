@@ -250,6 +250,7 @@
       "development/extensions-contrib/gce-extensions",
       "development/extensions-contrib/aliyun-oss",
       "development/extensions-contrib/prometheus",
+      "development/extensions-contrib/oak-incremental-index",
       "operations/kubernetes",
       "querying/hll-old",
       "querying/select-query",

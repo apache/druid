@@ -461,20 +461,19 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
    */
   public static class Builder extends AppendableIndexBuilder
   {
-    // OakMap stores its data in off-heap memory blocks. Larger blocks consolidates allocations
-    // and reduce its overhead, but has the potential to waste more memory if the block is not fully utilized.
-    // The default is 8 MiB as it has a good balance between performance and memory usage in tested
-    // batch ingestion scenario.
+    // OakMap stores its data outside the JVM heap in memory blocks. Larger blocks consolidate allocations and reduce
+    // overhead, but can also waste more memory if not fully utilized. The default has a reasonable balance between
+    // performance and memory usage when tested in a batch ingestion scenario.
     public static final int DEFAULT_OAK_BLOCK_SIZE = 8 * (1 << 20);
 
-    // OakMap has a predefined maximal capacity, that allows it to minimize the internal data-structure
-    // for maintaining off-heap memory blocks.
-    // The default is arbirtrary large number (32 GiB) that won't limit the users.
+    // OakMap maintains its memory blocks with an internal data-structure. Structure size is roughly
+    // `oakMaxMemoryCapacity/oakBlockSize`. We set this number to a large enough yet reasonable value so that this
+    // structure does not consume too much memory.
     public static final long DEFAULT_OAK_MAX_MEMORY_CAPACITY = 32L * (1L << 30);
 
-    // OakMap internal data-structure maintains its entries in small chunks. Larger chunks reduces the number of
-    // on-heap objects, but might incure more overhead when balancing the entries between the chunks.
-    // The default is 256 as it showed best performance in tested batch ingestion scenario.
+    // OakMap maintains its entries in small chunks. Using larger chunks reduces the number of on-heap objects, but may
+    // incur more overhead when balancing the entries between chunks. The default showed the best performance in batch
+    // ingestion scenarios.
     public static final int DEFAULT_OAK_CHUNK_MAX_ITEMS = 256;
 
     public long oakMaxMemoryCapacity = DEFAULT_OAK_MAX_MEMORY_CAPACITY;
