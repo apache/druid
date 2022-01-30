@@ -21,7 +21,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.apache.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>oak-incremental-index</artifactId>
   <name>oak-incremental-index</name>
   <description>Druid incremental-index based on Oak lib https://github.com/yahoo/Oak</description>
