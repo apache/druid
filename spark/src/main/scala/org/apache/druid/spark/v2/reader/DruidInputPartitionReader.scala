@@ -83,6 +83,7 @@ class DruidInputPartitionReader(
 
   override def close(): Unit = {
     try {
+      inputEntityReaderRows.close()
       if (Option(segment).nonEmpty) {
         segment.close()
       }

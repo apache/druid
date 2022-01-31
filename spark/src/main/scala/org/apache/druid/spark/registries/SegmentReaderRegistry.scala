@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType
 import org.apache.druid.guice.LocalDataStorageDruidModule
 import org.apache.druid.java.util.common.{IAE, ISE, StringUtils}
 import org.apache.druid.segment.loading.{LoadSpec, LocalDataSegmentPuller, LocalLoadSpec}
-import org.apache.druid.spark
 import org.apache.druid.spark.{MAPPER, baseInjectableValues}
 import org.apache.druid.spark.configuration.Configuration
 import org.apache.druid.spark.mixins.Logging
