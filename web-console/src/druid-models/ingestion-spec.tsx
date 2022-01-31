@@ -2247,11 +2247,12 @@ export function guessColumnTypeFromInput(
   if (definedValues.some(v => Array.isArray(v))) return 'string';
 
   if (
-    definedValues.every(
-      v =>
-        !isNaN(v) &&
-        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')),
-    )
+    definedValues.every(v => {
+      return (
+        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
+        !isNaN(Number(v))
+      );
+    })
   ) {
     return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
   } else {
@@ -2268,6 +2269,10 @@ export function guessColumnTypeFromHeaderAndRows(
     filterMap(headerAndRows.rows, r => r.input?.[column]),
     guessNumericStringsAsNumbers,
   );
+}
+
+export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | undefined): boolean {
+  return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
 function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
@@ -2297,7 +2302,9 @@ export function updateSchemaWithSample(
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
-  const guessNumericStringsAsNumbers = deepGet(spec, 'spec.ioConfig.inputFormat.type') !== 'json';
+  const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
+    deepGet(spec, 'spec.ioConfig.inputFormat'),
+  );
 
   let newSpec = spec;
 

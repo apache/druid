@@ -630,6 +630,10 @@ describe('spec utils', () => {
       expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
     });
+
+    it('works for strange input (object with no prototype)', () => {
+      expect(guessColumnTypeFromInput([1, Object.create(null), 3], false)).toEqual('string');
+    });
   });
 
   describe('guessColumnTypeFromHeaderAndRows', () => {
