@@ -95,8 +95,9 @@ public class HttpEntity extends RetryingInputEntity
       // Set header for range request.
       // Since we need to set only the start offset, the header is "bytes=<range-start>-".
       // See https://tools.ietf.org/html/rfc7233#section-2.1
-      urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
-      return urlConnection.getInputStream();
+      final URLConnection newUrlConnection = object.toURL().openConnection();
+      newUrlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
+      return newUrlConnection.getInputStream();
     } else {
       if (!withRanges && offset > 0) {
         LOG.warn(
