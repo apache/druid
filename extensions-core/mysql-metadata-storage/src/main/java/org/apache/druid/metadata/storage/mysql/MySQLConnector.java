@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -205,7 +204,11 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    return isTransientException(myTransientExceptionClass, e);
+    if (myTransientExceptionClass != null) {
+      return myTransientExceptionClass.isAssignableFrom(e.getClass())
+             || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
+    }
+    return false;
   }
 
   @Override
@@ -259,15 +262,5 @@ public class MySQLConnector extends SQLMetadataConnector
       log.warn("Could not find %s on the classpath.", className);
       return null;
     }
-  }
-
-  @VisibleForTesting
-  static boolean isTransientException(@Nullable Class<?> clazz, Throwable e)
-  {
-    if (clazz != null) {
-      return clazz.isAssignableFrom(e.getClass())
-             || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
-    }
-    return false;
   }
 }
