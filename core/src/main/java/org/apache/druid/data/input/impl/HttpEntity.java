@@ -44,6 +44,8 @@ public class HttpEntity extends RetryingInputEntity
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
+  @Nullable
+  private final String acceptRanges;
 
   HttpEntity(
       URI uri,
@@ -54,6 +56,13 @@ public class HttpEntity extends RetryingInputEntity
     this.uri = uri;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    String acceptRanges;
+    try {
+      acceptRanges = uri.toURL().openConnection().getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    } catch (IOException e) {
+      acceptRanges = null;
+    }
+    this.acceptRanges = acceptRanges;
   }
 
   @Override
@@ -65,7 +74,7 @@ public class HttpEntity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, acceptRanges, offset);
   }
 
   @Override
@@ -80,7 +89,7 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, String acceptRanges, long offset)
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
@@ -89,7 +98,7 @@ public class HttpEntity extends RetryingInputEntity
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
     }
-    final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    //final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
     final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
     if (withRanges && offset > 0) {
       // Set header for range request.
