@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Numbers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
@@ -35,7 +36,8 @@ public class PlannerConfig
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final int DEFAULT_MAX_NUMFILTERS = 10000;
+  public static final int DEFAULT_MAX_NUMFILTERS = 100;
+  public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
@@ -77,7 +79,7 @@ public class PlannerConfig
   private boolean useNativeQueryExplain = false;
 
   @JsonProperty
-  private int maxNumericInFilters = DEFAULT_MAX_NUMFILTERS;
+  private int maxNumericInFilters = NUM_FILTER_NOT_USED;
 
   public long getMetadataSegmentPollPeriod()
   {
@@ -211,7 +213,7 @@ public class PlannerConfig
     if (value == null) {
       return defaultValue;
     } else if (value instanceof String) {
-      return Integer.parseInt((String) value);
+      return Numbers.parseInt(value);
     } else if (value instanceof Integer) {
       return (Integer) value;
     } else {

@@ -6928,7 +6928,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testHighestMaxNumericInFilter() throws Exception
   {
     expectedException.expect(UOE.class);
-    expectedException.expectMessage("maxNumericFilter can only accept values between 0 and 10000");
+    expectedException.expectMessage("maxNumericFilter can only accept values between 0 and 100");
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,

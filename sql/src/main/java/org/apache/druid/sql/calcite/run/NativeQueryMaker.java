@@ -128,7 +128,7 @@ public class NativeQueryMaker implements QueryMaker
       }
     }
     int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
-    if (numFilters < 1) {
+    if (numFilters < 1 && numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
       throw new UOE("maxNumericInFilters must be greater than 0");
     }
     if (numFilters > PlannerConfig.DEFAULT_MAX_NUMFILTERS) {
@@ -143,17 +143,18 @@ public class NativeQueryMaker implements QueryMaker
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
-
-    if (query.getFilter() instanceof OrDimFilter) {
-      OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
-      if (orDimFilter.getFields().size() > numFilters) {
-        String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-        throw new UOE(StringUtils.format(
-            "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
-            dimension,
-            numFilters,
-            orDimFilter.getFields().size()
-        ));
+    if (numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
+      if (query.getFilter() instanceof OrDimFilter) {
+        OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
+        if (orDimFilter.getFields().size() > numFilters) {
+          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
+          throw new UOE(StringUtils.format(
+              "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
+              dimension,
+              numFilters,
+              orDimFilter.getFields().size()
+          ));
+        }
       }
     }
 
