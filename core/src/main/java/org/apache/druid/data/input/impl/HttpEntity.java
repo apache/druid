@@ -80,22 +80,28 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
-      throws IOException
-  {
-    final URLConnection urlConnection = object.toURL().openConnection();
+  private static void addAuthHeader(URLConnection urlConnection, String userName, PasswordProvider passwordProvider){
     if (!Strings.isNullOrEmpty(userName) && passwordProvider != null) {
       String userPass = userName + ":" + passwordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
     }
+  }
+
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
+      throws IOException
+  {
+    final URLConnection urlConnection = object.toURL().openConnection();
+    addAuthHeader(urlConnection, userName, passwordProvider);
     final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
     final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
     if (withRanges && offset > 0) {
       // Set header for range request.
       // Since we need to set only the start offset, the header is "bytes=<range-start>-".
       // See https://tools.ietf.org/html/rfc7233#section-2.1
+      urlConnection.getInputStream().close();
       final URLConnection newUrlConnection = object.toURL().openConnection();
+      addAuthHeader(newUrlConnection, userName, passwordProvider);
       newUrlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
       return newUrlConnection.getInputStream();
     } else {
@@ -109,6 +115,7 @@ public class HttpEntity extends RetryingInputEntity
       final InputStream in = urlConnection.getInputStream();
       final long skipped = in.skip(offset);
       if (skipped != offset) {
+        urlConnection.getInputStream().close();
         throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
       }
       return in;
