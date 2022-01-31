@@ -111,7 +111,7 @@ public class PrometheusEmitterTest
   }
 
   @Test
-  public void testEmitterStartWithHttpURL()
+  public void testEmitterStartWithHttpUrl()
   {
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway");
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
@@ -120,7 +120,7 @@ public class PrometheusEmitterTest
   }
 
   @Test
-  public void testEmitterStartWithHttpsURL()
+  public void testEmitterStartWithHttpsUrl()
   {
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway");
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
