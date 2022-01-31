@@ -36,11 +36,15 @@ import java.util.List;
 public class LocalDataStorageDruidModuleTest
 {
   @Test
-  public void testSegmentKillerBound()
+  public void testSegmentKillerBoundAndMemoized()
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(LocalDataStorageDruidModule.SCHEME));
+    Assert.assertSame(
+        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get()
+    );
   }
 
   private static Injector createInjector()

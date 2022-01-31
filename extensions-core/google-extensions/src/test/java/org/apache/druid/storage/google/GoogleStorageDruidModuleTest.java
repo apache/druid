@@ -22,7 +22,6 @@ package org.apache.druid.storage.google;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.common.gcp.GcpMockModule;
-import org.apache.druid.common.gcp.GcpModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
@@ -31,11 +30,15 @@ import org.junit.Test;
 public class GoogleStorageDruidModuleTest
 {
   @Test
-  public void testSegmentKillerBounded()
+  public void testSegmentKillerBoundedAndMemoized()
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
+    Assert.assertSame(
+        killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get()
+    );
   }
 
   private static Injector createInjector()

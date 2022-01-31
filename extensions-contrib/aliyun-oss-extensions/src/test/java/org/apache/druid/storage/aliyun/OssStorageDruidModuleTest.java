@@ -36,27 +36,39 @@ import java.util.Properties;
 public class OssStorageDruidModuleTest
 {
   @Test
-  public void testSegmentKillerBound()
+  public void testSegmentKillerBoundAndMemoized()
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assert.assertSame(
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+    );
   }
 
   @Test
-  public void testSegmentArchiverBound()
+  public void testSegmentArchiverBoundAndMemoized()
   {
     Injector injector = createInjector();
     OmniDataSegmentArchiver archiver = injector.getInstance(OmniDataSegmentArchiver.class);
     Assert.assertTrue(archiver.getArchivers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assert.assertSame(
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+    );
   }
 
   @Test
-  public void testSegmentMoverBound()
+  public void testSegmentMoverBoundAndMemoized()
   {
     Injector injector = createInjector();
     OmniDataSegmentMover mover = injector.getInstance(OmniDataSegmentMover.class);
     Assert.assertTrue(mover.getMovers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assert.assertSame(
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+    );
   }
 
   private static Injector createInjector()

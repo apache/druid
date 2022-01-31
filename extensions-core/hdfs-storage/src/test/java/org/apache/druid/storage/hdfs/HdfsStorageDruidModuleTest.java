@@ -64,11 +64,15 @@ public class HdfsStorageDruidModuleTest
   }
 
   @Test
-  public void testSegmentKillerBound()
+  public void testSegmentKillerBoundAndMemoized()
   {
     Injector injector = makeInjectorWithProperties(new Properties());
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(HdfsStorageDruidModule.SCHEME));
+    Assert.assertSame(
+        killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get()
+    );
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

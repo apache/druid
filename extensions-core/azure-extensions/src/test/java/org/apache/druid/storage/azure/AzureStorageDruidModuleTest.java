@@ -224,11 +224,19 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testSegmentKillerBound()
+  public void testSegmentKillerBoundAndMemoized()
   {
     Injector injector = makeInjectorWithProperties(PROPERTIES);
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(AzureStorageDruidModule.SCHEME));
+    Assert.assertSame(
+        AzureDataSegmentKiller.class,
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get().getClass()
+    );
+    Assert.assertSame(
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get()
+    );
   }
 
   private Injector makeInjectorWithProperties(final Properties props)
