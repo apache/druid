@@ -193,6 +193,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         3,
+        0,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:01Z"),
@@ -202,6 +203,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         2,
+        0,
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z"),

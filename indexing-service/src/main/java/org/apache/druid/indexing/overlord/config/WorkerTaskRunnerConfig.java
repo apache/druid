@@ -26,8 +26,16 @@ public class WorkerTaskRunnerConfig
   @JsonProperty
   private String minWorkerVersion = "0";
 
+  @JsonProperty
+  private double parallelIndexWorkerRatio = 0.1;
+
   public String getMinWorkerVersion()
   {
     return minWorkerVersion;
+  }
+
+  public double getParallelIndexWorkerRatio()
+  {
+    return parallelIndexWorkerRatio;
   }
 }
