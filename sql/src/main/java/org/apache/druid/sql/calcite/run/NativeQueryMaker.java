@@ -131,9 +131,7 @@ public class NativeQueryMaker implements QueryMaker
     if (numFilters < 1 && numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
       throw new UOE("maxNumericInFilters must be greater than 0");
     }
-    if (numFilters > PlannerConfig.DEFAULT_MAX_NUMFILTERS) {
-      throw new UOE("maxNumericFilter can only accept values between 0 and " + PlannerConfig.DEFAULT_MAX_NUMFILTERS);
-    }
+
     // special corner case handling for numeric IN filters
     // in case of query containing IN (v1, v2, v3,...) where Vi is numeric
     // a BoundFilter is created internally for each of the values

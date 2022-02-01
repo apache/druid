@@ -6924,25 +6924,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testHighestMaxNumericInFilter() throws Exception
-  {
-    expectedException.expect(UOE.class);
-    expectedException.expectMessage("maxNumericFilter can only accept values between 0 and 100");
-
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 20000),
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
-        + "1,2,3\n"
-        + ")\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
-  }
 
   @Test
   public void testQueryWithMoreThanMaxNumericInFilter() throws Exception

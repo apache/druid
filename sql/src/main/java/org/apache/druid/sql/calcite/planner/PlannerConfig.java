@@ -36,7 +36,6 @@ public class PlannerConfig
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final int DEFAULT_MAX_NUMFILTERS = 100;
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
