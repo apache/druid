@@ -80,6 +80,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * This class does async query processing and should be merged with QueryResource at some point
  */
+@SuppressWarnings("serial")
 public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements QueryCountStatsProvider
 {
   private static final EmittingLogger LOG = new EmittingLogger(AsyncQueryForwardingServlet.class);
@@ -245,7 +246,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     } else if (isNativeQueryEndpoint && HttpMethod.POST.is(method)) {
       // query request
       try {
-        Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
+        Query<?> inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
           targetServer = hostFinder.pickServer(inputQuery);
           if (inputQuery.getId() == null) {
@@ -396,7 +397,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       proxyRequest.content(new BytesContentProvider(avaticaQuery));
     }
 
-    final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
+    final Query<?> query = (Query<?>) clientRequest.getAttribute(QUERY_ATTRIBUTE);
     final SqlQuery sqlQuery = (SqlQuery) clientRequest.getAttribute(SQL_QUERY_ATTRIBUTE);
     if (query != null) {
       setProxyRequestContent(proxyRequest, clientRequest, query);
@@ -449,7 +450,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected Response.Listener newProxyResponseListener(HttpServletRequest request, HttpServletResponse response)
   {
-    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
+    final Query<?> query = (Query<?>) request.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
       return newMetricsEmittingProxyResponseListener(request, response, query, System.nanoTime());
     } else {
@@ -500,7 +501,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private Response.Listener newMetricsEmittingProxyResponseListener(
       HttpServletRequest request,
       HttpServletResponse response,
-      Query query,
+      Query<?> query,
       long startNs
   )
   {
@@ -544,17 +545,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
+  @SuppressWarnings("unchecked")
   @VisibleForTesting
   static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
-    // avatica commands always have a 'connectionId'. If commands are not part of a prepared statement, this appears at
+    // Avatica commands always have a 'connectionId'. If commands are not part of a prepared statement, this appears at
     // the top level of the request, but if it is part of a statement, then it will be nested in the 'statementHandle'.
     // see https://calcite.apache.org/avatica/docs/json_reference.html#requests for more details
     Object connectionIdObj = requestMap.get(AVATICA_CONNECTION_ID);
     if (connectionIdObj == null) {
       Object statementHandle = requestMap.get(AVATICA_STATEMENT_HANDLE);
       if (statementHandle != null && statementHandle instanceof Map) {
-        connectionIdObj = ((Map) statementHandle).get(AVATICA_CONNECTION_ID);
+        connectionIdObj = ((Map<String, Object>) statementHandle).get(AVATICA_CONNECTION_ID);
       }
     }
 
@@ -660,6 +662,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private class MetricsEmittingProxyResponseListener<T> extends ProxyResponseListener
   {
     private final HttpServletRequest req;
+    @SuppressWarnings("unused")
     private final HttpServletResponse res;
     private final Query<T> query;
     private final long startNs;

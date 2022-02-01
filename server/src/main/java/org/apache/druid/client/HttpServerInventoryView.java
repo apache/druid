@@ -126,7 +126,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     this.execNamePrefix = execNamePrefix;
   }
 
-
   @LifecycleStart
   public void start()
   {

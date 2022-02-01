@@ -141,6 +141,7 @@ public class Initialization
    * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
    * getFromExtensions().
    */
+  @SuppressWarnings("unchecked")
   public static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
   {
     // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
@@ -198,6 +199,7 @@ public class Initialization
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
+          log.error(e, "Failed to load extension [%s]", serviceClass.getName());
           throw new RuntimeException(e);
         }
       }
@@ -495,9 +497,9 @@ public class Initialization
         if (!checkModuleClass((Class<?>) input)) {
           return;
         }
-        if (DruidModule.class.isAssignableFrom((Class) input)) {
+        if (DruidModule.class.isAssignableFrom((Class<?>) input)) {
           modules.add(registerJacksonModules(baseInjector.getInstance((Class<? extends DruidModule>) input)));
-        } else if (Module.class.isAssignableFrom((Class) input)) {
+        } else if (Module.class.isAssignableFrom((Class<?>) input)) {
           modules.add(baseInjector.getInstance((Class<? extends Module>) input));
           return;
         } else {
@@ -518,7 +520,13 @@ public class Initialization
       Set<NodeRole> rolesPredicate = Arrays.stream(loadScope.roles())
                                            .map(NodeRole::fromJsonName)
                                            .collect(Collectors.toSet());
-      return rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      boolean shouldLoad = rolesPredicate.stream().anyMatch(nodeRoles::contains);
+      if (!shouldLoad) {
+        log.info(
+            "Not loading module [%s] - excluded per LoadScope",
+            object.getClass().getName());
+      }
+      return shouldLoad;
     }
 
     private boolean checkModuleClass(Class<?> moduleClass)

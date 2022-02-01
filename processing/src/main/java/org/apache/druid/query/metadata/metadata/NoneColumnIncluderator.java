@@ -21,6 +21,8 @@ package org.apache.druid.query.metadata.metadata;
 
 /**
  */
+// Needed for IntelliJ checks
+@SuppressWarnings("unused")
 public class NoneColumnIncluderator implements ColumnIncluderator
 {
   private static final byte[] NONE_CACHE_PREFIX = new byte[]{0x0};

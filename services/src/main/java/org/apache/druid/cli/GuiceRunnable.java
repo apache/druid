@@ -32,6 +32,7 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.discovery.NodeRoles;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
@@ -119,6 +120,8 @@ public abstract class GuiceRunnable implements Runnable
             new TypeLiteral<NodeRole>(){},
             new TypeLiteral<Set<Class<? extends DruidService>>>(){}
         );
+
+        NodeRoles.addKnownRoles(binder);
       };
     }
   }

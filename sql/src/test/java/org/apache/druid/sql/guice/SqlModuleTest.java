@@ -34,6 +34,7 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRoles;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -148,7 +149,7 @@ public class SqlModuleTest
     Assert.assertNotNull(viewManager);
     Assert.assertTrue(viewManager instanceof NoopViewManager);
   }
-  
+
   @Test
   public void testNonDefaultViewManagerBind()
   {
@@ -198,6 +199,7 @@ public class SqlModuleTest
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
+              NodeRoles.addKnownRoles(binder);
             },
             new SqlModule(props),
             new TestViewManagerModule()

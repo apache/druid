@@ -935,6 +935,12 @@ Returns segment information lists including server locations for the given query
 
 #### GET
 
+* `/druid/v2/router/cluster`
+
+Returns a list of the servers registered within the cluster. Similar to
+`/druid/coordinator/v1/cluster`, but visible on the Router to allow discovery of Druid
+servers if all you have is the Router endpoint.
+
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
 > [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
 > [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and

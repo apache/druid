@@ -56,6 +56,7 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.discovery.NodeRoles;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
@@ -1179,6 +1180,7 @@ public class CalciteTests
         druidLeaderClient,
         overlordLeaderClient,
         provider,
+        NodeRoles.knownRoles(),
         getJsonMapper()
     );
   }
