@@ -84,12 +84,11 @@ public class OakIncrementalIndexSpec implements AppendableIndexSpec
   @Override
   public long getDefaultMaxBytesInMemory()
   {
-    // Oak allocates its keys/values directly so the JVM off-heap limitations does not apply on it.
-    // Yet, we want to respect these values if the user did not specify any specific limitation.
-    // In the realtime node, the entire JVM's direct memory is utilized for ingestion and persist operations.
-    // But maxBytesInMemory only refers to the active index size and not to the index being flushed to disk and the
-    // persist-buffer.
-    // To account for that, we set default to 1/2 of the max jvm's direct memory.
-    return JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes() / 2;
+    // Since Oak allocates its keys/values directly, it is not subject to the JVM's on/off-heap limitations.
+    // Despite this, we have to respect runtime resource limits if they aren't specified by the ingestion specs.
+    // To ensure that the Oak index doesn't use more resources than available, we use the same default
+    // `maxBytesInMemory` as the on-heap index, i.e., 1/6 of the maximal heap size.
+    // It assumes that the middle-manager is configured correctly according to the machine's resources.
+    return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
   }
 }
