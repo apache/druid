@@ -638,11 +638,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternity()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -693,11 +689,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternity()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -1023,7 +1015,6 @@ public class ClientQuerySegmentWalkerTest
         )
     );
   }
-
 
   @Test
   public void testGroupByOnArraysUnknownStrings()
@@ -1469,12 +1460,12 @@ public class ClientQuerySegmentWalkerTest
       this.how = how;
     }
 
-    static ExpectedQuery local(final Query query)
+    static ExpectedQuery local(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.LOCAL);
     }
 
-    static ExpectedQuery cluster(final Query query)
+    static ExpectedQuery cluster(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.CLUSTER);
     }
