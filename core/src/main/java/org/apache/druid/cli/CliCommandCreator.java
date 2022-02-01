@@ -22,6 +22,8 @@ package org.apache.druid.cli;
 import io.airlift.airline.Cli;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import java.util.List;
+
 /**
  * An extension point to create a custom Druid service. Druid can understand and execute custom commands
  * to run services loaded via Druid's extension system (see {@code Initialization#getFromExtensions}). See
@@ -32,5 +34,14 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 @ExtensionPoint
 public interface CliCommandCreator
 {
-  void addCommands(Cli.CliBuilder builder);
+  void addCommands(Cli.CliBuilder<Runnable> builder);
+
+  /**
+   * Add an extension server. Note that the server should be of type
+   * {@code ServerRunnable}, but that class is not visible here.
+   */
+  default List<Class<? extends Runnable>> servers()
+  {
+    return null;
+  }
 }

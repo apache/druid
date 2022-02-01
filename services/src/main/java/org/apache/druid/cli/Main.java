@@ -29,6 +29,7 @@ import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -49,21 +50,35 @@ public class Main
   @SuppressForbidden(reason = "System#out")
   public static void main(String[] args)
   {
+    final Injector injector = GuiceInjectors.makeStartupInjector();
+    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
     final Cli.CliBuilder<Runnable> builder = Cli.builder("druid");
 
     builder.withDescription("Druid command-line runner.")
            .withDefaultCommand(Help.class)
            .withCommands(Help.class, Version.class);
 
-    List<Class<? extends Runnable>> serverCommands = Arrays.asList(
-        CliCoordinator.class,
-        CliHistorical.class,
-        CliBroker.class,
-        CliOverlord.class,
-        CliIndexer.class,
-        CliMiddleManager.class,
-        CliRouter.class
-    );
+    // Use mutable list so extensions can add to it.
+    List<Class<? extends Runnable>> serverCommands = new ArrayList<>(
+        Arrays.asList(
+          CliCoordinator.class,
+          CliHistorical.class,
+          CliBroker.class,
+          CliOverlord.class,
+          CliIndexer.class,
+          CliMiddleManager.class,
+          CliRouter.class
+      ));
+
+    final Collection<CliCommandCreator> extensionCommands =
+        Initialization.getFromExtensions(config, CliCommandCreator.class);
+    for (CliCommandCreator creator : extensionCommands) {
+      List<Class<? extends Runnable>> extns = creator.servers();
+      if (extns != null) {
+        serverCommands.addAll(extns);
+      }
+    }
+
     builder.withGroup("server")
            .withDescription("Run one of the Druid server types.")
            .withDefaultCommand(Help.class)
@@ -92,13 +107,6 @@ public class Main
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
            .withDefaultCommand(Help.class)
            .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
-
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    final ExtensionsConfig config = injector.getInstance(ExtensionsConfig.class);
-    final Collection<CliCommandCreator> extensionCommands = Initialization.getFromExtensions(
-        config,
-        CliCommandCreator.class
-    );
 
     for (CliCommandCreator creator : extensionCommands) {
       creator.addCommands(builder);
