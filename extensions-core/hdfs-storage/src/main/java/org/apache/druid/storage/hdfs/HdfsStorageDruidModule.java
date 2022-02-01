@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.firehose.hdfs.HdfsFirehoseFactory;
 import org.apache.druid.guice.Binders;
@@ -37,7 +36,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -85,7 +83,7 @@ public class HdfsStorageDruidModule implements DruidModule
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME)
-           .to(DataSegmentKillerSupplier.class)
+           .to(HdfsDataSegmentKiller.class)
            .in(LazySingleton.class);
 
     final Configuration conf = new Configuration();
@@ -126,14 +124,5 @@ public class HdfsStorageDruidModule implements DruidModule
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
 
     JsonConfigProvider.bind(binder, "druid.ingestion.hdfs", HdfsInputSourceConfig.class);
-  }
-
-  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
-  {
-    @Inject
-    public DataSegmentKillerSupplier(@Hdfs final Configuration config, final HdfsDataSegmentPusherConfig pusherConfig)
-    {
-      super(() -> new HdfsDataSegmentKiller(config, pusherConfig));
-    }
   }
 }

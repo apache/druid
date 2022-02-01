@@ -20,7 +20,6 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -41,12 +40,12 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final Supplier<ServerSideEncryptingAmazonS3> s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentPusher(
-      Supplier<ServerSideEncryptingAmazonS3> s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config
   )
   {
@@ -99,7 +98,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            S3Utils.uploadFileIfPossible(s3Client.get(), config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
+            S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
 
             return outSegment;
           }

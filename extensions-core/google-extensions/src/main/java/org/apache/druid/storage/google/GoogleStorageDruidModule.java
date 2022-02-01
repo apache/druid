@@ -30,10 +30,8 @@ import com.google.api.services.storage.Storage;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.firehose.google.StaticGoogleBlobStoreFirehoseFactory;
@@ -42,7 +40,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 
 import java.util.List;
 
@@ -95,7 +92,7 @@ public class GoogleStorageDruidModule implements DruidModule
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentPusher.class)
            .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(DataSegmentKillerSupplier.class)
+    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentKiller.class)
            .in(LazySingleton.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(GoogleTaskLogs.class);
@@ -105,19 +102,6 @@ public class GoogleStorageDruidModule implements DruidModule
         .addBinding(SCHEME_GS)
         .to(GoogleTimestampVersionedDataFinder.class)
         .in(LazySingleton.class);
-  }
-
-  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
-  {
-    @Inject
-    public DataSegmentKillerSupplier(
-        final GoogleStorage storage,
-        GoogleAccountConfig accountConfig,
-        GoogleInputDataConfig inputDataConfig
-    )
-    {
-      super(() -> new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig));
-    }
   }
 
   @Provides

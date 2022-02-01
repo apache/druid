@@ -36,38 +36,38 @@ import java.util.Properties;
 public class OssStorageDruidModuleTest
 {
   @Test
-  public void testSegmentKillerBoundAndMemoized()
+  public void testSegmentKillerBoundSingleton()
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
-        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP),
+        killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP)
     );
   }
 
   @Test
-  public void testSegmentArchiverBoundAndMemoized()
+  public void testSegmentArchiverBoundSingleton()
   {
     Injector injector = createInjector();
     OmniDataSegmentArchiver archiver = injector.getInstance(OmniDataSegmentArchiver.class);
     Assert.assertTrue(archiver.getArchivers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
-        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP),
+        archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP)
     );
   }
 
   @Test
-  public void testSegmentMoverBoundAndMemoized()
+  public void testSegmentMoverBoundSingleton()
   {
     Injector injector = createInjector();
     OmniDataSegmentMover mover = injector.getInstance(OmniDataSegmentMover.class);
     Assert.assertTrue(mover.getMovers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
     Assert.assertSame(
-        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
-        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get()
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP),
+        mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP)
     );
   }
 

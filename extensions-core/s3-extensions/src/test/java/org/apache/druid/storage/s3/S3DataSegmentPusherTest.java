@@ -25,7 +25,6 @@ import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.google.common.base.Suppliers;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -94,7 +93,7 @@ public class S3DataSegmentPusherTest
     config.setBucket("bucket");
     config.setBaseKey("key");
 
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(Suppliers.ofInstance(s3Client), config);
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");

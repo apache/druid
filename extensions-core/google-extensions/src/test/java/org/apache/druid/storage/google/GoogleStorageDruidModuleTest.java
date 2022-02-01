@@ -30,14 +30,14 @@ import org.junit.Test;
 public class GoogleStorageDruidModuleTest
 {
   @Test
-  public void testSegmentKillerBoundedAndMemoized()
+  public void testSegmentKillerBoundedSingleton()
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
     Assert.assertSame(
-        killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get(),
-        killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get()
+        killer.getKillers().get(GoogleStorageDruidModule.SCHEME),
+        killer.getKillers().get(GoogleStorageDruidModule.SCHEME)
     );
   }
 

@@ -19,12 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.timeline.DataSegment;
@@ -36,14 +34,6 @@ import javax.annotation.Nullable;
 
 public class OmniDataSegmentArchiverTest
 {
-  @Test
-  public void testInjectSegmentArchiverSuppliers()
-  {
-    final Injector injector = createInjector(null);
-    final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
-    Assert.assertEquals(ImmutableSet.of("explode"), segmentArchiver.getArchivers().keySet());
-  }
-
   @Test
   public void testArchiveSegmentWithType() throws SegmentLoadingException
   {
@@ -77,21 +67,12 @@ public class OmniDataSegmentArchiverTest
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
-              Binders.dataSegmentArchiverBinder(binder).addBinding("explode").to(ExplodingSupplier.class);
+              MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
               if (archiver != null) {
-                Binders.dataSegmentArchiverBinder(binder).addBinding("sane").toInstance(Suppliers.ofInstance(archiver));
+                mapBinder.addBinding("sane").toInstance(archiver);
               }
             }
         )
     );
-  }
-
-  private static class ExplodingSupplier implements Supplier<DataSegmentArchiver>
-  {
-    @Override
-    public DataSegmentArchiver get()
-    {
-      throw new RuntimeException("Should not be called");
-    }
   }
 }

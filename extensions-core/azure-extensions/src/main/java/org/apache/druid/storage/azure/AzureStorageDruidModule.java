@@ -23,14 +23,14 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
-import org.apache.druid.common.guava.MemoizingSupplier;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
@@ -39,7 +39,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URISyntaxException;
@@ -100,7 +99,7 @@ public class AzureStorageDruidModule implements DruidModule
 
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME)
-           .to(DataSegmentKillerSupplier.class).in(LazySingleton.class);
+           .to(AzureDataSegmentKiller.class).in(LazySingleton.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(AzureTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", AzureTaskLogsConfig.class);
@@ -118,54 +117,37 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(ListBlobItemHolderFactory.class));
   }
 
-  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
+  @Provides
+  @LazySingleton
+  public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
   {
-    @Inject
-    public DataSegmentKillerSupplier(
-        AzureDataSegmentConfig segmentConfig,
-        AzureInputDataConfig inputDataConfig,
-        AzureAccountConfig accountConfig,
-        final AzureStorage azureStorage,
-        AzureCloudBlobIterableFactory azureCloudBlobIterableFactory
-    )
-    {
-      super(
-          () -> new AzureDataSegmentKiller(
-              segmentConfig,
-              inputDataConfig,
-              accountConfig,
-              azureStorage,
-              azureCloudBlobIterableFactory
-          )
-      );
-    }
+
+
+    return Suppliers.memoize(() -> {
+      CloudStorageAccount account = null;
+      try {
+        account = CloudStorageAccount.parse(
+            StringUtils.format(
+                STORAGE_CONNECTION_STRING,
+                config.getProtocol(),
+                config.getAccount(),
+                config.getKey()
+            )
+        );
+      }
+      catch (URISyntaxException | InvalidKeyException e) {
+        throw new RuntimeException(e);
+      }
+      return account.createCloudBlobClient();
+    });
   }
 
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final AzureAccountConfig config
+      final Supplier<CloudBlobClient> cloudBlobClient
   )
   {
-    return new AzureStorage(
-        Suppliers.memoize(
-            () -> {
-              try {
-                CloudStorageAccount account = CloudStorageAccount.parse(
-                    StringUtils.format(
-                        STORAGE_CONNECTION_STRING,
-                        config.getProtocol(),
-                        config.getAccount(),
-                        config.getKey()
-                    )
-                );
-                return account.createCloudBlobClient();
-              }
-              catch (URISyntaxException | InvalidKeyException e) {
-                throw new RuntimeException(e);
-              }
-            }
-        )
-    );
+    return new AzureStorage(cloudBlobClient);
   }
 }

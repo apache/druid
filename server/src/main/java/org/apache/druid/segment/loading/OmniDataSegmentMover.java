@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -29,11 +28,11 @@ import java.util.Map;
 
 public class OmniDataSegmentMover implements DataSegmentMover
 {
-  private final Map<String, Supplier<DataSegmentMover>> movers;
+  private final Map<String, DataSegmentMover> movers;
 
   @Inject
   public OmniDataSegmentMover(
-      Map<String, Supplier<DataSegmentMover>> movers
+      Map<String, DataSegmentMover> movers
   )
   {
     this.movers = movers;
@@ -48,17 +47,17 @@ public class OmniDataSegmentMover implements DataSegmentMover
   private DataSegmentMover getMover(DataSegment segment) throws SegmentLoadingException
   {
     String type = MapUtils.getString(segment.getLoadSpec(), "type");
-    Supplier<DataSegmentMover> mover = movers.get(type);
+    DataSegmentMover mover = movers.get(type);
 
     if (mover == null) {
       throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, movers.keySet());
     }
 
-    return mover.get();
+    return mover;
   }
 
   @VisibleForTesting
-  public Map<String, Supplier<DataSegmentMover>> getMovers()
+  public Map<String, DataSegmentMover> getMovers()
   {
     return movers;
   }

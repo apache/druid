@@ -28,31 +28,24 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
-import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.loading.DataSegmentArchiver;
-import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.loading.DataSegmentMover;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -159,15 +152,15 @@ public class S3StorageDruidModule implements DruidModule
              .in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
-           .to(DataSegmentKillerSupplier.class)
+           .to(S3DataSegmentKiller.class)
            .in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
-           .to(DataSegmentMoverSupplier.class)
+           .to(S3DataSegmentMover.class)
            .in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
-           .to(DataSegmentArchiverSupplier.class)
+           .to(S3DataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(S3DataSegmentPusher.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3InputDataConfig.class);
@@ -180,45 +173,6 @@ public class S3StorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
     binder.bind(S3TaskLogs.class).in(LazySingleton.class);
-  }
-
-  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
-  {
-    @Inject
-    public DataSegmentKillerSupplier(
-        Supplier<ServerSideEncryptingAmazonS3> s3Client,
-        S3DataSegmentPusherConfig segmentPusherConfig,
-        S3InputDataConfig inputDataConfig
-    )
-    {
-      super(() -> new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig));
-    }
-  }
-
-  private static class DataSegmentMoverSupplier extends MemoizingSupplier<DataSegmentMover>
-  {
-    @Inject
-    public DataSegmentMoverSupplier(
-        Supplier<ServerSideEncryptingAmazonS3> s3Client,
-        S3DataSegmentPusherConfig config
-    )
-    {
-      super(() -> new S3DataSegmentMover(s3Client, config));
-    }
-  }
-
-  private static class DataSegmentArchiverSupplier extends MemoizingSupplier<DataSegmentArchiver>
-  {
-    @Inject
-    public DataSegmentArchiverSupplier(
-        @Json ObjectMapper mapper,
-        Supplier<ServerSideEncryptingAmazonS3> s3Client,
-        S3DataSegmentArchiverConfig archiveConfig,
-        S3DataSegmentPusherConfig restoreConfig
-    )
-    {
-      super(() -> new S3DataSegmentArchiver(mapper, s3Client, archiveConfig, restoreConfig));
-    }
   }
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.

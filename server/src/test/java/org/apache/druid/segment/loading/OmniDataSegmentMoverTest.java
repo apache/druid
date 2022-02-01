@@ -19,12 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.timeline.DataSegment;
@@ -36,14 +34,6 @@ import javax.annotation.Nullable;
 
 public class OmniDataSegmentMoverTest
 {
-  @Test
-  public void testInjectSegmentMoverSuppliers()
-  {
-    final Injector injector = createInjector(null);
-    final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
-    Assert.assertEquals(ImmutableSet.of("explode"), segmentMover.getMovers().keySet());
-  }
-
   @Test
   public void testMoveSegmentWithType() throws SegmentLoadingException
   {
@@ -77,21 +67,12 @@ public class OmniDataSegmentMoverTest
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
-              Binders.dataSegmentMoverBinder(binder).addBinding("explode").to(ExplodingSupplier.class);
+              MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
               if (mover != null) {
-                Binders.dataSegmentMoverBinder(binder).addBinding("sane").toInstance(Suppliers.ofInstance(mover));
+                mapBinder.addBinding("sane").toInstance(mover);
               }
             }
         )
     );
-  }
-
-  private static class ExplodingSupplier implements Supplier<DataSegmentMover>
-  {
-    @Override
-    public OmniDataSegmentMover get()
-    {
-      throw new RuntimeException("Should not be called");
-    }
   }
 }

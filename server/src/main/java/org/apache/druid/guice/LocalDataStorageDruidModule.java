@@ -23,10 +23,8 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -81,7 +79,7 @@ public class LocalDataStorageDruidModule implements DruidModule
 
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME)
-           .to(DataSegmentKillerSupplier.class)
+           .to(LocalDataSegmentKiller.class)
            .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
@@ -90,15 +88,6 @@ public class LocalDataStorageDruidModule implements DruidModule
             .in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.storage", LocalDataSegmentPusherConfig.class);
-  }
-
-  private static class DataSegmentKillerSupplier extends MemoizingSupplier<DataSegmentKiller>
-  {
-    @Inject
-    public DataSegmentKillerSupplier(LocalDataSegmentPusherConfig config)
-    {
-      super(() -> new LocalDataSegmentKiller(config));
-    }
   }
 
   @Override
