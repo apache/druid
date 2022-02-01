@@ -301,8 +301,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock) {
-      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
+    if (forceTimeChunkLock || ioConfig.isDropExisting()) {
+      log.info("forceTimeChunkLock[%s] or isDropExisting[%s] is set to true. Use timeChunk lock",
+               forceTimeChunkLock, ioConfig.isDropExisting()
+      );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
