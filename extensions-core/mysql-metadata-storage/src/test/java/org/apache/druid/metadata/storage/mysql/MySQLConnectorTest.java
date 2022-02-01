@@ -19,8 +19,11 @@
 
 package org.apache.druid.metadata.storage.mysql;
 
+import com.google.common.base.Supplier;
 import com.mysql.jdbc.exceptions.MySQLTransactionRollbackException;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
+import org.apache.druid.metadata.MetadataStorageConnectorConfig;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,37 +32,63 @@ import java.sql.SQLTransientConnectionException;
 
 public class MySQLConnectorTest
 {
-  @Test
-  public void testIsExceptionTransient()
+  private static final MySQLConnectorDriverConfig MYSQL_DRIVER_CONFIG = new MySQLConnectorDriverConfig();
+  private static final MySQLConnectorDriverConfig MARIADB_DRIVER_CONFIG = new MySQLConnectorDriverConfig()
   {
-    final Class<?> clazz = MySQLTransientException.class;
-    Assert.assertTrue(MySQLConnector.isTransientException(clazz, new MySQLTransientException()));
-    Assert.assertTrue(MySQLConnector.isTransientException(clazz, new MySQLTransactionRollbackException()));
+    @Override
+    public String getDriverClassName()
+    {
+      return "org.mariadb.jdbc.Driver";
+    }
+  };
+  private static final Supplier<MetadataStorageConnectorConfig> CONNECTOR_CONFIG_SUPPLIER =
+      MetadataStorageConnectorConfig::new;
+  private static final Supplier<MetadataStorageTablesConfig> TABLES_CONFIG_SUPPLIER =
+      () -> new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null);
+
+
+  @Test
+  public void testIsExceptionTransientMySql()
+  {
+    MySQLConnector connector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG
+    );
+    Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransientException()));
+    Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransactionRollbackException()));
     Assert.assertTrue(
-        MySQLConnector.isTransientException(clazz, new SQLException("some transient failure", "wtf", 1317))
+        connector.connectorIsTransientException(new SQLException("some transient failure", "wtf", 1317))
     );
     Assert.assertFalse(
-        MySQLConnector.isTransientException(clazz, new SQLException("totally realistic test data", "wtf", 1337))
+        connector.connectorIsTransientException(new SQLException("totally realistic test data", "wtf", 1337))
     );
     // this method does not specially handle normal transient exceptions either, since it is not vendor specific
     Assert.assertFalse(
-        MySQLConnector.isTransientException(clazz, new SQLTransientConnectionException("transient"))
+        connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
     );
   }
 
   @Test
   public void testIsExceptionTransientNoMySqlClazz()
   {
+    MySQLConnector connector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MARIADB_DRIVER_CONFIG
+    );
     // no vendor specific for MariaDb, so should always be false
-    Assert.assertFalse(MySQLConnector.isTransientException(null, new MySQLTransientException()));
+    Assert.assertFalse(connector.connectorIsTransientException(new MySQLTransientException()));
     Assert.assertFalse(
-        MySQLConnector.isTransientException(null, new SQLException("some transient failure", "wtf", 1317))
+        connector.connectorIsTransientException(new SQLException("some transient failure", "wtf", 1317))
     );
     Assert.assertFalse(
-        MySQLConnector.isTransientException(null, new SQLException("totally realistic test data", "wtf", 1337))
+        connector.connectorIsTransientException(new SQLException("totally realistic test data", "wtf", 1337))
     );
     Assert.assertFalse(
-        MySQLConnector.isTransientException(null, new SQLTransientConnectionException("transient"))
+        connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
     );
   }
 }
