@@ -121,12 +121,9 @@ public class AzureStorageDruidModule implements DruidModule
   @LazySingleton
   public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
   {
-
-
     return Suppliers.memoize(() -> {
-      CloudStorageAccount account = null;
       try {
-        account = CloudStorageAccount.parse(
+        CloudStorageAccount account = CloudStorageAccount.parse(
             StringUtils.format(
                 STORAGE_CONNECTION_STRING,
                 config.getProtocol(),
@@ -134,11 +131,11 @@ public class AzureStorageDruidModule implements DruidModule
                 config.getKey()
             )
         );
+        return account.createCloudBlobClient();
       }
       catch (URISyntaxException | InvalidKeyException e) {
         throw new RuntimeException(e);
       }
-      return account.createCloudBlobClient();
     });
   }
 

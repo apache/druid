@@ -21,7 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
