@@ -119,6 +119,9 @@ public class OverlordResource
 {
   private static final Logger log = new Logger(OverlordResource.class);
 
+  public static final String ERROR_KEY = "error";
+  public static final String ERROR_MESSAGE_KEY = "errorMessage";
+
   private final TaskMaster taskMaster;
   private final TaskStorageQueryAdapter taskStorageQueryAdapter;
   private final IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -130,7 +133,7 @@ public class OverlordResource
   private final ProvisioningStrategy provisioningStrategy;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
-  private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
 
   private enum TaskStateLookup
   {
@@ -213,18 +216,28 @@ public class OverlordResource
               return Response.ok(ImmutableMap.of("task", task.getId())).build();
             }
             catch (EntryExistsException e) {
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format("Task[%s] already exists!", task.getId())
-                                 )
-                             )
-                             .build();
+              return error(
+                  Response.Status.BAD_REQUEST,
+                  "Duplicate",
+                  StringUtils.format("Task[%s] already exists!", task.getId()));
             }
           }
         }
     );
+  }
+
+  private Response error(Response.Status status, String errorCode, String errorMsg)
+  {
+    return Response.status(status)
+        .entity(
+            ImmutableMap.of(
+                ERROR_KEY,
+                errorCode,
+                ERROR_MESSAGE_KEY,
+                errorMsg
+            )
+        )
+        .build();
   }
 
   @GET
@@ -260,7 +273,10 @@ public class OverlordResource
   public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
   {
     if (minTaskPriority == null || minTaskPriority.isEmpty()) {
-      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+      return error(
+          Status.BAD_REQUEST,
+          "Incomplete",
+          "No Datasource provided");
     }
 
     // Build the response
@@ -421,7 +437,10 @@ public class OverlordResource
   public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
-      return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
+      return error(
+          Response.Status.BAD_REQUEST,
+          "Invalid",
+          "No task ids provided");
     }
 
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
@@ -557,9 +576,10 @@ public class OverlordResource
         return Response.ok(workerEntryList).build();
       }
       catch (IllegalArgumentException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
-                       .build();
+        return error(
+            Response.Status.BAD_REQUEST,
+            "Invalid",
+            e.getMessage());
       }
     }
     List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
@@ -590,13 +610,17 @@ public class OverlordResource
             // or token that gets passed around.
 
             try {
+              @SuppressWarnings("unchecked")
               final Object ret = taskActionClient.submit(holder.getAction());
               retMap = new HashMap<>();
               retMap.put("result", ret);
             }
             catch (Exception e) {
               log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
+              return error(
+                  Status.INTERNAL_SERVER_ERROR,
+                  "Invalid",
+                  e.getMessage());
             }
 
             return Response.ok().entity(retMap).build();
@@ -658,10 +682,10 @@ public class OverlordResource
     //check for valid state
     if (state != null) {
       if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
-        return Response.status(Status.BAD_REQUEST)
-                       .type(MediaType.TEXT_PLAIN)
-                       .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
-                       .build();
+        return error(
+            Status.BAD_REQUEST,
+            "Invalid",
+            StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES));
       }
     }
     // early authorization check if datasource != null
@@ -678,11 +702,10 @@ public class OverlordResource
       );
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(
-            Response.status(Response.Status.FORBIDDEN)
-                    .type(MediaType.TEXT_PLAIN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                    .build()
-        );
+            error(
+                Response.Status.FORBIDDEN,
+                "Unauthorized",
+                StringUtils.format("Access-Check-Result: %s", authResult.toString())));
       }
     }
 
@@ -723,12 +746,12 @@ public class OverlordResource
       createdTimeDuration = null;
     }
 
-    // Ideally, snapshotting in taskStorage and taskRunner should be done atomically,
+    // Ideally, snapshoting in taskStorage and taskRunner should be done atomically,
     // but there is no way to do it today.
     // Instead, we first gets a snapshot from taskStorage and then one from taskRunner.
     // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
     // and use the snapshot from taskRunner as a reference for potential task state updates happened
-    // after the first snapshotting.
+    // after the first snapshot.
     Stream<TaskInfo<Task, TaskStatus>> taskInfoStreamFromTaskStorage = getTaskInfoStreamFromTaskStorage(
         state,
         dataSource,
@@ -963,9 +986,10 @@ public class OverlordResource
                   taskRunner,
                   taskRunner.getClass().getName()
               );
-              return Response.serverError()
-                             .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
-                             .build();
+              return error(
+                  Status.INTERNAL_SERVER_ERROR,
+                  "Unsupported",
+                  "Task Runner does not support worker listing");
             }
           }
         }
@@ -1000,16 +1024,18 @@ public class OverlordResource
         workerTaskRunnerQueryAdapter.enableWorker(host);
         return Response.ok(ImmutableMap.of(host, "enabled")).build();
       } else {
-        return Response.serverError()
-                       .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
-                       .build();
+        return error(
+            Status.INTERNAL_SERVER_ERROR,
+            "Unsupported",
+            "Worker does not support " + action + " action!");
       }
     }
     catch (Exception e) {
       log.error(e, "Error in posting [%s] action to [%s]", action, host);
-      return Response.serverError()
-                     .entity(ImmutableMap.of("error", e.getMessage()))
-                     .build();
+      return error(
+          Status.INTERNAL_SERVER_ERROR,
+          "Failed",
+          e.getMessage());
     }
   }
 
@@ -1069,12 +1095,11 @@ public class OverlordResource
       if (stream.isPresent()) {
         return Response.ok(stream.get().openStream()).build();
       } else {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           "No task reports were found for this task. "
-                           + "The task may not exist, or it may not have completed yet."
-                       )
-                       .build();
+        return error(
+            Response.Status.NOT_FOUND,
+            "Not found",
+            "No task reports were found for this task. "
+                + "The task may not exist, or it may not have completed yet.");
       }
     }
     catch (Exception e) {
@@ -1104,10 +1129,10 @@ public class OverlordResource
       final String taskDatasource = taskStatusPlus.getDataSource();
       if (taskDatasource == null) {
         throw new WebApplicationException(
-            Response.serverError().entity(
-                StringUtils.format("No task information found for task with id: [%s]", taskId)
-            ).build()
-        );
+            error(
+                Status.INTERNAL_SERVER_ERROR,
+                "Not found",
+                StringUtils.format("No task information found for task with id: [%s]", taskId)));
       }
       return Collections.singletonList(
           new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)

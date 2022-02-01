@@ -305,7 +305,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertNull(captor.getValue().getMessage());
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, captor.getValue().getMessage());
     Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
     Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
@@ -429,7 +429,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.verify(mockMapper).writeValue(ArgumentMatchers.eq(outputStream), captor.capture());
     Assert.assertTrue(captor.getValue() instanceof QueryException);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertNull(captor.getValue().getMessage());
+    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, captor.getValue().getMessage());
     Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
     Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }

@@ -26,7 +26,6 @@ import java.io.Reader;
 
 public class DruidSqlParserImplFactory implements SqlParserImplFactory
 {
-
   @Override
   public SqlAbstractParserImpl getParser(Reader stream)
   {

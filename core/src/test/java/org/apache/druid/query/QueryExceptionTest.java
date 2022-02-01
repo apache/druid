@@ -39,35 +39,35 @@ public class QueryExceptionTest
   private static final String ERROR_MESSAGE_TRANSFORMED = "bbbb";
 
   @Mock
-  private Function<String, String> trasformFunction;
+  private Function<String, String> transformFunction;
 
   @Test
   public void testSanitizeWithTransformFunctionReturningNull()
   {
-    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(null);
+    Mockito.when(transformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(null);
     QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
-    QueryException actual = queryException.sanitize(trasformFunction);
+    QueryException actual = queryException.sanitize(transformFunction);
     Assert.assertNotNull(actual);
     Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
-    Assert.assertNull(actual.getMessage());
+    Assert.assertEquals(ERROR_CODE, actual.getMessage());
     Assert.assertNull(actual.getHost());
     Assert.assertNull(actual.getErrorClass());
-    Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
-    Mockito.verifyNoMoreInteractions(trasformFunction);
+    Mockito.verify(transformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
+    Mockito.verifyNoMoreInteractions(transformFunction);
   }
 
   @Test
   public void testSanitizeWithTransformFunctionReturningNewString()
   {
-    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(ERROR_MESSAGE_TRANSFORMED);
+    Mockito.when(transformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(ERROR_MESSAGE_TRANSFORMED);
     QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
-    QueryException actual = queryException.sanitize(trasformFunction);
+    QueryException actual = queryException.sanitize(transformFunction);
     Assert.assertNotNull(actual);
     Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
     Assert.assertEquals(actual.getMessage(), ERROR_MESSAGE_TRANSFORMED);
     Assert.assertNull(actual.getHost());
     Assert.assertNull(actual.getErrorClass());
-    Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
-    Mockito.verifyNoMoreInteractions(trasformFunction);
+    Mockito.verify(transformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
+    Mockito.verifyNoMoreInteractions(transformFunction);
   }
 }

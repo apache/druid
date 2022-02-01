@@ -39,7 +39,6 @@ import java.util.List;
 
 public class DruidSqlParserUtils
 {
-
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
 
   /**
