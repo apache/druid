@@ -188,7 +188,23 @@ public class SqlExpressionBenchmark
       // 30: logical and operator
       "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
       // 31: isnull, notnull
-      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3"
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 32: time shift, non-expr col + reg agg
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), string2, SUM(double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 33: time shift, non-expr col + expr agg
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 34: time shift + non-expr agg (timeseries) (non-expression reference)
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), SUM(long1) FROM foo GROUP BY 1 ORDER BY 1",
+      // 35: time shift + expr agg (timeseries)
+      "SELECT TIME_SHIFT(__time, 'PT1H', 4), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1",
+      // 36: time shift + non-expr agg (group by)
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), SUM(long1) FROM foo GROUP BY 1 ORDER BY 2",
+      // 37: time shift + expr agg (group by)
+      "SELECT TIME_SHIFT(__time, 'PT1H', 5), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 38: time shift offset by 1 day + non-expr agg (group by)
+      "SELECT TIME_SHIFT(TIMESTAMPADD(DAY, -1, __time), 'PT1H', 3), SUM(long1) FROM foo GROUP BY 1 ORDER BY 1",
+      // 39: time shift offset by 1 day + expr agg (group by)
+      "SELECT TIME_SHIFT(TIMESTAMPADD(DAY, -1, __time), 'PT1H', 4), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 1"
   );
 
   @Param({"5000000"})
@@ -234,7 +250,15 @@ public class SqlExpressionBenchmark
       "28",
       "29",
       "30",
-      "31"
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39"
   })
   private String query;
 
