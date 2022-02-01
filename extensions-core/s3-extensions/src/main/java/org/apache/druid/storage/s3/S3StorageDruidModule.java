@@ -29,6 +29,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -184,7 +186,7 @@ public class S3StorageDruidModule implements DruidModule
   {
     @Inject
     public DataSegmentKillerSupplier(
-        ServerSideEncryptingAmazonS3 s3Client,
+        Supplier<ServerSideEncryptingAmazonS3> s3Client,
         S3DataSegmentPusherConfig segmentPusherConfig,
         S3InputDataConfig inputDataConfig
     )
@@ -197,7 +199,7 @@ public class S3StorageDruidModule implements DruidModule
   {
     @Inject
     public DataSegmentMoverSupplier(
-        ServerSideEncryptingAmazonS3 s3Client,
+        Supplier<ServerSideEncryptingAmazonS3> s3Client,
         S3DataSegmentPusherConfig config
     )
     {
@@ -210,7 +212,7 @@ public class S3StorageDruidModule implements DruidModule
     @Inject
     public DataSegmentArchiverSupplier(
         @Json ObjectMapper mapper,
-        ServerSideEncryptingAmazonS3 s3Client,
+        Supplier<ServerSideEncryptingAmazonS3> s3Client,
         S3DataSegmentArchiverConfig archiveConfig,
         S3DataSegmentPusherConfig restoreConfig
     )
@@ -261,5 +263,14 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     return serverSideEncryptingAmazonS3Builder.build();
+  }
+
+  @Provides
+  @LazySingleton
+  public Supplier<ServerSideEncryptingAmazonS3> getAmazonS3ClientSupplier(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
   }
 }

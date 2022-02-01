@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -58,13 +59,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
   private static final int MAX_LISTING_LENGTH = 1024;
 
-  private final ServerSideEncryptingAmazonS3 s3Client;
+  private final Supplier<ServerSideEncryptingAmazonS3> s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject Supplier<ServerSideEncryptingAmazonS3> s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
@@ -117,7 +118,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       final List<S3ObjectSummary> objects = new ArrayList<>();
       for (final URI prefix : prefixes) {
         final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
-            s3Client,
+            s3Client.get(),
             Collections.singletonList(prefix),
             MAX_LISTING_LENGTH
         );
@@ -136,7 +137,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
       final String bucket = object.getAuthority();
       final String key = S3Utils.extractS3Key(object);
 
-      final S3Object s3Object = s3Client.getObject(bucket, key);
+      final S3Object s3Object = s3Client.get().getObject(bucket, key);
       if (s3Object == null) {
         throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
       }
@@ -156,7 +157,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     final GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(start);
     try {
-      final S3Object s3Object = s3Client.getObject(request);
+      final S3Object s3Object = s3Client.get().getObject(request);
       if (s3Object == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",

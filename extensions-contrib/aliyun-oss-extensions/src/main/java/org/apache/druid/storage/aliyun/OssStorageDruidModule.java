@@ -23,6 +23,8 @@ import com.aliyun.oss.OSS;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -108,7 +110,7 @@ public class OssStorageDruidModule implements DruidModule
   {
     @Inject
     public DataSegmentKillerSupplier(
-        OSS client,
+        Supplier<OSS> client,
         OssStorageConfig segmentPusherConfig,
         OssInputDataConfig inputDataConfig
     )
@@ -121,7 +123,7 @@ public class OssStorageDruidModule implements DruidModule
   {
     @Inject
     public DataSegmentMoverSupplier(
-        OSS client,
+        Supplier<OSS> client,
         OssStorageConfig config
     )
     {
@@ -134,7 +136,7 @@ public class OssStorageDruidModule implements DruidModule
     @Inject
     public DataSegmentArchiverSupplier(
         @Json ObjectMapper mapper,
-        OSS client,
+        Supplier<OSS> client,
         OssDataSegmentArchiverConfig archiveConfig,
         OssStorageConfig restoreConfig
     )
@@ -148,5 +150,12 @@ public class OssStorageDruidModule implements DruidModule
   public OSS initializeOssClient(OssClientConfig inputSourceConfig)
   {
     return inputSourceConfig.buildClient();
+  }
+
+  @Provides
+  @LazySingleton
+  public Supplier<OSS> initializeOssClientSupplier(OssClientConfig inputSourceConfig)
+  {
+    return Suppliers.memoize(inputSourceConfig::buildClient);
   }
 }

@@ -23,13 +23,13 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.apache.druid.common.guava.MemoizingSupplier;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
@@ -143,27 +143,29 @@ public class AzureStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public CloudBlobClient getCloudBlobClient(final AzureAccountConfig config)
-      throws URISyntaxException, InvalidKeyException
-  {
-    CloudStorageAccount account = CloudStorageAccount.parse(
-        StringUtils.format(
-            STORAGE_CONNECTION_STRING,
-            config.getProtocol(),
-            config.getAccount(),
-            config.getKey()
-        )
-    );
-
-    return account.createCloudBlobClient();
-  }
-
-  @Provides
-  @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final CloudBlobClient cloudBlobClient
+      final AzureAccountConfig config
   )
   {
-    return new AzureStorage(cloudBlobClient);
+    return new AzureStorage(
+        Suppliers.memoize(
+            () -> {
+              try {
+                CloudStorageAccount account = CloudStorageAccount.parse(
+                    StringUtils.format(
+                        STORAGE_CONNECTION_STRING,
+                        config.getProtocol(),
+                        config.getAccount(),
+                        config.getKey()
+                    )
+                );
+                return account.createCloudBlobClient();
+              }
+              catch (URISyntaxException | InvalidKeyException e) {
+                throw new RuntimeException(e);
+              }
+            }
+        )
+    );
   }
 }

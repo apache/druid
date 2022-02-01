@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -48,16 +49,16 @@ public class S3DataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(S3DataSegmentMover.class);
 
-  private final ServerSideEncryptingAmazonS3 s3Client;
+  private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentMover(
-      ServerSideEncryptingAmazonS3 s3Client,
+      Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier,
       S3DataSegmentPusherConfig config
   )
   {
-    this.s3Client = s3Client;
+    this.s3ClientSupplier = s3ClientSupplier;
     this.config = config;
   }
 
@@ -164,6 +165,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
       return;
     }
+    final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
     if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
       final ListObjectsV2Result listResult = s3Client.listObjectsV2(
           new ListObjectsV2Request()
@@ -238,7 +240,7 @@ public class S3DataSegmentMover implements DataSegmentMover
     RetryUtils.retry(
         () -> {
           try {
-            s3Client.deleteObject(s3Bucket, s3Path);
+            s3ClientSupplier.get().deleteObject(s3Bucket, s3Path);
             return null;
           }
           catch (Exception e) {

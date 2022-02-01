@@ -22,6 +22,7 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
@@ -37,13 +38,13 @@ public class OssDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(OssDataSegmentKiller.class);
 
-  private final OSS client;
+  private final Supplier<OSS> client;
   private final OssStorageConfig segmentPusherConfig;
   private final OssInputDataConfig inputDataConfig;
 
   @Inject
   public OssDataSegmentKiller(
-      OSS client,
+      Supplier<OSS> client,
       OssStorageConfig segmentPusherConfig,
       OssInputDataConfig inputDataConfig
   )
@@ -61,9 +62,9 @@ public class OssDataSegmentKiller implements DataSegmentKiller
       String bucket = MapUtils.getString(loadSpec, "bucket");
       String path = MapUtils.getString(loadSpec, "key");
 
-      if (client.doesObjectExist(bucket, path)) {
+      if (client.get().doesObjectExist(bucket, path)) {
         log.info("Removing index file[%s://%s/%s] from aliyun OSS!", OssStorageDruidModule.SCHEME, bucket, path);
-        client.deleteObject(bucket, path);
+        client.get().deleteObject(bucket, path);
       }
     }
     catch (OSSException e) {
@@ -83,7 +84,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller
     );
     try {
       OssUtils.deleteObjectsInPath(
-          client,
+          client.get(),
           inputDataConfig,
           segmentPusherConfig.getBucket(),
           segmentPusherConfig.getPrefix(),

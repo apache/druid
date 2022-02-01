@@ -21,6 +21,8 @@ package org.apache.druid.firehose.s3;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.s3.S3InputSourceTest;
@@ -42,9 +44,11 @@ import java.util.stream.Collectors;
 public class StaticS3FirehoseFactoryTest
 {
   private static final AmazonS3Client S3_CLIENT = EasyMock.createNiceMock(AmazonS3Client.class);
-  private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
-      S3_CLIENT,
-      new NoopServerSideEncryption()
+  private static final Supplier<ServerSideEncryptingAmazonS3> SERVICE = Suppliers.ofInstance(
+      new ServerSideEncryptingAmazonS3(
+          S3_CLIENT,
+          new NoopServerSideEncryption()
+      )
   );
 
   @Test
