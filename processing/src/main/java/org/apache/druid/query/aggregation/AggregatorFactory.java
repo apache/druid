@@ -76,7 +76,10 @@ public abstract class AggregatorFactory implements Cacheable
    * {@link Aggregator#aggregateWithSize()} to perform aggregation and get back
    * the incremental memory required in each aggregate call. Combined with the
    * initial size, this gives the total on-heap memory required by the aggregator.
-   *
+   * <p>
+   * This method must include JVM object overheads in the estimated size and must
+   * ensure not to underestimate required memory as that might lead to OOM errors.
+   * <p>
    * This flow does not require invoking {@link #guessAggregatorHeapFootprint(long)}
    * which tends to over-estimate the required memory.
    *

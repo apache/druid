@@ -71,6 +71,7 @@ public class SketchModule implements DruidModule
         ThetaSketchApproxCountDistinctSqlAggregator.NAME,
         ThetaSketchApproxCountDistinctSqlAggregator.class
     );
+    SketchAggregator.initialize();
   }
 
   @Override

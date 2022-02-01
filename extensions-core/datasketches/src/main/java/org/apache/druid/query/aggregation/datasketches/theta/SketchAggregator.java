@@ -45,9 +45,17 @@ public class SketchAggregator implements Aggregator
   private Sketch sketch;
 
   @Nullable
-  private static final Field SKETCH_FIELD;
+  private static Field SKETCH_FIELD;
 
-  static {
+  /**
+   * Initializes static fields of the SketchAggregator needed for memory
+   * estimation.
+   */
+  public static void initialize()
+  {
+    if (SKETCH_FIELD != null) {
+      return;
+    }
     try {
       SKETCH_FIELD = Class.forName("org.apache.datasketches.theta.UnionImpl")
                           .getDeclaredField("gadget_");

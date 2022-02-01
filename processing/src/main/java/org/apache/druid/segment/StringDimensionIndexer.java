@@ -70,7 +70,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       boolean useMaxMemoryEstimates
   )
   {
-    super(useMaxMemoryEstimates ? new DimensionDictionary<>() : new StringDimensionDictionary());
+    super(new StringDimensionDictionary(!useMaxMemoryEstimates));
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
