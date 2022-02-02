@@ -20,25 +20,20 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.net.HttpHeaders;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.metadata.DefaultPasswordProvider;
-import org.apache.druid.metadata.PasswordProvider;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Stack;
 
 public class HttpEntityTest
 {
@@ -56,8 +51,7 @@ public class HttpEntityTest
   public void testOpenInputStream() throws IOException, URISyntaxException
   {
     URI url = new URI("https://druid.apache.org/data/wikipedia.json.gz");
-    PasswordProvider passwordProvider = new DefaultPasswordProvider("");
-    final InputStream inputStream = HttpEntity.openInputStream(url, "", passwordProvider, 0);
+    final InputStream inputStream = HttpEntity.openInputStream(url, "", null, 0);
     final InputStream inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
     inputStream.skip(5);
     Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
