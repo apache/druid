@@ -205,17 +205,15 @@ public class DruidPlanner implements Closeable
 
     try {
       if (parsed.getIngestionGranularity() != null) {
-        plannerContext.getQueryContext()
-                      .put(
-                          QueryContexts.INGESTION_GRANULARITY,
-                          plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
-                      );
+        plannerContext.getQueryContext().put(
+            QueryContexts.INGESTION_GRANULARITY,
+            plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
+        );
       }
     }
     catch (JsonProcessingException e) {
-
+      throw new ValidationException("Unable to serialize partition granularity.");
     }
-
 
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());

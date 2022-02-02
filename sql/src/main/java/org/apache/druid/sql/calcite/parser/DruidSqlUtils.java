@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -78,40 +79,62 @@ public class DruidSqlUtils
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
   {
     if (!(sqlNode instanceof SqlCall)) {
-      throw new ParseException("abc");
+      throw new ParseException(StringUtils.format("Unable to parse the granularity from %s", sqlNode.toString()));
     }
     SqlCall sqlCall = (SqlCall) sqlNode;
 
     List<SqlNode> operandList = sqlCall.getOperandList();
-    Preconditions.checkArgument(operandList.size() == 2, "Invalid number of arguments");
+    Preconditions.checkArgument(
+        operandList.size() == 2,
+        "Invalid number of arguments passed to the floor function in PARTIITONED BY"
+    );
 
-    SqlOperator operator = sqlCall.getOperator();
+    String operatorName = sqlCall.getOperator().getName();
 
-
+    // Check if the first argument passed in the floor function is __time
     SqlNode timeOperandSqlNode = operandList.get(0);
-    Preconditions.checkArgument(timeOperandSqlNode.getKind().equals(SqlKind.IDENTIFIER), "abc");
+    Preconditions.checkArgument(
+        timeOperandSqlNode.getKind().equals(SqlKind.IDENTIFIER),
+        StringUtils.format("First argument to %s in PARTITIONED BY can only be __time", operatorName)
+    )
     SqlIdentifier timeOperandSqlIdentifier = (SqlIdentifier) timeOperandSqlNode;
-    Preconditions.checkArgument(timeOperandSqlIdentifier.getSimple().equals(ColumnHolder.TIME_COLUMN_NAME), "abc");
+    Preconditions.checkArgument(
+        timeOperandSqlIdentifier.getSimple().equals(ColumnHolder.TIME_COLUMN_NAME),
+        StringUtils.format("First argument to %s in PARTITIONED BY can only be __time", operatorName)
+    );
 
-    if (operator.getName().equals(TimeFloorOperatorConversion.SQL_FUNCTION_NAME)) {
+    // If the floor function is of form TIME_FLOOR(__time, 'PT1H')
+    if (operatorName.equals(TimeFloorOperatorConversion.SQL_FUNCTION_NAME)) {
       SqlNode granularitySqlNode = operandList.get(1);
-      Preconditions.checkArgument(granularitySqlNode.getKind().equals(SqlKind.LITERAL), "abc");
+      Preconditions.checkArgument(
+          granularitySqlNode.getKind().equals(SqlKind.LITERAL),
+          "Second argument to the TIME_FLOOR function in PARTITIONED BY is invalid"
+      );
       String granularityString = SqlLiteral.unchain(granularitySqlNode).toValue();
       Period period = new Period(granularityString);
       return new PeriodGranularity(period, null, null);
 
-    } else if (operator.getName().equals("FLOOR")) {
+    } else if (operatorName.equals("FLOOR")) { // If the floor function is of form FLOOR(__time TO DAY)
       SqlNode granularitySqlNode = operandList.get(1);
       // In future versions of Calcite, this can be checked via
       // granularitySqlNode.getKind().equals(SqlKind.INTERVAL_QUALIFIER)
-      Preconditions.checkArgument(granularitySqlNode instanceof SqlIntervalQualifier, "abc");
+      Preconditions.checkArgument(
+          granularitySqlNode instanceof SqlIntervalQualifier,
+          "Second argument to the FLOOR function in PARTITIONED BY is invalid"
+      );
       SqlIntervalQualifier granularityIntervalQualifier = (SqlIntervalQualifier) granularitySqlNode;
 
       Period period = TimeUnits.toPeriod(granularityIntervalQualifier.timeUnitRange);
-      Preconditions.checkNotNull(period, "abc");
+      Preconditions.checkNotNull(
+          period,
+          StringUtils.format(
+              "Unable to convert %s to valid granularity for ingestion",
+              granularityIntervalQualifier.timeUnitRange.toString()
+          )
+      );
       return new PeriodGranularity(period, null, null);
     }
 
-    throw new ParseException("Unable to convert");
+    throw new ParseException("Unable to parse the PARTITIONED BY clause");
   }
 }
