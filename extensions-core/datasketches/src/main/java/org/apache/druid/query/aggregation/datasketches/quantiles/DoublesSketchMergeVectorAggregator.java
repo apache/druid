@@ -55,14 +55,12 @@ public class DoublesSketchMergeVectorAggregator implements VectorAggregator
 
     final DoublesUnion union = helper.getSketchAtPosition(buf, position);
 
-    DoublesSketches.handleMaxStreamLengthLimit(() -> {
-      for (int i = startRow; i < endRow; i++) {
-        final DoublesSketch sketch = (DoublesSketch) vector[i];
-        if (sketch != null) {
-          union.update(sketch);
-        }
+    for (int i = startRow; i < endRow; i++) {
+      final DoublesSketch sketch = (DoublesSketch) vector[i];
+      if (sketch != null) {
+        union.update(sketch);
       }
-    });
+    }
   }
 
   @Override
@@ -76,17 +74,15 @@ public class DoublesSketchMergeVectorAggregator implements VectorAggregator
   {
     final Object[] vector = selector.getObjectVector();
 
-    DoublesSketches.handleMaxStreamLengthLimit(() -> {
-      for (int i = 0; i < numRows; i++) {
-        final DoublesSketch sketch = (DoublesSketch) vector[rows != null ? rows[i] : i];
+    for (int i = 0; i < numRows; i++) {
+      final DoublesSketch sketch = (DoublesSketch) vector[rows != null ? rows[i] : i];
 
-        if (sketch != null) {
-          final int position = positions[i] + positionOffset;
-          final DoublesUnion union = helper.getSketchAtPosition(buf, position);
-          union.update(sketch);
-        }
+      if (sketch != null) {
+        final int position = positions[i] + positionOffset;
+        final DoublesUnion union = helper.getSketchAtPosition(buf, position);
+        union.update(sketch);
       }
-    });
+    }
   }
 
   @Nullable
