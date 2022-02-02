@@ -8175,7 +8175,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testXXX() throws Exception
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename() throws Exception
   {
     cannotVectorize();
     requireMergeBuffers(3);
