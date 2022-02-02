@@ -19,15 +19,15 @@
 
 SqlNode DruidSqlInsert() :
 {
- SqlNode insertNode;
- SqlNode partitionedBy = null;
- SqlNodeList clusteredBy = null;
+  SqlNode insertNode;
+  Granularity partitionedBy = null;
+  SqlNodeList clusteredBy = null;
 }
 {
   insertNode = SqlInsert()
   [
     <PARTITIONED> <BY>
-    partitionedBy = StringLiteral()
+    partitionedBy = PartitionGranularity()
   ]
   [
     <CLUSTERED> <BY>
@@ -61,4 +61,42 @@ SqlNodeList ClusterItems() :
   {
     return new SqlNodeList(list, s.addAll(list).pos());
   }
+}
+
+Granularity PartitionGranularity() :
+{
+  SqlNode e = null;
+}
+{
+  (
+    <HOUR>
+    {
+      return Granularities.HOUR;
+    }
+  |
+    <DAY>
+    {
+      return Granularities.DAY;
+    }
+  |
+    <MONTH>
+    {
+      return Granularities.MONTH;
+    }
+  |
+    <YEAR>
+    {
+      return Granularities.YEAR;
+    }
+  |
+    <ALL> <TIME>
+    {
+      return Granularities.ALL;
+    }
+  |
+    e = Expression(ExprContext.ACCEPT_SUB_QUERY)
+    {
+      return DruidSqlUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+    }
+  )
 }

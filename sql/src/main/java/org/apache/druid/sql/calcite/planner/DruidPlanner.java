@@ -203,9 +203,19 @@ public class DruidPlanner implements Closeable
 
     final ParsedNodes parsed = ParsedNodes.create(planner.parse(plannerContext.getSql()));
 
-    if (parsed.getIngestionGranularity() != null) {
-      plannerContext.getQueryContext().put(QueryContexts.INGESTION_GRANULARITY, parsed.getIngestionGranularity());
+    try {
+      if (parsed.getIngestionGranularity() != null) {
+        plannerContext.getQueryContext()
+                      .put(
+                          QueryContexts.INGESTION_GRANULARITY,
+                          plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
+                      );
+      }
     }
+    catch (JsonProcessingException e) {
+
+    }
+
 
     // the planner's type factory is not available until after parsing
     this.rexBuilder = new RexBuilder(planner.getTypeFactory());
@@ -747,21 +757,21 @@ public class DruidPlanner implements Closeable
   private static class ParsedNodes
   {
     @Nullable
-    private SqlExplain explain;
+    private final SqlExplain explain;
 
     @Nullable
-    private SqlInsert insert;
+    private final SqlInsert insert;
 
-    private SqlNode query;
+    private final SqlNode query;
 
     @Nullable
-    private String ingestionGranularity;
+    private final Granularity ingestionGranularity;
 
     private ParsedNodes(
         @Nullable SqlExplain explain,
         @Nullable SqlInsert insert,
         SqlNode query,
-        @Nullable String ingestionGranularity
+        @Nullable Granularity ingestionGranularity
     )
     {
       this.explain = explain;
@@ -775,7 +785,7 @@ public class DruidPlanner implements Closeable
       SqlExplain explain = null;
       SqlInsert insert = null;
       SqlNode query = node;
-      String ingestionGranularity = null;
+      Granularity ingestionGranularity = null;
 
       if (query.getKind() == SqlKind.EXPLAIN) {
         explain = (SqlExplain) query;
@@ -801,16 +811,6 @@ public class DruidPlanner implements Closeable
           DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
 
           ingestionGranularity = druidSqlInsert.getPartitionedBy();
-
-          // Check if ingestionGranularity is valid
-          if (ingestionGranularity != null) {
-            try {
-              Granularity.fromString(ingestionGranularity);
-            }
-            catch (IllegalArgumentException e) {
-              throw new ValidationException("Granularity passed in PARTITIONED BY clause is invalid");
-            }
-          }
 
           if (druidSqlInsert.getClusteredBy() != null) {
             // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
@@ -864,7 +864,7 @@ public class DruidPlanner implements Closeable
     }
 
     @Nullable
-    public String getIngestionGranularity()
+    public Granularity getIngestionGranularity()
     {
       return ingestionGranularity;
     }

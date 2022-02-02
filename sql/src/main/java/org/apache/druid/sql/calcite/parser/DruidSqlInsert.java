@@ -20,11 +20,11 @@
 package org.apache.druid.sql.calcite.parser;
 
 import org.apache.calcite.sql.SqlInsert;
-import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
+import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,12 +39,12 @@ public class DruidSqlInsert extends SqlInsert
   // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
-  private final SqlNode partitionedBy;
+  private final Granularity partitionedBy;
   private final SqlNodeList clusteredBy;
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
-      @Nullable SqlNode partitionedBy,
+      @Nullable Granularity partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
   {
@@ -66,12 +66,9 @@ public class DruidSqlInsert extends SqlInsert
   }
 
   @Nullable
-  public String getPartitionedBy()
+  public Granularity getPartitionedBy()
   {
-    if (partitionedBy == null) {
-      return null;
-    }
-    return SqlLiteral.unchain(partitionedBy).toValue();
+    return partitionedBy;
   }
 
   @Nonnull
@@ -87,7 +84,7 @@ public class DruidSqlInsert extends SqlInsert
     super.unparse(writer, leftPrec, rightPrec);
     if (partitionedBy != null) {
       writer.keyword("PARTITIONED BY");
-      writer.keyword(getPartitionedBy());
+      writer.keyword(getPartitionedBy().toString()); // TODO: Can this be made cleaner
     }
     if (clusteredBy != null) {
       writer.sep("CLUSTERED BY");
