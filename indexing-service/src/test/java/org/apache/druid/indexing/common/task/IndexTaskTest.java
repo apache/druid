@@ -732,6 +732,42 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
 
+  @Test(expected = org.apache.druid.java.util.common.IAE.class)
+  public void testIntervalNotSpecifiedWithReplace() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createDefaultIngestionSpec(
+            jsonMapper,
+            tmpDir,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            null,
+            createTuningConfigWithMaxRowsPerSegment(2, true),
+            false,
+            true
+        ),
+        null
+    );
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+
+  }
+
   @Test
   public void testCSVFileWithHeader() throws Exception
   {

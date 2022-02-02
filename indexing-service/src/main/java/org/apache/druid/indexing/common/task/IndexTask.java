@@ -1060,6 +1060,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
+
+      if (ioConfig.isDropExisting() && dataSchema.getGranularitySpec().inputIntervals().isEmpty()) {
+        throw new IAE("GranularitySpec's intervals cannot be empty when setting dropExisting to true.");
+      }
+
       if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
         Checks.checkOneNotNullOrEmpty(
             ImmutableList.of(
