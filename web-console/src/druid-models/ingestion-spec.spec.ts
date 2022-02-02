@@ -19,13 +19,14 @@
 import {
   adjustId,
   cleanSpec,
-  getColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromHeaderAndRows,
+  guessColumnTypeFromInput,
   guessInputFormat,
-  guessTypeFromSample,
   IngestionSpec,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
+import { CSV_SAMPLE } from './test-fixtures';
 
 describe('ingestion-spec', () => {
   it('upgrades / downgrades task spec 1', () => {
@@ -427,14 +428,46 @@ describe('spec utils', () => {
     },
   };
 
-  it('guessTypeFromSample', () => {
-    expect(guessTypeFromSample([])).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromInput', () => {
+    it('works for empty', () => {
+      expect(guessColumnTypeFromInput([], false)).toEqual('string');
+    });
+
+    it('works for long', () => {
+      expect(guessColumnTypeFromInput([1, 2, 3], false)).toEqual('long');
+      expect(guessColumnTypeFromInput([1, 2, 3], true)).toEqual('long');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2', '3'], true)).toEqual('long');
+    });
+
+    it('works for double', () => {
+      expect(guessColumnTypeFromInput([1, 2.1, 3], false)).toEqual('double');
+      expect(guessColumnTypeFromInput([1, 2.1, 3], true)).toEqual('double');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput(['1', '2.1', '3'], true)).toEqual('double');
+    });
+
+    it('works for multi-value', () => {
+      expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+    });
   });
 
-  it('getColumnTypeFromHeaderAndRows', () => {
-    expect(
-      getColumnTypeFromHeaderAndRows({ header: ['header'], rows: [] }, 'header'),
-    ).toMatchInlineSnapshot(`"string"`);
+  describe('guessColumnTypeFromHeaderAndRows', () => {
+    it('works in empty dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows({ header: ['c0'], rows: [] }, 'c0', false)).toEqual(
+        'string',
+      );
+    });
+
+    it('works for generic dataset', () => {
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'user', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'followers', true)).toEqual('long');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'spend', true)).toEqual('double');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', false)).toEqual('string');
+      expect(guessColumnTypeFromHeaderAndRows(CSV_SAMPLE, 'nums', true)).toEqual('string');
+    });
   });
 
   it('updateSchemaWithSample', () => {

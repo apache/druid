@@ -87,7 +87,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -414,7 +413,6 @@ public class DruidQuery
       }
 
       final VirtualColumn virtualColumn;
-
 
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
@@ -933,6 +931,10 @@ public class DruidQuery
     }
 
     final DimensionSpec dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
+    // grouping col cannot be type array
+    if (dimensionSpec.getOutputType().isArray()) {
+      return null;
+    }
     final OrderByColumnSpec limitColumn;
     if (sorting.getOrderBys().isEmpty()) {
       limitColumn = new OrderByColumnSpec(

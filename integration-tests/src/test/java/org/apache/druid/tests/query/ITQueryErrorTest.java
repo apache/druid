@@ -24,9 +24,8 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
@@ -69,7 +68,7 @@ public class ITQueryErrorTest
   private static final String SQL_PLAN_FAILURE_RESOURCE = "/queries/sql_plan_failure_query.json";
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private DataLoaderHelper dataLoaderHelper;
   @Inject
   private TestQueryHelper queryHelper;
   @Inject
@@ -81,9 +80,7 @@ public class ITQueryErrorTest
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
   }
 
   @Test(expectedExceptions = {RuntimeException.class}, expectedExceptionsMessageRegExp = "(?s).*400.*")

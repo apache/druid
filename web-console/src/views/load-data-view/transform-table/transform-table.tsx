@@ -29,12 +29,12 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../utils';
 import { escapeColumnName } from '../../../utils/druid-expression';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './transform-table.scss';
 
 export function transformTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   selectedTransform: Partial<Transform> | undefined,
 ): string | undefined {
   if (!selectedTransform) return;
@@ -44,7 +44,7 @@ export function transformTableSelectedColumnName(
 }
 
 export interface TransformTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   transformedColumnsOnly: boolean;
   transforms: Transform[];

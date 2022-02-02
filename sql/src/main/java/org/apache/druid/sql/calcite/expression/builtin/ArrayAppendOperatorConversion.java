@@ -24,12 +24,12 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class ArrayAppendOperatorConversion implements SqlOperatorConversion
@@ -50,7 +50,7 @@ public class ArrayAppendOperatorConversion implements SqlOperatorConversion
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeInference(ReturnTypes.ARG0_NULLABLE)
+      .returnTypeInference(Calcites.ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE)
       .build();
 
   @Override
