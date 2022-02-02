@@ -347,10 +347,10 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities, which must be present and explicitly not multi-valued
+              // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              return dimension.getOutputType().equals(ColumnType.STRING_ARRAY)
-                     || (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse());
+              return dimension.getOutputType().isArray()
+                     || (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse() && !columnCapabilities.isArray());
             });
   }
 

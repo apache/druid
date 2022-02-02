@@ -264,6 +264,9 @@ public final class DimensionHandlerUtils
                                                capabilities.isDictionaryEncoded().isTrue() &&
                                                fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
                                            )
+                                           .setHasMultipleValues(
+                                               capabilities.hasMultipleValues().isMaybeTrue() || capabilities.isArray()
+                                           )
                                            .setDictionaryValuesSorted(
                                                capabilities.isDictionaryEncoded().isTrue() && fn.preservesOrdering()
                                            );

@@ -23,21 +23,20 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
-import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -45,76 +44,23 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class BitwiseSqlAggregator implements SqlAggregator
+public class ArrayConcatSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction XOR_FUNCTION = new BitwiseXorSqlAggFunction();
-
-  public enum Op
-  {
-    AND {
-      @Override
-      SqlAggFunction getCalciteFunction()
-      {
-        return SqlStdOperatorTable.BIT_AND;
-      }
-
-      @Override
-      String getDruidFunction()
-      {
-        return "bitwiseAnd";
-      }
-    },
-    OR {
-      @Override
-      SqlAggFunction getCalciteFunction()
-      {
-        return SqlStdOperatorTable.BIT_OR;
-      }
-
-      @Override
-      String getDruidFunction()
-      {
-        return "bitwiseOr";
-      }
-    },
-    XOR {
-      @Override
-      SqlAggFunction getCalciteFunction()
-      {
-        // newer versions of calcite have this built-in so someday we can drop this...
-        return XOR_FUNCTION;
-      }
-
-      @Override
-      String getDruidFunction()
-      {
-        return "bitwiseXor";
-      }
-    };
-
-    abstract SqlAggFunction getCalciteFunction();
-    abstract String getDruidFunction();
-  };
-
-  private final Op op;
-
-  public BitwiseSqlAggregator(Op op)
-  {
-    this.op = op;
-  }
+  private static final String NAME = "ARRAY_CONCAT_AGG";
+  private static final SqlAggFunction FUNCTION = new ArrayConcatAggFunction();
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return op.getCalciteFunction();
+    return FUNCTION;
   }
 
   @Nullable
@@ -131,63 +77,98 @@ public class BitwiseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-    final List<DruidExpression> arguments = aggregateCall
+    final List<RexNode> arguments = aggregateCall
         .getArgList()
         .stream()
         .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
-        .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
-    if (arguments.stream().anyMatch(Objects::isNull)) {
-      return null;
+    Integer maxSizeBytes = null;
+    if (arguments.size() > 1) {
+      RexNode maxBytes = arguments.get(1);
+      if (!maxBytes.isA(SqlKind.LITERAL)) {
+        // maxBytes must be a literal
+        return null;
+      }
+      maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
-
-    final DruidExpression arg = arguments.get(0);
+    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, arguments.get(0));
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
     final String fieldName;
+    final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
+    if (druidType == null || !druidType.isArray()) {
+      // must be an array
+      return null;
+    }
+    final String initialvalue = ExpressionType.fromColumnTypeStrict(druidType).asTypeString() + "[]";
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, ColumnType.LONG);
+      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, druidType);
       fieldName = vc.getOutputName();
     }
 
-    return Aggregation.create(
-        new FilteredAggregatorFactory(
-            new ExpressionLambdaAggregatorFactory(
-                name,
-                ImmutableSet.of(fieldName),
-                null,
-                "0",
-                null,
-                null,
-                false,
-                false,
-                StringUtils.format("%s(\"__acc\", \"%s\")", op.getDruidFunction(), fieldName),
-                null,
-                null,
-                null,
-                null,
-                macroTable
-            ),
-            new NotDimFilter(new SelectorDimFilter(fieldName, null, null))
-        )
-    );
+    if (aggregateCall.isDistinct()) {
+      return Aggregation.create(
+          new ExpressionLambdaAggregatorFactory(
+              name,
+              ImmutableSet.of(fieldName),
+              null,
+              initialvalue,
+              null,
+              true,
+              false,
+              false,
+              StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", fieldName),
+              StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
+              null,
+              null,
+              maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+              macroTable
+          )
+      );
+    } else {
+      return Aggregation.create(
+          new ExpressionLambdaAggregatorFactory(
+              name,
+              ImmutableSet.of(fieldName),
+              null,
+              initialvalue,
+              null,
+              true,
+              false,
+              false,
+              StringUtils.format("array_concat(\"__acc\", \"%s\")", fieldName),
+              StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
+              null,
+              null,
+              maxSizeBytes != null ? new HumanReadableBytes(maxSizeBytes) : null,
+              macroTable
+          )
+      );
+    }
   }
 
-  private static class BitwiseXorSqlAggFunction extends SqlAggFunction
+  private static class ArrayConcatAggFunction extends SqlAggFunction
   {
-    BitwiseXorSqlAggFunction()
+    ArrayConcatAggFunction()
     {
       super(
-          "BIT_XOR",
+          NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.BIGINT),
+          ReturnTypes.ARG0,
           InferTypes.ANY_NULLABLE,
-          OperandTypes.EXACT_NUMERIC,
-          SqlFunctionCategory.NUMERIC,
+          OperandTypes.or(
+              OperandTypes.ARRAY,
+              OperandTypes.sequence(
+                  StringUtils.format("'%s'(expr, maxSizeBytes)", NAME),
+                  OperandTypes.ARRAY,
+                  OperandTypes.POSITIVE_INTEGER_LITERAL
+              )
+          ),
+          SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false,
           Optionality.IGNORED
