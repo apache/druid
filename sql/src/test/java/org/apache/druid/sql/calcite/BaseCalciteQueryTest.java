@@ -113,7 +113,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -942,7 +941,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         expectedQueries,
-        new DefaultResultsVerifier(Collections.emptyList()),
+        (query, results) -> {},
         expectedExceptionInitializer
     );
   }
