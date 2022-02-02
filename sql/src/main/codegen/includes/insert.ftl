@@ -96,7 +96,7 @@ Granularity PartitionGranularity() :
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      return DruidSqlUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      return DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
     }
   )
 }

@@ -36,8 +36,7 @@ import org.joda.time.Period;
 
 import java.util.List;
 
-// TODO: More appropriate name
-public class DruidSqlUtils
+public class DruidSqlParserUtils
 {
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}

@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
 public class TimeFloorOperatorConversion implements SqlOperatorConversion
 {
   public static final String SQL_FUNCTION_NAME = "TIME_FLOOR";
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(SQL_FUNCTION_NAME)
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
