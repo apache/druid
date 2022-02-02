@@ -38,18 +38,18 @@ public class OssDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(OssDataSegmentKiller.class);
 
-  private final Supplier<OSS> client;
+  private final Supplier<OSS> clientSupplier;
   private final OssStorageConfig segmentPusherConfig;
   private final OssInputDataConfig inputDataConfig;
 
   @Inject
   public OssDataSegmentKiller(
-      Supplier<OSS> client,
+      Supplier<OSS> clientSupplier,
       OssStorageConfig segmentPusherConfig,
       OssInputDataConfig inputDataConfig
   )
   {
-    this.client = client;
+    this.clientSupplier = clientSupplier;
     this.segmentPusherConfig = segmentPusherConfig;
     this.inputDataConfig = inputDataConfig;
   }
@@ -62,9 +62,10 @@ public class OssDataSegmentKiller implements DataSegmentKiller
       String bucket = MapUtils.getString(loadSpec, "bucket");
       String path = MapUtils.getString(loadSpec, "key");
 
-      if (client.get().doesObjectExist(bucket, path)) {
+      final OSS client = this.clientSupplier.get();
+      if (client.doesObjectExist(bucket, path)) {
         log.info("Removing index file[%s://%s/%s] from aliyun OSS!", OssStorageDruidModule.SCHEME, bucket, path);
-        client.get().deleteObject(bucket, path);
+        client.deleteObject(bucket, path);
       }
     }
     catch (OSSException e) {
@@ -84,7 +85,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller
     );
     try {
       OssUtils.deleteObjectsInPath(
-          client.get(),
+          clientSupplier.get(),
           inputDataConfig,
           segmentPusherConfig.getBucket(),
           segmentPusherConfig.getPrefix(),
