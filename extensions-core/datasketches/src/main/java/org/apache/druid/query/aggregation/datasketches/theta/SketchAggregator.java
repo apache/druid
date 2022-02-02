@@ -51,7 +51,7 @@ public class SketchAggregator implements Aggregator
    * Initializes static fields of the SketchAggregator needed for memory
    * estimation.
    */
-  public static void initialize()
+  public static synchronized void initialize()
   {
     if (SKETCH_FIELD != null) {
       return;
