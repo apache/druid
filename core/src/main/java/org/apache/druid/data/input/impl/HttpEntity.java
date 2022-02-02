@@ -94,7 +94,7 @@ public class HttpEntity extends RetryingInputEntity
     // See https://tools.ietf.org/html/rfc7233#section-2.1
     urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
     final String contentRange = urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE);
-    final boolean withContentRange = contentRange.startsWith("bytes ");
+    final boolean withContentRange = contentRange != null && contentRange.startsWith("bytes ");
     if (withContentRange && offset > 0) {
       return urlConnection.getInputStream();
     } else {
