@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -68,12 +67,12 @@ public class DruidSqlUtils
    * 3. Number of operands in the call are 2
    * 4. First operand is a SimpleIdentifier representing __time
    * 5. If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class
-   * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link org.apache.druid.sql.calcite.expression.TimeUnits}
+   * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}
    * <p>
    * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
    *
    * @param sqlNode SqlNode representing a call to a function
-   * @return
+   * @return Granularity as intended by the function call
    * @throws ParseException SqlNode cannot be converted a granularity
    */
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
@@ -96,7 +95,7 @@ public class DruidSqlUtils
     Preconditions.checkArgument(
         timeOperandSqlNode.getKind().equals(SqlKind.IDENTIFIER),
         StringUtils.format("First argument to %s in PARTITIONED BY can only be __time", operatorName)
-    )
+    );
     SqlIdentifier timeOperandSqlIdentifier = (SqlIdentifier) timeOperandSqlNode;
     Preconditions.checkArgument(
         timeOperandSqlIdentifier.getSimple().equals(ColumnHolder.TIME_COLUMN_NAME),
