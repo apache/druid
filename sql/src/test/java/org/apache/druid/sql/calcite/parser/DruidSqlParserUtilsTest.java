@@ -28,18 +28,14 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
 
 @RunWith(Enclosed.class)
 public class DruidSqlParserUtilsTest
@@ -77,7 +73,7 @@ public class DruidSqlParserUtilsTest
       final SqlNode timeFloorCall = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(
           timeFloorCall);
-      assertEquals(expectedGranularity, actualGranularity);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
     }
   }
 
@@ -120,7 +116,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIntervalQualifier(this.timeUnit, null, SqlParserPos.ZERO));
       final SqlNode floorCall = SqlStdOperatorTable.FLOOR.createCall(args);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(floorCall);
-      assertEquals(expectedGranularity, actualGranularity);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
     }
   }
 

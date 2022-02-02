@@ -102,7 +102,7 @@ public class DruidSqlParserUtils
     );
 
     // If the floor function is of form TIME_FLOOR(__time, 'PT1H')
-    if (operatorName.equals(TimeFloorOperatorConversion.SQL_FUNCTION_NAME)) {
+    if (operatorName.equalsIgnoreCase(TimeFloorOperatorConversion.SQL_FUNCTION_NAME)) {
       SqlNode granularitySqlNode = operandList.get(1);
       Preconditions.checkArgument(
           granularitySqlNode.getKind().equals(SqlKind.LITERAL),
@@ -112,7 +112,7 @@ public class DruidSqlParserUtils
       Period period = new Period(granularityString);
       return new PeriodGranularity(period, null, null);
 
-    } else if (operatorName.equals("FLOOR")) { // If the floor function is of form FLOOR(__time TO DAY)
+    } else if ("FLOOR".equalsIgnoreCase(operatorName)) { // If the floor function is of form FLOOR(__time TO DAY)
       SqlNode granularitySqlNode = operandList.get(1);
       // In future versions of Calcite, this can be checked via
       // granularitySqlNode.getKind().equals(SqlKind.INTERVAL_QUALIFIER)
