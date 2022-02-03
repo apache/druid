@@ -213,17 +213,16 @@ public class PlannerConfig
   private int validateMaxNumericInFilters(int queryContextMaxNumericInFilters, int systemConfigMaxNumericInFilters)
   {
     // if maxNumericInFIlters through context == 0 catch exception
+    // else if query context exceeds system set value throw error
     if (queryContextMaxNumericInFilters == 0) {
       throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
-    }
-    // if query context exceeds system set value throw error
-    else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
-             && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
-      throw new UOE(String.format(
+    } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
+               && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
+      throw new UOE(
           "Expected parameter[%s] cannot exceed system set value of [%d]",
           CTX_MAX_NUMERIC_IN_FILTERS,
           systemConfigMaxNumericInFilters
-      ));
+      );
     }
     // if system set value is not present, thereby inferring default of -1
     if (systemConfigMaxNumericInFilters == NUM_FILTER_NOT_USED) {
