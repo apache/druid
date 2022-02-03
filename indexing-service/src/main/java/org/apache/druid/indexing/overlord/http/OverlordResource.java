@@ -53,8 +53,13 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
+import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningConfig;
+import org.apache.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerProvisioningStrategy;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -122,6 +127,7 @@ public class OverlordResource
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
+  private final ProvisioningStrategy provisioningStrategy;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -135,7 +141,8 @@ public class OverlordResource
       JacksonConfigManager configManager,
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
-      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
+      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
+      ProvisioningStrategy provisioningStrategy
   )
   {
     this.taskMaster = taskMaster;
@@ -146,6 +153,7 @@ public class OverlordResource
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
+    this.provisioningStrategy = provisioningStrategy;
   }
 
   /**
@@ -420,6 +428,38 @@ public class OverlordResource
     }
 
     return Response.ok(workerConfigRef.get()).build();
+  }
+
+  @GET
+  @Path("/autoScaleConfig")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response getAutoScaleConfig()
+  {
+    if (workerConfigRef == null) {
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
+    }
+
+    WorkerBehaviorConfig workerBehaviorConfig = workerConfigRef.get();
+    if (workerBehaviorConfig == null) {
+      return Response.ok().build();
+    } else if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
+      DefaultWorkerBehaviorConfig defaultWorkerBehaviorConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
+      int workerCapacityHint = provisioningStrategy instanceof PendingTaskBasedWorkerProvisioningStrategy
+                               ? ((PendingTaskBasedWorkerProvisioningStrategy) provisioningStrategy).getConfig().getWorkerCapacityHint()
+                               : -1;
+      AutoScaleConfigResponse response = new AutoScaleConfigResponse(
+          defaultWorkerBehaviorConfig.getAutoScaler().getMinNumWorkers(),
+          defaultWorkerBehaviorConfig.getAutoScaler().getMaxNumWorkers(),
+          workerCapacityHint
+      );
+      return Response.ok(response).build();
+    } else {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          StringUtils.format("Operation not supported for WorkerBehaviorConfig of type [%s]", workerBehaviorConfig.getClass().getSimpleName())
+      ).build();
+    }
+
   }
 
   // default value is used for backwards compatibility

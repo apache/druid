@@ -69,6 +69,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
+    return 0;
+  }
+
+  @Override
   public String runTask(String taskId, Object taskObject)
   {
     return null;

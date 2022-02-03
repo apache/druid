@@ -148,7 +148,8 @@ public class OverlordResourceTest
         null,
         null,
         authMapper,
-        workerTaskRunnerQueryAdapter
+        workerTaskRunnerQueryAdapter,
+        null
     );
   }
 

@@ -1802,7 +1802,8 @@ public class CompactSegmentsTest
             new CoordinatorCompactionConfig(
                 compactionConfigs,
                 numCompactionTaskSlots == null ? null : 100., // 100% when numCompactionTaskSlots is not null
-                numCompactionTaskSlots
+                numCompactionTaskSlots,
+                false
             )
         )
         .build();

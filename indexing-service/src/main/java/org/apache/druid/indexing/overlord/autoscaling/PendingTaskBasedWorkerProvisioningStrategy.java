@@ -138,6 +138,11 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     this.workerConfigRef = workerConfigRef;
   }
 
+  public PendingTaskBasedWorkerProvisioningConfig getConfig()
+  {
+    return config;
+  }
+
   @Override
   public Provisioner makeProvisioner(WorkerTaskRunner runner)
   {

@@ -195,25 +195,38 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   @Override
   public int getTotalWorkerCapacity()
   {
+    return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  @Override
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
     try {
       final StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers")
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/autoScaleConfig")
                            .setHeader("Content-Type", MediaType.APPLICATION_JSON)
       );
-
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while getting available cluster capacity. status[%s] content[%s]",
+            "Error while getting worker info. status[%s] content[%s]",
             response.getStatus(),
             response.getContent()
         );
       }
-      final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
+      final IndexingAutoScaleConfigInfo indexingAutoScaleConfigInfo = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Collection<IndexingWorkerInfo>>() {}
+          new TypeReference<IndexingAutoScaleConfigInfo>() {}
       );
-
-      return workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+      Collection<IndexingWorkerInfo> workers = getWorkers();
+      int capacityPerWorker;
+      if (workers != null && !workers.isEmpty()) {
+        capacityPerWorker = workers.stream().findFirst().get().getWorker().getCapacity();
+      } else if (indexingAutoScaleConfigInfo.getWorkerCapacityHint() > 0) {
+        capacityPerWorker = indexingAutoScaleConfigInfo.getWorkerCapacityHint();
+      } else {
+        throw new ISE("Unable to determine capacity per worker");
+      }
+      return capacityPerWorker * indexingAutoScaleConfigInfo.getMaxNumWorkers();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -456,6 +469,33 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
 
       final Object numDeletedObject = resultMap.get("numDeleted");
       return (Integer) Preconditions.checkNotNull(numDeletedObject, "numDeletedObject");
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Collection<IndexingWorkerInfo> getWorkers()
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers")
+                           .setHeader("Content-Type", MediaType.APPLICATION_JSON)
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting worker info. status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<Collection<IndexingWorkerInfo>>() {}
+      );
+
+      return workers;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

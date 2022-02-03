@@ -51,6 +51,8 @@ public interface IndexingServiceClient
 
   int getTotalWorkerCapacity();
 
+  int getTotalWorkerCapacityWithAutoScale();
+
   String runTask(String taskId, Object taskObject);
 
   String cancelTask(String taskId);
