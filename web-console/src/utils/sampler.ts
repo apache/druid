@@ -250,7 +250,7 @@ export async function sampleForConnect(
   if (!reingestMode) {
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
-      pattern: '(.*)',
+      pattern: '([\\s\\S]*)', // Match the entire line, every single character
       listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });

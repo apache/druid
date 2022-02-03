@@ -85,7 +85,7 @@
     "fontsource-open-sans": "^3.0.9",
     "has-own-prop": "^2.0.0",
     "hjson": "^3.2.1",
-    "json-bigint-native": "^1.1.0",
+    "json-bigint-native": "^1.2.0",
     "lodash.debounce": "^4.0.8",
     "lodash.escape": "^4.0.1",
     "memoize-one": "^5.1.1",

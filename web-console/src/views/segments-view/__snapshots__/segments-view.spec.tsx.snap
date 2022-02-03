@@ -56,6 +56,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Version",
             "Time span",
             "Partitioning",
+            "Shard detail",
             "Partition",
             "Size",
             "Num rows",
@@ -74,6 +75,7 @@ exports[`SegmentsView matches snapshot 1`] = `
           Array [
             "Time span",
             "Partitioning",
+            "Shard detail",
           ]
         }
       />
@@ -205,6 +207,15 @@ exports[`SegmentsView matches snapshot 1`] = `
             "show": false,
             "sortable": true,
             "width": 100,
+          },
+          Object {
+            "Cell": [Function],
+            "Header": "Shard detail",
+            "accessor": "shard_spec",
+            "filterable": false,
+            "show": false,
+            "sortable": false,
+            "width": 400,
           },
           Object {
             "Header": "Partition",
