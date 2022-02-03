@@ -37,7 +37,6 @@ public class PlannerConfig
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final int DEFAULT_MAX_NUMFILTERS = 1000;
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
@@ -217,15 +216,21 @@ public class PlannerConfig
     // if maxNumericInFIlters through context == 0 catch exception
     if (queryContextMaxNumericInFilters == 0) {
       throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
-    } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
-               && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
-      throw new UOE(String.format("Expected parameter[%s] cannot exceed system set value of [%d]",
-                                  CTX_MAX_NUMERIC_IN_FILTERS,
-                                  systemConfigMaxNumericInFilters));
     }
+    // if query context exceeds system set value throw error
+    else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
+             && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
+      throw new UOE(String.format(
+          "Expected parameter[%s] cannot exceed system set value of [%d]",
+          CTX_MAX_NUMERIC_IN_FILTERS,
+          systemConfigMaxNumericInFilters
+      ));
+    }
+    // if system set value is not present, thereby inferring default of -1
     if (systemConfigMaxNumericInFilters == NUM_FILTER_NOT_USED) {
       return systemConfigMaxNumericInFilters;
     }
+    // all other cases return the valid query context value
     return queryContextMaxNumericInFilters;
   }
 
