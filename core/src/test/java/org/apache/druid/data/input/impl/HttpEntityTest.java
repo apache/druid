@@ -27,6 +27,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.AdditionalAnswers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -38,20 +40,22 @@ import java.net.URLConnection;
 
 public class HttpEntityTest
 {
-  private long offset = 15;
-  private URI uri = Mockito.mock(URI.class);
-  private URL url = Mockito.mock(URL.class);
-  private URLConnection urlConnection = Mockito.mock(URLConnection.class);
-  private InputStream inputStreamMock = Mockito.mock(InputStream.class);
-  private String contentRange = StringUtils.format("bytes %d-%d/%d", offset, 1000, 1000);
+  private URI uri;
+  private URL url;
+  private URLConnection urlConnection;
+  private InputStream inputStreamMock;
 
   @Before
   public void setup() throws IOException
   {
+    uri = Mockito.mock(URI.class);
+    url = Mockito.mock(URL.class);
+    urlConnection = Mockito.mock(URLConnection.class);
+    inputStreamMock = Mockito.mock(InputStream.class);
     Mockito.when(uri.toURL()).thenReturn(url);
     Mockito.when(url.openConnection()).thenReturn(urlConnection);
     Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
-    Mockito.when(inputStreamMock.skip(offset)).thenReturn(offset);
+    Mockito.when(inputStreamMock.skip(ArgumentMatchers.anyLong())).then(AdditionalAnswers.returnsFirstArg());
   }
 
   @Rule
@@ -70,6 +74,8 @@ public class HttpEntityTest
   @Test
   public void testWithServerSupportingRanges() throws IOException
   {
+    long offset = 15;
+    String contentRange = StringUtils.format("bytes %d-%d/%d", offset, 1000, 1000);
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(contentRange);
     HttpEntity.openInputStream(uri, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(0)).skip(offset);
@@ -78,6 +84,7 @@ public class HttpEntityTest
   @Test
   public void testWithServerNotSupportingRanges() throws IOException
   {
+    long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(null);
     HttpEntity.openInputStream(uri, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
@@ -86,6 +93,7 @@ public class HttpEntityTest
   @Test
   public void testWithServerNotSupportingBytesRanges() throws IOException
   {
+    long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn("token 2-12/12");
     HttpEntity.openInputStream(uri, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);

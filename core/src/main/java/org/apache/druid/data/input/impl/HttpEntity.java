@@ -105,8 +105,9 @@ public class HttpEntity extends RetryingInputEntity
             + " a lot."
         );
       }
-      final InputStream in = urlConnection.getInputStream();
+      InputStream in = null;
       try {
+        in = urlConnection.getInputStream();
         final long skipped = in.skip(offset);
         if (skipped != offset) {
           in.close();
@@ -116,7 +117,9 @@ public class HttpEntity extends RetryingInputEntity
         }
       }
       catch (IOException ex) {
-        in.close();
+        if (in != null) {
+          in.close();
+        }
         throw ex;
       }
     }
