@@ -44,6 +44,14 @@ public class HttpEntityTest
   InputStream inputStreamMock = Mockito.mock(InputStream.class);
   String contentRange = StringUtils.format("bytes %d-%d/%d", offset, 1000, 1000);
 
+  private void mockSetup() throws IOException
+  {
+    Mockito.when(uri.toURL()).thenReturn(url);
+    Mockito.when(url.openConnection()).thenReturn(urlConnection);
+    Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
+    Mockito.when(inputStreamMock.skip(offset)).thenReturn(offset);
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -60,24 +68,18 @@ public class HttpEntityTest
   @Test
   public void testWithServerSupportingRanges() throws IOException
   {
-    Mockito.when(uri.toURL()).thenReturn(url);
-    Mockito.when(url.openConnection()).thenReturn(urlConnection);
-    Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn("posts 12-22/22");
-    Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
-    Mockito.when(inputStreamMock.skip(offset)).thenReturn(offset);
+    mockSetup();
+    Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(contentRange);
     HttpEntity.openInputStream(uri, "", null, offset);
-    Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
+    Mockito.verify(inputStreamMock, Mockito.times(0)).skip(offset);
   }
 
   @Test
   public void testWithServerNotSupportingRanges() throws IOException
   {
-    Mockito.when(uri.toURL()).thenReturn(url);
-    Mockito.when(url.openConnection()).thenReturn(urlConnection);
-    Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(contentRange);
-    Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
-    Mockito.when(inputStreamMock.skip(offset)).thenReturn(offset);
+    mockSetup();
+    Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(null);
     HttpEntity.openInputStream(uri, "", null, offset);
-    Mockito.verify(inputStreamMock, Mockito.times(0)).skip(offset);
+    Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
   }
 }
