@@ -40,7 +40,7 @@ A sample task is shown below:
         "format" : "auto"
       },
       "dimensionsSpec" : {
-        "dimensions": ["country", "page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent",,"region","city"],
+        "dimensions": ["country", "page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","region","city"],
         "dimensionExclusions" : []
       },
       "metricsSpec" : [
@@ -120,7 +120,7 @@ that range if there's some stray data with unexpected timestamps.
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|dropExisting|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task drops (mark unused) all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid does not drop or mark unused any segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` is not specified in `granularitySpec`, Druid does not drop any segments even if `dropExisting` is `true`. WARNING: this functionality is still in beta and can result in temporary data unavailability for data within the specified `interval`.|false|no|
+|dropExisting|If this setting is `false` then ingestion proceeds as usual. Set this to `true` and `appendToExisting` to `false` to enforce true "replace" functionality as described next. If `true` and `appendToExisting` is `false` and the `granularitySpec` contains at least one`interval`, then the ingestion task will create regular segments for time chunk intervals with input data and `tombstones` for all other time chunks with no data. The task will publish the data segments and the tombstone segments together when the it publishes new segments. The net effect of the data segments and the tombstones is to completely adhere to a "replace" semantics where the  input data contained in the `granularitySpec` intervals replaces all existing data in the intervals even for time chunks that would be empty in the case that no input data was associated with them. In the extreme case when the input data set that falls in the `granularitySpec` intervals is empty all existing data in the interval will be replaced with an empty data set (i.e. with nothing -- all existing data will be covered by `tombstones`). If ingestion fails, no segments and tombstones will be published. The following two combinations are not supported and will make the ingestion fail with an error: `dropExisting` is `true` and `interval` is not specified in `granularitySpec` or  `appendToExisting` is true and `dropExisting` is `true`. WARNING: this functionality is still in beta and even though we are not aware of any bugs, use with caution.|false|no|
 
 ### `tuningConfig`
 
