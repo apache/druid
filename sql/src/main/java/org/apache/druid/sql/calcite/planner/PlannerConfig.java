@@ -200,7 +200,6 @@ public class PlannerConfig
     );
     newConfig.maxNumericInFilters = validateMaxNumericInFilters(queryContextMaxNumericInFilters,
                                                                 systemConfigMaxNumericInFilters);
-    newConfig.maxNumericInFilters = getContextInt(context, CTX_MAX_NUMERIC_IN_FILTERS, getMaxNumericInFilters());
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
