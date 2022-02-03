@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.UOE;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
@@ -36,6 +37,7 @@ public class PlannerConfig
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final int DEFAULT_MAX_NUMFILTERS = 1000;
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
@@ -191,6 +193,14 @@ public class PlannerConfig
         CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         isUseNativeQueryExplain()
     );
+    final int systemConfigMaxNumericInFilters = getMaxNumericInFilters();
+    final int queryContextMaxNumericInFilters = getContextInt(
+        context,
+        CTX_MAX_NUMERIC_IN_FILTERS,
+        getMaxNumericInFilters()
+    );
+    newConfig.maxNumericInFilters = validateMaxNumericInFilters(queryContextMaxNumericInFilters,
+                                                                systemConfigMaxNumericInFilters);
     newConfig.maxNumericInFilters = getContextInt(context, CTX_MAX_NUMERIC_IN_FILTERS, getMaxNumericInFilters());
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
@@ -200,6 +210,23 @@ public class PlannerConfig
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
     newConfig.authorizeSystemTablesDirectly = isAuthorizeSystemTablesDirectly();
     return newConfig;
+  }
+
+  private int validateMaxNumericInFilters(int queryContextMaxNumericInFilters, int systemConfigMaxNumericInFilters)
+  {
+    // if maxNumericInFIlters through context == 0 catch exception
+    if (queryContextMaxNumericInFilters == 0) {
+      throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
+    } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
+               && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
+      throw new UOE(String.format("Expected parameter[%s] cannot exceed system set value of [%d]",
+                                  CTX_MAX_NUMERIC_IN_FILTERS,
+                                  systemConfigMaxNumericInFilters));
+    }
+    if (systemConfigMaxNumericInFilters == NUM_FILTER_NOT_USED) {
+      return systemConfigMaxNumericInFilters;
+    }
+    return queryContextMaxNumericInFilters;
   }
 
   private static int getContextInt(

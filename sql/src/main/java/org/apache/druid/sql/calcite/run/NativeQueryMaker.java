@@ -128,9 +128,6 @@ public class NativeQueryMaker implements QueryMaker
       }
     }
     int numFilters = plannerContext.getPlannerConfig().getMaxNumericInFilters();
-    if (numFilters < 1 && numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
-      throw new UOE("maxNumericInFilters must be greater than 0");
-    }
 
     // special corner case handling for numeric IN filters
     // in case of query containing IN (v1, v2, v3,...) where Vi is numeric
