@@ -25,10 +25,8 @@ SqlNode DruidSqlInsert() :
 }
 {
   insertNode = SqlInsert()
-  [
-    <PARTITIONED> <BY>
-    partitionedBy = PartitionGranularity()
-  ]
+  <PARTITIONED> <BY>
+  partitionedBy = PartitionGranularity()
   [
     <CLUSTERED> <BY>
     clusteredBy = ClusterItems()

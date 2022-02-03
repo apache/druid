@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -40,11 +41,13 @@ public class DruidSqlInsert extends SqlInsert
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final Granularity partitionedBy;
+
+  @Nullable
   private final SqlNodeList clusteredBy;
 
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
-      @Nullable Granularity partitionedBy,
+      @Nonnull Granularity partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
   {
@@ -55,6 +58,7 @@ public class DruidSqlInsert extends SqlInsert
         insertNode.getSource(),
         insertNode.getTargetColumnList()
     );
+    Preconditions.checkNotNull(partitionedBy); // Shouldn't hit due to how the parser is written
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
   }
@@ -65,7 +69,6 @@ public class DruidSqlInsert extends SqlInsert
     return clusteredBy;
   }
 
-  @Nullable
   public Granularity getPartitionedBy()
   {
     return partitionedBy;
@@ -82,10 +85,8 @@ public class DruidSqlInsert extends SqlInsert
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     super.unparse(writer, leftPrec, rightPrec);
-    if (partitionedBy != null) {
-      writer.keyword("PARTITIONED BY");
-      writer.keyword(getPartitionedBy().toString()); // TODO: Can this be made cleaner
-    }
+    writer.keyword("PARTITIONED BY");
+    writer.keyword(getPartitionedBy().toString()); // TODO: Can this be made cleaner
     if (clusteredBy != null) {
       writer.sep("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
