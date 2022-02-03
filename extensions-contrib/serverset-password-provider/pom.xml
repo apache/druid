@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <groupId>org.apache.druid.extensions.contrib</groupId>
+    <artifactId>druid-serverset-password-provider</artifactId>
+    <name>druid-serverset-password-provider</name>
+    <description>Serverset Password Provider</description>
+
+    <parent>
+        <artifactId>druid</artifactId>
+        <groupId>org.apache.druid</groupId>
+        <version>dev-0.16.0-incubating</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>
