@@ -28,7 +28,6 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -42,7 +41,6 @@ import org.junit.runners.Parameterized;
 @RunWith(Enclosed.class)
 public class DruidSqlParserUtilsTest
 {
-
   /**
    * Sanity checking that the formats of TIME_FLOOR(__time, Period) work as expected
    */

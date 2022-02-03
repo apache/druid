@@ -206,7 +206,7 @@ public class DruidPlanner implements Closeable
     try {
       if (parsed.getIngestionGranularity() != null) {
         plannerContext.getQueryContext().put(
-            QueryContexts.INGESTION_GRANULARITY,
+            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
             plannerContext.getJsonMapper().writeValueAsString(parsed.getIngestionGranularity())
         );
       }

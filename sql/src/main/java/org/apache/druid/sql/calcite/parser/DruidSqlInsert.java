@@ -37,6 +37,8 @@ import javax.annotation.Nullable;
  */
 public class DruidSqlInsert extends SqlInsert
 {
+  public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
+
   // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 

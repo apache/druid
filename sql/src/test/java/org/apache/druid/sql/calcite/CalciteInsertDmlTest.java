@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -53,6 +52,7 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -102,7 +102,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   );
 
   private static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
-      QueryContexts.INGESTION_GRANULARITY,
+      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
 
@@ -344,7 +344,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
       Map<String, Object> queryContext = null;
       try {
         queryContext = ImmutableMap.of(
-            QueryContexts.INGESTION_GRANULARITY, queryJsonMapper.writeValueAsString(expectedGranularity)
+            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, queryJsonMapper.writeValueAsString(expectedGranularity)
         );
       }
       catch (JsonProcessingException e) {
@@ -424,7 +424,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
-    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
+    queryContext.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "day");
 
     testInsertQuery()
         .sql(
@@ -514,7 +514,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Unable to parse the granularity from 'invalid_granularity'. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function.",
+          "Unable to parse the granularity from 'invalid_granularity'. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
           e.getMessage()
       );
     }
@@ -763,7 +763,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     catch (JsonProcessingException e) {
       Assert.fail(e.getMessage());
     }
-    return ImmutableMap.of(QueryContexts.INGESTION_GRANULARITY, granularityString);
+    return ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, granularityString);
   }
 
   private InsertDmlTester testInsertQuery()
