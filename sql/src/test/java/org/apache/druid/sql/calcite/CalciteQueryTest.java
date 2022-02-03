@@ -8174,6 +8174,98 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename() throws Exception
+  {
+    cannotVectorize();
+    requireMergeBuffers(3);
+    testQuery(
+        PLANNER_CONFIG_NO_HLL.withOverrides(ImmutableMap.of(
+            PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+            "true"
+        )),
+        "SELECT\n"
+        + "(SUM(CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN 1 ELSE 0 END)*1.0/COUNT(DISTINCT CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN dim1 END))\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY ()",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setVirtualColumns(
+                                                expressionVirtualColumn(
+                                                    "v0",
+                                                    "case_searched(((947005200000 <= \"__time\") && (\"__time\" < 1641402000000)),\"dim1\",null)",
+                                                    ColumnType.STRING
+                                                )
+                                            )
+                                            .setDimensions(
+                                                dimensions(
+                                                    new DefaultDimensionSpec(
+                                                        "v0",
+                                                        "d0",
+                                                        ColumnType.STRING
+                                                    )
+                                                )
+                                            )
+                                            .setAggregatorSpecs(
+                                                aggregators(
+                                                    new LongSumAggregatorFactory(
+                                                        "a0",
+                                                        null,
+                                                        "case_searched(((947005200000 <= \"__time\") && (\"__time\" < 1641402000000)),1,0)",
+                                                        ExprMacroTable.nil()
+                                                    ),
+                                                    new GroupingAggregatorFactory(
+                                                        "a1",
+                                                        ImmutableList.of("v0")
+                                                    )
+                                                )
+                                            )
+                                            .setSubtotalsSpec(
+                                                ImmutableList.of(
+                                                    ImmutableList.of("d0"),
+                                                    ImmutableList.of()
+                                                )
+                                            )
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new FilteredAggregatorFactory(
+                                    new LongMinAggregatorFactory("_a0", "a0"),
+                                    selector("a1", "1", null)
+                                ),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a1"),
+                                    and(not(selector("d0", null, null)), selector("a1", "0", null))
+                                )
+                            )
+                        )
+                        .setPostAggregatorSpecs(Collections.singletonList(new ExpressionPostAggregator(
+                            "p0",
+                            "((\"_a0\" * 1.0) / \"_a1\")",
+                            null,
+                            ExprMacroTable.nil()
+                        )))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0d}
+        )
+    );
+  }
+
+  @Test
   public void testGroupByFloorWithOrderBy() throws Exception
   {
     testQuery(
