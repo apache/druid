@@ -96,5 +96,4 @@ public class DruidSqlInsert extends SqlInsert
       writer.endList(frame);
     }
   }
-
 }

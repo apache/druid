@@ -304,9 +304,6 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
 
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
-    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
-
     testInsertQuery()
         .sql(
             "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITIONED BY TIME_FLOOR(__time, 'PT1H')")
@@ -318,7 +315,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "v0")
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
-                .context(queryContext)
+                .context(queryContextWithGranularity(Granularities.HOUR))
                 .build()
         )
         .verify();
@@ -390,7 +387,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
-            + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "PARTITIONED BY ALL TIME CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -410,6 +407,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                         new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
                     )
                 )
+                .context(queryContextWithGranularity(Granularities.ALL))
                 .build()
         )
         .verify();
@@ -460,12 +458,9 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
 
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
-    queryContext.put(QueryContexts.INGESTION_GRANULARITY, "day");
-
     testInsertQuery()
         .sql(
-            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY 'day'")
+            "INSERT INTO druid.dst SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY DAY")
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
@@ -476,7 +471,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .limit(10)
                 .offset(20)
-                .context(queryContext)
+                .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
         .verify();
@@ -519,7 +514,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Granularity passed in PARTITIONED BY clause is invalid",
+          "Unable to parse the granularity from 'invalid_granularity'. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function.",
           e.getMessage()
       );
     }
@@ -532,7 +527,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     try {
       testQuery(
           StringUtils.format(
-              "INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME ORDER BY 2",
+              "INSERT INTO dst SELECT * FROM %s ORDER BY 2 PARTITIONED BY ALL TIME",
               externSql(externalDataSource)
           ),
           ImmutableList.of(),
@@ -763,7 +758,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
   {
     String granularityString = null;
     try {
-       granularityString = queryJsonMapper.writeValueAsString(granularity);
+      granularityString = queryJsonMapper.writeValueAsString(granularity);
     }
     catch (JsonProcessingException e) {
       Assert.fail(e.getMessage());
