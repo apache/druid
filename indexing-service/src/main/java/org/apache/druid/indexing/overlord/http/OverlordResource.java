@@ -457,7 +457,6 @@ public class OverlordResource
           StringUtils.format("Operation not supported for WorkerBehaviorConfig of type [%s]", workerBehaviorConfig.getClass().getSimpleName())
       ).build();
     }
-
   }
 
   // default value is used for backwards compatibility

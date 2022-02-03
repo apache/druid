@@ -38,6 +38,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
+import org.apache.druid.client.indexing.IndexingAutoScaleConfigInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -645,6 +646,32 @@ public class CompactSegmentsTest
     Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
     Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
     Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+  }
+
+  @Test
+  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsButFailAndUseFallback()
+  {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    leaderClient.start();
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), 3, true);
+    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+  }
+
+  @Test
+  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlots()
+  {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    leaderClient.start();
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), 100, true);
+    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
   }
 
   @Test
@@ -1795,15 +1822,25 @@ public class CompactSegmentsTest
       @Nullable Integer numCompactionTaskSlots
   )
   {
+    return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
+  }
+
+  private CoordinatorStats doCompactSegments(
+      CompactSegments compactSegments,
+      List<DataSourceCompactionConfig> compactionConfigs,
+      @Nullable Integer numCompactionTaskSlots,
+      boolean useAutoScaleSlots
+  )
+  {
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withUsedSegmentsTimelinesPerDataSourceInTest(dataSources)
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,
-                numCompactionTaskSlots == null ? null : 100., // 100% when numCompactionTaskSlots is not null
+                numCompactionTaskSlots == null ? null : 1., // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
-                false
+                useAutoScaleSlots
             )
         )
         .build();
@@ -1995,6 +2032,8 @@ public class CompactSegmentsTest
         return handleTask(request);
       } else if (urlString.contains("/druid/indexer/v1/workers")) {
         return handleWorkers();
+      } else if (urlString.contains("/druid/indexer/v1/autoScaleConfig")) {
+        return handleAutoScaleConfig();
       } else if (urlString.contains("/druid/indexer/v1/waitingTasks")
                  || urlString.contains("/druid/indexer/v1/pendingTasks")
                  || urlString.contains("/druid/indexer/v1/runningTasks")) {
@@ -2034,6 +2073,12 @@ public class CompactSegmentsTest
         );
       }
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(workerInfos));
+    }
+
+    private StringFullResponseHolder handleAutoScaleConfig() throws JsonProcessingException
+    {
+      IndexingAutoScaleConfigInfo info = new IndexingAutoScaleConfigInfo(5, 10, 3);
+      return createStringFullResponseHolder(jsonMapper.writeValueAsString(info));
     }
 
     private StringFullResponseHolder handleTask(Request request) throws IOException

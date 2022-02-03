@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.Request;
@@ -46,6 +47,8 @@ import org.junit.rules.ExpectedException;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class HttpIndexingServiceClientTest
@@ -341,6 +344,117 @@ public class HttpIndexingServiceClientTest
 
     ClientCompactionTaskQuery taskQuery = (ClientCompactionTaskQuery) captureTask.getValue();
     Assert.assertNull(taskQuery.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleAndNoRunningWorker() throws Exception
+  {
+    int minWorker = 3; // Does not matter
+    int maxWorker = 6;
+    int workerCapacityHint = 2;
+    // Mock response for /druid/indexer/v1/autoScaleConfig
+    HttpResponse autoScaleResponse = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(autoScaleResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(autoScaleResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(autoScaleResponse);
+    IndexingAutoScaleConfigInfo indexingAutoScaleConfigInfo = new IndexingAutoScaleConfigInfo(minWorker, maxWorker, workerCapacityHint);
+    StringFullResponseHolder autoScaleResponseHolder = new StringFullResponseHolder(
+        autoScaleResponse,
+        StandardCharsets.UTF_8
+    ).addChunk(jsonMapper.writeValueAsString(indexingAutoScaleConfigInfo));
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(autoScaleResponseHolder)
+            .once();
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/autoScaleConfig"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/autoScaleConfig")
+            ))
+            .once();
+    // Mock response for /druid/indexer/v1/workers
+    HttpResponse workerResponse = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(workerResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(workerResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(workerResponse);
+    StringFullResponseHolder workerResponseHolder = new StringFullResponseHolder(
+        workerResponse,
+        StandardCharsets.UTF_8
+    ).addChunk(jsonMapper.writeValueAsString(null));
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(workerResponseHolder)
+            .once();
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/workers")
+            ))
+            .once();
+    EasyMock.replay(druidLeaderClient);
+
+    final int actualResponse = httpIndexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+    Assert.assertEquals(workerCapacityHint * maxWorker, actualResponse);
+    EasyMock.verify(druidLeaderClient, workerResponse);
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleAndRunningWorker() throws Exception
+  {
+    int minWorker = 3; // Does not matter
+    int maxWorker = 6;
+    int workerCapacityHint = 2; // Does not matter
+    int runningWorkerCapacity = 3;
+    // Mock response for /druid/indexer/v1/autoScaleConfig
+    HttpResponse autoScaleResponse = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(autoScaleResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(autoScaleResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(autoScaleResponse);
+    IndexingAutoScaleConfigInfo indexingAutoScaleConfigInfo = new IndexingAutoScaleConfigInfo(minWorker, maxWorker, workerCapacityHint);
+    StringFullResponseHolder autoScaleResponseHolder = new StringFullResponseHolder(
+        autoScaleResponse,
+        StandardCharsets.UTF_8
+    ).addChunk(jsonMapper.writeValueAsString(indexingAutoScaleConfigInfo));
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(autoScaleResponseHolder)
+            .once();
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/autoScaleConfig"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/autoScaleConfig")
+            ))
+            .once();
+    // Mock response for /druid/indexer/v1/workers
+    HttpResponse workerResponse = EasyMock.createMock(HttpResponse.class);
+    EasyMock.expect(workerResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(workerResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.replay(workerResponse);
+    List<IndexingWorkerInfo> workerInfoList = ImmutableList.of(
+        new IndexingWorkerInfo(
+            new IndexingWorker("http", "host", "8091", runningWorkerCapacity, "version"),
+            0,
+            Collections.emptySet(),
+            Collections.emptyList(),
+            DateTimes.EPOCH,
+            null
+        )
+    );
+    StringFullResponseHolder workerResponseHolder = new StringFullResponseHolder(
+        workerResponse,
+        StandardCharsets.UTF_8
+    ).addChunk(jsonMapper.writeValueAsString(workerInfoList));
+    EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
+            .andReturn(workerResponseHolder)
+            .once();
+    EasyMock.expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/workers"))
+            .andReturn(new Request(
+                HttpMethod.GET,
+                new URL("http://localhost:8090/druid/indexer/v1/workers")
+            ))
+            .once();
+    EasyMock.replay(druidLeaderClient);
+
+    final int actualResponse = httpIndexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+    Assert.assertEquals(runningWorkerCapacity * maxWorker, actualResponse);
+    EasyMock.verify(druidLeaderClient, workerResponse);
   }
 }
 

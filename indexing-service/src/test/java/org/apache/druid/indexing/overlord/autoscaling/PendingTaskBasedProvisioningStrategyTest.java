@@ -66,6 +66,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 {
   private AutoScaler autoScaler;
   private Task testTask;
+  private PendingTaskBasedWorkerProvisioningConfig config;
   private PendingTaskBasedWorkerProvisioningStrategy strategy;
   private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
@@ -79,7 +80,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     testTask = TestTasks.immediateSuccess("task1");
 
-    PendingTaskBasedWorkerProvisioningConfig config = new PendingTaskBasedWorkerProvisioningConfig()
+    config = new PendingTaskBasedWorkerProvisioningConfig()
         .setMaxScalingDuration(new Period(1000))
         .setNumEventsToTrack(10)
         .setPendingTaskTimeout(new Period(0))
@@ -106,6 +107,12 @@ public class PendingTaskBasedProvisioningStrategyTest
           }
         }
     );
+  }
+
+  @Test
+  public void testGetConfig()
+  {
+    Assert.assertEquals(config, strategy.getConfig());
   }
 
   @Test
