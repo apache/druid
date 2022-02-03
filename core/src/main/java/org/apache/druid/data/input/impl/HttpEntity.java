@@ -111,14 +111,14 @@ public class HttpEntity extends RetryingInputEntity
         if (skipped != offset) {
           in.close();
           throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+        } else {
+          return in;
         }
       }
       catch (IOException ex) {
         in.close();
         throw ex;
       }
-      return in;
     }
-
   }
 }
