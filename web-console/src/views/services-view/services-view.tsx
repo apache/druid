@@ -245,7 +245,7 @@ ORDER BY
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
             if (loadQueueInfo) {
-              s = Object.assign(s, loadQueueInfo);
+              s = { ...s, ...loadQueueInfo };
             }
             return s;
           });
@@ -278,7 +278,7 @@ ORDER BY
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
             if (middleManagerInfo) {
-              s = Object.assign(s, middleManagerInfo);
+              s = { ...s, ...middleManagerInfo };
             }
             return s;
           });
