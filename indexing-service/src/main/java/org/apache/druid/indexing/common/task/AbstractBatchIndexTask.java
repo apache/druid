@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -515,9 +516,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null
                                           : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
+      List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
+                                 ? null
+                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
+
       final CompactionState compactionState = new CompactionState(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
+          metricsSpec,
           transformSpec,
           tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
           granularitySpec.asMap(toolbox.getJsonMapper())

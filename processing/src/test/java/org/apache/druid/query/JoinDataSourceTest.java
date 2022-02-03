@@ -204,4 +204,19 @@ public class JoinDataSourceTest
     );
     Assert.assertEquals(TrueDimFilter.instance(), dataSource.getLeftFilter());
   }
+
+  @Test
+  public void testVirtualColumnCandidates()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        new TableDataSource("table1"),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil()
+    );
+    Assert.assertEquals(dataSource.getVirtualColumnCandidates(), ImmutableSet.of("x"));
+  }
 }

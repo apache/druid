@@ -283,21 +283,25 @@ public class CliCoordinator extends ServerRunnable
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.supervisor.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillSupervisors.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.audit.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillAuditLog.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.rule.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillRules.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.datasource.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillDatasourceMetadata.class
             );

@@ -50,6 +50,9 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
   @Override
   public void aggregate()
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     long time = timeSelector.getLong();
     if (time >= lastTime) {
       lastTime = time;

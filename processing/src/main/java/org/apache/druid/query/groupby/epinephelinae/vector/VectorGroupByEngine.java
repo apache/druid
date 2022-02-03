@@ -47,6 +47,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -102,6 +103,11 @@ public class VectorGroupByEngine
                 // group by on multi value dimensions are not currently supported
                 // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
                 // To be safe, we must return false here.
+                return false;
+              }
+
+              if (dimension.getOutputType().getType().equals(ValueType.ARRAY)) {
+                // group by on arrays is not currently supported in the vector processing engine
                 return false;
               }
 

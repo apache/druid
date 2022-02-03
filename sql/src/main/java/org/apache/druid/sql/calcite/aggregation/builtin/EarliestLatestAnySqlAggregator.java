@@ -204,38 +204,20 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
         break;
       case 2:
-        if (!outputType.isNumeric()) { // translates (expr, maxBytesPerString) signature
-          theAggFactory = aggregatorType.createAggregatorFactory(
-              aggregatorName,
-              fieldName,
-              null,
-              outputType,
-              RexLiteral.intValue(rexNodes.get(1))
-          );
-        } else { // translates (expr, timeColumn) signature
-          theAggFactory = aggregatorType.createAggregatorFactory(
-              aggregatorName,
-              fieldName,
-              getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
-              outputType,
-              -1
-          );
-        }
-        break;
-      case 3:
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            getColumnName(plannerContext, virtualColumnRegistry, args.get(2), rexNodes.get(2)),
+            null,
             outputType,
             RexLiteral.intValue(rexNodes.get(1))
         );
         break;
       default:
         throw new IAE(
-            "aggregation[%s], Invalid number of arguments[%,d] to Earliest/Latest/Any operator",
+            "aggregation[%s], Invalid number of arguments[%,d] to [%s] operator",
             aggregatorName,
-            args.size()
+            args.size(),
+            aggregatorType.name()
         );
     }
 
@@ -245,7 +227,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     );
   }
 
-  private String getColumnName(
+  static String getColumnName(
       PlannerContext plannerContext,
       VirtualColumnRegistry virtualColumnRegistry,
       DruidExpression arg,
@@ -307,20 +289,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
                   "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
                   OperandTypes.ANY,
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
-              ),
-              OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
-                  OperandTypes.ANY,
-                  OperandTypes.NUMERIC
-              ),
-              OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, maxBytesPerString, timeColumn)'\n",
-                  OperandTypes.ANY,
-                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL),
-                  OperandTypes.NUMERIC
               )
           ),
-          SqlFunctionCategory.STRING,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false,
           Optionality.FORBIDDEN

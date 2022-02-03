@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlExpression, SqlRef } from 'druid-query-toolkit';
+import { SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -49,6 +49,7 @@ import {
   formatBytes,
   formatInteger,
   getNeedleAndMode,
+  isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   makeBooleanFilter,
@@ -59,6 +60,7 @@ import {
   sqlQueryCustomTableFilter,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  twoLines,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -73,9 +75,11 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Version',
     'Time span',
     'Partitioning',
+    'Shard detail',
     'Partition',
     'Size',
     'Num rows',
+    'Avg. row size',
     'Replicas',
     'Is published',
     'Is realtime',
@@ -100,9 +104,11 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'End',
     'Version',
     'Partitioning',
+    'Shard detail',
     'Partition',
     'Size',
     'Num rows',
+    'Avg. row size',
     'Replicas',
     'Is published',
     'Is realtime',
@@ -110,6 +116,10 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Is overshadowed',
   ],
 };
+
+function formatRangeDimensionValue(dimension: any, value: any): string {
+  return `${SqlRef.column(String(dimension))}=${SqlLiteral.create(String(value))}`;
+}
 
 export interface SegmentsViewProps {
   goToQuery: (initSql: string) => void;
@@ -145,9 +155,11 @@ interface SegmentQueryResultRow {
   version: string;
   time_span: string;
   partitioning: string;
-  size: number;
+  shard_spec: string;
   partition_num: number;
+  size: number;
   num_rows: NumberLike;
+  avg_row_size: NumberLike;
   num_replicas: number;
   is_available: number;
   is_published: number;
@@ -197,9 +209,12 @@ END AS "time_span"`,
   WHEN "shard_spec" LIKE '%"type":"numbered_overwrite"%' THEN 'numbered_overwrite'
   ELSE '-'
 END AS "partitioning"`,
+      visibleColumns.shown('Shard detail') && `"shard_spec"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
       visibleColumns.shown('Num rows') && `"num_rows"`,
+      visibleColumns.shown('Avg. row size') &&
+        `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
       visibleColumns.shown('Is published') && `"is_published"`,
       visibleColumns.shown('Is available') && `"is_available"`,
@@ -251,7 +266,7 @@ END AS "partitioning"`,
       segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Time span', 'Partitioning'],
+        ['Time span', 'Partitioning', 'Shard detail'],
       ),
       groupByInterval: false,
       showSegmentTimeline: false,
@@ -387,9 +402,11 @@ END AS "partitioning"`,
                 version: segment.version,
                 time_span: SegmentsView.computeTimeSpan(start, end),
                 partitioning: deepGet(segment, 'shardSpec.type') || '-',
+                shard_spec: deepGet(segment, 'shardSpec'),
                 partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
                 size: segment.size,
                 num_rows: -1,
+                avg_row_size: -1,
                 num_replicas: -1,
                 is_available: -1,
                 is_published: -1,
@@ -465,6 +482,8 @@ END AS "partitioning"`,
     const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
 
     const numRowsValues = segments.map(d => formatInteger(d.num_rows)).concat('(unknown)');
+
+    const avgRowSizeValues = segments.map(d => formatInteger(d.avg_row_size));
 
     const renderFilterableCell = (field: string) => {
       return (row: { value: any }) => {
@@ -587,6 +606,67 @@ END AS "partitioning"`,
             Cell: renderFilterableCell('partitioning'),
           },
           {
+            Header: 'Shard detail',
+            show: visibleColumns.shown('Shard detail'),
+            accessor: 'shard_spec',
+            width: 400,
+            sortable: false,
+            filterable: false,
+            Cell: ({ value }) => {
+              let v: any;
+              try {
+                v = JSON.parse(value);
+              } catch {
+                return '-';
+              }
+
+              switch (v?.type) {
+                case 'range': {
+                  const dimensions = v.dimensions || [];
+                  const formatEdge = (values: string[]) =>
+                    values.map((x, i) => formatRangeDimensionValue(dimensions[i], x)).join('; ');
+
+                  return (
+                    <div className="range-detail">
+                      <span className="range-label">Start:</span>
+                      {Array.isArray(v.start) ? formatEdge(v.start) : '-∞'}
+                      <br />
+                      <span className="range-label">End:</span>
+                      {Array.isArray(v.end) ? formatEdge(v.end) : '∞'}
+                    </div>
+                  );
+                }
+
+                case 'single': {
+                  return (
+                    <div className="range-detail">
+                      <span className="range-label">Start:</span>
+                      {v.start != null ? formatRangeDimensionValue(v.dimension, v.start) : '-∞'}
+                      <br />
+                      <span className="range-label">End:</span>
+                      {v.end != null ? formatRangeDimensionValue(v.dimension, v.end) : '∞'}
+                    </div>
+                  );
+                }
+
+                case 'hashed': {
+                  const { partitionDimensions } = v;
+                  if (!Array.isArray(partitionDimensions)) return value;
+                  return `Partition dimensions: ${
+                    partitionDimensions.length ? partitionDimensions.join('; ') : 'all'
+                  }`;
+                }
+
+                case 'numbered':
+                case 'none':
+                  return '-';
+
+                default:
+                  return typeof value === 'string' ? value : '-';
+              }
+            },
+          },
+          {
             Header: 'Partition',
             show: visibleColumns.shown('Partition'),
             accessor: 'partition_num',
@@ -625,6 +705,23 @@ END AS "partitioning"`,
                 unselectableThousandsSeparator
               />
             ),
+          },
+          {
+            Header: twoLines('Avg. row size', '(bytes)'),
+            show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
+            accessor: 'avg_row_size',
+            filterable: false,
+            width: 100,
+            Cell: ({ value }) => {
+              if (isNumberLikeNaN(value)) return '-';
+              return (
+                <BracedText
+                  text={formatInteger(value)}
+                  braces={avgRowSizeValues}
+                  unselectableThousandsSeparator
+                />
+              );
+            },
           },
           {
             Header: 'Replicas',

@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -31,7 +32,7 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
 
   private static final Interner<ColumnType> INTERNER = Interners.newWeakInterner();
 
-  public static ColumnTypeFactory getInstance()
+  public static TypeFactory<ColumnType> getInstance()
   {
     return INSTANCE;
   }
@@ -86,6 +87,39 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
       default:
         throw new ISE("Unsupported column type[%s]", type);
     }
+  }
+
+  @Override
+  public <T> TypeStrategy<T> getTypeStrategy(ColumnType type)
+  {
+    final TypeStrategy strategy;
+    switch (type.getType()) {
+      case LONG:
+        strategy = TypeStrategies.LONG;
+        break;
+      case FLOAT:
+        strategy = TypeStrategies.FLOAT;
+        break;
+      case DOUBLE:
+        strategy = TypeStrategies.DOUBLE;
+        break;
+      case STRING:
+        strategy = TypeStrategies.STRING;
+        break;
+      case ARRAY:
+        strategy = new TypeStrategies.ArrayTypeStrategy(type);
+        break;
+      case COMPLEX:
+        TypeStrategy<?> complexStrategy = TypeStrategies.getComplex(type.getComplexTypeName());
+        if (complexStrategy == null) {
+          throw new IAE("Cannot find strategy for type [%s]", type.asTypeString());
+        }
+        strategy = complexStrategy;
+        break;
+      default:
+        throw new ISE("Unsupported column type[%s]", type);
+    }
+    return strategy;
   }
 
   @Override

@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
@@ -85,6 +86,7 @@ import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -133,6 +135,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
                    .add(EarliestLatestAnySqlAggregator.LATEST)
                    .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
+                   .add(EarliestLatestBySqlAggregator.EARLIEST_BY)
+                   .add(EarliestLatestBySqlAggregator.LATEST_BY)
                    .add(new MinSqlAggregator())
                    .add(new MaxSqlAggregator())
                    .add(new SumSqlAggregator())
@@ -239,6 +243,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
                    .add(new MultiValueStringOperatorConversions.FilterOnly())
                    .add(new MultiValueStringOperatorConversions.FilterNone())
+                   .add(new MultiValueStringToArrayOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =

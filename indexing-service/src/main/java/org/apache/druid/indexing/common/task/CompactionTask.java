@@ -106,7 +106,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -754,7 +753,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                                                : dimensionsSpec;
     final AggregatorFactory[] finalMetricsSpec = metricsSpec == null
                                                  ? createMetricsSpec(queryableIndexAndSegments)
-                                                 : convertToCombiningFactories(metricsSpec);
+                                                 : metricsSpec;
 
     return new DataSchema(
         dataSource,
@@ -838,13 +837,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       throw new ISE("Failed to merge aggregators[%s]", aggregatorFactories);
     }
     return mergedAggregators;
-  }
-
-  private static AggregatorFactory[] convertToCombiningFactories(AggregatorFactory[] metricsSpec)
-  {
-    return Arrays.stream(metricsSpec)
-                 .map(AggregatorFactory::getCombiningFactory)
-                 .toArray(AggregatorFactory[]::new);
   }
 
   private static DimensionsSpec createDimensionsSpec(List<NonnullPair<QueryableIndex, DataSegment>> queryableIndices)

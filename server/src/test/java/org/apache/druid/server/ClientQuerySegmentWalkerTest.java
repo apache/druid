@@ -71,6 +71,8 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
@@ -807,19 +809,48 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .setDimensions(
+                                       new DefaultDimensionSpec(
+                                           "ad",
+                                           "ad",
+                                           ColumnType.DOUBLE_ARRAY
+                                       ))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
-
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0))},
+            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0))},
+            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0))},
+            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysDoublesAsString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0)).toString()}
+        )
     );
   }
 
@@ -865,18 +896,49 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .setDimensions(new DefaultDimensionSpec(
+                                       "al",
+                                       "al",
+                                       ColumnType.LONG_ARRAY
+                                   ))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
 
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<LONG>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L))},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L))},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L))},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysLongsAsString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    // when we donot define an outputType, convert {@link ComparableList} to a string
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L)).toString()}
+        )
     );
   }
 
@@ -922,21 +984,46 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .setDimensions(new DefaultDimensionSpec("as", "as", ColumnType.STRING_ARRAY))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
-
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{ComparableStringArray.of("1.0", "2.0")},
+            new Object[]{ComparableStringArray.of("2.0", "4.0")},
+            new Object[]{ComparableStringArray.of("3.0", "6.0")},
+            new Object[]{ComparableStringArray.of("4.0", "8.0")}
+        )
     );
   }
+
+  @Test
+  public void testGroupByOnArraysStringsasString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{ComparableStringArray.of("1.0", "2.0").toString()},
+            new Object[]{ComparableStringArray.of("2.0", "4.0").toString()},
+            new Object[]{ComparableStringArray.of("3.0", "6.0").toString()},
+            new Object[]{ComparableStringArray.of("4.0", "8.0").toString()}
+        )
+    );
+  }
+
 
   @Test
   public void testGroupByOnArraysUnknownStrings()

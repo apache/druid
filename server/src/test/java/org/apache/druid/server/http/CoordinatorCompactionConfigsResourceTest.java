@@ -59,6 +59,7 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       null,
       null,
+      null,
       ImmutableMap.of("key", "val")
   );
   private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
@@ -156,6 +157,7 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
     String author = "maytas";
@@ -195,6 +197,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,
@@ -318,6 +321,7 @@ public class CoordinatorCompactionConfigsResourceTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,

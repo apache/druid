@@ -31,3 +31,15 @@ exports[`FormattedInput matches snapshot with escaped value 1`] = `
   </div>
 </div>
 `;
+
+exports[`FormattedInput matches works with multiline 1`] = `
+<div
+  class="formatted-input"
+>
+  <textarea
+    class="bp3-input"
+  >
+    Here are some chars \\t\\r\\n lol
+  </textarea>
+</div>
+`;

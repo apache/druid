@@ -180,6 +180,15 @@ public class DruidNodeDiscoveryProviderTest
     Assert.assertEquals(ImmutableSet.of(node1, node3), lookupNodes);
   }
 
+  @Test
+  public void test_removeListener_withNullListener_noException()
+  {
+    TestDruidNodeDiscoveryProvider provider = new TestDruidNodeDiscoveryProvider();
+
+    DruidNodeDiscovery dataNodeDiscovery = provider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
+    dataNodeDiscovery.removeListener(null);
+  }
+
   private static class TestDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private List<DruidNodeDiscovery.Listener> listeners = new ArrayList<>();
