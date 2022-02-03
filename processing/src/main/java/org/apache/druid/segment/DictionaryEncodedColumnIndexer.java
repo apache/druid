@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -29,6 +30,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.Iterator;
 
 /**
@@ -43,9 +45,25 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   @Nullable
   protected SortedDimensionDictionary<ActualType> sortedLookup;
 
+  /**
+   * Creates a new DictionaryEncodedColumnIndexer with the default implementation
+   * of {@link DimensionDictionary}.
+   * <p>
+   * Using this constructor disables memory estimations of the dictionary size.
+   */
   public DictionaryEncodedColumnIndexer()
   {
-    this.dimLookup = new DimensionDictionary();
+    this(new DimensionDictionary<>());
+  }
+
+  /**
+   * Creates a new DictionaryEncodedColumnIndexer.
+   *
+   * @param dimLookup Dimension Dictionary to lookup dimension values.
+   */
+  public DictionaryEncodedColumnIndexer(@NotNull DimensionDictionary<ActualType> dimLookup)
+  {
+    this.dimLookup = Preconditions.checkNotNull(dimLookup);
   }
 
   @Override
