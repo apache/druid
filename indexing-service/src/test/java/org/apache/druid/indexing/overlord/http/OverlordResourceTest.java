@@ -25,7 +25,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -1478,7 +1477,7 @@ public class OverlordResourceTest
     );
     final Response response = overlordResource.getAutoScaleConfig();
     Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.getCode(), response.getStatus());
-    Assert.assertTrue(((String)response.getEntity()).contains("Operation not supported for WorkerBehaviorConfig of type"));
+    Assert.assertTrue(((String) response.getEntity()).contains("Operation not supported for WorkerBehaviorConfig of type"));
   }
 
   @Test
