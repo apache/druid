@@ -58,7 +58,7 @@ public class DruidSqlParserUtils
    * This method is used to extract the granularity from a SqlNode representing following function calls:
    * 1. FLOOR(__time TO TimeUnit)
    * 2. TIME_FLOOR(__time, 'PT1H')
-   * <p>
+   *
    * Validation on the sqlNode is contingent to following conditions:
    * 1. sqlNode is an instance of SqlCall
    * 2. Operator is either one of TIME_FLOOR or FLOOR
@@ -66,7 +66,7 @@ public class DruidSqlParserUtils
    * 4. First operand is a SimpleIdentifier representing __time
    * 5. If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class
    * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}
-   * <p>
+   *
    * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
    *
    * @param sqlNode SqlNode representing a call to a function

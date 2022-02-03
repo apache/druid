@@ -88,7 +88,7 @@ public class DruidSqlInsert extends SqlInsert
   {
     super.unparse(writer, leftPrec, rightPrec);
     writer.keyword("PARTITIONED BY");
-    writer.keyword(getPartitionedBy().toString()); // TODO: Can this be made cleaner
+    writer.keyword(getPartitionedBy().toString()); // TODO: Make it cleaner by directly unparsing the SqlNode
     if (getClusteredBy() != null) {
       writer.sep("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
