@@ -732,7 +732,7 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
 
-  @Test(expected = org.apache.druid.java.util.common.IAE.class)
+  @Test
   public void testIntervalNotSpecifiedWithReplace() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
@@ -744,6 +744,11 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T02:00:30Z,c,1\n");
     }
 
+    // Expect exception if reingest with dropExisting and null intervals is attempted
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "GranularitySpec's intervals cannot be empty when setting dropExisting to true."
+    );
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -762,9 +767,6 @@ public class IndexTaskTest extends IngestionTestBase
         ),
         null
     );
-
-    final List<DataSegment> segments = runTask(indexTask).rhs;
-
 
   }
 
@@ -2515,97 +2517,9 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    // Ingest data with overwrite and same segment granularity
-    segments = runTask(indexTask).rhs;
-
-    Assert.assertEquals(1, segments.size()); // one tombstone
-    Assert.assertTrue(segments.get(0).isTombstone());
   }
 
-  @Test
-  public void testOldSegmentNotReplacedWhenDropFlagTrueAndIngestionIntervalEmpty() throws Exception
-  {
-    File tmpDir = temporaryFolder.newFolder();
-
-    File tmpFile = File.createTempFile("druid", "index", tmpDir);
-
-    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("2014-01-01T00:00:10Z,a,1\n");
-      writer.write("2014-01-01T01:00:20Z,b,1\n");
-      writer.write("2014-01-01T02:00:30Z,c,1\n");
-    }
-
-    IndexTask indexTask = new IndexTask(
-        null,
-        null,
-        createDefaultIngestionSpec(
-            jsonMapper,
-            tmpDir,
-            new UniformGranularitySpec(
-                Granularities.YEAR,
-                Granularities.MINUTE,
-                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(10, true),
-            false,
-            false
-        ),
-        null
-    );
-
-    // Ingest data with YEAR segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
-
-    Assert.assertEquals(1, segments.size());
-    Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
-    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
-    for (DataSegment segment : usedSegmentsBeforeOverwrite) {
-      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
-    }
-
-    indexTask = new IndexTask(
-        null,
-        null,
-        createDefaultIngestionSpec(
-            jsonMapper,
-            tmpDir,
-            new UniformGranularitySpec(
-                Granularities.MINUTE,
-                Granularities.MINUTE,
-                null
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(10, true),
-            false,
-            true
-        ),
-        null
-    );
-
-    // Ingest data with overwrite and MINUTE segment granularity
-    segments = runTask(indexTask).rhs;
-
-    Assert.assertEquals(3, segments.size());
-    Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
-    Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
-    int yearSegmentFound = 0;
-    int minuteSegmentFound = 0;
-    for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
-      // Used segments after overwrite will contain 1 old segment with YEAR segmentGranularity (from first ingestion)
-      // and 3 new segments with MINUTE segmentGranularity (from second ingestion)
-      if (usedSegmentsBeforeOverwrite.contains(segment)) {
-        Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
-        yearSegmentFound++;
-      } else {
-        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
-        minuteSegmentFound++;
-      }
-    }
-    Assert.assertEquals(1, yearSegmentFound);
-    Assert.assertEquals(3, minuteSegmentFound);
-  }
-
+ 
   @Test
   public void testErrorWhenDropFlagTrueAndOverwriteFalse() throws Exception
   {
