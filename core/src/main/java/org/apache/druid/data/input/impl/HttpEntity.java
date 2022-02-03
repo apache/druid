@@ -106,10 +106,16 @@ public class HttpEntity extends RetryingInputEntity
         );
       }
       final InputStream in = urlConnection.getInputStream();
-      final long skipped = in.skip(offset);
-      if (skipped != offset) {
-        urlConnection.getInputStream().close();
-        throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+      try {
+        final long skipped = in.skip(offset);
+        if (skipped != offset) {
+          in.close();
+          throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+        }
+      }
+      catch (IOException ex) {
+        in.close();
+        throw ex;
       }
       return in;
     }
