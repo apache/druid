@@ -111,9 +111,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-
-      return shuttle.visit(new TimestampFloorExpr(newArgs));
+      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -189,8 +187,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
