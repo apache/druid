@@ -130,7 +130,6 @@ public interface DimensionIndexer<
    * Contains an object of the {@link EncodedKeyComponentType} and the effective
    * size of the key component in bytes.
    */
-  @Nullable
   EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
       @Nullable Object dimValues,
       boolean reportParseExceptions
