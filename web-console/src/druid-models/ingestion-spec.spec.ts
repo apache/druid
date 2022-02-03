@@ -330,6 +330,185 @@ describe('ingestion-spec', () => {
     });
   });
 
+  it('upgrades / downgrades back compat supervisor spec', () => {
+    const backCompatSupervisorSpec = {
+      type: 'kafka',
+      spec: {
+        dataSchema: {
+          dataSource: 'metrics-kafka',
+          parser: {
+            type: 'string',
+            parseSpec: {
+              format: 'json',
+              timestampSpec: {
+                column: 'timestamp',
+                format: 'auto',
+              },
+              dimensionsSpec: {
+                dimensions: [],
+                dimensionExclusions: ['timestamp', 'value'],
+              },
+            },
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              name: 'value_sum',
+              fieldName: 'value',
+              type: 'doubleSum',
+            },
+            {
+              name: 'value_min',
+              fieldName: 'value',
+              type: 'doubleMin',
+            },
+            {
+              name: 'value_max',
+              fieldName: 'value',
+              type: 'doubleMax',
+            },
+          ],
+          granularitySpec: {
+            type: 'uniform',
+            segmentGranularity: 'HOUR',
+            queryGranularity: 'NONE',
+          },
+        },
+        tuningConfig: {
+          type: 'kafka',
+          maxRowsPerSegment: 5000000,
+        },
+        ioConfig: {
+          topic: 'metrics',
+          consumerProperties: {
+            'bootstrap.servers': 'localhost:9092',
+          },
+          taskCount: 1,
+          replicas: 1,
+          taskDuration: 'PT1H',
+        },
+      },
+      dataSchema: {
+        dataSource: 'metrics-kafka',
+        parser: {
+          type: 'string',
+          parseSpec: {
+            format: 'json',
+            timestampSpec: {
+              column: 'timestamp',
+              format: 'auto',
+            },
+            dimensionsSpec: {
+              dimensions: [],
+              dimensionExclusions: ['timestamp', 'value'],
+            },
+          },
+        },
+        metricsSpec: [
+          {
+            name: 'count',
+            type: 'count',
+          },
+          {
+            name: 'value_sum',
+            fieldName: 'value',
+            type: 'doubleSum',
+          },
+          {
+            name: 'value_min',
+            fieldName: 'value',
+            type: 'doubleMin',
+          },
+          {
+            name: 'value_max',
+            fieldName: 'value',
+            type: 'doubleMax',
+          },
+        ],
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'HOUR',
+          queryGranularity: 'NONE',
+        },
+      },
+      tuningConfig: {
+        type: 'kafka',
+        maxRowsPerSegment: 5000000,
+      },
+      ioConfig: {
+        topic: 'metrics',
+        consumerProperties: {
+          'bootstrap.servers': 'localhost:9092',
+        },
+        taskCount: 1,
+        replicas: 1,
+        taskDuration: 'PT1H',
+      },
+    };
+
+    expect(cleanSpec(upgradeSpec(backCompatSupervisorSpec))).toEqual({
+      spec: {
+        dataSchema: {
+          dataSource: 'metrics-kafka',
+          dimensionsSpec: {
+            dimensionExclusions: ['timestamp', 'value'],
+            dimensions: [],
+          },
+          granularitySpec: {
+            queryGranularity: 'NONE',
+            segmentGranularity: 'HOUR',
+            type: 'uniform',
+          },
+          metricsSpec: [
+            {
+              name: 'count',
+              type: 'count',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_sum',
+              type: 'doubleSum',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_min',
+              type: 'doubleMin',
+            },
+            {
+              fieldName: 'value',
+              name: 'value_max',
+              type: 'doubleMax',
+            },
+          ],
+          timestampSpec: {
+            column: 'timestamp',
+            format: 'auto',
+          },
+        },
+        ioConfig: {
+          consumerProperties: {
+            'bootstrap.servers': 'localhost:9092',
+          },
+          inputFormat: {
+            type: 'json',
+          },
+          replicas: 1,
+          taskCount: 1,
+          taskDuration: 'PT1H',
+          topic: 'metrics',
+        },
+        tuningConfig: {
+          maxRowsPerSegment: 5000000,
+          type: 'kafka',
+        },
+      },
+      type: 'kafka',
+    });
+  });
+
   it('cleanSpec', () => {
     expect(
       cleanSpec({
@@ -450,6 +629,10 @@ describe('spec utils', () => {
     it('works for multi-value', () => {
       expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
       expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
+    });
+
+    it('works for strange input (object with no prototype)', () => {
+      expect(guessColumnTypeFromInput([1, Object.create(null), 3], false)).toEqual('string');
     });
   });
 

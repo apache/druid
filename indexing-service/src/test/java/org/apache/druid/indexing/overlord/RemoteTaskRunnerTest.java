@@ -43,6 +43,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -56,6 +57,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -67,10 +70,14 @@ import java.util.concurrent.TimeUnit;
 
 public class RemoteTaskRunnerTest
 {
+  private static final Logger LOG = new Logger(RemoteTaskRunnerTest.class);
   private static final Joiner JOINER = RemoteTaskRunnerTestUtils.JOINER;
   private static final String WORKER_HOST = "worker";
   private static final String ANNOUCEMENTS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH, WORKER_HOST);
   private static final String STATUS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.STATUS_PATH, WORKER_HOST);
+
+  // higher timeout to reduce flakiness on CI pipeline
+  private static final Period TIMEOUT_PERIOD = Period.millis(30000);
 
   private RemoteTaskRunner remoteTaskRunner;
   private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
@@ -79,6 +86,24 @@ public class RemoteTaskRunnerTest
 
   private Task task;
   private Worker worker;
+
+  @Rule
+  public TestRule watcher = new TestWatcher() {
+    @Override
+    protected void starting(Description description)
+    {
+      LOG.info("Starting test: " + description.getMethodName());
+    }
+
+    @Override
+    protected void finished(Description description)
+    {
+      LOG.info("Finishing test: " + description.getMethodName());
+    }
+  };
+
+
+
 
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
@@ -153,7 +178,7 @@ public class RemoteTaskRunnerTest
   @Test
   public void testStartWithNoWorker()
   {
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
   }
 
   @Test
@@ -364,10 +389,9 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBootstrap() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -510,7 +534,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(workerRunningTask(task.getId()));
 
     remoteTaskRunner.stop();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
     final RemoteTaskRunnerWorkItem newWorkItem = remoteTaskRunner
         .getKnownTasks()
         .stream()
@@ -547,7 +571,7 @@ public class RemoteTaskRunnerTest
   public void testRunPendingTaskTimeoutToAssign() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
     RemoteTaskRunnerWorkItem workItem = remoteTaskRunner.addPendingTask(task);
     remoteTaskRunner.runPendingTask(workItem);
     TaskStatus taskStatus = workItem.getResult().get(0, TimeUnit.MILLISECONDS);
@@ -561,7 +585,7 @@ public class RemoteTaskRunnerTest
   private void doSetup() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD));
   }
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
@@ -770,10 +794,9 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -821,7 +844,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
 
     ((RemoteTaskRunnerTestUtils.TestableRemoteTaskRunner) remoteTaskRunner)
-        .setCurrentTimeMillis(System.currentTimeMillis() + 2 * timeoutPeriod.toStandardDuration().getMillis());
+        .setCurrentTimeMillis(System.currentTimeMillis() + 2 * TIMEOUT_PERIOD.toStandardDuration().getMillis());
     remoteTaskRunner.checkBlackListedNodes();
 
     // After backOffTime the nodes are removed from blacklist
@@ -857,12 +880,10 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers25Percent() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
-
     rtrTestUtils.makeWorker("worker", 10);
     rtrTestUtils.makeWorker("worker2", 10);
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(25);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -914,12 +935,10 @@ public class RemoteTaskRunnerTest
   @Test
   public void testBlacklistZKWorkers50Percent() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
-
     rtrTestUtils.makeWorker("worker", 10);
     rtrTestUtils.makeWorker("worker2", 10);
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(50);
 
     makeRemoteTaskRunner(rtrConfig);
@@ -967,10 +986,9 @@ public class RemoteTaskRunnerTest
   @Test
   public void testSuccessfulTaskOnBlacklistedWorker() throws Exception
   {
-    Period timeoutPeriod = Period.millis(1000);
     makeWorker();
 
-    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD);
     rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
     makeRemoteTaskRunner(rtrConfig);

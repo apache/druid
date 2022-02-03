@@ -84,7 +84,7 @@ public class OakIncrementalIndex extends IncrementalIndex implements Incremental
                              int oakBlockSize,
                              int oakChunkMaxItems)
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory, true);
 
     AggregatorFactory[] metrics = getMetricAggs();
     this.aggregators = new BufferAggregator[metrics.length];

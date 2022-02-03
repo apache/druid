@@ -67,6 +67,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
+  private final boolean useMaxMemoryEstimates;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
@@ -84,6 +85,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
+      boolean useMaxMemoryEstimates,
       String dedupColumn
   )
   {
@@ -95,6 +97,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
+        useMaxMemoryEstimates,
         dedupColumn,
         Collections.emptyList()
     );
@@ -108,6 +111,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
+      boolean useMaxMemoryEstimates,
       String dedupColumn,
       List<FireHydrant> hydrants
   )
@@ -119,6 +123,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.dedupColumn = dedupColumn;
 
     int maxCount = -1;
@@ -334,6 +339,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
+        .setUseMaxMemoryEstimates(useMaxMemoryEstimates)
         .build();
 
     final FireHydrant old;

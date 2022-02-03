@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
@@ -56,7 +55,6 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -65,7 +63,6 @@ import java.util.List;
 /**
  * Tests for array functions and array types
  */
-@RunWith(JUnitParamsRunner.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   // test some query stuffs, sort of limited since no native array column types so either need to use constructor or

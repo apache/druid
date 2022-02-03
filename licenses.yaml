@@ -5823,7 +5823,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Vadim Ogievetsky, Andrey Sidorov
-version: 1.1.0
+version: 1.2.0
 license_file_path: licenses/bin/json-bigint-native.MIT
 
 ---

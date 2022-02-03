@@ -45,6 +45,7 @@ exports[`AutoForm matches snapshot 1`] = `
   >
     <Memo(SuggestibleInput)
       disabled={false}
+      multiline={false}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
@@ -57,6 +58,20 @@ exports[`AutoForm matches snapshot 1`] = `
   >
     <Memo(SuggestibleInput)
       disabled={false}
+      multiline={false}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value="Hello World"
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
+    key="testStringWithMultiline"
+    label="Test string with multiline"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      multiline={true}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
@@ -148,6 +163,7 @@ exports[`AutoForm matches snapshot 1`] = `
     <Memo(SuggestibleInput)
       disabled={false}
       intent="primary"
+      multiline={false}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""

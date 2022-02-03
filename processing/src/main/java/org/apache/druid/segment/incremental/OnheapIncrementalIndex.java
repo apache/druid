@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.utils.JvmUtils;
@@ -73,16 +74,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      long maxBytesInMemory
+      long maxBytesInMemory,
+      boolean useMaxMemoryEstimates
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory);
+    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, maxRowCount, maxBytesInMemory, useMaxMemoryEstimates);
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts, dimsComparator());
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+    maxBytesPerRowForAggregators =
+        useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
   }
 
   /**
+   * Old method of memory estimation. Used only when {@link #useMaxMemoryEstimates} is true.
+   *
    * Gives estimated max size per aggregator. It is assumed that every aggregator will have enough overhead for its own
    * object header and for a pointer to a selector. We are adding a overhead-factor for each object as additional 16
    * bytes.
@@ -150,11 +155,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final AggregatorFactory[] metrics = getMetrics();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      long aggSizeDelta = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      bytesInMemory.addAndGet(useMaxMemoryEstimates ? 0 : aggSizeDelta);
     } else {
       aggs = new Aggregator[metrics.length];
-      factorizeAggs(metrics, aggs, rowContainer, row);
-      doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      long aggSizeForRow = factorizeAggs(metrics, aggs, rowContainer, row);
+      aggSizeForRow += doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
 
       final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
@@ -172,38 +178,27 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
-        long estimatedRowSize = estimateRowSizeInBytes(key, maxBytesPerRowForAggregators);
-        bytesInMemory.addAndGet(estimatedRowSize);
       } else {
-        // We lost a race
+        // This would happen in a race condition where there are multiple write threads
+        // which could be possible in case of GroupBy v1 strategy
         parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
-        doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+        aggSizeForRow = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
       }
+
+      // For a new key, row size = key size + aggregator size + overhead
+      final long estimatedSizeOfAggregators =
+          useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForRow;
+      final long rowSize = key.estimateBytesInMemory()
+                           + estimatedSizeOfAggregators
+                           + ROUGH_OVERHEAD_PER_MAP_ENTRY;
+      bytesInMemory.addAndGet(rowSize);
     }
-
     return new AddToFactsResult(numEntries.get(), bytesInMemory.get(), parseExceptionMessages);
-  }
-
-  /**
-   * Gives an estimated size of row in bytes, it accounts for:
-   * <ul>
-   * <li> overhead per Map Entry
-   * <li> TimeAndDims key size
-   * <li> aggregator size
-   * </ul>
-   *
-   * @param key                          TimeAndDims key
-   * @param maxBytesPerRowForAggregators max size per aggregator
-   *
-   * @return estimated size of row
-   */
-  private long estimateRowSizeInBytes(IncrementalIndexRow key, long maxBytesPerRowForAggregators)
-  {
-    return ROUGH_OVERHEAD_PER_MAP_ENTRY + key.estimateBytesInMemory() + maxBytesPerRowForAggregators;
   }
 
   @Override
@@ -212,22 +207,49 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     return indexIncrement.get() - 1;
   }
 
-  private void factorizeAggs(
+  /**
+   * Creates aggregators for the given aggregator factories.
+   *
+   * @return Total initial size in bytes required by all the aggregators.
+   * This value is non-zero only when {@link #useMaxMemoryEstimates} is false.
+   */
+  private long factorizeAggs(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
       ThreadLocal<InputRow> rowContainer,
       InputRow row
   )
   {
+    long totalInitialSizeBytes = 0L;
     rowContainer.set(row);
+
+    final long aggReferenceSize = Long.BYTES;
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
-      aggs[i] = agg.factorize(selectors.get(agg.getName()));
+
+      if (useMaxMemoryEstimates) {
+        aggs[i] = agg.factorize(selectors.get(agg.getName()));
+      } else {
+        AggregatorAndSize aggregatorAndSize =
+            agg.factorizeWithSize(selectors.get(agg.getName()));
+        aggs[i] = aggregatorAndSize.getAggregator();
+        totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+        totalInitialSizeBytes += aggReferenceSize;
+      }
     }
     rowContainer.set(null);
+
+    return totalInitialSizeBytes;
   }
 
-  private void doAggregate(
+  /**
+   * Performs aggregation for all of the aggregators.
+   *
+   * @return Total incremental memory in bytes required by this step of the
+   * aggregation. The returned value is non-zero only if
+   * {@link #useMaxMemoryEstimates} is false.
+   */
+  private long doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
       ThreadLocal<InputRow> rowContainer,
@@ -237,11 +259,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     rowContainer.set(row);
 
+    long totalIncrementalBytes = 0L;
     for (int i = 0; i < aggs.length; i++) {
       final Aggregator agg = aggs[i];
       synchronized (agg) {
         try {
-          agg.aggregate();
+          if (useMaxMemoryEstimates) {
+            agg.aggregate();
+          } else {
+            totalIncrementalBytes += agg.aggregateWithSize();
+          }
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
@@ -252,6 +279,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
 
     rowContainer.set(null);
+    return totalIncrementalBytes;
   }
 
   private void closeAggregators()
@@ -365,7 +393,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          useMaxMemoryEstimates
       );
     }
   }

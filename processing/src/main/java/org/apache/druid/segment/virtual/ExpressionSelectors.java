@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -256,30 +257,43 @@ public class ExpressionSelectors
     final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
     final Map<String, Pair<ExpressionType, Supplier<Object>>> suppliers = new HashMap<>();
     for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+      final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
-      final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
 
-      if (columnCapabilities == null ||
-          columnCapabilities.isArray() ||
-          (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT) && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED))
-      ) {
-        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
+      final boolean useObjectSupplierForMultiValueStringArray =
+          capabilities != null
+          // if homogenizing null multi-value string arrays, or if a single valued function that must be applied across
+          // multi-value rows, we can just use the dimension selector, which has the homogenization behavior built-in
+          && ((!capabilities.is(ValueType.STRING))
+              || (capabilities.is(ValueType.STRING)
+                  && !ExpressionProcessing.isHomogenizeNullMultiValueStringArrays()
+                  && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+              )
+          )
+          // expression has array output
+          && plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
+
+      final boolean homogenizeNullMultiValueStringArrays =
+          plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
+
+      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
-            plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+            homogenizeNullMultiValueStringArrays
         );
-      } else if (columnCapabilities.is(ValueType.FLOAT)) {
+      } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (columnCapabilities.is(ValueType.LONG)) {
+      } else if (capabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (columnCapabilities.is(ValueType.DOUBLE)) {
+      } else if (capabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (columnCapabilities.is(ValueType.STRING)) {
+      } else if (capabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
             multiVal

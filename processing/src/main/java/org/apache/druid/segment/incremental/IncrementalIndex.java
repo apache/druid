@@ -59,6 +59,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
@@ -227,6 +228,33 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
 
+  /**
+   * Flag denoting if max possible values should be used to estimate on-heap mem
+   * usage.
+   * <p>
+   * There is one instance of Aggregator per metric per row key.
+   * <p>
+   * <b>Old Method:</b> {@code useMaxMemoryEstimates = true} (default)
+   * <ul>
+   *   <li>Aggregator: For a given metric, compute the max memory an aggregator
+   *   can use and multiply that by number of aggregators (same as number of
+   *   aggregated rows or number of unique row keys)</li>
+   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
+   *   size of original dimension values</li>
+   * </ul>
+   *
+   * <b>New Method:</b> {@code useMaxMemoryEstimates = false}
+   * <ul>
+   *   <li>Aggregator: Get the initialize of an Aggregator instance, and add the
+   *   incremental size required in each aggregation step.</li>
+   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
+   *   size of dimension values only if they are newly added to the dictionary</li>
+   * </ul>
+   * <p>
+   * Thus the new method eliminates over-estimations.
+   */
+  protected final boolean useMaxMemoryEstimates;
+
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] metrics;
@@ -265,13 +293,17 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
+   * @param maxRowCount               maximal number of rows before persist
+   * @param maxBytesInMemory          maximal number of bytes before persist
+   * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
       final boolean concurrentEventAdd,
       final int maxRowCount,
-      final long maxBytesInMemory
+      final long maxBytesInMemory,
+      final boolean useMaxMemoryEstimates
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -281,6 +313,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
@@ -533,12 +566,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * Calls to add() are thread safe.
    * <p>
    *
-   * @param row the row of data to add
-   * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
+   * @param row                      the row of data to add
+   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows limit
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
+      throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
@@ -604,12 +638,14 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          final EncodedKeyComponent<?> encodedKeyComponent
+              = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          dimsKey = encodedKeyComponent.getComponent();
+          dimsKeySize += encodedKeyComponent.getEffectiveSizeBytes();
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
         }
-        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         if (wasNewDim) {
           // unless this is the first row we are processing, all newly discovered columns will be sparse
           if (maxIngestedEventTime != null) {
@@ -899,10 +935,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, DimensionHandler handler)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, handler);
+    DimensionDesc desc = initDimension(dimensionDescs.size(), dim, handler);
     dimensionDescs.put(dim, desc);
     dimensionDescsList.add(desc);
     return desc;
+  }
+
+  private DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
+  {
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
   public List<String> getMetricNames()
@@ -1007,12 +1048,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     private final DimensionHandler handler;
     private final DimensionIndexer indexer;
 
-    public DimensionDesc(int index, String name, DimensionHandler handler)
+    public DimensionDesc(int index, String name, DimensionHandler handler, boolean useMaxMemoryEstimates)
     {
       this.index = index;
       this.name = name;
       this.handler = handler;
-      this.indexer = handler.makeIndexer();
+      this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
     }
 
     public int getIndex()
