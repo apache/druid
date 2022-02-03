@@ -31,7 +31,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Extends the Insert call to hold custom paramaters specific to druid i.e. PARTITIONED BY and CLUSTERED BY
+ * Extends the 'insert' call to hold custom parameters specific to Druid i.e. PARTITIONED BY and CLUSTERED BY
  * This class extends the {@link SqlInsert} so that this SqlNode can be used in
  * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
@@ -87,7 +87,7 @@ public class DruidSqlInsert extends SqlInsert
     super.unparse(writer, leftPrec, rightPrec);
     writer.keyword("PARTITIONED BY");
     writer.keyword(getPartitionedBy().toString()); // TODO: Can this be made cleaner
-    if (clusteredBy != null) {
+    if (getClusteredBy() != null) {
       writer.sep("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
       for (SqlNode clusterByOpts : getClusteredBy().getList()) {

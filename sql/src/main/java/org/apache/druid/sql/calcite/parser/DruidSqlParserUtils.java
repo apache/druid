@@ -76,15 +76,22 @@ public class DruidSqlParserUtils
    */
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
   {
+
+    final String genericParseFailedMessageFormatString = "Unable to parse the granularity from %s. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or %s function.";
+
     if (!(sqlNode instanceof SqlCall)) {
-      throw new ParseException(StringUtils.format("Unable to parse the granularity from %s", sqlNode.toString()));
+      throw new ParseException(StringUtils.format(
+          genericParseFailedMessageFormatString,
+          sqlNode.toString(),
+          TimeFloorOperatorConversion.SQL_FUNCTION_NAME
+      ));
     }
     SqlCall sqlCall = (SqlCall) sqlNode;
 
     List<SqlNode> operandList = sqlCall.getOperandList();
     Preconditions.checkArgument(
         operandList.size() == 2,
-        "Invalid number of arguments passed to the floor function in PARTIITONED BY"
+        "Invalid number of arguments passed to the floor function in PARTIITONED BY clause"
     );
 
     String operatorName = sqlCall.getOperator().getName();
@@ -93,12 +100,12 @@ public class DruidSqlParserUtils
     SqlNode timeOperandSqlNode = operandList.get(0);
     Preconditions.checkArgument(
         timeOperandSqlNode.getKind().equals(SqlKind.IDENTIFIER),
-        StringUtils.format("First argument to %s in PARTITIONED BY can only be __time", operatorName)
+        StringUtils.format("First argument to %s in PARTITIONED BY clause can only be __time", operatorName)
     );
     SqlIdentifier timeOperandSqlIdentifier = (SqlIdentifier) timeOperandSqlNode;
     Preconditions.checkArgument(
         timeOperandSqlIdentifier.getSimple().equals(ColumnHolder.TIME_COLUMN_NAME),
-        StringUtils.format("First argument to %s in PARTITIONED BY can only be __time", operatorName)
+        StringUtils.format("First argument to %s in PARTITIONED BY clause can only be __time", operatorName)
     );
 
     // If the floor function is of form TIME_FLOOR(__time, 'PT1H')
@@ -106,10 +113,16 @@ public class DruidSqlParserUtils
       SqlNode granularitySqlNode = operandList.get(1);
       Preconditions.checkArgument(
           granularitySqlNode.getKind().equals(SqlKind.LITERAL),
-          "Second argument to the TIME_FLOOR function in PARTITIONED BY is invalid"
+          "Second argument to the TIME_FLOOR function in PARTITIONED BY clause is invalid"
       );
       String granularityString = SqlLiteral.unchain(granularitySqlNode).toValue();
-      Period period = new Period(granularityString);
+      Period period;
+      try {
+        period = new Period(granularityString);
+      }
+      catch (IllegalArgumentException e) {
+        throw new ParseException(StringUtils.format("Unable to create period from string '%s'", granularityString));
+      }
       return new PeriodGranularity(period, null, null);
 
     } else if ("FLOOR".equalsIgnoreCase(operatorName)) { // If the floor function is of form FLOOR(__time TO DAY)
@@ -118,7 +131,7 @@ public class DruidSqlParserUtils
       // granularitySqlNode.getKind().equals(SqlKind.INTERVAL_QUALIFIER)
       Preconditions.checkArgument(
           granularitySqlNode instanceof SqlIntervalQualifier,
-          "Second argument to the FLOOR function in PARTITIONED BY is invalid"
+          "Second argument to the FLOOR function in PARTITIONED BY clause cannot be converted to a valid granularity."
       );
       SqlIntervalQualifier granularityIntervalQualifier = (SqlIntervalQualifier) granularitySqlNode;
 
@@ -133,6 +146,10 @@ public class DruidSqlParserUtils
       return new PeriodGranularity(period, null, null);
     }
 
-    throw new ParseException("Unable to parse the PARTITIONED BY clause");
+    throw new ParseException(StringUtils.format(
+        genericParseFailedMessageFormatString,
+        sqlNode.toString(),
+        TimeFloorOperatorConversion.SQL_FUNCTION_NAME
+    ));
   }
 }
