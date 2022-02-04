@@ -30,6 +30,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -177,6 +178,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // are unable to compute the output type of the expression, either due to incomplete type information of the
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
+
+    // array types must not currently escape from the expression system
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && outputType != null && outputType.isArray()) {
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
+    }
+
     return new ColumnCapabilitiesImpl().setType(outputType == null ? ColumnType.FLOAT : outputType);
   }
 
