@@ -21,13 +21,13 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteOrder;
+import java.util.function.IntSupplier;
 
 /**
  */
@@ -95,7 +95,7 @@ public class LongNumericColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public Deserializer getDeserializer()
+  public Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory)
   {
     return (buffer, builder, columnConfig) -> {
       final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
@@ -104,7 +104,7 @@ public class LongNumericColumnPartSerde implements ColumnPartSerde
       );
       LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
           column,
-          IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+          segmentBitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
       );
       builder.setType(ValueType.LONG)
              .setHasMultipleValues(false)

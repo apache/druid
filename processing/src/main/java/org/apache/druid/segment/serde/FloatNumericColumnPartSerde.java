@@ -21,15 +21,16 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.function.IntSupplier;
 
 /**
  */
@@ -97,7 +98,7 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public Deserializer getDeserializer()
+  public Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory)
   {
     return new Deserializer()
     {
@@ -110,7 +111,7 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
         );
         FloatNumericColumnSupplier columnSupplier = new FloatNumericColumnSupplier(
             column,
-            IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+            segmentBitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
         );
         builder.setType(ValueType.FLOAT)
                .setHasMultipleValues(false)

@@ -278,7 +278,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
-    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, -1));
+    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
   }
 
   /**
@@ -342,6 +342,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
+        DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
         int maxColumnsToMerge
     ) throws IOException

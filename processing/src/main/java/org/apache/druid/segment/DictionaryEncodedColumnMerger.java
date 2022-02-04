@@ -75,6 +75,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected final SegmentWriteOutMedium segmentWriteOutMedium;
   protected final MutableBitmap nullRowsBitmap;
   protected final ColumnCapabilities capabilities;
+  protected final boolean shouldStore;
 
   protected int dictionarySize;
   protected int rowCount = 0;
@@ -102,6 +103,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
+      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   )
@@ -111,6 +113,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     this.capabilities = capabilities;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    this.shouldStore = shouldStore;
 
     this.progress = progress;
     this.closer = closer;
@@ -492,11 +495,16 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   }
 
   @Override
-  public boolean canSkip()
+  public boolean shouldStore()
+  {
+    return shouldStore;
+  }
+
+  @Override
+  public boolean hasOnlyNulls()
   {
     return cardinality == 0;
   }
-
 
   protected IndexSeeker[] toIndexSeekers(
       List<IndexableAdapter> adapters,

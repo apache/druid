@@ -61,6 +61,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -143,7 +144,12 @@ public class IndexTaskTest extends IngestionTestBase
   private static final String DATASOURCE = "test";
   private static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
-      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
+//      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
+      ImmutableList.of(
+          new StringDimensionSchema("ts"),
+          new StringDimensionSchema("dim"),
+          new LongDimensionSchema("val")
+      )
   );
   private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
       DEFAULT_TIMESTAMP_SPEC,
@@ -211,6 +217,224 @@ public class IndexTaskTest extends IngestionTestBase
         jsonMapper
     );
     taskRunner = new TestTaskRunner();
+  }
+
+  @Test
+  public void testTestCsv() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,,\n");
+      writer.write("2014-01-01T01:00:20Z,,\n");
+      writer.write("2014-01-01T02:00:30Z,,\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    segments.forEach(segment -> {
+      System.out.println("dims: " + segment.getDimensions());
+      System.out.println("mets: " + segment.getMetrics());
+    });
+  }
+
+  @Test
+  public void testTestJson1() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("{ \"ts\" : \"2014-01-01T00:00:10Z\", \"dim\": null, \"val\": null }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T01:00:10Z\", \"dim\": null, \"val\": null }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T02:00:10Z\", \"dim\": null, \"val\": null }\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(ImmutableList.of()),
+                new AggregatorFactory[]{},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/2015"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                new JsonInputFormat(null, null, true),
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    segments.forEach(segment -> {
+      System.out.println("dims: " + segment.getDimensions());
+      System.out.println("mets: " + segment.getMetrics());
+    });
+  }
+
+  @Test
+  public void testTestJson2() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("{ \"ts\" : \"2014-01-01T00:00:10Z\", \"extra\": \"e1\" }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T01:00:10Z\", \"extra\": \"e2\" }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T02:00:10Z\", \"extra\": \"e3\" }\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("val")
+                    ),
+                    null,
+                    null
+                ),
+                new AggregatorFactory[]{},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/2015"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                new JsonInputFormat(new JSONPathSpec(true, null), null, true),
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    segments.forEach(segment -> {
+      System.out.println("dims: " + segment.getDimensions());
+      System.out.println("mets: " + segment.getMetrics());
+    });
+  }
+
+  @Test
+  public void testTestJson4() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("{ \"ts\" : \"2014-01-01T00:00:10Z\" }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T01:00:10Z\" }\n");
+      writer.write("{ \"ts\" : \"2014-01-01T02:00:10Z\" }\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(ImmutableList.of()),
+                new AggregatorFactory[]{},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/2015"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                new JsonInputFormat(null, null, true),
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+
+    segments.forEach(segment -> {
+      System.out.println("dims: " + segment.getDimensions());
+      System.out.println("mets: " + segment.getMetrics());
+    });
   }
 
   @Test
@@ -2724,7 +2948,7 @@ public class IndexTaskTest extends IngestionTestBase
               Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
               Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"),
               new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
+//                  new LongSumAggregatorFactory("val", "val")
               },
               granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
                   Granularities.DAY,
@@ -2754,7 +2978,7 @@ public class IndexTaskTest extends IngestionTestBase
                   Map.class
               ),
               new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
+//                  new LongSumAggregatorFactory("val", "val")
               },
               granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
                   Granularities.DAY,

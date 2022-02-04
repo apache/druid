@@ -23,13 +23,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.function.IntSupplier;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NullColumnPartSerde.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "complex", value = ComplexColumnPartSerde.class),
     @JsonSubTypes.Type(name = "float", value = FloatNumericColumnPartSerde.class),
@@ -39,13 +41,20 @@ import java.nio.ByteBuffer;
     @JsonSubTypes.Type(name = "floatV2", value = FloatNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "longV2", value = LongNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "doubleV2", value = DoubleNumericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "null", value = NullColumnPartSerde.class)
 })
 public interface ColumnPartSerde
 {
   @Nullable
   Serializer getSerializer();
 
-  Deserializer getDeserializer();
+  /**
+   * TODO
+   * @param rowCountSupplier          can be expensive. do not call eagerly
+   * @param segmentBitmapSerdeFactory
+   * @return
+   */
+  Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory);
 
   interface Deserializer
   {

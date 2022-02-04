@@ -17,59 +17,48 @@
  * under the License.
  */
 
-package org.apache.druid.segment.serde;
+package org.apache.druid.segment.column;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.data.CloseableIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
+import java.util.function.IntSupplier;
 
-/**
- * Provides {@link BitmapIndex} for some dictionary encoded column, where the dictionary and bitmaps are stored in some
- * {@link GenericIndexed}.
- */
-public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
+public final class BitmapIndexes
 {
-  private final BitmapFactory bitmapFactory;
-  private final CloseableIndexed<ImmutableBitmap> bitmaps;
-  private final CloseableIndexed<String> dictionary;
-
-  public StringBitmapIndexColumnPartSupplier(
-      BitmapFactory bitmapFactory,
-      GenericIndexed<ImmutableBitmap> bitmaps,
-      GenericIndexed<String> dictionary
-  )
-  {
-    this.bitmapFactory = bitmapFactory;
-    this.bitmaps = bitmaps;
-    this.dictionary = dictionary;
-  }
-
-  @Override
-  public BitmapIndex get()
+  public static BitmapIndex forNullOnlyColumn(IntSupplier rowCountSupplier, BitmapFactory bitmapFactory)
   {
     return new BitmapIndex()
     {
+      private final Supplier<ImmutableBitmap> nullBitmapSupplier = Suppliers.memoize(
+          () -> getBitmapFactory().complement(
+              getBitmapFactory().makeEmptyImmutableBitmap(),
+              rowCountSupplier.getAsInt()
+          )
+      );
+
       @Override
       public int getCardinality()
       {
-        return dictionary.size();
+        return 1;
       }
 
+      @Nullable
       @Override
       public String getValue(int index)
       {
-        return dictionary.get(index);
+        return null;
       }
 
       @Override
       public boolean hasNulls()
       {
-        return dictionary.indexOf(null) >= 0;
+        return true;
       }
 
       @Override
@@ -78,23 +67,31 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
         return bitmapFactory;
       }
 
+      /**
+       * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
+       * {@link StringBitmapIndexColumnPartSupplier}
+       * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
+       * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
+       */
       @Override
       public int getIndex(@Nullable String value)
       {
-        // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
-        return dictionary.indexOf(value);
+        return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
       }
 
       @Override
       public ImmutableBitmap getBitmap(int idx)
       {
-        if (idx < 0) {
+        if (idx == 0) {
+          return nullBitmapSupplier.get();
+        } else {
           return bitmapFactory.makeEmptyImmutableBitmap();
         }
-
-        final ImmutableBitmap bitmap = bitmaps.get(idx);
-        return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
       }
     };
+  }
+
+  private BitmapIndexes()
+  {
   }
 }

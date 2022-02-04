@@ -27,6 +27,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -56,6 +57,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CombiningIndexed;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
@@ -81,6 +83,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.IntSupplier;
 
 public class IndexIO
 {
@@ -511,7 +514,7 @@ public class IndexIO
     private Supplier<ColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
     {
       if (lazy) {
-        return Suppliers.memoize(() -> builder.build());
+        return Suppliers.memoize(builder::build);
       } else {
         ColumnHolder columnHolder = builder.build();
         return () -> columnHolder;
@@ -565,10 +568,26 @@ public class IndexIO
        * this information is appended to the end of index.drd.
        */
       if (indexBuffer.hasRemaining()) {
-        segmentBitmapSerdeFactory = mapper.readValue(SERIALIZER_UTILS.readString(indexBuffer), BitmapSerdeFactory.class);
+        segmentBitmapSerdeFactory = mapper.readValue(
+            SERIALIZER_UTILS.readString(indexBuffer),
+            BitmapSerdeFactory.class
+        );
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
+
+      // TODO: dims only? or dims + mets?
+      ByteBuffer nullColsBuffer = smooshedFiles.mapFile("null_columns.drd");
+      final GenericIndexed<String> nullCols = GenericIndexed.read(
+          nullColsBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
+      );
+      final GenericIndexed<String> nullDims = GenericIndexed.read(
+          nullColsBuffer,
+          GenericIndexed.STRING_STRATEGY,
+          smooshedFiles
+      );
 
       Metadata metadata = null;
       ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
@@ -590,7 +609,76 @@ public class IndexIO
       }
 
       Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      final SegmentRowCountSupplier rowCountSupplier = new SegmentRowCountSupplier();
 
+      // Register the time column
+      ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");
+      registerColumnHolder(
+          lazy,
+          columns,
+          ColumnHolder.TIME_COLUMN_NAME,
+          mapper,
+          timeBuffer,
+          smooshedFiles,
+          loadFailed,
+          rowCountSupplier,
+          segmentBitmapSerdeFactory
+      );
+
+      // Register all columns in index.drd.
+      registerColumnHolders(
+          inDir,
+          cols,
+          lazy,
+          columns,
+          mapper,
+          smooshedFiles,
+          loadFailed,
+          rowCountSupplier,
+          segmentBitmapSerdeFactory
+      );
+
+      // Register all columns in null_columns.drd.
+      registerColumnHolders(
+          inDir,
+          nullCols,
+          lazy,
+          columns,
+          mapper,
+          smooshedFiles,
+          loadFailed,
+          rowCountSupplier,
+          segmentBitmapSerdeFactory
+      );
+
+      final QueryableIndex index = new SimpleQueryableIndex(
+          dataInterval,
+          new CombiningIndexed<>(ImmutableList.of(dims, nullDims)),
+          segmentBitmapSerdeFactory.getBitmapFactory(),
+          columns,
+          smooshedFiles,
+          metadata,
+          lazy
+      );
+      rowCountSupplier.setQueryableIndex(index);
+
+      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
+
+      return index;
+    }
+
+    private void registerColumnHolders(
+        File inDir,
+        GenericIndexed<String> cols,
+        boolean lazy,
+        Map<String, Supplier<ColumnHolder>> columns,
+        ObjectMapper mapper,
+        SmooshedFileMapper smooshedFiles,
+        SegmentLazyLoadFailCallback loadFailed,
+        IntSupplier rowCountSupplier,
+        BitmapSerdeFactory segmentBitmapSerdeFactory
+    ) throws IOException
+    {
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
           log.warn("Null or Empty Dimension found in the file : " + inDir);
@@ -598,69 +686,87 @@ public class IndexIO
         }
 
         ByteBuffer colBuffer = smooshedFiles.mapFile(columnName);
-
-        if (lazy) {
-          columns.put(columnName, Suppliers.memoize(
-              () -> {
-                try {
-                  return deserializeColumn(mapper, colBuffer, smooshedFiles);
-                }
-                catch (IOException | RuntimeException e) {
-                  log.warn(e, "Throw exceptions when deserialize column [%s].", columnName);
-                  loadFailed.execute();
-                  throw Throwables.propagate(e);
-                }
-              }
-          ));
-        } else {
-          ColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
-          columns.put(columnName, () -> columnHolder);
-        }
-
+        registerColumnHolder(
+            lazy,
+            columns,
+            columnName,
+            mapper,
+            colBuffer,
+            smooshedFiles,
+            loadFailed,
+            rowCountSupplier,
+            segmentBitmapSerdeFactory
+        );
       }
+    }
 
-      ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");
-
+    private void registerColumnHolder(
+        boolean lazy,
+        Map<String, Supplier<ColumnHolder>> columns,
+        String columnName,
+        ObjectMapper mapper,
+        ByteBuffer colBuffer,
+        SmooshedFileMapper smooshedFiles,
+        SegmentLazyLoadFailCallback loadFailed,
+        IntSupplier rowCountSupplier,
+        BitmapSerdeFactory segmentBitmapSerdeFactory
+    ) throws IOException
+    {
       if (lazy) {
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, Suppliers.memoize(
+        columns.put(columnName, Suppliers.memoize(
             () -> {
               try {
-                return deserializeColumn(mapper, timeBuffer, smooshedFiles);
+                return deserializeColumn(mapper, colBuffer, smooshedFiles, rowCountSupplier, segmentBitmapSerdeFactory);
               }
               catch (IOException | RuntimeException e) {
-                log.warn(e, "Throw exceptions when deserialize column [%s]", ColumnHolder.TIME_COLUMN_NAME);
+                log.warn(e, "Throw exceptions when deserialize column [%s].", columnName);
                 loadFailed.execute();
                 throw Throwables.propagate(e);
               }
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
+        ColumnHolder columnHolder = deserializeColumn(
+            mapper,
+            colBuffer,
+            smooshedFiles,
+            rowCountSupplier,
+            segmentBitmapSerdeFactory
+        );
+        columns.put(columnName, () -> columnHolder);
       }
-
-      final QueryableIndex index = new SimpleQueryableIndex(
-          dataInterval,
-          dims,
-          segmentBitmapSerdeFactory.getBitmapFactory(),
-          columns,
-          smooshedFiles,
-          metadata,
-          lazy
-      );
-
-      log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
-
-      return index;
     }
 
-    private ColumnHolder deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
-        throws IOException
+    private ColumnHolder deserializeColumn(
+        ObjectMapper mapper,
+        ByteBuffer byteBuffer,
+        SmooshedFileMapper smooshedFiles,
+        IntSupplier rowCountSupplier,
+        BitmapSerdeFactory segmentBitmapSerdeFactory
+    ) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(
           SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(byteBuffer, columnConfig, smooshedFiles, rowCountSupplier, segmentBitmapSerdeFactory);
+    }
+  }
+
+  private static class SegmentRowCountSupplier implements IntSupplier
+  {
+    @Nullable
+    private QueryableIndex queryableIndex;
+
+    private void setQueryableIndex(QueryableIndex queryableIndex)
+    {
+      this.queryableIndex = queryableIndex;
+    }
+
+    @Override
+    public int getAsInt()
+    {
+      assert queryableIndex != null;
+      return queryableIndex.getNumRows();
     }
   }
 

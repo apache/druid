@@ -80,6 +80,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
+      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   )

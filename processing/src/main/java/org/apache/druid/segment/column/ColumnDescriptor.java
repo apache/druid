@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -34,11 +36,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 
 /**
  */
 public class ColumnDescriptor implements Serializer
 {
+  private static final Logger LOG = new Logger(ColumnDescriptor.class);
   public static Builder builder()
   {
     return new Builder();
@@ -96,7 +100,13 @@ public class ColumnDescriptor implements Serializer
     }
   }
 
-  public ColumnHolder read(ByteBuffer buffer, ColumnConfig columnConfig, SmooshedFileMapper smooshedFiles)
+  public ColumnHolder read(
+      ByteBuffer buffer,
+      ColumnConfig columnConfig,
+      SmooshedFileMapper smooshedFiles,
+      IntSupplier rowCountSupplier,
+      BitmapSerdeFactory segmentBitmapSerdeFactory
+  )
   {
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
@@ -104,7 +114,8 @@ public class ColumnDescriptor implements Serializer
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
-      part.getDeserializer().read(buffer, builder, columnConfig);
+      LOG.info("part class: %s", part.getClass().getName());
+      part.getDeserializer(rowCountSupplier, segmentBitmapSerdeFactory).read(buffer, builder, columnConfig);
     }
 
     return builder.build();

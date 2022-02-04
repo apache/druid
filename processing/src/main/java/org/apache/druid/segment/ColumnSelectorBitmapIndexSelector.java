@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapIndexes;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -34,7 +35,6 @@ import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
-import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -216,55 +216,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       // Create a BitmapIndex so that filters applied to null columns can use
       // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
       // whether the filter is applied in the pre or post filtering stage.
-      return new BitmapIndex()
-      {
-        @Override
-        public int getCardinality()
-        {
-          return 1;
-        }
-
-        @Override
-        @Nullable
-        public String getValue(int index)
-        {
-          return null;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return true;
-        }
-
-        @Override
-        public BitmapFactory getBitmapFactory()
-        {
-          return bitmapFactory;
-        }
-
-        /**
-         * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
-         * {@link StringBitmapIndexColumnPartSupplier}
-         * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
-         * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
-         */
-        @Override
-        public int getIndex(@Nullable String value)
-        {
-          return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
-        }
-
-        @Override
-        public ImmutableBitmap getBitmap(int idx)
-        {
-          if (idx == 0) {
-            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
-          } else {
-            return bitmapFactory.makeEmptyImmutableBitmap();
-          }
-        }
-      };
+      return BitmapIndexes.forNullOnlyColumn(this::getNumRows, bitmapFactory);
     } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
       // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
       // other types of dictionary encoded columns

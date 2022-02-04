@@ -80,6 +80,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
+      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   )

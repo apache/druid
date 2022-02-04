@@ -17,25 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.serde;
 
-import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public interface NumericColumn extends BaseColumn, HotLoopCallee
+public class NullColumnPartSerdeTest
 {
-  /**
-   *  TODO: this returns column.size() as its length(), but column.size() doesn't seem to include nulls
-   *        however, it seems fine as length() is being called only for the time column which does not have nulls.
-   * @return
-   */
-  int length();
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
 
-  @CalledFromHotLoop
-  long getLongSingleValueRow(int rowNum);
-
-  @Override
-  void close();
+    final NullColumnPartSerde partSerde = NullColumnPartSerde.getInstance();
+    final String json = mapper.writeValueAsString(partSerde);
+    Assert.assertSame(partSerde, mapper.readValue(json, ColumnPartSerde.class));
+  }
 }

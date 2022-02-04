@@ -125,11 +125,15 @@ public interface DimensionMerger
   void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions) throws IOException;
 
   /**
-   * Return true if this dimension's data does not need to be written to the segment.
-   *
-   * For example, if a dictionary-encoded String dimension had only null values, it can be skipped.
-   *
-   * @return true if this dimension can be excluded from the merged segment.
+   * Returns true if this dimension should be stored in the segment.
+   * Every explicit dimension in {@link org.apache.druid.data.input.impl.DimensionsSpec} should be stored.
    */
-  boolean canSkip();
+  boolean shouldStore();
+
+  /**
+   * Returns true if this dimension has no data besides nulls.
+   *
+   * @see org.apache.druid.segment.serde.NullColumnPartSerde
+   */
+  boolean hasOnlyNulls();
 }

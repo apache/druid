@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.function.IntSupplier;
 
 /**
  */
@@ -138,7 +139,7 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   @Override
-  public Deserializer getDeserializer()
+  public Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory)
   {
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();

@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.function.IntSupplier;
 
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
@@ -283,7 +284,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public Deserializer getDeserializer()
+  public Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory)
   {
     return new Deserializer()
     {
@@ -303,6 +304,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
 
+        builder.setType(ValueType.STRING);
+
         // Duplicate the first buffer since we are reading the dictionary twice.
         final GenericIndexed<String> rDictionary = GenericIndexed.read(
             buffer.duplicate(),
@@ -315,8 +318,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             GenericIndexed.BYTE_BUFFER_STRATEGY,
             builder.getFileMapper()
         );
-
-        builder.setType(ValueType.STRING);
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -338,6 +339,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()
         );
+
         builder
             .setHasMultipleValues(hasMultipleValues)
             .setHasNulls(firstDictionaryEntry == null)

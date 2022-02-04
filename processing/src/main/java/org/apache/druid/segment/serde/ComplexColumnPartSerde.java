@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 
 import javax.annotation.Nullable;
+import java.util.function.IntSupplier;
 
 /**
  */
@@ -75,7 +77,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   }
 
   @Override
-  public Deserializer getDeserializer()
+  public Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory)
   {
     return (buffer, builder, columnConfig) -> {
       // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change

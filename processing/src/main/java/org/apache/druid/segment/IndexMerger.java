@@ -312,6 +312,7 @@ public interface IndexMerger
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
+      DimensionsSpec dimensionsSpec,
       IndexSpec indexSpec,
       int maxColumnsToMerge
   ) throws IOException;
