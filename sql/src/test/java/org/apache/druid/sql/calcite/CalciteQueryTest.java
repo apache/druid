@@ -6951,7 +6951,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     expectedException.expectMessage("The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String");
 
     testQuery(
-        PLANNER_CONFIG_DEFAULT,
+        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
         ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"

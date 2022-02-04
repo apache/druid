@@ -473,6 +473,7 @@ _common
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
+druid.sql.planner.maxNumericInFilters
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
