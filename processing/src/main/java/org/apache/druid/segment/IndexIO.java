@@ -567,27 +567,22 @@ public class IndexIO
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
        * this information is appended to the end of index.drd.
        */
+      @Nullable final GenericIndexed<String> nullDims;
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(
             SERIALIZER_UTILS.readString(indexBuffer),
             BitmapSerdeFactory.class
         );
+
+        nullDims = GenericIndexed.read(
+            indexBuffer,
+            GenericIndexed.STRING_STRATEGY,
+            smooshedFiles
+        );
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
+        nullDims = null;
       }
-
-      // TODO: dims only? or dims + mets?
-      ByteBuffer nullColsBuffer = smooshedFiles.mapFile("null_columns.drd");
-      final GenericIndexed<String> nullCols = GenericIndexed.read(
-          nullColsBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
-      );
-      final GenericIndexed<String> nullDims = GenericIndexed.read(
-          nullColsBuffer,
-          GenericIndexed.STRING_STRATEGY,
-          smooshedFiles
-      );
 
       Metadata metadata = null;
       ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
@@ -625,7 +620,7 @@ public class IndexIO
           segmentBitmapSerdeFactory
       );
 
-      // Register all columns in index.drd.
+      // Register all non-null columns.
       registerColumnHolders(
           inDir,
           cols,
@@ -638,22 +633,24 @@ public class IndexIO
           segmentBitmapSerdeFactory
       );
 
-      // Register all columns in null_columns.drd.
-      registerColumnHolders(
-          inDir,
-          nullCols,
-          lazy,
-          columns,
-          mapper,
-          smooshedFiles,
-          loadFailed,
-          rowCountSupplier,
-          segmentBitmapSerdeFactory
-      );
+      // Register all null-only dimensions.
+      if (nullDims != null) {
+        registerColumnHolders(
+            inDir,
+            nullDims,
+            lazy,
+            columns,
+            mapper,
+            smooshedFiles,
+            loadFailed,
+            rowCountSupplier,
+            segmentBitmapSerdeFactory
+        );
+      }
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval,
-          new CombiningIndexed<>(ImmutableList.of(dims, nullDims)),
+          nullDims == null ? dims : new CombiningIndexed<>(ImmutableList.of(dims, nullDims)),
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,

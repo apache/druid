@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -314,7 +313,6 @@ public class IndexMergerV9 implements IndexMerger
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
       makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers);
-      makeNullColumnsBinary(v9Smoosher, outDir, mergedDimensions, progress, mergers);
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
       v9Smoosher.close();
@@ -359,24 +357,28 @@ public class IndexMergerV9 implements IndexMerger
 
     long startTime = System.currentTimeMillis();
     final Set<String> finalDimensions = new LinkedHashSet<>();
+    final Set<String> finalNullOnlyDimensions = new LinkedHashSet<>();
     final Set<String> finalColumns = new LinkedHashSet<>(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
-      if (mergers.get(i).hasOnlyNulls()) {
-        // do not store empty dimensions in index.drd.
-        // they are stored in null_columns.drd instead for compatibility.
-        // Historicals on an older Druid version will not be aware of null_columns.drd and ignore it.
-        continue;
+      // 1. the column has a non-null.
+      // 2. the column is null-only but should be stored.
+      if (!mergers.get(i).hasOnlyNulls() || mergers.get(i).shouldStore()) {
+        finalColumns.add(mergedDimensions.get(i));
+        finalDimensions.add(mergedDimensions.get(i));
       }
-      finalColumns.add(mergedDimensions.get(i));
-      finalDimensions.add(mergedDimensions.get(i));
     }
 
     GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
     GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> nullDims = GenericIndexed.fromIterable(
+        finalNullOnlyDimensions,
+        GenericIndexed.STRING_STRATEGY
+    );
 
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
+                          + nullDims.getSerializedSize()
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
@@ -397,45 +399,15 @@ public class IndexMergerV9 implements IndexMerger
       SERIALIZER_UTILS.writeLong(writer, dataInterval.getEndMillis());
 
       SERIALIZER_UTILS.writeString(writer, bitmapSerdeFactoryType);
+
+      // Store null-only dimensions at the end of this section,
+      // so that historicals of an older version can ignore them instead of exploding while reading this segment.
+      // Those historicals will still serve any query that reads null-only columns.
+      nullDims.writeTo(writer, v9Smoosher);
     }
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
     log.debug("Completed index.drd in %,d millis.", System.currentTimeMillis() - startTime);
-
-    progress.stopSection(section);
-  }
-
-  private void makeNullColumnsBinary(
-      final FileSmoosher v9Smoosher,
-      final File outDir,
-      final List<String> mergedDimensions,
-      final ProgressIndicator progress,
-      final List<DimensionMergerV9> mergers
-  ) throws IOException
-  {
-    final String sectionName = "null_columns.drd";
-    final String section = StringUtils.format("make %s", sectionName);
-    progress.startSection(section);
-
-    long startTime = System.currentTimeMillis();
-    final Set<String> finalDimensions = new LinkedHashSet<>();
-    for (int i = 0; i < mergedDimensions.size(); ++i) {
-      if (mergers.get(i).shouldStore() && mergers.get(i).hasOnlyNulls()) {
-        finalDimensions.add(mergedDimensions.get(i));
-      }
-    }
-
-    // Only null dimensions are stored in this section currently.
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
-    final long numBytes = cols.getSerializedSize() + dims.getSerializedSize();
-    try (final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter(sectionName, numBytes)) {
-      cols.writeTo(writer, v9Smoosher);
-      dims.writeTo(writer, v9Smoosher);
-    }
-
-    IndexIO.checkFileSize(new File(outDir, sectionName));
-    log.debug("Completed %s in %,d millis.", sectionName, System.currentTimeMillis() - startTime);
 
     progress.stopSection(section);
   }
