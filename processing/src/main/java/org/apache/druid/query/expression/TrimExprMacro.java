@@ -210,6 +210,8 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
         return false;
       }
       TrimStaticCharsExpr that = (TrimStaticCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
       return mode == that.mode &&
              Arrays.equals(chars, that.chars) &&
              Objects.equals(charsExpr, that.charsExpr);
@@ -331,6 +333,8 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
         return false;
       }
       TrimDynamicCharsExpr that = (TrimDynamicCharsExpr) o;
+
+      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
       return mode == that.mode &&
              Objects.equals(stringExpr, that.stringExpr) &&
              Objects.equals(charsExpr, that.charsExpr);
