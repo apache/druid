@@ -2517,6 +2517,11 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
+    // Ingest data with overwrite and same segment granularity
+    segments = runTask(indexTask).rhs;
+
+    Assert.assertEquals(1, segments.size()); // one tombstone
+    Assert.assertTrue(segments.get(0).isTombstone());
   }
 
  
