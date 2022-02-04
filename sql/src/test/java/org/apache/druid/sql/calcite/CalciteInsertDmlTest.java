@@ -68,7 +68,6 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -422,9 +421,6 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                                                   .add("floor_m1", ColumnType.FLOAT)
                                                   .add("dim1", ColumnType.STRING)
                                                   .build();
-
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_CONTEXT);
-    queryContext.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "day");
 
     testInsertQuery()
         .sql(
