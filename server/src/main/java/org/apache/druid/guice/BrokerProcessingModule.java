@@ -161,7 +161,7 @@ public class BrokerProcessingModule implements Module
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             StringUtils.format(
-                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, or druid.processing.numMergeBuffers: "
                 + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + 1)",
                 maxDirectMemory,
                 memoryNeeded,
