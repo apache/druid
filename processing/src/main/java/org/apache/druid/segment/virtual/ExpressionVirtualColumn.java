@@ -179,7 +179,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
 
-    // array types must not currently escape from the expression system
     if (ExpressionProcessing.processArraysAsMultiValueStrings() && outputType != null && outputType.isArray()) {
       return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
     }
