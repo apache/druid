@@ -25,7 +25,7 @@ From the root of the repo, run `docker build -t apache/druid:tag -f distribution
 
 Edit `environment` to suite. Run `docker-compose -f distribution/docker/docker-compose.yml up`
 
-## Java 11 (experimental)
+## Java 11
 
 From the root of the repo, run `docker build -t apache/druid:tag -f distribution/docker/Dockerfile.java11 .` which will build Druid to run in a Java 11 environment.
 

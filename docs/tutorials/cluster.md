@@ -130,13 +130,10 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 ## Select OS
 
-We recommend running your favorite Linux distribution. You will also need:
+We recommend running your favorite Linux distribution. You will also need Java 8 or 11.
 
-  * **Java 8 or later**
-
-> **Warning:** Druid only officially supports Java 8. Any Java version later than 8 is still experimental.
->
-> If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
+> If needed, you can specify where to find Java using the environment variables
+> `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
 
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those
