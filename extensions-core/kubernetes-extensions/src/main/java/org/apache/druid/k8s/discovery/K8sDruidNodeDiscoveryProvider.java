@@ -288,7 +288,6 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                 return;
               }
             }
-            return;
           }
           finally {
             iter.close();
