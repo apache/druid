@@ -1206,6 +1206,7 @@
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
+                        <exclude>org/apache/druid/sql/calcite/parser/DruidSqlInsert.class</exclukde>
 
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
                   </excludes>
