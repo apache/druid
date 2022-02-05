@@ -152,6 +152,11 @@ public class DruidExpression
     );
   }
 
+  public static DruidExpression ofStringLiteral(final String s)
+  {
+    return ofLiteral(ColumnType.STRING, stringLiteral(s));
+  }
+
   public static DruidExpression ofColumn(
       @Nullable final ColumnType columnType,
       final String column,

@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -79,7 +78,7 @@ public class RPadOperatorConversion implements SqlOperatorConversion
                 ImmutableList.of(
                     druidExpressions.get(0),
                     druidExpressions.get(1),
-                    DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(" "))
+                    DruidExpression.ofStringLiteral(" ")
                 )
             );
           }

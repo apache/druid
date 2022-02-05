@@ -103,10 +103,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
                     StringUtils.format("concat('P', %s, 'M')", expression)
               ),
               DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(direction > 0 ? 1 : -1)),
-              DruidExpression.ofLiteral(
-                  ColumnType.STRING,
-                  DruidExpression.stringLiteral(plannerContext.getTimeZone().getID())
-              )
+              DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
           )
       );
     } else if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
@@ -137,7 +134,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
             ImmutableList.of(
                 leftExpr,
                 rightExpr,
-                DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+                DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
             )
         );
       } else {

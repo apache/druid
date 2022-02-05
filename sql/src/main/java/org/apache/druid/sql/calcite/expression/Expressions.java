@@ -297,7 +297,7 @@ public class Expressions
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
       return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.ofLiteral(columnType, DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       if (RexLiteral.isNullLiteral(rexNode)) {
         return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
