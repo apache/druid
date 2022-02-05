@@ -33,7 +33,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -110,8 +109,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampShiftExpr(newArgs));
+      return shuttle.visit(new TimestampShiftExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -146,8 +144,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampShiftDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampShiftDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

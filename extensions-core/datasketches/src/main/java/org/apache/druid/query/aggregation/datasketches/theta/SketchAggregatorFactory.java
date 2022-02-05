@@ -29,6 +29,7 @@ import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
@@ -78,6 +79,14 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchAggregator(selector, size);
+  }
+
+  @Override
+  public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
+  {
+    BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    final SketchAggregator aggregator = new SketchAggregator(selector, size);
+    return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
   }
 
   @SuppressWarnings("unchecked")

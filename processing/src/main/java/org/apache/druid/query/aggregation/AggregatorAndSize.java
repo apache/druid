@@ -17,28 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.query.expression;
+package org.apache.druid.query.aggregation;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
-
-public class TrimExprMacroTest
+/**
+ * Encapsulates an {@link Aggregator} and the initial size in bytes required by
+ * the Aggregator.
+ */
+public class AggregatorAndSize
 {
-  @Test
-  public void testEqualsContractForTrimStaticCharsExpr()
+  private final Aggregator aggregator;
+  private final long initialSizeBytes;
+
+  /**
+   * @param aggregator       Aggregator
+   * @param initialSizeBytes Initial size in bytes (including JVM object overheads)
+   *                         required by the aggregator.
+   */
+  public AggregatorAndSize(Aggregator aggregator, long initialSizeBytes)
   {
-    EqualsVerifier.forClass(TrimExprMacro.TrimStaticCharsExpr.class)
-                  .withIgnoredFields("analyzeInputsSupplier", "visitFn")
-                  .usingGetClass()
-                  .verify();
+    this.aggregator = aggregator;
+    this.initialSizeBytes = initialSizeBytes;
   }
 
-  @Test
-  public void testEqualsContractForTrimDynamicCharsExpr()
+  public Aggregator getAggregator()
   {
-    EqualsVerifier.forClass(TrimExprMacro.TrimDynamicCharsExpr.class)
-                  .withIgnoredFields("visitFn")
-                  .usingGetClass()
-                  .verify();
+    return aggregator;
+  }
+
+  /**
+   * Initial size of the aggregator in bytes including JVM object overheads.
+   */
+  public long getInitialSizeBytes()
+  {
+    return initialSizeBytes;
   }
 }

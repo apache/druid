@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,7 +36,9 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.client.ServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -56,6 +59,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -100,6 +104,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -1347,7 +1352,7 @@ public class CalciteTests
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
    */
-  private static class FakeServerInventoryView implements ServerInventoryView
+  private static class FakeServerInventoryView implements FilteredServerInventoryView
   {
     @Nullable
     @Override
@@ -1375,13 +1380,20 @@ public class CalciteTests
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    public void registerSegmentCallback(
+        Executor exec,
+        ServerView.SegmentCallback callback,
+        Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+    )
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+    public void registerServerRemovedCallback(
+        Executor exec,
+        ServerView.ServerRemovedCallback callback
+    )
     {
       throw new UnsupportedOperationException();
     }

@@ -57,6 +57,7 @@ export interface Field<M> {
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
@@ -303,6 +304,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
       />
     );
   }
