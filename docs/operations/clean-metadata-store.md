@@ -75,13 +75,13 @@ If you want to skip the details, check out the [example](#example) for configuri
 
 Segment records and segments in deep storage become eligible for deletion when both of the following conditions hold:
 
-- When they meet the eligibility requirement of kill task datasource configuration according to `killDataSourceWhitelist` and `killAllDataSources` set in the Coordinator dynamic configuration. See [Dynamic configuration](../configuration/index.md#dynamic-configuration).
+- When they meet the eligibility requirement of kill task datasource configuration according to `killDataSourceWhitelist` set in the Coordinator dynamic configuration. See [Dynamic configuration](../configuration/index.md#dynamic-configuration).
 - When the `durationToRetain` time has passed since their creation.
 
 Kill tasks use the following configuration:
 - `druid.coordinator.kill.on`: When `true`, enables the Coordinator to submit a kill task for unused segments, which deletes them completely from metadata store and from deep storage.
 Only applies to the specified datasources in the dynamic configuration parameter `killDataSourceWhitelist`.
-If `killDataSourceWhitelist` is not set or empty, `killAllDataSources` defaults to true so that kill tasks can be submitted for all datasources.
+If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitted for all datasources.
 - `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `P1D`. Must be greater than `druid.coordinator.period.indexingPeriod`. 
 - `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
@@ -189,8 +189,8 @@ druid.coordinator.period.metadataStoreManagementPeriod=P1H
 
 # Set a kill task to poll every day to delete Segment records and segments
 # in deep storage > 4 days old. When druid.coordinator.kill.on is set to true,
-# you must set either killAllDataSources or killDataSourceWhitelist in the dynamic
-# configuration. For this example, assume killAllDataSources is set to true.
+# you can set killDataSourceWhitelist in the dynamic configuration to limit
+# the datasources that can be killed.
 # Required also for automated cleanup of rules and compaction configuration.
 
 druid.coordinator.kill.on=true
