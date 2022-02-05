@@ -138,7 +138,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("bar")
         ),
-        DruidExpression.fromExpression("concat(\"s\",'bar')"),
+        makeExpression("concat(\"s\",'bar')"),
         "foobar"
     );
   }
@@ -149,7 +149,7 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.CHARACTER_LENGTH,
         testHelper.makeInputRef("s"),
-        DruidExpression.fromExpression("strlen(\"s\")"),
+        makeExpression("strlen(\"s\")"),
         3L
     );
   }
@@ -164,7 +164,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("x(.)"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("x(.)", 1, true, null)),
             "regexp_extract(\"s\",'x(.)',1)"
         ),
@@ -178,7 +178,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("(o)"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("(o)", 1, true, null)),
             "regexp_extract(\"s\",'(o)',1)"
         ),
@@ -197,7 +197,7 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral("Zf(.)")
         ),
-        DruidExpression.fromExpression("regexp_extract(concat('Z',\"s\"),'Zf(.)')"),
+        makeExpression("regexp_extract(concat('Z',\"s\"),'Zf(.)')"),
         "Zfo"
     );
 
@@ -208,7 +208,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("f(.)"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 1, true, null)),
             "regexp_extract(\"s\",'f(.)',1)"
         ),
@@ -221,7 +221,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f(.)")
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 0, true, null)),
             "regexp_extract(\"s\",'f(.)')"
         ),
@@ -234,7 +234,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
             "regexp_extract(\"s\",'')"
         ),
@@ -247,7 +247,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        DruidExpression.of(
+        makeExpression(
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
             "regexp_extract(\"s\",'')"
         ),
@@ -260,7 +260,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("(.)")
         ),
-        DruidExpression.fromExpression("regexp_extract(null,'(.)')"),
+        makeExpression("regexp_extract(null,'(.)')"),
         null
     );
 
@@ -270,7 +270,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        DruidExpression.fromExpression("regexp_extract(null,'')"),
+        makeExpression("regexp_extract(null,'')"),
         null
     );
 
@@ -280,7 +280,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("null")
         ),
-        DruidExpression.fromExpression("regexp_extract(null,'null')"),
+        makeExpression("regexp_extract(null,'null')"),
         null
     );
   }
@@ -294,7 +294,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f.")
         ),
-        DruidExpression.fromExpression("regexp_like(\"s\",'f.')"),
+        makeExpression("regexp_like(\"s\",'f.')"),
         1L
     );
 
@@ -304,7 +304,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("o")
         ),
-        DruidExpression.fromExpression("regexp_like(\"s\",'o')"),
+        makeExpression("regexp_like(\"s\",'o')"),
 
         // Column "s" contains an 'o', but not at the beginning; we do match this.
         1L
@@ -316,7 +316,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("x.")
         ),
-        DruidExpression.fromExpression("regexp_like(\"s\",'x.')"),
+        makeExpression("regexp_like(\"s\",'x.')"),
         0L
     );
 
@@ -326,7 +326,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("")
         ),
-        DruidExpression.fromExpression("regexp_like(\"s\",'')"),
+        makeExpression("regexp_like(\"s\",'')"),
         1L
     );
 
@@ -336,7 +336,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("beep\nboop"),
             testHelper.makeLiteral("^beep$")
         ),
-        DruidExpression.fromExpression("regexp_like('beep\\u000Aboop','^beep$')"),
+        makeExpression("regexp_like('beep\\u000Aboop','^beep$')"),
         0L
     );
 
@@ -346,7 +346,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("beep\nboop"),
             testHelper.makeLiteral("^beep\\nboop$")
         ),
-        DruidExpression.fromExpression("regexp_like('beep\\u000Aboop','^beep\\u005Cnboop$')"),
+        makeExpression("regexp_like('beep\\u000Aboop','^beep\\u005Cnboop$')"),
         1L
     );
 
@@ -356,7 +356,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^beep$")
         ),
-        DruidExpression.fromExpression("regexp_like(\"newliney\",'^beep$')"),
+        makeExpression("regexp_like(\"newliney\",'^beep$')"),
         0L
     );
 
@@ -366,7 +366,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^beep\\nboop$")
         ),
-        DruidExpression.fromExpression("regexp_like(\"newliney\",'^beep\\u005Cnboop$')"),
+        makeExpression("regexp_like(\"newliney\",'^beep\\u005Cnboop$')"),
         1L
     );
 
@@ -376,7 +376,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("boo")
         ),
-        DruidExpression.fromExpression("regexp_like(\"newliney\",'boo')"),
+        makeExpression("regexp_like(\"newliney\",'boo')"),
         1L
     );
 
@@ -386,7 +386,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("newliney"),
             testHelper.makeLiteral("^boo")
         ),
-        DruidExpression.fromExpression("regexp_like(\"newliney\",'^boo')"),
+        makeExpression("regexp_like(\"newliney\",'^boo')"),
         0L
     );
 
@@ -400,7 +400,7 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral("x(.)")
         ),
-        DruidExpression.fromExpression("regexp_like(concat('Z',\"s\"),'x(.)')"),
+        makeExpression("regexp_like(concat('Z',\"s\"),'x(.)')"),
         0L
     );
 
@@ -410,7 +410,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("(.)")
         ),
-        DruidExpression.fromExpression("regexp_like(null,'(.)')"),
+        makeExpression("regexp_like(null,'(.)')"),
         0L
     );
 
@@ -420,7 +420,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("")
         ),
-        DruidExpression.fromExpression("regexp_like(null,'')"),
+        makeExpression("regexp_like(null,'')"),
 
         // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
         NullHandling.sqlCompatible() ? 0L : 1L
@@ -432,7 +432,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("null")
         ),
-        DruidExpression.fromExpression("regexp_like(null,'null')"),
+        makeExpression("regexp_like(null,'null')"),
         0L
     );
   }
@@ -539,7 +539,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("%x"),
             testHelper.makeInputRef("b")
         ),
-        DruidExpression.fromExpression("format('%x',\"b\")"),
+        makeExpression("format('%x',\"b\")"),
         "19"
     );
 
@@ -550,7 +550,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1234)
         ),
-        DruidExpression.fromExpression("format('%s %,d',\"s\",1234)"),
+        makeExpression("format('%s %,d',\"s\",1234)"),
         "foo 1,234"
     );
 
@@ -560,7 +560,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("%s %,d"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("format('%s %,d',\"s\")"),
+        makeExpression("format('%s %,d',\"s\")"),
         "%s %,d; foo"
     );
 
@@ -572,7 +572,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(1234),
             testHelper.makeLiteral(6789)
         ),
-        DruidExpression.fromExpression("format('%s %,d',\"s\",1234,6789)"),
+        makeExpression("format('%s %,d',\"s\",1234,6789)"),
         "foo 1,234"
     );
   }
@@ -586,7 +586,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("oo")
         ),
-        DruidExpression.fromExpression("(strpos(\"s\",'oo') + 1)"),
+        makeExpression("(strpos(\"s\",'oo') + 1)"),
         2L
     );
 
@@ -596,7 +596,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("ax")
         ),
-        DruidExpression.fromExpression("(strpos(\"s\",'ax') + 1)"),
+        makeExpression("(strpos(\"s\",'ax') + 1)"),
         0L
     );
 
@@ -606,7 +606,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
             testHelper.makeLiteral("ax")
         ),
-        DruidExpression.fromExpression("(strpos(null,'ax') + 1)"),
+        makeExpression("(strpos(null,'ax') + 1)"),
         NullHandling.replaceWithDefault() ? 0L : null
     );
   }
@@ -617,7 +617,7 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("intstr"),
-        DruidExpression.fromExpression("parse_long(\"intstr\")"),
+        makeExpression(ColumnType.LONG, "parse_long(\"intstr\")"),
         -100L
     );
 
@@ -627,7 +627,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("hexstr"),
             testHelper.makeLiteral(BigDecimal.valueOf(16))
         ),
-        DruidExpression.fromExpression("parse_long(\"hexstr\",16)"),
+        makeExpression(ColumnType.LONG, "parse_long(\"hexstr\",16)"),
         239L
     );
 
@@ -641,14 +641,14 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral(BigDecimal.valueOf(16))
         ),
-        DruidExpression.fromExpression("parse_long(concat('0x',\"hexstr\"),16)"),
+        makeExpression(ColumnType.LONG, "parse_long(concat('0x',\"hexstr\"),16)"),
         239L
     );
 
     testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("hexstr"),
-        DruidExpression.fromExpression("parse_long(\"hexstr\")"),
+        makeExpression(ColumnType.LONG, "parse_long(\"hexstr\")"),
         NullHandling.sqlCompatible() ? null : 0L
     );
   }
@@ -662,7 +662,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("oo"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("(strpos(\"s\",'oo',0) + 1)"),
+        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',0) + 1)"),
         2L
     );
 
@@ -673,7 +673,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(BigDecimal.valueOf(2))
         ),
-        DruidExpression.fromExpression("(strpos(\"s\",'oo',(2 - 1)) + 1)"),
+        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',(2 - 1)) + 1)"),
         2L
     );
 
@@ -684,7 +684,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(BigDecimal.valueOf(3))
         ),
-        DruidExpression.fromExpression("(strpos(\"s\",'oo',(3 - 1)) + 1)"),
+        makeExpression(ColumnType.LONG, "(strpos(\"s\",'oo',(3 - 1)) + 1)"),
         0L
     );
   }
@@ -698,7 +698,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("a"),
             testHelper.makeLiteral(2)
         ),
-        DruidExpression.fromExpression("pow(\"a\",2)"),
+        makeExpression(ColumnType.DOUBLE, "pow(\"a\",2)"),
         100.0
     );
   }
@@ -709,28 +709,28 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("a"),
-        DruidExpression.fromExpression("floor(\"a\")"),
+        makeExpression(ColumnType.DOUBLE, "floor(\"a\")"),
         10.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("x"),
-        DruidExpression.fromExpression("floor(\"x\")"),
+        makeExpression(ColumnType.DOUBLE, "floor(\"x\")"),
         2.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("y"),
-        DruidExpression.fromExpression("floor(\"y\")"),
+        makeExpression(ColumnType.DOUBLE, "floor(\"y\")"),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
         testHelper.makeInputRef("z"),
-        DruidExpression.fromExpression("floor(\"z\")"),
+        makeExpression(ColumnType.DOUBLE, "floor(\"z\")"),
         -3.0
     );
   }
@@ -741,28 +741,28 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("a"),
-        DruidExpression.fromExpression("ceil(\"a\")"),
+        makeExpression(ColumnType.DOUBLE, "ceil(\"a\")"),
         10.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("x"),
-        DruidExpression.fromExpression("ceil(\"x\")"),
+        makeExpression(ColumnType.DOUBLE, "ceil(\"x\")"),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("y"),
-        DruidExpression.fromExpression("ceil(\"y\")"),
+        makeExpression(ColumnType.DOUBLE, "ceil(\"y\")"),
         3.0
     );
 
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
         testHelper.makeInputRef("z"),
-        DruidExpression.fromExpression("ceil(\"z\")"),
+        makeExpression(ColumnType.DOUBLE, "ceil(\"z\")"),
         -2.0
     );
   }
@@ -775,28 +775,28 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         truncateFunction,
         testHelper.makeInputRef("a"),
-        DruidExpression.fromExpression("(cast(cast(\"a\" * 1,'long'),'double') / 1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"a\" * 1,'long'),'double') / 1)"),
         10.0
     );
 
     testHelper.testExpression(
         truncateFunction,
         testHelper.makeInputRef("x"),
-        DruidExpression.fromExpression("(cast(cast(\"x\" * 1,'long'),'double') / 1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"x\" * 1,'long'),'double') / 1)"),
         2.0
     );
 
     testHelper.testExpression(
         truncateFunction,
         testHelper.makeInputRef("y"),
-        DruidExpression.fromExpression("(cast(cast(\"y\" * 1,'long'),'double') / 1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"y\" * 1,'long'),'double') / 1)"),
         3.0
     );
 
     testHelper.testExpression(
         truncateFunction,
         testHelper.makeInputRef("z"),
-        DruidExpression.fromExpression("(cast(cast(\"z\" * 1,'long'),'double') / 1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"z\" * 1,'long'),'double') / 1)"),
         -2.0
     );
 
@@ -806,7 +806,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("x"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("(cast(cast(\"x\" * 10.0,'long'),'double') / 10.0)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"x\" * 10.0,'long'),'double') / 10.0)"),
         2.2
     );
 
@@ -816,7 +816,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("z"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("(cast(cast(\"z\" * 10.0,'long'),'double') / 10.0)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"z\" * 10.0,'long'),'double') / 10.0)"),
         -2.2
     );
 
@@ -826,7 +826,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("b"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("(cast(cast(\"b\" * 0.1,'long'),'double') / 0.1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"b\" * 0.1,'long'),'double') / 0.1)"),
         20.0
     );
 
@@ -836,7 +836,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("z"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
+        makeExpression(ColumnType.DOUBLE, "(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
         0.0
     );
   }
@@ -849,14 +849,14 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("a"),
-        DruidExpression.fromExpression("round(\"a\")"),
+        makeExpression(ColumnType.LONG, "round(\"a\")"),
         10L
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("b"),
-        DruidExpression.fromExpression("round(\"b\")"),
+        makeExpression(ColumnType.LONG, "round(\"b\")"),
         25L
     );
 
@@ -866,14 +866,14 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("b"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("round(\"b\",-1)"),
+        makeExpression(ColumnType.LONG, "round(\"b\",-1)"),
         30L
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("x"),
-        DruidExpression.fromExpression("round(\"x\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"x\")"),
         2.0
     );
 
@@ -883,21 +883,21 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("x"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("round(\"x\",1)"),
+        makeExpression(ColumnType.DOUBLE, "round(\"x\",1)"),
         2.3
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("y"),
-        DruidExpression.fromExpression("round(\"y\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"y\")"),
         3.0
     );
 
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("z"),
-        DruidExpression.fromExpression("round(\"z\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"z\")"),
         -2.0
     );
   }
@@ -916,7 +916,7 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("s"),
-        DruidExpression.fromExpression("round(\"s\")"),
+        makeExpression("round(\"s\")"),
         NullHandling.sqlCompatible() ? null : "IAE Exception"
     );
   }
@@ -936,7 +936,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("x"),
             testHelper.makeLiteral("foo")
         ),
-        DruidExpression.fromExpression("round(\"x\",'foo')"),
+        makeExpression("round(\"x\",'foo')"),
         "IAE Exception"
     );
   }
@@ -949,13 +949,13 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("nan"),
-        DruidExpression.fromExpression("round(\"nan\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"nan\")"),
         0D
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("fnan"),
-        DruidExpression.fromExpression("round(\"fnan\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"fnan\")"),
         0D
     );
   }
@@ -969,25 +969,25 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("inf"),
-        DruidExpression.fromExpression("round(\"inf\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"inf\")"),
         Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-inf"),
-        DruidExpression.fromExpression("round(\"-inf\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"-inf\")"),
         -1 * Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("finf"),
-        DruidExpression.fromExpression("round(\"finf\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"finf\")"),
         Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-finf"),
-        DruidExpression.fromExpression("round(\"-finf\")"),
+        makeExpression(ColumnType.DOUBLE, "round(\"-finf\")"),
         -1 * Double.MAX_VALUE
     );
     //CHECKSTYLE.ON: Regexp
@@ -1002,7 +1002,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("hour"),
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
-        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'PT1H',null,'UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
@@ -1012,7 +1012,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("DAY"),
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
-        DruidExpression.fromExpression("timestamp_floor(949550706000,'P1D',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03T00:00:00").getMillis()
     );
   }
@@ -1027,7 +1027,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(" "),
             testHelper.makeInputRef("spacey")
         ),
-        DruidExpression.fromExpression("trim(\"spacey\",' ')"),
+        makeExpression("trim(\"spacey\",' ')"),
         "hey there"
     );
 
@@ -1038,7 +1038,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(" h"),
             testHelper.makeInputRef("spacey")
         ),
-        DruidExpression.fromExpression("ltrim(\"spacey\",' h')"),
+        makeExpression("ltrim(\"spacey\",' h')"),
         "ey there  "
     );
 
@@ -1049,7 +1049,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(" e"),
             testHelper.makeInputRef("spacey")
         ),
-        DruidExpression.fromExpression("rtrim(\"spacey\",' e')"),
+        makeExpression("rtrim(\"spacey\",' e')"),
         "  hey ther"
     );
   }
@@ -1064,7 +1064,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(5),
             testHelper.makeLiteral("x")
         ),
-        DruidExpression.fromExpression("lpad(\"s\",5,'x')"),
+        makeExpression("lpad(\"s\",5,'x')"),
         "xxfoo"
     );
 
@@ -1075,7 +1075,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(5),
             testHelper.makeLiteral("x")
         ),
-        DruidExpression.fromExpression("rpad(\"s\",5,'x')"),
+        makeExpression("rpad(\"s\",5,'x')"),
         "fooxx"
     );
   }
@@ -1089,7 +1089,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("there")
         ),
-        DruidExpression.fromExpression("contains_string(\"spacey\",'there')"),
+        makeExpression("contains_string(\"spacey\",'there')"),
         1L
     );
 
@@ -1099,7 +1099,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
         ),
-        DruidExpression.fromExpression("contains_string(\"spacey\",'There')"),
+        makeExpression(ColumnType.LONG, "contains_string(\"spacey\",'There')"),
         0L
     );
 
@@ -1109,7 +1109,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
         ),
-        DruidExpression.fromExpression("icontains_string(\"spacey\",'There')"),
+        makeExpression(ColumnType.LONG, "icontains_string(\"spacey\",'There')"),
         1L
     );
 
@@ -1123,7 +1123,7 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral("what")
         ),
-        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'what')"),
+        makeExpression(ColumnType.LONG, "contains_string(concat('what is',\"spacey\"),'what')"),
         1L
     );
 
@@ -1137,7 +1137,7 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral("there")
         ),
-        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'there')"),
+        makeExpression(ColumnType.LONG, "contains_string(concat('what is',\"spacey\"),'there')"),
         1L
     );
 
@@ -1151,7 +1151,7 @@ public class ExpressionsTest extends ExpressionTestBase
             ),
             testHelper.makeLiteral("There")
         ),
-        DruidExpression.fromExpression("icontains_string(concat('what is',\"spacey\"),'There')"),
+        makeExpression(ColumnType.LONG, "icontains_string(concat('what is',\"spacey\"),'There')"),
         1L
     );
 
@@ -1169,7 +1169,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeLiteral("yes")
             )
         ),
-        DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+        makeExpression(ColumnType.LONG, "(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
         1L
     );
 
@@ -1187,7 +1187,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeLiteral("yes")
             )
         ),
-        DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+        makeExpression(ColumnType.LONG, "(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
         1L
     );
   }
@@ -1315,7 +1315,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(949550706000,'PT1H',null,'UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
@@ -1327,7 +1327,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'America/Los_Angeles')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1D',null,'America/Los_Angeles')"),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
@@ -1343,7 +1343,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1Y',null,'UTC')"),
         DateTimes.of("2000").getMillis()
     );
   }
@@ -1357,7 +1357,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             testHelper.makeLiteral("PT1H")
         ),
-        DruidExpression.fromExpression("timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
         DateTimes.of("2000-02-03T05:00:00").getMillis()
     );
 
@@ -1369,7 +1369,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
+        makeExpression(ColumnType.LONG, "timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
         DateTimes.of("2000-02-03T08:00:00").getMillis()
     );
   }
@@ -1385,7 +1385,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_ceil(\"t\",'P1Y',null,'UTC')"),
         DateTimes.of("2001").getMillis()
     );
   }
@@ -1400,7 +1400,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("PT2H"),
             testHelper.makeLiteral(-3)
         ),
-        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
 
@@ -1412,7 +1412,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral(-3),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
+        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
@@ -1426,7 +1426,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("QUARTER")
         ),
-        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -1437,7 +1437,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("DAY"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
         2L
     );
   }
@@ -1456,10 +1456,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
             )
         ),
-        DruidExpression.of(
-            null,
-            "(\"t\" + 90060000)"
-        ),
+        makeExpression(ColumnType.LONG, "(\"t\" + 90060000)"),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
@@ -1478,10 +1475,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_shift(\"t\",'P13M',1,'UTC')"
-        ),
+        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'P13M',1,'UTC')"),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
@@ -1501,10 +1495,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
             )
         ),
-        DruidExpression.of(
-            null,
-            "(\"t\" - 90060000)"
-        ),
+        makeExpression(ColumnType.LONG, "(\"t\" - 90060000)"),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
@@ -1524,10 +1515,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_shift(\"t\",'P13M',-1,'UTC')"
-        ),
+        makeExpression(ColumnType.LONG, "timestamp_shift(\"t\",'P13M',-1,'UTC')"),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
@@ -1541,7 +1529,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 
@@ -1552,7 +1540,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
+        makeExpression(ColumnType.LONG, "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
   }
@@ -1566,7 +1554,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("t"),
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
+        makeExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         "2000-02-03 04:05:06"
     );
 
@@ -1577,7 +1565,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             testHelper.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
+        makeExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         "2000-02-02 20:05:06"
     );
   }
@@ -1591,7 +1579,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeFlag(TimeUnitRange.QUARTER),
             testHelper.makeInputRef("t")
         ),
-        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -1601,7 +1589,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeFlag(TimeUnitRange.DAY),
             testHelper.makeInputRef("t")
         ),
-        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','UTC')"),
         3L
     );
   }
@@ -1614,10 +1602,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.createSqlType(SqlTypeName.TIMESTAMP),
             testHelper.makeInputRef("t")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of("t", null),
-            "\"t\""
-        ),
+        makeExpression(ColumnType.LONG, SimpleExtraction.of("t", null), "\"t\""),
         DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
 
@@ -1626,10 +1611,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.createSqlType(SqlTypeName.TIMESTAMP),
             testHelper.makeInputRef("tstr")
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_parse(\"tstr\",null,'UTC')"
-        ),
+        makeExpression(ColumnType.LONG, "timestamp_parse(\"tstr\",null,'UTC')"),
         DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
   }
@@ -1645,9 +1627,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeInputRef("t")
             )
         ),
-        DruidExpression.fromExpression(
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"
-        ),
+        makeExpression(ColumnType.LONG, "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         "2000-02-03 04:05:06"
     );
 
@@ -1659,7 +1639,8 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeInputRef("t")
             )
         ),
-        DruidExpression.of(
+        makeExpression(
+            ColumnType.LONG,
             SimpleExtraction.of("t", null),
             "\"t\""
         ),
@@ -1675,7 +1656,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.createSqlType(SqlTypeName.DATE),
             testHelper.makeInputRef("t")
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03").getMillis()
     );
 
@@ -1684,7 +1665,8 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.createSqlType(SqlTypeName.DATE),
             testHelper.makeInputRef("dstr")
         ),
-        DruidExpression.fromExpression(
+        makeExpression(
+            ColumnType.LONG,
             "timestamp_floor(timestamp_parse(\"dstr\",null,'UTC'),'P1D',null,'UTC')"
         ),
         DateTimes.of("2000-02-03").getMillis()
@@ -1702,7 +1684,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeInputRef("t")
             )
         ),
-        DruidExpression.fromExpression(
+        makeExpression(
             "timestamp_format(timestamp_floor(\"t\",'P1D',null,'UTC'),'yyyy-MM-dd','UTC')"
         ),
         "2000-02-03"
@@ -1716,7 +1698,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 testHelper.makeInputRef("t")
             )
         ),
-        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'UTC')"),
+        makeExpression(ColumnType.LONG, "timestamp_floor(\"t\",'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03").getMillis()
     );
   }
@@ -1727,28 +1709,28 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("s"),
-        DruidExpression.fromExpression("reverse(\"s\")"),
+        makeExpression("reverse(\"s\")"),
         "oof"
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("spacey"),
-        DruidExpression.fromExpression("reverse(\"spacey\")"),
+        makeExpression("reverse(\"spacey\")"),
         "  ereht yeh  "
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("tstr"),
-        DruidExpression.fromExpression("reverse(\"tstr\")"),
+        makeExpression("reverse(\"tstr\")"),
         "60:50:40 30-20-0002"
     );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("dstr"),
-        DruidExpression.fromExpression("reverse(\"dstr\")"),
+        makeExpression("reverse(\"dstr\")"),
         "30-20-0002"
     );
   }
@@ -1761,7 +1743,7 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
         testHelper.makeInputRef("a"),
-        DruidExpression.fromExpression("reverse(\"a\")"),
+        makeExpression("reverse(\"a\")"),
         null
     );
   }
@@ -1775,7 +1757,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("right(\"s\",1)"),
+        makeExpression("right(\"s\",1)"),
         "o"
     );
 
@@ -1785,7 +1767,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2)
         ),
-        DruidExpression.fromExpression("right(\"s\",2)"),
+        makeExpression("right(\"s\",2)"),
         "oo"
     );
 
@@ -1795,7 +1777,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        DruidExpression.fromExpression("right(\"s\",3)"),
+        makeExpression("right(\"s\",3)"),
         "foo"
     );
 
@@ -1805,7 +1787,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(4)
         ),
-        DruidExpression.fromExpression("right(\"s\",4)"),
+        makeExpression("right(\"s\",4)"),
         "foo"
     );
 
@@ -1815,7 +1797,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral(5)
         ),
-        DruidExpression.fromExpression("right(\"tstr\",5)"),
+        makeExpression("right(\"tstr\",5)"),
         "05:06"
     );
   }
@@ -1831,7 +1813,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("right(\"s\",-1)"),
+        makeExpression("right(\"s\",-1)"),
         null
     );
   }
@@ -1847,7 +1829,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("right(\"s\",\"s\")"),
+        makeExpression("right(\"s\",\"s\")"),
         null
     );
   }
@@ -1861,7 +1843,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("left(\"s\",1)"),
+        makeExpression("left(\"s\",1)"),
         "f"
     );
 
@@ -1871,7 +1853,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(2)
         ),
-        DruidExpression.fromExpression("left(\"s\",2)"),
+        makeExpression("left(\"s\",2)"),
         "fo"
     );
 
@@ -1881,7 +1863,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        DruidExpression.fromExpression("left(\"s\",3)"),
+        makeExpression("left(\"s\",3)"),
         "foo"
     );
 
@@ -1891,7 +1873,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(4)
         ),
-        DruidExpression.fromExpression("left(\"s\",4)"),
+        makeExpression("left(\"s\",4)"),
         "foo"
     );
 
@@ -1901,7 +1883,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("tstr"),
             testHelper.makeLiteral(10)
         ),
-        DruidExpression.fromExpression("left(\"tstr\",10)"),
+        makeExpression("left(\"tstr\",10)"),
         "2000-02-03"
     );
   }
@@ -1917,7 +1899,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("left(\"s\",-1)"),
+        makeExpression("left(\"s\",-1)"),
         null
     );
   }
@@ -1933,7 +1915,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("left(\"s\",\"s\")"),
+        makeExpression("left(\"s\",\"s\")"),
         null
     );
   }
@@ -1947,7 +1929,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("repeat(\"s\",1)"),
+        makeExpression("repeat(\"s\",1)"),
         "foo"
     );
 
@@ -1957,7 +1939,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(3)
         ),
-        DruidExpression.fromExpression("repeat(\"s\",3)"),
+        makeExpression("repeat(\"s\",3)"),
         "foofoofoo"
     );
 
@@ -1967,7 +1949,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral(-1)
         ),
-        DruidExpression.fromExpression("repeat(\"s\",-1)"),
+        makeExpression("repeat(\"s\",-1)"),
         null
     );
   }
@@ -1983,7 +1965,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
+        makeExpression("repeat(\"s\",\"s\")"),
         null
     );
   }
@@ -1996,7 +1978,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("a")
         ),
-        DruidExpression.fromExpression("bitwiseComplement(\"a\")"),
+        makeExpression(ColumnType.LONG, "bitwiseComplement(\"a\")"),
         -11L
     );
 
@@ -2005,7 +1987,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("x")
         ),
-        DruidExpression.fromExpression("bitwiseComplement(\"x\")"),
+        makeExpression(ColumnType.LONG, "bitwiseComplement(\"x\")"),
         -3L
     );
 
@@ -2014,7 +1996,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("bitwiseComplement(\"s\")"),
+        makeExpression(ColumnType.LONG, "bitwiseComplement(\"s\")"),
         null
     );
   }
@@ -2027,7 +2009,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("a")
         ),
-        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"a\")"),
+        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"a\")"),
         4.9E-323
     );
 
@@ -2036,7 +2018,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("x")
         ),
-        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"x\")"),
+        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"x\")"),
         1.0E-323
     );
 
@@ -2045,7 +2027,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("bitwiseConvertLongBitsToDouble(\"s\")"),
+        makeExpression(ColumnType.LONG, "bitwiseConvertLongBitsToDouble(\"s\")"),
         null
     );
   }
@@ -2059,7 +2041,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("a"),
             testHelper.makeInputRef("b")
         ),
-        DruidExpression.fromExpression("bitwiseAnd(\"a\",\"b\")"),
+        makeExpression(ColumnType.LONG, "bitwiseAnd(\"a\",\"b\")"),
         8L
     );
 
@@ -2069,7 +2051,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("x"),
             testHelper.makeInputRef("y")
         ),
-        DruidExpression.fromExpression("bitwiseAnd(\"x\",\"y\")"),
+        makeExpression(ColumnType.LONG, "bitwiseAnd(\"x\",\"y\")"),
         2L
     );
 
@@ -2079,7 +2061,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeInputRef("s")
         ),
-        DruidExpression.fromExpression("bitwiseAnd(\"s\",\"s\")"),
+        makeExpression(ColumnType.LONG, "bitwiseAnd(\"s\",\"s\")"),
         null
     );
   }
@@ -2095,7 +2077,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(1000)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(1000)"),
+        makeExpression("human_readable_binary_byte_format(1000)"),
         "1000 B"
     );
     testHelper.testExpression(
@@ -2103,7 +2085,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(1024)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(1024)"),
+        makeExpression("human_readable_binary_byte_format(1024)"),
         "1.00 KiB"
     );
     testHelper.testExpression(
@@ -2111,7 +2093,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(Long.MAX_VALUE)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(9223372036854775807)"),
+        makeExpression("human_readable_binary_byte_format(9223372036854775807)"),
         "8.00 EiB"
     );
 
@@ -2129,7 +2111,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("b"),
             testHelper.makeInputRef("p")
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(\"b\",\"p\")"),
+        makeExpression("human_readable_binary_byte_format(\"b\",\"p\")"),
         "25 B"
     );
 
@@ -2143,7 +2125,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 0
             testHelper.makeLiteral(0)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,0)"),
+        makeExpression("human_readable_binary_byte_format(45000,0)"),
         "44 KiB"
     );
     testHelper.testExpression(
@@ -2153,7 +2135,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 1
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,1)"),
+        makeExpression("human_readable_binary_byte_format(45000,1)"),
         "43.9 KiB"
     );
     testHelper.testExpression(
@@ -2163,7 +2145,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 2
             testHelper.makeLiteral(2)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,2)"),
+        makeExpression("human_readable_binary_byte_format(45000,2)"),
         "43.95 KiB"
     );
     testHelper.testExpression(
@@ -2173,7 +2155,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 3
             testHelper.makeLiteral(3)
         ),
-        DruidExpression.fromExpression("human_readable_binary_byte_format(45000,3)"),
+        makeExpression("human_readable_binary_byte_format(45000,3)"),
         "43.945 KiB"
     );
   }
@@ -2189,7 +2171,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(999)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(999)"),
+        makeExpression("human_readable_decimal_byte_format(999)"),
         "999 B"
     );
     testHelper.testExpression(
@@ -2197,7 +2179,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(1024)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(1024)"),
+        makeExpression("human_readable_decimal_byte_format(1024)"),
         "1.02 KB"
     );
     testHelper.testExpression(
@@ -2205,7 +2187,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ImmutableList.of(
             testHelper.makeLiteral(Long.MAX_VALUE)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(9223372036854775807)"),
+        makeExpression("human_readable_decimal_byte_format(9223372036854775807)"),
         "9.22 EB"
     );
 
@@ -2222,7 +2204,7 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("b"),
             testHelper.makeInputRef("p")
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(\"b\",\"p\")"),
+        makeExpression("human_readable_decimal_byte_format(\"b\",\"p\")"),
         "25 B"
     );
 
@@ -2236,7 +2218,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 0
             testHelper.makeLiteral(0)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,0)"),
+        makeExpression("human_readable_decimal_byte_format(45678,0)"),
         "46 KB"
     );
     testHelper.testExpression(
@@ -2246,7 +2228,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 1
             testHelper.makeLiteral(1)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,1)"),
+        makeExpression("human_readable_decimal_byte_format(45678,1)"),
         "45.7 KB"
     );
     testHelper.testExpression(
@@ -2256,7 +2238,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 2
             testHelper.makeLiteral(2)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,2)"),
+        makeExpression("human_readable_decimal_byte_format(45678,2)"),
         "45.68 KB"
     );
     testHelper.testExpression(
@@ -2266,7 +2248,7 @@ public class ExpressionsTest extends ExpressionTestBase
             //precision 3
             testHelper.makeLiteral(3)
         ),
-        DruidExpression.fromExpression("human_readable_decimal_byte_format(45678,3)"),
+        makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
     );
   }

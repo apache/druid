@@ -34,6 +34,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -48,7 +49,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimeFloorOperatorConversion implements SqlOperatorConversion
 {
@@ -91,16 +91,26 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
       }
     }
 
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        input.getDruidType(),
         "timestamp_floor",
         ImmutableList.of(
-            input.getExpression(),
-            DruidExpression.stringLiteral(granularity.getPeriod().toString()),
-            DruidExpression.numberLiteral(
-                granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
+            input,
+            DruidExpression.ofLiteral(
+                ColumnType.STRING,
+                DruidExpression.stringLiteral(granularity.getPeriod().toString())
             ),
-            DruidExpression.stringLiteral(granularity.getTimeZone().toString())
-        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+            DruidExpression.ofLiteral(
+                ColumnType.LONG,
+                DruidExpression.numberLiteral(
+                    granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
+                )
+            ),
+            DruidExpression.ofLiteral(
+                ColumnType.STRING,
+                DruidExpression.stringLiteral(granularity.getTimeZone().toString())
+            )
+        )
     );
   }
 
@@ -133,7 +143,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
         return null;
       }
 
-      functionArgs.add(DruidExpression.fromExpression(DruidExpression.stringLiteral(period.toString())));
+      functionArgs.add(DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(period.toString())));
     } else {
       // Other literal types are used by TIME_FLOOR and TIME_CEIL
       functionArgs.add(Expressions.toDruidExpression(plannerContext, rowSignature, periodOperand));
@@ -146,7 +156,8 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
             2,
             operand -> {
               if (operand.isA(SqlKind.LITERAL)) {
-                return DruidExpression.fromExpression(
+                return DruidExpression.ofLiteral(
+                    Calcites.getColumnTypeForRelDataType(operand.getType()),
                     DruidExpression.numberLiteral(
                         Calcites.calciteDateTimeLiteralToJoda(operand, plannerContext.getTimeZone()).getMillis()
                     )
@@ -155,7 +166,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
                 return Expressions.toDruidExpression(plannerContext, rowSignature, operand);
               }
             },
-            DruidExpression.fromExpression(DruidExpression.nullLiteral())
+            DruidExpression.ofLiteral(null, DruidExpression.nullLiteral())
         )
     );
 
@@ -165,7 +176,10 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
             operands,
             3,
             operand -> Expressions.toDruidExpression(plannerContext, rowSignature, operand),
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+            DruidExpression.ofLiteral(
+                ColumnType.STRING,
+                DruidExpression.stringLiteral(plannerContext.getTimeZone().getID())
+            )
         )
     );
 
@@ -206,6 +220,10 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
       return null;
     }
 
-    return DruidExpression.fromFunctionCall("timestamp_floor", functionArgs);
+    return DruidExpression.ofFunctionCall(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+        "timestamp_floor",
+        functionArgs
+    );
   }
 }

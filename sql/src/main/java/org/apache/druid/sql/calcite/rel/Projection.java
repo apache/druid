@@ -31,7 +31,6 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -65,13 +64,13 @@ public class Projection
   private final List<PostAggregator> postAggregators;
 
   @Nullable
-  private final List<VirtualColumn> virtualColumns;
+  private final List<String> virtualColumns;
 
   private final RowSignature outputRowSignature;
 
   private Projection(
       @Nullable final List<PostAggregator> postAggregators,
-      @Nullable final List<VirtualColumn> virtualColumns,
+      @Nullable final List<String> virtualColumns,
       final RowSignature outputRowSignature
   )
   {
@@ -255,7 +254,7 @@ public class Projection
       }
     }
 
-    final Set<VirtualColumn> virtualColumns = new HashSet<>();
+    final Set<String> virtualColumns = new HashSet<>();
     final List<String> rowOrder = new ArrayList<>();
 
     for (int i = 0; i < expressions.size(); i++) {
@@ -271,13 +270,12 @@ public class Projection
         // Refer to column directly when it's a direct access with matching type.
         rowOrder.add(expression.getDirectColumn());
       } else {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             expression,
             project.getChildExps().get(i).getType()
         );
-        virtualColumns.add(virtualColumn);
-        rowOrder.add(virtualColumn.getOutputName());
+        virtualColumns.add(virtualColumnName);
+        rowOrder.add(virtualColumnName);
       }
     }
 
@@ -367,7 +365,7 @@ public class Projection
     return Preconditions.checkNotNull(postAggregators, "postAggregators");
   }
 
-  public List<VirtualColumn> getVirtualColumns()
+  public List<String> getVirtualColumns()
   {
     // If you ever see this error, it probably means a Projection was created in post-aggregation mode, but then
     // used in a pre-aggregation context. This is likely a bug somewhere in DruidQuery. See class-level Javadocs.

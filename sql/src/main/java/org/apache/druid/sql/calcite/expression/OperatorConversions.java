@@ -72,7 +72,7 @@ import java.util.stream.IntStream;
 public class OperatorConversions
 {
   @Nullable
-  public static DruidExpression convertCall(
+  public static DruidExpression convertSimpleCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -83,12 +83,16 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.fromFunctionCall(functionName, druidExpressions)
+        druidExpressions -> DruidExpression.ofFunctionCall(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            functionName,
+            druidExpressions
+        )
     );
   }
 
   @Nullable
-  public static DruidExpression convertCall(
+  public static DruidExpression convertSimpleCallWithExtraction(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -100,9 +104,30 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.of(
+        druidExpressions -> DruidExpression.ofExpression(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             simpleExtractionFunction == null ? null : simpleExtractionFunction.apply(druidExpressions),
-            DruidExpression.functionCall(functionName, druidExpressions)
+            DruidExpression.functionCall(functionName),
+            druidExpressions
+        )
+    );
+  }
+
+  public static DruidExpression convertCallBuilder(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final DruidExpression.ExpressionBuilder expressionBuilder
+  )
+  {
+    return convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        (operands) -> DruidExpression.ofExpression(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            expressionBuilder,
+            operands
         )
     );
   }
@@ -112,7 +137,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final Function<List<DruidExpression>, DruidExpression> expressionFunction
+      final DruidExpression.DruidExpressionBuilder expressionFunction
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -127,7 +152,7 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.apply(druidExpressions);
+    return expressionFunction.buildExpression(druidExpressions);
   }
 
   /**
@@ -153,7 +178,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final Function<List<DruidExpression>, DruidExpression> expressionFunction,
+      final DruidExpression.DruidExpressionBuilder expressionFunction,
       final PostAggregatorVisitor postAggregatorVisitor
   )
   {
@@ -170,7 +195,7 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.apply(druidExpressions);
+    return expressionFunction.buildExpression(druidExpressions);
   }
 
   /**

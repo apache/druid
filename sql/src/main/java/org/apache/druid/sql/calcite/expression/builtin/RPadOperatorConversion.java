@@ -26,10 +26,12 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class RPadOperatorConversion implements SqlOperatorConversion
@@ -61,7 +63,8 @@ public class RPadOperatorConversion implements SqlOperatorConversion
         rexNode,
         druidExpressions -> {
           if (druidExpressions.size() > 2) {
-            return DruidExpression.fromFunctionCall(
+            return DruidExpression.ofFunctionCall(
+                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
                 "rpad",
                 ImmutableList.of(
                     druidExpressions.get(0),
@@ -70,12 +73,13 @@ public class RPadOperatorConversion implements SqlOperatorConversion
                 )
             );
           } else {
-            return DruidExpression.fromFunctionCall(
+            return DruidExpression.ofFunctionCall(
+                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
                 "rpad",
                 ImmutableList.of(
                     druidExpressions.get(0),
                     druidExpressions.get(1),
-                    DruidExpression.fromExpression(DruidExpression.stringLiteral(" "))
+                    DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(" "))
                 )
             );
           }

@@ -22,10 +22,14 @@ package org.apache.druid.sql.calcite.util;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.BeforeClass;
 
+import java.util.Collections;
 import java.util.List;
 
 public abstract class CalciteTestBase
@@ -38,5 +42,39 @@ public abstract class CalciteTestBase
     Calcites.setSystemProperties();
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests(null);
+  }
+
+  public static DruidExpression makeColumnExpression(final String column)
+  {
+    return DruidExpression.ofColumn(ColumnType.STRING, column);
+  }
+
+  public static DruidExpression makeExpression(final String staticExpression)
+  {
+    return makeExpression(ColumnType.STRING, staticExpression);
+  }
+
+  public static DruidExpression makeExpression(final ColumnType columnType, final String staticExpression)
+  {
+    return makeExpression(columnType, null, staticExpression);
+  }
+
+  public static DruidExpression makeExpression(final SimpleExtraction simpleExtraction, final String staticExpression)
+  {
+    return makeExpression(ColumnType.STRING, simpleExtraction, staticExpression);
+  }
+
+  public static DruidExpression makeExpression(
+      final ColumnType columnType,
+      final SimpleExtraction simpleExtraction,
+      final String staticExpression
+  )
+  {
+    return DruidExpression.ofExpression(
+        columnType,
+        simpleExtraction,
+        (args) -> staticExpression,
+        Collections.emptyList()
+    );
   }
 }

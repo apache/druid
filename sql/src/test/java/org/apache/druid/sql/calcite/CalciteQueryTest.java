@@ -6858,8 +6858,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     ),
                                                     "j0.",
                                                     equalsCondition(
-                                                        DruidExpression.fromExpression("substring(\"dim2\", 0, 1)"),
-                                                        DruidExpression.fromColumn("j0.d0")
+                                                        makeExpression("substring(\"dim2\", 0, 1)"),
+                                                        DruidExpression.ofColumn(ColumnType.STRING, "j0.d0")
                                                     ),
                                                     JoinType.INNER
                                                 )
@@ -10852,8 +10852,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         "j0.",
                         StringUtils.format(
                             "(%s && %s)",
-                            equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
-                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.p0"))
+                            equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
+                            equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.p0"))
                         ),
                         JoinType.INNER
                     )
@@ -10899,7 +10899,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .build()
                         ),
                         "j0.",
-                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.d0")),
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.d0")),
                         JoinType.INNER
                     )
                 )
@@ -11629,8 +11629,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           ),
                           "j0.",
                           equalsCondition(
-                              DruidExpression.fromExpression("substring(\"dim2\", 0, 1)"),
-                              DruidExpression.fromColumn("j0.d0")
+                              makeExpression("substring(\"dim2\", 0, 1)"),
+                              DruidExpression.ofColumn(ColumnType.STRING, "j0.d0")
                           ),
                           JoinType.INNER
                       )

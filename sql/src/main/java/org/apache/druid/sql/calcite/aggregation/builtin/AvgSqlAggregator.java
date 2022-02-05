@@ -32,7 +32,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -116,8 +115,8 @@ public class AvgSqlAggregator implements SqlAggregator
           project,
           Iterables.getOnlyElement(aggregateCall.getArgList())
       );
-      VirtualColumn vc = virtualColumnRegistry.getVirtualColumnByExpression(arg.getExpression(), resolutionArg.getType());
-      fieldName = vc != null ? vc.getOutputName() : null;
+      String vc = virtualColumnRegistry.getVirtualColumnByExpression(arg, resolutionArg.getType());
+      fieldName = vc != null ? vc : null;
       expression = vc != null ? null : arg.getExpression();
     }
     final String sumName = Calcites.makePrefixedName(name, "sum");

@@ -30,15 +30,15 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTimeZone;
-
-import java.util.stream.Collectors;
 
 public class TimeFormatOperatorConversion implements SqlOperatorConversion
 {
@@ -93,13 +93,14 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
         plannerContext.getTimeZone()
     );
 
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType()),
         "timestamp_format",
         ImmutableList.of(
-            timeExpression.getExpression(),
-            DruidExpression.stringLiteral(pattern),
-            DruidExpression.stringLiteral(timeZone.getID())
-        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+            timeExpression,
+            DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(pattern)),
+            DruidExpression.ofLiteral(ColumnType.STRING, DruidExpression.stringLiteral(timeZone.getID()))
+        )
     );
   }
 }

@@ -34,6 +34,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
@@ -52,6 +53,7 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -205,7 +207,7 @@ class ExpressionTestHelper
                               .map(ExpressionTestHelper::quoteIfNeeded)
                               .collect(Collectors.joining(","));
     List<String> elements = Arrays.asList(functionName, "(", argsString, ")");
-    return DruidExpression.fromExpression(String.join(noDelimiter, elements));
+    return CalciteTestBase.makeExpression(String.join(noDelimiter, elements));
   }
 
   private static String quoteIfNeeded(@Nullable Object arg)
@@ -260,7 +262,10 @@ class ExpressionTestHelper
   )
   {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    Assert.assertNotNull(expression);
+    // todo(clint): it would be way more cool to compare DruidExpression to validate the expected tree structure
+    // only compare the built expression so that test writers do not need to match the tree structure perfectly
+    Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
                                .eval(InputBindings.withMap(bindings));
@@ -277,7 +282,7 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE);
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);

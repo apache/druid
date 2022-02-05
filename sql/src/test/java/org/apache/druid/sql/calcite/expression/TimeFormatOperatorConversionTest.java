@@ -119,7 +119,7 @@ public class TimeFormatOperatorConversionTest extends ExpressionTestBase
     testHelper.testExpression(
         target.calciteOperator(),
         exprsBuilder.build(),
-        DruidExpression.fromExpression(expectedExpression),
+        makeExpression(expectedExpression),
         expectedResult
     );
   }

@@ -38,7 +38,6 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -149,8 +148,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, ColumnType.LONG);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, ColumnType.LONG);
     }
 
     return Aggregation.create(

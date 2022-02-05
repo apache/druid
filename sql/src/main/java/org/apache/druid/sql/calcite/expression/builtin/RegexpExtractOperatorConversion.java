@@ -59,7 +59,7 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertSimpleCallWithExtraction(
         plannerContext,
         rowSignature,
         rexNode,
