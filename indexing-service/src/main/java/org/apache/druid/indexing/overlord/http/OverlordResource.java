@@ -45,6 +45,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -428,35 +429,67 @@ public class OverlordResource
     return Response.ok(workerConfigRef.get()).build();
   }
 
+  /**
+   * Gets the total worker capacity of varies states of the cluster.
+   */
   @GET
-  @Path("/autoScaleConfig")
+  @Path("/totalWorkerCapacity")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(ConfigResourceFilter.class)
-  public Response getAutoScaleConfig()
+  public Response getTotalWorkerCapacity()
   {
+    // Calculate current cluster capacity
+    int currentCapacity;
+    Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    if (!taskRunnerOptional.isPresent()) {
+      // Cannot serve call as not leader
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
+    TaskRunner taskRunner = taskRunnerOptional.get();
+    Collection<ImmutableWorkerInfo> workers;
+    if (taskRunner instanceof WorkerTaskRunner) {
+      workers = ((WorkerTaskRunner) taskRunner).getWorkers();
+      currentCapacity = workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+    } else {
+      log.debug(
+          "Cannot calculate capacity as task runner [%s] of type [%s] does not support listing workers",
+          taskRunner,
+          taskRunner.getClass().getName()
+      );
+      workers = ImmutableList.of();
+      currentCapacity = -1;
+    }
+
+    // Calculate maximum capacity with auto scale
+    int maximumCapacity;
     if (workerConfigRef == null) {
       workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
     }
-
     WorkerBehaviorConfig workerBehaviorConfig = workerConfigRef.get();
     if (workerBehaviorConfig == null) {
-      return Response.ok().build();
+      // Auto scale not setup
+      log.debug("Cannot calculate maximum worker capacity as worker behavior config is not configured");
+      maximumCapacity = -1;
     } else if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
       DefaultWorkerBehaviorConfig defaultWorkerBehaviorConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
-      int workerCapacityHint = provisioningStrategy instanceof PendingTaskBasedWorkerProvisioningStrategy
-                               ? ((PendingTaskBasedWorkerProvisioningStrategy) provisioningStrategy).getConfig().getWorkerCapacityHint()
-                               : -1;
-      AutoScaleConfigResponse response = new AutoScaleConfigResponse(
-          defaultWorkerBehaviorConfig.getAutoScaler().getMinNumWorkers(),
-          defaultWorkerBehaviorConfig.getAutoScaler().getMaxNumWorkers(),
-          workerCapacityHint
-      );
-      return Response.ok(response).build();
+      if (defaultWorkerBehaviorConfig.getAutoScaler() == null) {
+        // Auto scale not setup
+        log.debug("Cannot calculate maximum worker capacity as auto scaler not configured");
+        maximumCapacity = -1;
+      } else {
+        int maxWorker = defaultWorkerBehaviorConfig.getAutoScaler().getMaxNumWorkers();
+        int expectedWorkerCapacity = provisioningStrategy.getExpectedWorkerCapacity(workers);
+        maximumCapacity = expectedWorkerCapacity == -1 ? -1 : maxWorker * expectedWorkerCapacity;
+      }
     } else {
-      return Response.status(Response.Status.BAD_REQUEST).entity(
-          StringUtils.format("Operation not supported for WorkerBehaviorConfig of type [%s]", workerBehaviorConfig.getClass().getSimpleName())
-      ).build();
+      // Auto scale is not using DefaultWorkerBehaviorConfig
+      log.debug("Cannot calculate maximum worker capacity as WorkerBehaviorConfig [%s] of type [%s] does not support getting max capacity",
+                workerBehaviorConfig,
+                workerBehaviorConfig.getClass().getSimpleName()
+      );
+      maximumCapacity = -1;
     }
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
   }
 
   // default value is used for backwards compatibility

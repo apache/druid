@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.RemoteTaskRunner;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.ZkWorker;
@@ -54,8 +55,10 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,9 +113,99 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testGetConfig()
+  public void testGetExpectedWorkerCapacityWithNoWorkerAndHintIsValid()
   {
-    Assert.assertEquals(config, strategy.getConfig());
+    int capacityHint = 10;
+    config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityHint(capacityHint);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    int expectedWorkerCapacity = strategy.getExpectedWorkerCapacity(ImmutableList.of());
+    Assert.assertEquals(capacityHint, expectedWorkerCapacity);
+  }
+
+  @Test
+  public void testGetExpectedWorkerCapacityWithNoWorkerAndHintIsNotValid()
+  {
+    int capacityHint = -1;
+    config = new PendingTaskBasedWorkerProvisioningConfig()
+        .setMaxScalingDuration(new Period(1000))
+        .setNumEventsToTrack(10)
+        .setPendingTaskTimeout(new Period(0))
+        .setWorkerVersion(MIN_VERSION)
+        .setMaxScalingStep(2)
+        .setWorkerCapacityHint(capacityHint);
+    strategy = new PendingTaskBasedWorkerProvisioningStrategy(
+        config,
+        DSuppliers.of(workerConfig),
+        new ProvisioningSchedulerConfig(),
+        new Supplier<ScheduledExecutorService>()
+        {
+          @Override
+          public ScheduledExecutorService get()
+          {
+            return executorService;
+          }
+        }
+    );
+    int expectedWorkerCapacity = strategy.getExpectedWorkerCapacity(ImmutableList.of());
+    Assert.assertEquals(1, expectedWorkerCapacity);
+  }
+
+  @Test
+  public void testGetExpectedWorkerCapacityWithSingleWorker()
+  {
+    int workerCapacity = 3;
+    Collection<ImmutableWorkerInfo> workerInfoCollection = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker("http", "localhost0", "localhost0", workerCapacity, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+            new HashSet<>(),
+            new HashSet<>(),
+            DateTimes.nowUtc()
+        )
+    );
+    int expectedWorkerCapacity = strategy.getExpectedWorkerCapacity(workerInfoCollection);
+    Assert.assertEquals(workerCapacity, expectedWorkerCapacity);
+  }
+
+  @Test
+  public void testGetExpectedWorkerCapacityWithMultipleWorker()
+  {
+    int workerOneCapacity = 3;
+    int workerTwoCapacity = 6;
+    Collection<ImmutableWorkerInfo> workerInfoCollection = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker("http", "localhost0", "localhost0", workerOneCapacity, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+            new HashSet<>(),
+            new HashSet<>(),
+            DateTimes.nowUtc()
+        ),
+        new ImmutableWorkerInfo(
+            new Worker("http", "localhost0", "localhost0", workerTwoCapacity + 3, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
+            new HashSet<>(),
+            new HashSet<>(),
+            DateTimes.nowUtc()
+        )
+    );
+    int expectedWorkerCapacity = strategy.getExpectedWorkerCapacity(workerInfoCollection);
+    // Use capacity of the first worker in the list
+    Assert.assertEquals(workerOneCapacity, expectedWorkerCapacity);
   }
 
   @Test

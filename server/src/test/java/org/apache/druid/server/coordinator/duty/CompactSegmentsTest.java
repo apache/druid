@@ -38,7 +38,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingAutoScaleConfigInfo;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -134,6 +134,7 @@ public class CompactSegmentsTest
   private static final int TOTAL_BYTE_PER_DATASOURCE = 440;
   private static final int TOTAL_SEGMENT_PER_DATASOURCE = 44;
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
+  private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -649,29 +650,33 @@ public class CompactSegmentsTest
   }
 
   @Test
-  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsButFailAndUseFallback()
+  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsOverMaxSlot()
   {
+    int maxCompactionSlot = 3;
+    Assert.assertTrue(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), 3, true);
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
   }
 
   @Test
-  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlots()
+  public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsUnderMaxSlot()
   {
+    int maxCompactionSlot = 100;
+    Assert.assertFalse(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
     final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), 100, true);
-    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(10, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
   }
 
   @Test
@@ -2032,8 +2037,8 @@ public class CompactSegmentsTest
         return handleTask(request);
       } else if (urlString.contains("/druid/indexer/v1/workers")) {
         return handleWorkers();
-      } else if (urlString.contains("/druid/indexer/v1/autoScaleConfig")) {
-        return handleAutoScaleConfig();
+      } else if (urlString.contains("/druid/indexer/v1/totalWorkerCapacity")) {
+        return handleTotalWorkerCapacity();
       } else if (urlString.contains("/druid/indexer/v1/waitingTasks")
                  || urlString.contains("/druid/indexer/v1/pendingTasks")
                  || urlString.contains("/druid/indexer/v1/runningTasks")) {
@@ -2075,9 +2080,9 @@ public class CompactSegmentsTest
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(workerInfos));
     }
 
-    private StringFullResponseHolder handleAutoScaleConfig() throws JsonProcessingException
+    private StringFullResponseHolder handleTotalWorkerCapacity() throws JsonProcessingException
     {
-      IndexingAutoScaleConfigInfo info = new IndexingAutoScaleConfigInfo(5, 10, 3);
+      IndexingTotalWorkerCapacityInfo info = new IndexingTotalWorkerCapacityInfo(5, 10);
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(info));
     }
 
