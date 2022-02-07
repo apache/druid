@@ -302,7 +302,7 @@ public class IndexMergerV9 implements IndexMerger
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (merger.shouldStore()) {
+        if (merger.shouldStore() || !merger.hasOnlyNulls()) {
           ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
         }

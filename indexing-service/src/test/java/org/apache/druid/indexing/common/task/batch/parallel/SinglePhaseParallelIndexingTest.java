@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.IngestionState;
@@ -65,6 +66,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -314,14 +316,63 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     testRunAndOverwrite(null, Granularities.DAY);
   }
 
-  @Test()
+  @Test
   public void testRunInParallel()
   {
     // Ingest all data.
     testRunAndOverwrite(Intervals.of("2017-12/P1M"), Granularities.DAY);
   }
 
-  @Test()
+  @Test
+  public void testRunInParallelIngestNullColumn()
+  {
+    if (!useInputFormatApi) {
+      return;
+    }
+    // Ingest all data.
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                "dataSource",
+                DEFAULT_TIMESTAMP_SPEC,
+                DEFAULT_DIMENSIONS_SPEC.withDimensions(
+                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim", "unknownDim"))
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("val", "val")
+                },
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2017-12/P1M"))
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new SettableSplittableLocalInputSource(inputDir, VALID_INPUT_SOURCE_FILTER, true),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING
+        ),
+        null
+    );
+
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      Assert.assertTrue(segment.getDimensions().contains("unknownDim"));
+    }
+  }
+
+  @Test
   public void testRunInParallelTaskReports()
   {
     ParallelIndexSupervisorTask task = runTestTask(
