@@ -242,7 +242,7 @@ Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` 
 
 * `/druid/coordinator/v1/datasources`
 
-Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.html#coordinator-operation).
+Returns a list of datasource names found in the cluster as seen by the coordinator. This view is updated every [`druid.coordinator.period`](../configuration/index.md#coordinator-operation).
 
 * `/druid/coordinator/v1/datasources?simple`
 
