@@ -103,9 +103,9 @@ parameter, like:
 }
 ```
 
-You can additionally request a header with information about column names by setting `header` to true in your request.
+To request a header with information about column names, set `header` to true in your request.
 When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
-you information about [Druid runtime and SQL types](#data-types) respectively. You can request all these headers
+you information about [Druid runtime and SQL types](sql-data-types.md) respectively. You can request all these headers
 with a request like:
 
 ```json
@@ -118,15 +118,15 @@ with a request like:
 }
 ```
 
-The supported result formats are:
+The following table shows supported result formats:
 
 |Format|Description|Header description|Content-Type|
 |------|-----------|------------------|------------|
 |`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|If `header` is true, the first row is an object where the fields are column names. Each field's value is either null (if `typesHeader` and `sqlTypesHeader` are false) or an object that contains the Druid type as `type` (if `typesHeader` is true) and the SQL type as `sqlType` (if `sqlTypesHeader` is true).|application/json|
 |`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|If `header` is true, the first row is an array of column names. If `typesHeader` is true, the next row is an array of Druid types. If `sqlTypesHeader` is true, the next row is an array of SQL types.|application/json|
-|`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "object".|text/plain|
-|`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "array", except the rows are separated by newlines.|text/plain|
-|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as "array", except the lists are in CSV format.|text/csv|
+|`objectLines`|Like `object`, but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `object`.|text/plain|
+|`arrayLines`|Like `array`, but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the rows are separated by newlines.|text/plain|
+|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the lists are in CSV format.|text/csv|
 
 If `typesHeader` is set to true, [Druid type](#data-types) information is included in the response. Complex types,
 like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
@@ -150,7 +150,7 @@ same format as [native Druid query errors](../querying/querying.md#query-errors)
 being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
 simply end midstream and an error will be logged by the Druid server that was handling your request.
 
-As a caller, it is important that you properly handle response truncation. This is easy for the "object" and "array"
+As a caller, it is important that you properly handle response truncation. This is easy for the `object` and `array`
 formats, since truncated responses will be invalid JSON. For the line-oriented formats, you should check the
 trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
 through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
