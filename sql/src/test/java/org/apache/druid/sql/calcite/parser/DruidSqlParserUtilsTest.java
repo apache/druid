@@ -123,14 +123,6 @@ public class DruidSqlParserUtilsTest
   public static class FloorToGranularityConversionTestErrors
   {
     /**
-     * incorrect node
-     * incorrect function name
-     * Incorrect number of arguments
-     * incorrect first argument
-     * incorrect second argument
-     */
-
-    /**
      * Tests clause like "PARTITIONED BY 'day'"
      */
     @Test
@@ -139,12 +131,10 @@ public class DruidSqlParserUtilsTest
       SqlNode sqlNode = SqlLiteral.createCharString("day", SqlParserPos.ZERO);
       ParseException e = Assert.assertThrows(
           ParseException.class,
-          () -> {
-            DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
-          }
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals(
-          "Unable to parse the granularity from 'day'. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
+          "Encountered 'day' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
           e.getMessage()
       );
     }
@@ -161,13 +151,11 @@ public class DruidSqlParserUtilsTest
       final SqlNode sqlNode = SqlStdOperatorTable.CEIL.createCall(args);
       ParseException e = Assert.assertThrows(
           ParseException.class,
-          () -> {
-            DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
-          }
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals(
           StringUtils.format(
-              "PARTITIONED BY clause can only parse FLOOR and %s functions.",
+              "PARTITIONED BY clause only supports FLOOR(__time TO <unit> and TIME_FLOOR(__time, period) functions",
               TimeFloorOperatorConversion.SQL_FUNCTION_NAME
           ),
           e.getMessage()
@@ -185,18 +173,16 @@ public class DruidSqlParserUtilsTest
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
       ParseException e = Assert.assertThrows(
           ParseException.class,
-          () -> {
-            DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
-          }
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
-      Assert.assertEquals("Invalid number of arguments passed to FLOOR in PARTIITONED BY clause", e.getMessage());
+      Assert.assertEquals("FLOOR in PARTITIONED BY clause must have two arguments", e.getMessage());
     }
 
     /**
-     * Tests clause like "PARTITIONED BY (timestamps TO DAY)"
+     * Tests clause like "PARTITIONED BY FLOOR(timestamps TO DAY)"
      */
     @Test
-    public void testConvertSqlNodeToGranularityWithWrongIdentifier()
+    public void testConvertSqlNodeToGranularityWithWrongIdentifierInFloorFunction()
     {
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
@@ -204,11 +190,60 @@ public class DruidSqlParserUtilsTest
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
       ParseException e = Assert.assertThrows(
           ParseException.class,
-          () -> {
-            DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
-          }
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals("First argument to FLOOR in PARTITIONED BY clause can only be __time", e.getMessage());
+    }
+
+    /**
+     * Tests clause like "PARTITIONED BY TIME_FLOOR(timestamps, 'PT1H')"
+     */
+    @Test
+    public void testConvertSqlNodeToGranularityWithWrongIdentifierInTimeFloorFunction()
+    {
+      final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
+      args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
+      args.add(SqlLiteral.createCharString("PT1H", SqlParserPos.ZERO));
+      final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
+      ParseException e = Assert.assertThrows(
+          ParseException.class,
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
+      );
+      Assert.assertEquals("First argument to TIME_FLOOR in PARTITIONED BY clause can only be __time", e.getMessage());
+    }
+
+    /**
+     * Tests clause like "PARTITIONED BY FLOOR(__time to ISOYEAR)"
+     */
+    @Test
+    public void testConvertSqlNodeToGranularityWithIncorrectIngestionGranularityInFloorFunction()
+    {
+      final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
+      args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      args.add(new SqlIntervalQualifier(TimeUnit.ISOYEAR, null, SqlParserPos.ZERO));
+      final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
+      ParseException e = Assert.assertThrows(
+          ParseException.class,
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
+      );
+      Assert.assertEquals("ISOYEAR is not a valid granularity for ingestion", e.getMessage());
+    }
+
+    /**
+     * Tests clause like "PARTITIONED BY TIME_FLOOR(__time, 'abc')"
+     */
+    @Test
+    public void testConvertSqlNodeToGranularityWithIncorrectIngestionGranularityInTimeFloorFunction()
+    {
+      final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
+      args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      args.add(SqlLiteral.createCharString("abc", SqlParserPos.ZERO));
+      final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
+      ParseException e = Assert.assertThrows(
+          ParseException.class,
+          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
+      );
+      Assert.assertEquals("'abc' is an invalid period string", e.getMessage());
     }
   }
 }

@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -38,6 +39,9 @@ import java.util.List;
 
 public class DruidSqlParserUtils
 {
+
+  private static final Logger log = new Logger(DruidSqlParserUtils.class);
+
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
    * with the underlying message
@@ -48,6 +52,7 @@ public class DruidSqlParserUtils
       return convertSqlNodeToGranularity(sqlNode);
     }
     catch (Exception e) {
+      log.error(e, StringUtils.format("Unable to convert %s to a valid granularity.", sqlNode.toString()));
       throw new ParseException(e.getMessage());
     }
   }
@@ -74,7 +79,8 @@ public class DruidSqlParserUtils
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
   {
 
-    final String genericParseFailedMessageFormatString = "Unable to parse the granularity from %s. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or %s function";
+    final String genericParseFailedMessageFormatString = "Encountered %s after PARTITIONED BY. "
+                                                         + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or %s function";
 
     if (!(sqlNode instanceof SqlCall)) {
       throw new ParseException(StringUtils.format(
@@ -91,7 +97,7 @@ public class DruidSqlParserUtils
         "FLOOR".equalsIgnoreCase(operatorName)
         || TimeFloorOperatorConversion.SQL_FUNCTION_NAME.equalsIgnoreCase(operatorName),
         StringUtils.format(
-            "PARTITIONED BY clause can only parse FLOOR and %s functions.",
+            "PARTITIONED BY clause only supports FLOOR(__time TO <unit> and %s(__time, period) functions",
             TimeFloorOperatorConversion.SQL_FUNCTION_NAME
         )
     );
@@ -99,7 +105,7 @@ public class DruidSqlParserUtils
     List<SqlNode> operandList = sqlCall.getOperandList();
     Preconditions.checkArgument(
         operandList.size() == 2,
-        StringUtils.format("Invalid number of arguments passed to %s in PARTIITONED BY clause", operatorName)
+        StringUtils.format("%s in PARTITIONED BY clause must have two arguments", operatorName)
     );
 
 
@@ -120,7 +126,7 @@ public class DruidSqlParserUtils
       SqlNode granularitySqlNode = operandList.get(1);
       Preconditions.checkArgument(
           granularitySqlNode.getKind().equals(SqlKind.LITERAL),
-          "Second argument to TIME_FLOOR in PARTITIONED BY clause should be string representing a period"
+          "Second argument to TIME_FLOOR in PARTITIONED BY clause must be a period like 'PT1H'"
       );
       String granularityString = SqlLiteral.unchain(granularitySqlNode).toValue();
       Period period;
@@ -128,7 +134,7 @@ public class DruidSqlParserUtils
         period = new Period(granularityString);
       }
       catch (IllegalArgumentException e) {
-        throw new ParseException(StringUtils.format("Unable to create period from %s", granularitySqlNode.toString()));
+        throw new ParseException(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
       }
       return new PeriodGranularity(period, null, null);
 
@@ -138,7 +144,8 @@ public class DruidSqlParserUtils
       // granularitySqlNode.getKind().equals(SqlKind.INTERVAL_QUALIFIER)
       Preconditions.checkArgument(
           granularitySqlNode instanceof SqlIntervalQualifier,
-          "Second argument to the FLOOR function in PARTITIONED BY clause cannot be converted to a valid granularity"
+          "Second argument to the FLOOR function in PARTITIONED BY clause is not a valid granularity. "
+          + "Please refer to the documentation of FLOOR function"
       );
       SqlIntervalQualifier granularityIntervalQualifier = (SqlIntervalQualifier) granularitySqlNode;
 
@@ -146,7 +153,7 @@ public class DruidSqlParserUtils
       Preconditions.checkNotNull(
           period,
           StringUtils.format(
-              "Unable to convert %s to valid granularity for ingestion",
+              "%s is not a valid granularity for ingestion",
               granularityIntervalQualifier.timeUnitRange.toString()
           )
       );
