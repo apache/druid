@@ -50,6 +50,14 @@ public class OssDataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(OssDataSegmentMover.class);
 
+  /**
+   * Any implementation of DataSegmentMover is initialized when an ingestion job starts if the extension is loaded
+   * even when the implementation of DataSegmentMover is not used. As a result, if we accept an OSS client instead
+   * of a supplier of it, it can cause unnecessary config validation for OSS even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentMover for how DataSegmentMovers are initialized.
+   */
   private final Supplier<OSS> clientSupplier;
   private final OssStorageConfig config;
 

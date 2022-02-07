@@ -104,6 +104,10 @@ public class GoogleStorageDruidModule implements DruidModule
         .in(LazySingleton.class);
   }
 
+  /**
+   * Returns a GoogleStorage that lazily initialize {@link {@link Storage}}.
+   * This is to avoid immediate config validation but defer it until you actually use the client.
+   */
   @Provides
   @LazySingleton
   public GoogleStorage getGoogleStorage(

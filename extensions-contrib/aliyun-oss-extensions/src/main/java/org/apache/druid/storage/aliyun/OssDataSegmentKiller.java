@@ -38,6 +38,14 @@ public class OssDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(OssDataSegmentKiller.class);
 
+  /**
+   * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
+   * even when the implementation of DataSegmentKiller is not used. As a result, if we have an OSS client instead
+   * of a supplier of it, it can cause unnecessary config validation for OSS even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
   private final Supplier<OSS> clientSupplier;
   private final OssStorageConfig segmentPusherConfig;
   private final OssInputDataConfig inputDataConfig;

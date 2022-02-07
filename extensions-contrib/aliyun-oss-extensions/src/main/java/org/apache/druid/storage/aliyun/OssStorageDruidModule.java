@@ -99,6 +99,11 @@ public class OssStorageDruidModule implements DruidModule
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
   }
 
+  /**
+   * Creates {@link OSS} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the OSS client.
+   * Use {@link #initializeOssClientSupplier} instead in that case.
+   */
   @Provides
   @LazySingleton
   public OSS initializeOssClient(OssClientConfig inputSourceConfig)
@@ -106,10 +111,14 @@ public class OssStorageDruidModule implements DruidModule
     return inputSourceConfig.buildClient();
   }
 
+  /**
+   * Creates a supplier that lazily initialize {@link OSS}.
+   * You may want to use the supplier to defer config validation until you actually use the OSS client.
+   */
   @Provides
   @LazySingleton
   public Supplier<OSS> initializeOssClientSupplier(OssClientConfig inputSourceConfig)
   {
-    return Suppliers.memoize(inputSourceConfig::buildClient);
+    return Suppliers.memoize(() -> initializeOssClient(inputSourceConfig));
   }
 }

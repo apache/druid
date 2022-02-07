@@ -49,6 +49,14 @@ public class S3DataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(S3DataSegmentMover.class);
 
+  /**
+   * Any implementation of DataSegmentMover is initialized when an ingestion job starts if the extension is loaded
+   * even when the implementation of DataSegmentMover is not used. As a result, if we accept a s3 client instead
+   * of a supplier of it, it can cause unnecessary config validation for s3 even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentMover for how DataSegmentMovers are initialized.
+   */
   private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   private final S3DataSegmentPusherConfig config;
 

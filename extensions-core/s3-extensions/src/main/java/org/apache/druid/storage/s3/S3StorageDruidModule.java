@@ -46,6 +46,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3.Builder;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -210,6 +211,11 @@ public class S3StorageDruidModule implements DruidModule
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
+  /**
+   * Creates {@link ServerSideEncryptingAmazonS3} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the s3 client.
+   * Use {@link #getAmazonS3ClientSupplier} instead in that case.
+   */
   @Provides
   @LazySingleton
   public ServerSideEncryptingAmazonS3 getAmazonS3Client(
@@ -219,6 +225,10 @@ public class S3StorageDruidModule implements DruidModule
     return serverSideEncryptingAmazonS3Builder.build();
   }
 
+  /**
+   * Creates a supplier that lazily initialize {@link ServerSideEncryptingAmazonS3}.
+   * You may want to use the supplier to defer config validation until you actually use the s3 client.
+   */
   @Provides
   @LazySingleton
   public Supplier<ServerSideEncryptingAmazonS3> getAmazonS3ClientSupplier(

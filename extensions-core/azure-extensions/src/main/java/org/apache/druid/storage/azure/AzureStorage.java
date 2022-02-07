@@ -49,6 +49,15 @@ public class AzureStorage
 
   private static final Logger log = new Logger(AzureStorage.class);
 
+  /**
+   * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
+   * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
+   * if we have a CloudBlobClient instead of a supplier of it, it can cause unnecessary config validation
+   * against Azure storage even when it's not used at all. To perform the config validation
+   * only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
   private final Supplier<CloudBlobClient> cloudBlobClient;
 
   public AzureStorage(

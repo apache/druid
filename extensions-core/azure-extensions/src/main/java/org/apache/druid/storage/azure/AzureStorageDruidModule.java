@@ -117,6 +117,10 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(ListBlobItemHolderFactory.class));
   }
 
+  /**
+   * Creates a supplier that lazily initialize {@link CloudBlobClient}.
+   * This is to avoid immediate config validation but defer it until you actually use the client.
+   */
   @Provides
   @LazySingleton
   public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
