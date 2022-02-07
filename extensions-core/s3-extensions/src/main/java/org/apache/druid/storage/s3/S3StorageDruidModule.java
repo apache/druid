@@ -46,7 +46,6 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3.Builder;
 
 import javax.annotation.Nullable;
 import java.net.URI;
