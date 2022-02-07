@@ -17,10 +17,11 @@
  * under the License.
  */
 
+// Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
 SqlNode DruidSqlInsert() :
 {
   SqlNode insertNode;
-  Granularity partitionedBy = null;
+  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = null;
   SqlNodeList clusteredBy = null;
 }
 {
@@ -38,7 +39,7 @@ SqlNode DruidSqlInsert() :
       return insertNode;
     }
     SqlInsert sqlInsert = (SqlInsert) insertNode;
-    return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
+    return new DruidSqlInsert(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy);
   }
 }
 
@@ -61,40 +62,51 @@ SqlNodeList ClusterItems() :
   }
 }
 
-Granularity PartitionGranularity() :
+org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
 {
   SqlNode e = null;
+  org.apache.druid.java.util.common.granularity.Granularity granularity = null;
+  String unparseString = null;
 }
 {
   (
     <HOUR>
     {
-      return Granularities.HOUR;
+      granularity = Granularities.HOUR;
+      unparseString = "HOUR";
     }
   |
     <DAY>
     {
-      return Granularities.DAY;
+      granularity = Granularities.DAY;
+      unparseString = "DAY";
     }
   |
     <MONTH>
     {
-      return Granularities.MONTH;
+      granularity = Granularities.MONTH;
+      unparseString = "MONTH";
     }
   |
     <YEAR>
     {
-      return Granularities.YEAR;
+      granularity = Granularities.YEAR;
+      unparseString = "YEAR";
     }
   |
     <ALL> <TIME>
     {
-      return Granularities.ALL;
+      granularity = Granularities.ALL;
+      unparseString = "ALL TIME";
     }
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      return DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      unparseString = e.toString();
     }
   )
+  {
+    return new org.apache.druid.java.util.common.Pair(granularity, unparseString);
+  }
 }

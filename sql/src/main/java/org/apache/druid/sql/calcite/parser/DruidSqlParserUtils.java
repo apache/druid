@@ -44,14 +44,12 @@ public class DruidSqlParserUtils
    */
   public static Granularity convertSqlNodeToGranularityThrowingParseExceptions(SqlNode sqlNode) throws ParseException
   {
-    Granularity g;
     try {
-      g = convertSqlNodeToGranularity(sqlNode);
+      return convertSqlNodeToGranularity(sqlNode);
     }
     catch (Exception e) {
       throw new ParseException(e.getMessage());
     }
-    return g;
   }
 
   /**

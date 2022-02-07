@@ -43,6 +43,7 @@ public class DruidSqlInsert extends SqlInsert
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
   private final Granularity partitionedBy;
+  private final String partitionedByStringForUnparse;
 
   @Nullable
   private final SqlNodeList clusteredBy;
@@ -50,6 +51,7 @@ public class DruidSqlInsert extends SqlInsert
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
       @Nonnull Granularity partitionedBy,
+      @Nonnull String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy
   )
   {
@@ -62,6 +64,8 @@ public class DruidSqlInsert extends SqlInsert
     );
     Preconditions.checkNotNull(partitionedBy); // Shouldn't hit due to how the parser is written
     this.partitionedBy = partitionedBy;
+    Preconditions.checkNotNull(partitionedByStringForUnparse);
+    this.partitionedByStringForUnparse = partitionedByStringForUnparse;
     this.clusteredBy = clusteredBy;
   }
 
@@ -88,9 +92,9 @@ public class DruidSqlInsert extends SqlInsert
   {
     super.unparse(writer, leftPrec, rightPrec);
     writer.keyword("PARTITIONED BY");
-    writer.keyword(getPartitionedBy().toString()); // TODO: Make it cleaner by directly unparsing the SqlNode
+    writer.keyword(partitionedByStringForUnparse);
     if (getClusteredBy() != null) {
-      writer.sep("CLUSTERED BY");
+      writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
       for (SqlNode clusterByOpts : getClusteredBy().getList()) {
         clusterByOpts.unparse(writer, leftPrec, rightPrec);

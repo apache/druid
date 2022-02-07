@@ -386,7 +386,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) FROM foo "
-            + "PARTITIONED BY ALL TIME CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -406,7 +406,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                         new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
                     )
                 )
-                .context(queryContextWithGranularity(Granularities.ALL))
+                .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
         .verify();
