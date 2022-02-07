@@ -174,8 +174,21 @@ public class CompactSegments implements CoordinatorDuty
         final CompactionSegmentIterator iterator =
             policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);
 
+        int totalCapacity;
+        if (dynamicConfig.isUseAutoScaleSlots()) {
+          try {
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+          }
+          catch (Exception e) {
+            LOG.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+          }
+        } else {
+          totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+        }
+
         final int compactionTaskCapacity = (int) Math.min(
-            indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
+            totalCapacity * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
         final int numAvailableCompactionTaskSlots;

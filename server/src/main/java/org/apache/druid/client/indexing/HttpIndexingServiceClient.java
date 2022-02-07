@@ -221,6 +221,32 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/totalWorkerCapacity")
+                           .setHeader("Content-Type", MediaType.APPLICATION_JSON)
+      );
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting total worker capacity. status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      final IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<IndexingTotalWorkerCapacityInfo>() {}
+      );
+      return indexingTotalWorkerCapacityInfo.getMaximumCapacityWithAutoScale();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public List<TaskStatusPlus> getActiveTasks()
   {
     // Must retrieve waiting, then pending, then running, so if tasks move from one state to the next between
