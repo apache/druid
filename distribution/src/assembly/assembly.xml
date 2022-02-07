@@ -42,7 +42,7 @@
             <outputDirectory>hadoop-dependencies</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/conf</directory>
+            <directory>../../conf</directory>
             <includes>
                 <include>*</include>
                 <include>*/*</include>
@@ -51,6 +51,55 @@
                 <include>*/*/*/*/*</include>
             </includes>
             <outputDirectory>conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/_common</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/_common</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/broker</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/broker</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/coordinator</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/coordinator</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/historical</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/historical</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/overlord</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/overlord</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/router</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/router</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../../conf/druid/middleManager</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/middleManager</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/quickstart/</directory>
@@ -88,7 +137,7 @@
             <outputDirectory>quickstart/protobuf</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/bin</directory>
+            <directory>../../examples/bin</directory>
             <includes>
                 <include>*</include>
             </includes>
