@@ -420,8 +420,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    *  Cache these values for each stream at a RecordSupplier level to avoid redundant calls
    *  Only streams which are part of at least one assigned PartitionResource are considered
    */
-  private final TreeMap<String, Set<String>> closedEmptyShardsInStream = new TreeMap<>();
-  private final TreeMap<String, Set<String>> closedNonemptyShardsInStream = new TreeMap<>();
+  private final Map<String, Set<String>> emptyClosedShardsMap = new TreeMap<>();
+  private final Map<String, Set<String>> nonEmptyClosedShardsMap = new TreeMap<>();
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -590,22 +590,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     }
 
     // Handle shard relevance cache at stream level
-    Set<String> prevStreams = ImmutableSet.copyOf(closedEmptyShardsInStream.keySet());
+    Set<String> prevStreams = ImmutableSet.copyOf(emptyClosedShardsMap.keySet());
     Set<String> currentStreams = collection.stream()
                                            .map(StreamPartition::getStream)
                                            .collect(Collectors.toSet());
     // clear cache for unassigned streams
     for (String prevStream : prevStreams) {
       if (!currentStreams.contains(prevStream)) {
-        closedEmptyShardsInStream.remove(prevStream);
-        closedNonemptyShardsInStream.remove(prevStream);
+        emptyClosedShardsMap.remove(prevStream);
+        nonEmptyClosedShardsMap.remove(prevStream);
       }
     }
     // handle newly assigned streams
     for (String currentStream : currentStreams) {
       if (!prevStreams.contains(currentStream)) {
-        closedEmptyShardsInStream.put(currentStream, new TreeSet<>());
-        closedNonemptyShardsInStream.put(currentStream, new TreeSet<>());
+        emptyClosedShardsMap.put(currentStream, new TreeSet<>());
+        nonEmptyClosedShardsMap.put(currentStream, new TreeSet<>());
       }
     }
   }
@@ -706,9 +706,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       ImmutableSet.Builder<String> relevantShardIds = ImmutableSet.builder();
       ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
 
-      boolean useCache = closedEmptyShardsInStream.containsKey(stream);
-      Set<String> emptyShards = closedEmptyShardsInStream.get(stream);
-      Set<String> nonemptyShards = closedNonemptyShardsInStream.get(stream);
+      final boolean useCache = nonEmptyClosedShardsMap.containsKey(stream);
+      final Set<String> emptyClosedShards = emptyClosedShardsMap.get(stream);
+      final Set<String> nonEmptyClosedShards = nonEmptyClosedShardsMap.get(stream);
 
       while (true) {
         ListShardsResult result = kinesis.listShards(request);
@@ -719,7 +719,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             relevantShardIds.add(shardId);
           } else {
             currentlyClosedShardIds.add(shardId);
-            if (isClosedShardRelevant(stream, shardId, useCache, emptyShards, nonemptyShards)) {
+            if (isClosedShardNonEmpty(stream, shardId, useCache, emptyClosedShards, nonEmptyClosedShards)) {
               relevantShardIds.add(shardId);
             }
           }
@@ -728,8 +728,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         if (nextToken == null) {
           // clean up expired shards
           if (useCache) {
-            emptyShards.retainAll(currentlyClosedShardIds);
-            nonemptyShards.retainAll(currentlyClosedShardIds);
+            emptyClosedShards.retainAll(currentlyClosedShardIds);
+            nonEmptyClosedShards.retainAll(currentlyClosedShardIds);
           }
           return relevantShardIds.build();
         }
@@ -999,23 +999,40 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * @param stream Name of the stream
    * @param shardId id of a closed string belonging to the stream
    * @param useCache indicates if this record supplier maintains shard cache for this stream
-   * @param emptyShards cached set of closed and empty shards in stream
-   * @param nonemptyShards cached set of closed and non-empty shards in stream
+   * @param emptyClosedShards cached set of closed and empty shards in stream
+   * @param nonEmptyClosedShards cached set of closed and non-empty shards in stream
    * @return relevance of shard for ingestion
    */
-  private boolean isClosedShardRelevant(String stream, String shardId, boolean useCache,
-                                        Set<String> emptyShards, Set<String> nonemptyShards)
+  private boolean isClosedShardNonEmpty(String stream, String shardId, boolean useCache,
+                                        Set<String> emptyClosedShards, Set<String> nonEmptyClosedShards)
   {
     if (useCache) {
-      if (emptyShards.contains(shardId)) {
+      if (emptyClosedShards.contains(shardId)) {
         return false;
       }
-      if (nonemptyShards.contains(shardId)) {
+      if (nonEmptyClosedShards.contains(shardId)) {
         return true;
       }
     }
 
-    // Fetch records from a shard at most once, when it is closed for the first time
+    boolean emptyAndClosed = isShardEmpty(stream, shardId);
+
+    if (useCache) {
+      if (emptyAndClosed) {
+        emptyClosedShards.add(shardId);
+      } else {
+        nonEmptyClosedShards.add(shardId);
+      }
+    }
+    return !emptyAndClosed;
+  }
+
+  private boolean isShardOpen(Shard shard)
+  {
+    return shard.getSequenceNumberRange().getEndingSequenceNumber() == null;
+  }
+
+  private boolean isShardEmpty(String stream, String shardId) {
     String shardIterator = kinesis.getShardIterator(stream,
                                                     shardId,
                                                     ShardIteratorType.TRIM_HORIZON.toString())
@@ -1024,20 +1041,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
                                                        .withLimit(1);
     GetRecordsResult shardData = kinesis.getRecords(request);
 
-    boolean isEmpty = shardData.getRecords().isEmpty()
-                      && shardData.getNextShardIterator() == null;
-    if (useCache) {
-      if (isEmpty) {
-        emptyShards.add(shardId);
-      } else {
-        nonemptyShards.add(shardId);
-      }
-    }
-    return !isEmpty;
-  }
-
-  private boolean isShardOpen(Shard shard)
-  {
-    return shard.getSequenceNumberRange().getEndingSequenceNumber() == null;
+    return shardData.getRecords().isEmpty() && shardData.getNextShardIterator() == null;
   }
 }
