@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -86,19 +87,10 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillUnusedSegmentsInAllDataSources();
-    Collection<String> specificDataSourcesToKill =
+    Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
-    if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
-      log.error(
-          "killAllDataSources can't be true when specificDataSourcesToKill is non-empty. No kill tasks are scheduled."
-      );
-      return params;
-    }
-
-    Collection<String> dataSourcesToKill = specificDataSourcesToKill;
-    if (killAllDataSources) {
+    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
       dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
     }
 
