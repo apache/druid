@@ -6915,7 +6915,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0),
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
+        + "WHERE dim1=1 OR dim6 IN (\n"
         + "1,2,3\n"
         + ")\n",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -6948,7 +6948,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testQueryWithMoreThanMaxNumericInFilter() throws Exception
   {
     expectedException.expect(UOE.class);
-    expectedException.expectMessage("The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String");
+    expectedException.expectMessage("The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [2]. Cast [3] values of WHERE clause to String");
 
     testQuery(
         PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
@@ -6956,6 +6956,82 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
         + "WHERE dim6 IN (\n"
+        + "1,2,3\n"
+        + ")\n",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testQueryAndsOfOrsNumericInFilter() throws Exception
+  {
+    expectedException.expect(UOE.class);
+    expectedException.expectMessage("The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [2]. Cast [5] values of WHERE clause to String");
+
+    testQuery(
+        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE dim1=1 AND dim2=2 AND dim6 IN (\n"
+        + "1,2,3\n"
+        + ")\n",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testQueryOfAndsNumericInFilter() throws Exception
+  {
+    expectedException.expect(UOE.class);
+    expectedException.expectMessage("The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [2]. Cast [3] values of WHERE clause to String");
+
+    testQuery(
+        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE dim1=1 AND dim2=2 AND dim6=3",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testQueryOfOrsNumericInFilter() throws Exception
+  {
+    expectedException.expect(UOE.class);
+    expectedException.expectMessage("The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [2]. Cast [6] values of WHERE clause to String");
+
+    testQuery(
+        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE dim1 IN (1,2,3) OR dim6 IN (1,2,3)",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testQueryNOTWithNumericInFilter() throws Exception
+  {
+    expectedException.expect(UOE.class);
+    expectedException.expectMessage("The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [2]. Cast [3] values of WHERE clause to String");
+
+    testQuery(
+        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
+        "SELECT COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE dim6 NOT IN (\n"
         + "1,2,3\n"
         + ")\n",
         CalciteTests.REGULAR_USER_AUTH_RESULT,

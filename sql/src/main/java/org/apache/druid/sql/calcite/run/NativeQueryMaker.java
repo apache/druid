@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -43,7 +42,9 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -138,21 +139,18 @@ public class NativeQueryMaker implements QueryMaker
     // and BoundFilter.match predicate eating up processing time which stalls a historical for a query with large number
     // of numeric INs (> 10K). In such cases user should change the query to specify the IN clauses as String
     // Instead of IN(v1,v2,v3) user should specify IN('v1','v2','v3')
+
+    int countOfFilters;
     if (numFilters != PlannerConfig.NUM_FILTER_NOT_USED) {
-      if (query.getFilter() instanceof OrDimFilter) {
-        OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
-        if (orDimFilter.getFields().size() > numFilters) {
-          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-          throw new UOE(StringUtils.format(
-              "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
-              dimension,
-              numFilters,
-              orDimFilter.getFields().size()
-          ));
-        }
+      countOfFilters = countFilters(query.getFilter());
+      if (countOfFilters > numFilters) {
+        throw new UOE(
+            "The number of values in the WHERE clause exceeds configured maxNumericFilter limit of [%s]. Cast [%s] values of WHERE clause to String",
+            numFilters,
+            countOfFilters
+        );
       }
     }
-
 
     final List<String> rowOrder;
     if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
@@ -180,6 +178,23 @@ public class NativeQueryMaker implements QueryMaker
         mapColumnList(rowOrder, fieldMapping),
         mapColumnList(columnTypes, fieldMapping)
     );
+  }
+
+  private int countFilters(DimFilter filter)
+  {
+    int count = 0;
+    if (filter instanceof BoundDimFilter) {
+      count += 1;
+    } else if (filter instanceof OrDimFilter) {
+      for (DimFilter dimFilter : ((OrDimFilter) filter).getFields()) {
+        count += countFilters(dimFilter);
+      }
+    } else if (filter instanceof AndDimFilter) {
+      for (DimFilter dimFilter : ((AndDimFilter) filter).getFields()) {
+        count += countFilters(dimFilter);
+      }
+    }
+    return count;
   }
 
   private List<Interval> findBaseDataSourceIntervals(Query<?> query)
