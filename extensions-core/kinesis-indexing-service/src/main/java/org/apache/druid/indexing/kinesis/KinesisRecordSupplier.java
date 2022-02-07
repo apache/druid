@@ -72,6 +72,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -414,6 +415,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private volatile boolean closed = false;
   private AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
+  /**
+   *  Determining if a shard has data requires a kinesis call for records, and is expensive
+   *  Cache these values for each stream at a RecordSupplier level to avoid redundant calls
+   *  Only streams which are part of at least one assigned PartitionResource are considered
+   */
+  private final TreeMap<String, Set<String>> closedEmptyShardsInStream = new TreeMap<>();
+  private final TreeMap<String, Set<String>> closedNonemptyShardsInStream = new TreeMap<>();
+
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
       int recordsPerFetch,
@@ -579,6 +588,26 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         entry.getValue().stopBackgroundFetch();
       }
     }
+
+    // Handle shard relevance cache at stream level
+    Set<String> prevStreams = ImmutableSet.copyOf(closedEmptyShardsInStream.keySet());
+    Set<String> currentStreams = collection.stream()
+                                           .map(StreamPartition::getStream)
+                                           .collect(Collectors.toSet());
+    // clear cache for unassigned streams
+    for (String prevStream : prevStreams) {
+      if (!currentStreams.contains(prevStream)) {
+        closedEmptyShardsInStream.remove(prevStream);
+        closedNonemptyShardsInStream.remove(prevStream);
+      }
+    }
+    // handle newly assigned streams
+    for (String currentStream : currentStreams) {
+      if (!prevStreams.contains(currentStream)) {
+        closedEmptyShardsInStream.put(currentStream, new TreeSet<>());
+        closedNonemptyShardsInStream.put(currentStream, new TreeSet<>());
+      }
+    }
   }
 
   @Override
@@ -667,25 +696,42 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
    *
    * @param stream name of stream
-   *
-   * @return Set of Shard ids
+   * @return Immutable set of ids of shards which are relevant for ingestion
    */
   @Override
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      final Set<String> retVal = new TreeSet<>();
+      final Set<String> currentlyClosedShardIds = new TreeSet<>();
+      ImmutableSet.Builder<String> relevantShardIds = ImmutableSet.builder();
       ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
+
+      boolean useCache = closedEmptyShardsInStream.containsKey(stream);
+      Set<String> emptyShards = closedEmptyShardsInStream.get(stream);
+      Set<String> nonemptyShards = closedNonemptyShardsInStream.get(stream);
+
       while (true) {
         ListShardsResult result = kinesis.listShards(request);
-        retVal.addAll(result.getShards()
-                            .stream()
-                            .map(Shard::getShardId)
-                            .collect(Collectors.toList())
-        );
+        for (Shard shard : result.getShards()) {
+          String shardId = shard.getShardId();
+          // Open shards are relevant
+          if (isShardOpen(shard)) {
+            relevantShardIds.add(shardId);
+          } else {
+            currentlyClosedShardIds.add(shardId);
+            if (isClosedShardRelevant(stream, shardId, useCache, emptyShards, nonemptyShards)) {
+              relevantShardIds.add(shardId);
+            }
+          }
+        }
         String nextToken = result.getNextToken();
         if (nextToken == null) {
-          return retVal;
+          // clean up expired shards
+          if (useCache) {
+            emptyShards.retainAll(currentlyClosedShardIds);
+            nonemptyShards.retainAll(currentlyClosedShardIds);
+          }
+          return relevantShardIds.build();
         }
         request = new ListShardsRequest().withNextToken(nextToken);
       }
@@ -944,5 +990,54 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
     // restart fetching threads
     partitionResources.values().forEach(x -> x.stopBackgroundFetch());
+  }
+
+  /**
+   * If a closed shard has no data when polled for the first time, it can be ignored for ingestion
+   * If it does have data, its offsets are periodically published to metadata by ingestion tasks
+   *
+   * @param stream Name of the stream
+   * @param shardId id of a closed string belonging to the stream
+   * @param useCache indicates if this record supplier maintains shard cache for this stream
+   * @param emptyShards cached set of closed and empty shards in stream
+   * @param nonemptyShards cached set of closed and non-empty shards in stream
+   * @return relevance of shard for ingestion
+   */
+  private boolean isClosedShardRelevant(String stream, String shardId, boolean useCache,
+                                        Set<String> emptyShards, Set<String> nonemptyShards)
+  {
+    if (useCache) {
+      if (emptyShards.contains(shardId)) {
+        return false;
+      }
+      if (nonemptyShards.contains(shardId)) {
+        return true;
+      }
+    }
+
+    // Fetch records from a shard at most once, when it is closed for the first time
+    String shardIterator = kinesis.getShardIterator(stream,
+                                                    shardId,
+                                                    ShardIteratorType.TRIM_HORIZON.toString())
+                                  .getShardIterator();
+    GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
+                                                       .withLimit(1);
+    GetRecordsResult shardData = kinesis.getRecords(request);
+
+    boolean isEmpty = shardData.getRecords().isEmpty()
+                      && shardData.getNextShardIterator() == null;
+    if (useCache) {
+      if (isEmpty) {
+        emptyShards.add(shardId);
+      } else {
+        nonemptyShards.add(shardId);
+      }
+    }
+    return !isEmpty;
+  }
+
+  private boolean isShardOpen(Shard shard)
+  {
+    return shard.getSequenceNumberRange().getEndingSequenceNumber() == null;
   }
 }
