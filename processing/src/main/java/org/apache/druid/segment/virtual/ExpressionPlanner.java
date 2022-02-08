@@ -107,10 +107,13 @@ public class ExpressionPlanner
     // automatic transformation to map across multi-valued inputs (or row by row detection in the worst case)
     if (ExpressionPlan.none(traits, ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final Set<String> definitelyMultiValued = new HashSet<>();
+      final Set<String> definitelyArray = new HashSet<>();
       for (String column : analysis.getRequiredBindings()) {
         final ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
         if (capabilities != null) {
-          if (capabilities.hasMultipleValues().isTrue()) {
+          if (capabilities.isArray()) {
+            definitelyArray.add(column);
+          } else if (capabilities.is(ValueType.STRING) && capabilities.hasMultipleValues().isTrue()) {
             definitelyMultiValued.add(column);
           } else if (capabilities.is(ValueType.STRING) &&
                      capabilities.hasMultipleValues().isMaybeTrue() &&
@@ -126,7 +129,11 @@ public class ExpressionPlanner
       // find any inputs which will need implicitly mapped across multi-valued rows
       needsApplied =
           columns.stream()
-                 .filter(c -> definitelyMultiValued.contains(c) && !analysis.getArrayBindings().contains(c))
+                 .filter(
+                     c -> !definitelyArray.contains(c)
+                          && definitelyMultiValued.contains(c)
+                          && !analysis.getArrayBindings().contains(c)
+                 )
                  .collect(Collectors.toList());
 
       // if any multi-value inputs, set flag for non-scalar inputs

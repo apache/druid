@@ -295,7 +295,7 @@ public class GroupByQueryEngineV2
       }
       // We cannot support array-based aggregation on array based grouping as we we donot have all the indexes up front
       // to allocate appropriate values
-      if (dimensions.get(0).getOutputType().equals(ColumnType.STRING_ARRAY)) {
+      if (dimensions.get(0).getOutputType().isArray()) {
         return -1;
       }
 
@@ -327,10 +327,11 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued,
-   * or STRING_ARRAY, in case we don't want to explode the underline multi value column,
-   * or if allowed, nonexistent. Since non-existent columnselectors will show up as full of nulls they are effectively
-   * single valued, however they can also be null during broker merge, for example with an 'inline' datasource subquery.
+   * Checks whether all "dimensions" are either single-valued, or if the input column or output dimension spec has
+   * specified a type that {@link ColumnType#isArray()}. Both cases indicate we don't want to explode the under-lying
+   * multi value column. Since selectors on non-existent columns will show up as full of nulls, they are effectively
+   * single valued, however capabilites on columns can also be null, for example during broker merge with an 'inline'
+   * datasource subquery, so we only return true from this method when capabilities are fully known.
    */
   public static boolean hasNoExplodingDimensions(
       final ColumnInspector inspector,
@@ -347,10 +348,13 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities, which must be present and explicitly not multi-valued
+              // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              return dimension.getOutputType().equals(ColumnType.STRING_ARRAY)
-                     || (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse());
+              return dimension.getOutputType().isArray()
+                     || (columnCapabilities != null
+                         && columnCapabilities.hasMultipleValues().isFalse()
+                         && !columnCapabilities.isArray()
+                     );
             });
   }
 
