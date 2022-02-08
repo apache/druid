@@ -57,7 +57,7 @@ public class JavaScriptWorkerSelectStrategyTest
       + "}\n"
       + "Array.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\n"
       + "var minWorkerVer = config.getMinWorkerVersion();\n"
-      + "var parallelIndexWorkerRatio = config.getParallelIndexWorkerRatio();\n"
+      + "var parallelIndexWorkerRatio = config.getParallelIndexTaskSlotRatio();\n"
       + "for (var i = 0; i < sortedWorkers.length; i++) {\n"
       + " var worker = sortedWorkers[i];\n"
       + "  var zkWorker = zkWorkers.get(worker);\n"

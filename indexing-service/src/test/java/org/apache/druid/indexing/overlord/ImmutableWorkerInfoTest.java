@@ -22,12 +22,19 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ImmutableWorkerInfoTest
 {
@@ -209,6 +216,40 @@ public class ImmutableWorkerInfoTest
         DateTimes.of("2015-01-01T01:01:02Z"),
         DateTimes.of("2017-07-31")
     ), false);
+  }
+
+  @Test
+  public void test_canRunParallelIndexTask()
+  {
+    ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
+        new Worker(
+            "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
+        ),
+        2,
+        0,
+        ImmutableSet.of("grp1", "grp2"),
+        ImmutableSet.of("task1", "task2"),
+        DateTimes.of("2015-01-01T01:01:02Z")
+    );
+
+    TaskResource taskResource = mock(TaskResource.class);
+    when(taskResource.getRequiredCapacity()).thenReturn(3);
+
+    Task parallelIndexTask = mock(ParallelIndexSupervisorTask.class);
+    when(parallelIndexTask.getType()).thenReturn(ParallelIndexSupervisorTask.TYPE);
+    when(parallelIndexTask.getTaskResource()).thenReturn(taskResource);
+    // 5 parallel index task slots available, 3 needed -> can run
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, 0.5));
+    // 1 parallel index task slots available, 3 needed -> can't run
+    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, 0.1));
+
+    Task anyOtherTask = mock(IndexTask.class);
+    when(anyOtherTask.getType()).thenReturn("index");
+    when(anyOtherTask.getTaskResource()).thenReturn(taskResource);
+    // Not a parallel index task -> can run irrespective of available slots
+    Assert.assertTrue(workerInfo.canRunTask(anyOtherTask, 0.5));
+    // Not a parallel index task -> can run irrespective of available slots
+    Assert.assertTrue(workerInfo.canRunTask(anyOtherTask, 0.1));
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)

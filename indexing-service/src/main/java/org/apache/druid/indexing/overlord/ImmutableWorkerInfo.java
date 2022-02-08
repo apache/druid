@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
@@ -142,13 +143,14 @@ public class ImmutableWorkerInfo
     return worker.getVersion().compareTo(minVersion) >= 0;
   }
 
-  public boolean canRunTask(Task task, double parallelIndexWorkerRatio)
+  public boolean canRunTask(Task task, double parallelIndexTaskSlotRatio)
   {
     return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
-            && canRunParallelIndexTask(task, parallelIndexWorkerRatio)
+            && canRunParallelIndexTask(task, parallelIndexTaskSlotRatio)
             && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
   }
 
+  @VisibleForTesting
   public boolean canRunParallelIndexTask(Task task, double parallelIndexWorkerRatio)
   {
     if (!task.getType().equals(ParallelIndexSupervisorTask.TYPE)) {
@@ -161,9 +163,9 @@ public class ImmutableWorkerInfo
 
   private int getWorkerParallelIndexCapacity(double parallelIndexWorkerRatio)
   {
-    int totalCapcity = worker.getCapacity();
-    int workerParallelIndexCapacity = (int) Math.round(parallelIndexWorkerRatio * totalCapcity);
-    if (totalCapcity > 1 && workerParallelIndexCapacity == 0) {
+    int totalCapacity = worker.getCapacity();
+    int workerParallelIndexCapacity = (int) Math.round(parallelIndexWorkerRatio * totalCapacity);
+    if (totalCapacity > 1 && workerParallelIndexCapacity == 0) {
       workerParallelIndexCapacity = 1;
     }
     return workerParallelIndexCapacity;

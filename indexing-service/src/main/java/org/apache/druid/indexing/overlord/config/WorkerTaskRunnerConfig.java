@@ -27,15 +27,25 @@ public class WorkerTaskRunnerConfig
   private String minWorkerVersion = "0";
 
   @JsonProperty
-  private double parallelIndexWorkerRatio = 0.1;
+  private double parallelIndexTaskSlotRatio = 1;
 
   public String getMinWorkerVersion()
   {
     return minWorkerVersion;
   }
 
-  public double getParallelIndexWorkerRatio()
+  /**
+   * The number of task slots that a parallel indexing task can take is restricted using this config as a multiplier
+   * Tasks of other types are not restricted and can take slots in this pool as well
+   *
+   * A value of 1 means that there are no restrictions and is the default.
+   * A value of 0.5 is ideal to prevent deadlocks
+   * For greater concurrency of k subtasks per task, configure this parameter to 1 / (k + 1)
+   *
+   * @return ratio of task slots available to a parallel indexing task at a worker level
+   */
+  public double getParallelIndexTaskSlotRatio()
   {
-    return parallelIndexWorkerRatio;
+    return parallelIndexTaskSlotRatio;
   }
 }
