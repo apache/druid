@@ -116,9 +116,7 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   SequenceOffsetType getPosition(StreamPartition<PartitionIdType> partition);
 
   /**
-   * returns the set of relevant partitions under the given stream
-   * For kafka, this returns all the partitions
-   * For kinesis, only shards which are either currently OPEN or have at least one record are relevant
+   * returns the set of all available partitions under the given stream
    *
    * @param stream name of stream
    *

@@ -19,10 +19,12 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import com.amazonaws.services.kinesis.model.Shard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -64,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -87,6 +90,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
   private volatile Map<String, Long> currentPartitionTimeLag;
+
+  // Maintain sets of currently closed shards to find "bad" (closed and empty) shards
+  // Poll closed shards once and store the result to avoid redundant costly calls to kinesis
+  private final Set<String> emptyClosedShardIds = new TreeSet<>();
+  private final Set<String> nonEmptyClosedShardIds = new TreeSet<>();
 
   public KinesisSupervisor(
       final TaskStorage taskStorage,
@@ -417,6 +425,49 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
+  protected boolean shouldSkipIgnorablePartitions()
+  {
+    return spec.getSpec().getTuningConfig().shouldSkipIgnorableShards();
+  }
+
+  /**
+   * Closed and empty shards can be ignored for ingestion,
+   * Use this method if skipIgnorablePartitions is true in the spec
+   *
+   * These partitions can be safely ignored for both ingesetion task assignment and autoscaler limits
+   *
+   * @return the set of ignorable shards' ids
+   */
+  @Override
+  protected Set<String> getIgnorablePartitionIds()
+  {
+    updateClosedShardCache();
+    return ImmutableSet.copyOf(emptyClosedShardIds);
+  }
+
+  private void updateClosedShardCache()
+  {
+    String stream = spec.getSource();
+    Set<Shard> allActiveShards = ((KinesisRecordSupplier) recordSupplier).getShards(stream);
+    Set<String> activeClosedShards = allActiveShards.stream()
+                                                    .filter(shard -> isShardOpen(shard))
+                                                    .map(Shard::getShardId).collect(Collectors.toSet());
+
+    // clear stale shards
+    emptyClosedShardIds.retainAll(activeClosedShards);
+    nonEmptyClosedShardIds.retainAll(activeClosedShards);
+
+    // add newly closed shards to cache
+    for (String closedShardId : activeClosedShards) {
+      if (isClosedShardEmpty(stream, closedShardId)) {
+        emptyClosedShardIds.add(closedShardId);
+      } else {
+        nonEmptyClosedShardIds.add(closedShardId);
+      }
+    }
+  }
+
+  @Override
   protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetadataWithExpiredPartitions(
       SeekableStreamDataSourceMetadata<String, String> currentMetadata, Set<String> expiredPartitionIds
   )
@@ -480,5 +531,38 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     }
 
     return new KinesisDataSourceMetadata(newSequences);
+  }
+
+  /**
+   * Open shards iff they don't have an ending sequence number
+   *
+   * @param shard to be checked
+   * @return if shard is open
+   */
+  private boolean isShardOpen(Shard shard)
+  {
+    return shard.getSequenceNumberRange().getEndingSequenceNumber() == null;
+  }
+
+  /**
+   * Checking if a shard is empty requires polling for records which is quite expensive
+   * Fortunately, the results can be cached for closed shards as no more records can be written to them
+   *
+   * @param stream to which the shard belongs
+   * @param shardId of the shard
+   * @return if the shard is empty
+   */
+  private boolean isClosedShardEmpty(String stream, String shardId)
+  {
+    // utilize cache
+    if (emptyClosedShardIds.contains(shardId)) {
+      return true;
+    }
+    if (nonEmptyClosedShardIds.contains(shardId)) {
+      return false;
+    }
+
+    // Make an expensive call to kinesis
+    return ((KinesisRecordSupplier) recordSupplier).isShardEmpty(stream, shardId);
   }
 }

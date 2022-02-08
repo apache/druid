@@ -2291,9 +2291,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  protected boolean shouldSkipIgnorablePartitions()
+  {
+    return false;
+  }
+
+  protected Set<PartitionIdType> getIgnorablePartitionIds()
+  {
+    return ImmutableSet.of();
+  }
+
   public int getPartitionCount()
   {
-    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
+    int partitionCount = recordSupplier.getPartitionIds(ioConfig.getStream()).size();
+    if (shouldSkipIgnorablePartitions()) {
+      partitionCount -= getIgnorablePartitionIds().size();
+    }
+    return partitionCount;
   }
 
   private boolean updatePartitionDataFromStream()
@@ -2303,6 +2317,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     recordSupplierLock.lock();
     try {
       partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
+      if (shouldSkipIgnorablePartitions()) {
+        partitionIdsFromSupplier.removeAll(getIgnorablePartitionIds());
+      }
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
