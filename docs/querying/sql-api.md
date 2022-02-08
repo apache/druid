@@ -128,10 +128,10 @@ The following table shows supported result formats:
 |`arrayLines`|Like `array`, but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the rows are separated by newlines.|text/plain|
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the lists are in CSV format.|text/csv|
 
-If `typesHeader` is set to true, [Druid type](#data-types) information is included in the response. Complex types,
+If `typesHeader` is set to true, [Druid type](sql-data-types.md) information is included in the response. Complex types,
 like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
 or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHeader` is set to true,
-[SQL type](#data-types) information is included in the response. It is possible to set both `typesHeader` and
+[SQL type](sql-data-types.md) information is included in the response. It is possible to set both `typesHeader` and
 `sqlTypesHeader` at once. Both parameters require that `header` is also set.
 
 To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
