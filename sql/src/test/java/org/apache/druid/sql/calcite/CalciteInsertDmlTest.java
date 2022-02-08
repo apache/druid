@@ -510,7 +510,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Unable to parse the granularity from 'invalid_granularity'. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
+          "Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
           e.getMessage()
       );
     }

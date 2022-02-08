@@ -154,10 +154,7 @@ public class DruidSqlParserUtilsTest
           () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals(
-          StringUtils.format(
-              "PARTITIONED BY clause only supports FLOOR(__time TO <unit> and TIME_FLOOR(__time, period) functions",
-              TimeFloorOperatorConversion.SQL_FUNCTION_NAME
-          ),
+          "PARTITIONED BY clause only supports FLOOR(__time TO <unit> and TIME_FLOOR(__time, period) functions",
           e.getMessage()
       );
     }
