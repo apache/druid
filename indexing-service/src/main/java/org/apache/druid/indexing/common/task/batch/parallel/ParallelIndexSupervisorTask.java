@@ -932,10 +932,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    // Create a set of PartitionStats, sorted by (interval, bucketId, subTaskId)
+    // Create a set of PartitionStats, sorted by (interval, bucketId, subTaskId).
     // This ensures that within an interval, partitionIds are assigned in the
-    // same order as bucketIds. Comparison on subTaskId is needed to retain parts
-    // of the same partition written by different tasks, which will later be merged.
+    // same order as bucketIds. Comparison on subTaskId ensures that different
+    // PartitionStats of the same partition are not ignored as duplicates.
     final Set<Pair<PartitionStat, String>> partitionStatTaskIdPairs = new TreeSet<>(
         Comparator
             .comparingLong((Pair<PartitionStat, String> pair) -> pair.lhs.getInterval().getStartMillis())
@@ -948,10 +948,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         )
     );
 
-    // Create locations for each partition (interval + bucketId -> locations)
+    // Map from partition (interval + bucketId) to list of partition locations
     final Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = new HashMap<>();
     final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> partitionToShardSpecs = new HashMap<>();
 
+    // Create a location for each PartitionStat
     Interval prevInterval = null;
     final AtomicInteger partitionId = new AtomicInteger(0);
     for (Pair<PartitionStat, String> partitionStatTaskIdPair : partitionStatTaskIdPairs) {
