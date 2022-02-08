@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -180,24 +179,11 @@ public class VirtualColumnRegistry
                      .collect(Collectors.toList());
   }
 
-  public void visitAll(DruidExpression.DruidExpressionShuttle shuttle)
-  {
-    final Set<String> keys = virtualColumnsByName.keySet();
-    for (String key : keys) {
-      final ExpressionAndTypeHint wrapped = virtualColumnsByName.get(key);
-      virtualColumnsByExpression.remove(wrapped);
-      final DruidExpression newExpression = shuttle.visit(wrapped.getExpression());
-      final ExpressionAndTypeHint newWrapped = wrap(newExpression, wrapped.getTypeHint());
-      virtualColumnsByName.put(key, newWrapped);
-      virtualColumnsByExpression.put(newWrapped, key);
-    }
-  }
-
   public void visitAllSubExpressions(DruidExpression.DruidExpressionShuttle shuttle)
   {
-    final Set<String> keys = virtualColumnsByName.keySet();
-    for (String key : keys) {
-      final ExpressionAndTypeHint wrapped = virtualColumnsByName.get(key);
+    for (Map.Entry<String, ExpressionAndTypeHint> entry : virtualColumnsByName.entrySet()) {
+      final String key = entry.getKey();
+      final ExpressionAndTypeHint wrapped = entry.getValue();
       virtualColumnsByExpression.remove(wrapped);
       final List<DruidExpression> newArgs = shuttle.visitAll(wrapped.getExpression().getArguments());
       final ExpressionAndTypeHint newWrapped = wrap(wrapped.getExpression().withArguments(newArgs), wrapped.getTypeHint());
