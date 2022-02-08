@@ -332,21 +332,8 @@ public class NativeQueryMaker implements QueryMaker
         // the protobuf jdbc handler prefers lists (it actually can't handle java arrays as sql arrays, only java lists)
         // the json handler could handle this just fine, but it handles lists as sql arrays as well so just convert
         // here if needed
-        if (value instanceof List) {
-          coercedValue = value;
-        } else if (value instanceof String[]) {
-          coercedValue = Arrays.asList((String[]) value);
-        } else if (value instanceof Long[]) {
-          coercedValue = Arrays.asList((Long[]) value);
-        } else if (value instanceof Double[]) {
-          coercedValue = Arrays.asList((Double[]) value);
-        } else if (value instanceof Object[]) {
-          coercedValue = Arrays.asList((Object[]) value);
-        } else if (value instanceof ComparableStringArray) {
-          coercedValue = Arrays.asList(((ComparableStringArray) value).getDelegate());
-        } else if (value instanceof ComparableList) {
-          coercedValue = ((ComparableList) value).getDelegate();
-        } else {
+        coercedValue = maybeCoerceArrayToList(value, true);
+        if (coercedValue == null) {
           throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
         }
       }
@@ -355,6 +342,34 @@ public class NativeQueryMaker implements QueryMaker
     }
 
     return coercedValue;
+  }
+
+
+  private static Object maybeCoerceArrayToList(Object value, boolean mustCoerce)
+  {
+    if (value instanceof List) {
+      return value;
+    } else if (value instanceof String[]) {
+      return Arrays.asList((String[]) value);
+    } else if (value instanceof Long[]) {
+      return Arrays.asList((Long[]) value);
+    } else if (value instanceof Double[]) {
+      return Arrays.asList((Double[]) value);
+    } else if (value instanceof Object[]) {
+      Object[] array = (Object[]) value;
+      ArrayList<Object> lst = new ArrayList<>(array.length);
+      for (Object o : array) {
+        lst.add(maybeCoerceArrayToList(o, false));
+      }
+      return lst;
+    } else if (value instanceof ComparableStringArray) {
+      return Arrays.asList(((ComparableStringArray) value).getDelegate());
+    } else if (value instanceof ComparableList) {
+      return ((ComparableList) value).getDelegate();
+    } else if (mustCoerce) {
+      return null;
+    }
+    return value;
   }
 
   private static DateTime coerceDateTime(Object value, SqlTypeName sqlType)

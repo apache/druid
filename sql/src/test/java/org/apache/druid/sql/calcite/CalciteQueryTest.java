@@ -9205,9 +9205,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               "a6",
                               ImmutableSet.of("dim3"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"dim3\")",
                               "array_set_add_all(\"__acc\", \"a6\")",
                               null,
@@ -9223,6 +9225,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"dim3\")",
                                   "array_set_add_all(\"__acc\", \"a7\")",
                                   null,
@@ -9240,6 +9244,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseAnd(\"__acc\", \"l1\")",
                                   "bitwiseAnd(\"__acc\", \"a8\")",
                                   null,
@@ -9257,6 +9263,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseOr(\"__acc\", \"l1\")",
                                   "bitwiseOr(\"__acc\", \"a9\")",
                                   null,
@@ -9274,6 +9282,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseXor(\"__acc\", \"l1\")",
                                   "bitwiseXor(\"__acc\", \"a10\")",
                                   null,
@@ -9502,9 +9512,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "a6",
                                         ImmutableSet.of("dim3"),
                                         "__acc",
-                                        "[]",
-                                        "[]",
+                                        "ARRAY<STRING>[]",
+                                        "ARRAY<STRING>[]",
                                         true,
+                                        true,
+                                        false,
                                         "array_set_add(\"__acc\", \"dim3\")",
                                         "array_set_add_all(\"__acc\", \"a6\")",
                                         null,
@@ -9522,6 +9534,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "[]",
                                         "[]",
                                         true,
+                                        false,
+                                        false,
                                         "array_set_add(\"__acc\", \"dim3\")",
                                         "array_set_add_all(\"__acc\", \"a7\")",
                                         null,
@@ -9542,6 +9556,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseAnd(\"__acc\", \"l1\")",
                                         "bitwiseAnd(\"__acc\", \"a8\")",
                                         null,
@@ -9559,6 +9575,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseOr(\"__acc\", \"l1\")",
                                         "bitwiseOr(\"__acc\", \"a9\")",
                                         null,
@@ -9576,6 +9594,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseXor(\"__acc\", \"l1\")",
                                         "bitwiseXor(\"__acc\", \"a10\")",
                                         null,
@@ -12852,6 +12872,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseAnd(\"__acc\", \"l1\")",
                                   "bitwiseAnd(\"__acc\", \"a0\")",
                                   null,
@@ -12869,6 +12891,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseOr(\"__acc\", \"l1\")",
                                   "bitwiseOr(\"__acc\", \"a1\")",
                                   null,
@@ -12886,6 +12910,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "0",
                                   "0",
                                   NullHandling.sqlCompatible(),
+                                  false,
+                                  false,
                                   "bitwiseXor(\"__acc\", \"l1\")",
                                   "bitwiseXor(\"__acc\", \"a2\")",
                                   null,
@@ -12935,6 +12961,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseAnd(\"__acc\", \"l1\")",
                                         "bitwiseAnd(\"__acc\", \"a0\")",
                                         null,
@@ -12952,6 +12980,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseOr(\"__acc\", \"l1\")",
                                         "bitwiseOr(\"__acc\", \"a1\")",
                                         null,
@@ -12969,6 +12999,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         "0",
                                         "0",
                                         NullHandling.sqlCompatible(),
+                                        false,
+                                        false,
                                         "bitwiseXor(\"__acc\", \"l1\")",
                                         "bitwiseXor(\"__acc\", \"a2\")",
                                         null,
@@ -13033,6 +13065,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"dim1\")",
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
@@ -13050,6 +13084,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"dim1\")",
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
@@ -13067,6 +13103,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"dim1\")",
                                   "array_set_add_all(\"__acc\", \"a2\")",
                                   null,
@@ -13086,8 +13124,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"10.1,2,1,def,abc", "1,2,abc,def,10.1", ""}
-            : new Object[]{",10.1,2,1,def,abc", ",1,2,abc,def,10.1", null}
+            ? new Object[]{"10.1,2,1,def,abc", "1,10.1,2,abc,def", ""}
+            : new Object[]{",10.1,2,1,def,abc", ",1,10.1,2,abc,def", null}
         )
     );
   }
@@ -13113,6 +13151,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"dim3\")",
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
@@ -13130,6 +13170,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"dim3\")",
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
@@ -13173,6 +13215,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"l1\")",
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
@@ -13190,6 +13234,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"l1\")",
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
@@ -13207,6 +13253,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"d1\")",
                                   "array_concat(\"__acc\", \"a2\")",
                                   null,
@@ -13224,6 +13272,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"d1\")",
                                   "array_set_add_all(\"__acc\", \"a3\")",
                                   null,
@@ -13241,6 +13291,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"f1\")",
                                   "array_concat(\"__acc\", \"a4\")",
                                   null,
@@ -13258,6 +13310,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"f1\")",
                                   "array_set_add_all(\"__acc\", \"a5\")",
                                   null,
@@ -13276,19 +13330,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             useDefault
             ? new Object[]{
                 "7,325323,0,0,0,0",
-                "0,7,325323",
+                "0,325323,7",
                 "1.0,1.7,0.0,0.0,0.0,0.0",
                 "0.0,1.0,1.7",
                 "1.0,0.10000000149011612,0.0,0.0,0.0,0.0",
-                "0.10000000149011612,0.0,1.0"
+                "0.0,0.10000000149011612,1.0"
             }
             : new Object[]{
                 "7,325323,0",
-                "0,7,325323",
+                "0,325323,7",
                 "1.0,1.7,0.0",
                 "0.0,1.0,1.7",
                 "1.0,0.10000000149011612,0.0",
-                "0.10000000149011612,0.0,1.0"
+                "0.0,0.10000000149011612,1.0"
             }
         )
     );
@@ -13318,6 +13372,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"v0\")",
                                   "array_set_add_all(\"__acc\", \"a0\")",
                                   null,
@@ -13335,6 +13391,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"v0\")",
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
@@ -13351,8 +13409,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"1a,a,2,abc,10.1,defabc", "1a||a||2||abc||10.1||defabc"}
-            : new Object[]{"1a,a,2,defabc", "1a||a||2||defabc"}
+            ? new Object[]{"10.1,1a,2,a,abc,defabc", "10.1||1a||2||a||abc||defabc"}
+            : new Object[]{"1a,2,a,defabc", "1a||2||a||defabc"}
         )
     );
   }
@@ -13388,6 +13446,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_append(\"__acc\", \"l1\")",
                                   "array_concat(\"__acc\", \"a0\")",
                                   null,
@@ -13405,6 +13465,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                   "[]",
                                   "[]",
                                   true,
+                                  false,
+                                  false,
                                   "array_set_add(\"__acc\", \"l1\")",
                                   "array_set_add_all(\"__acc\", \"a1\")",
                                   null,
@@ -13421,8 +13483,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"7,325323,0,0,0,0", "0,7,325323"}
-            : new Object[]{"7,325323,0", "0,7,325323"}
+            ? new Object[]{"7,325323,0,0,0,0", "0,325323,7"}
+            : new Object[]{"7,325323,0", "0,325323,7"}
         )
     );
   }
