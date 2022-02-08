@@ -52,10 +52,11 @@
     "start": "webpack serve --hot --open"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=14"
   },
   "volta": {
-    "node": "16.13.2"
+    "node": "14.16.1",
+    "npm": "6.14.12"
   },
   "browserslist": [
     "> 1% and supports es6",
