@@ -44,26 +44,51 @@ public abstract class CalciteTestBase
     ExpressionProcessing.initializeForTests(null);
   }
 
+  /**
+   * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
+   * expression structure, this method is just to have a convenient way to fix a very large number of existing tests
+   */
+  @Deprecated
   public static DruidExpression makeColumnExpression(final String column)
   {
     return DruidExpression.ofColumn(ColumnType.STRING, column);
   }
 
+  /**
+   * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
+   * expression structure, this method is just to have a convenient way to fix a very large number of existing tests
+   */
+  @Deprecated
   public static DruidExpression makeExpression(final String staticExpression)
   {
     return makeExpression(ColumnType.STRING, staticExpression);
   }
 
+  /**
+   * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
+   * expression structure, this method is just to have a convenient way to fix a very large number of existing tests
+   */
+  @Deprecated
   public static DruidExpression makeExpression(final ColumnType columnType, final String staticExpression)
   {
     return makeExpression(columnType, null, staticExpression);
   }
 
+  /**
+   * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
+   * expression structure, this method is just to have a convenient way to fix a very large number of existing tests
+   */
+  @Deprecated
   public static DruidExpression makeExpression(final SimpleExtraction simpleExtraction, final String staticExpression)
   {
     return makeExpression(ColumnType.STRING, simpleExtraction, staticExpression);
   }
 
+  /**
+   * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
+   * expression structure, this method is just to have a convenient way to fix a very large number of existing tests
+   */
+  @Deprecated
   public static DruidExpression makeExpression(
       final ColumnType columnType,
       final SimpleExtraction simpleExtraction,

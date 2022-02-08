@@ -63,7 +63,7 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertSimpleCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,

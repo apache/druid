@@ -114,7 +114,7 @@ public class CastOperatorConversion implements SqlOperatorConversion
           Calcites.getColumnTypeForRelDataType(rexNode.getType())
       );
     } else if (SqlTypeName.DATETIME_TYPES.contains(fromType) && SqlTypeName.CHAR_TYPES.contains(toType)) {
-      return castDateTimeToChar(plannerContext, operandExpression, fromType, Calcites.getColumnTypeForRelDataType(operand.getType()));
+      return castDateTimeToChar(plannerContext, operandExpression, fromType, Calcites.getColumnTypeForRelDataType(rexNode.getType()));
     } else {
       // Handle other casts.
       final ExprType fromExprType = EXPRESSION_TYPES.get(fromType);
@@ -185,11 +185,11 @@ public class CastOperatorConversion implements SqlOperatorConversion
       final PlannerContext plannerContext,
       final DruidExpression operand,
       final SqlTypeName fromType,
-      final ColumnType fromDruidType
+      final ColumnType toDruidType
   )
   {
     return DruidExpression.ofFunctionCall(
-        fromDruidType,
+        toDruidType,
         "timestamp_format",
         ImmutableList.of(
             operand,

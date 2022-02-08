@@ -49,7 +49,7 @@ public class RoundOperatorConversion implements SqlOperatorConversion
   @Override
   public DruidExpression toDruidExpression(final PlannerContext plannerContext, final RowSignature rowSignature, final RexNode rexNode)
   {
-    return OperatorConversions.convertSimpleCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,

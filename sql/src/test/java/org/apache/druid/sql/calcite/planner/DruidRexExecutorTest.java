@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
@@ -154,7 +155,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        CalciteTestBase.makeExpression(ColumnType.DOUBLE_ARRAY, "array(50.12,12.1)"),
+        DruidExpression.ofExpression(
+            ColumnType.DOUBLE_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "50.12"),
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "12.1")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
@@ -175,7 +183,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        CalciteTestBase.makeExpression(ColumnType.LONG_ARRAY, "array(50,12)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.LONG, "50"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "12")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
@@ -198,7 +213,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
     Assert.assertEquals(
-        CalciteTestBase.makeExpression(ColumnType.STRING, "string_to_array('a,b,c',',')"),
+        DruidExpression.ofExpression(
+            ColumnType.STRING,
+            DruidExpression.functionCall("string_to_array"),
+            ImmutableList.of(
+                DruidExpression.ofStringLiteral("a,b,c"),
+                DruidExpression.ofStringLiteral(",")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.builder().build(),

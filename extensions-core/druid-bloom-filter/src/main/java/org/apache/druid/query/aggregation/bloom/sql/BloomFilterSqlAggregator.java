@@ -112,7 +112,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final DruidExpression virtualInput = virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+          final DruidExpression virtualInput = virtualColumnRegistry.findVirtualColumnExpressions(theFactory.requiredFields())
                                                                     .stream()
                                                                     .findFirst()
                                                                     .orElse(null);

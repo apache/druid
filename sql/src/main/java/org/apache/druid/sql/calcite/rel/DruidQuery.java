@@ -624,7 +624,28 @@ public class DruidQuery
     // the various transforms and optimizations
     Set<VirtualColumn> virtualColumns = new HashSet<>();
 
-    // todo(clint): optimize virtual column registry here
+
+    // rewrite any "specialized" virtual column expressions as top level virtual columns so that their native
+    // implementation can be used instead of being composed as part of some expression tree in an expresson virtual
+    // column
+    Set<String> specialized = new HashSet<>();
+    virtualColumnRegistry.visitAllSubExpressions((expression) -> {
+      switch (expression.getType()) {
+        case SPECIALIZED:
+          // add the expression to the top level of the registry as a standalone virtual column
+          final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+              expression,
+              expression.getDruidType()
+          );
+          specialized.add(name);
+          // replace with an identifier expression of the new virtual column name
+          return DruidExpression.ofColumn(expression.getDruidType(), name);
+        default:
+          // do nothing
+          return expression;
+      }
+    });
+
 
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
@@ -667,12 +688,17 @@ public class DruidQuery
       }
     }
 
-    // todo(clint): rework this probably
     if (dataSource instanceof JoinDataSource) {
       for (String expression : ((JoinDataSource) dataSource).getVirtualColumnCandidates()) {
         if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
           virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
         }
+      }
+    }
+
+    for (String columnName : specialized) {
+      if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+        virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
       }
     }
 

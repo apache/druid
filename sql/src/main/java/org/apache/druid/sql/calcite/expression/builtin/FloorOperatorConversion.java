@@ -53,7 +53,7 @@ public class FloorOperatorConversion implements SqlOperatorConversion
 
     if (call.getOperands().size() == 1) {
       // FLOOR(expr) -- numeric FLOOR
-      return OperatorConversions.convertSimpleCall(plannerContext, rowSignature, call, "floor");
+      return OperatorConversions.convertDirectCall(plannerContext, rowSignature, call, "floor");
     } else if (call.getOperands().size() == 2) {
       // FLOOR(expr TO timeUnit) -- time FLOOR
       return DruidExpression.ofFunctionCall(

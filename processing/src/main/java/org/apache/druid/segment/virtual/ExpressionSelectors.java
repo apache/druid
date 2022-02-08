@@ -296,7 +296,8 @@ public class ExpressionSelectors
       } else if (capabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
-            multiVal
+            multiVal,
+            homogenizeNullMultiValueStringArrays
         );
       } else {
         // complex type just pass straight through
@@ -371,7 +372,7 @@ public class ExpressionSelectors
    * arrays if specified.
    */
   @VisibleForTesting
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray, boolean homogenize)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
@@ -382,7 +383,11 @@ public class ExpressionSelectors
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
         if (row.size() == 0) {
-          return new Object[]{null};
+          if (homogenize) {
+            return new Object[]{null};
+          } else {
+            return null;
+          }
         }
         final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection

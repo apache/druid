@@ -136,7 +136,7 @@ public class QuantileSqlAggregator implements SqlAggregator
           // Check input for equivalence.
           final boolean inputMatches;
           final DruidExpression virtualInput =
-              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+              virtualColumnRegistry.findVirtualColumnExpressions(theFactory.requiredFields())
                                    .stream()
                                    .findFirst()
                                    .orElse(null);

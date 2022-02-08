@@ -108,11 +108,6 @@ public class DruidExpression
     return "null";
   }
 
-  public static String functionCall(final String functionName, final List<DruidExpression> args)
-  {
-    return functionCall(functionName).buildExpression(args);
-  }
-
   public static ExpressionBuilder functionCall(final String functionName)
   {
     Preconditions.checkNotNull(functionName, "functionName");
@@ -135,6 +130,24 @@ public class DruidExpression
 
       return builder.toString();
     };
+  }
+
+  /**
+   * @deprecated use {@link #functionCall(String)} instead
+   */
+  @Deprecated
+  public static String functionCall(final String functionName, final List<DruidExpression> args)
+  {
+    return functionCall(functionName).buildExpression(args);
+  }
+
+  /**
+   * @deprecated use {@link #functionCall(String)} instead
+   */
+  @Deprecated
+  public static String functionCall(final String functionName, final DruidExpression... args)
+  {
+    return functionCall(functionName).buildExpression(Arrays.asList(args));
   }
 
   public static DruidExpression ofLiteral(
@@ -216,9 +229,77 @@ public class DruidExpression
     return new DruidExpression(NodeType.EXPRESSION, columnType, simpleExtraction, expressionBuilder, arguments, null);
   }
 
+  /**
+   * @deprecated use {@link #ofExpression(ColumnType, SimpleExtraction, ExpressionBuilder, List)} instead to participate
+   * in virtual column and expression optimization
+   */
+  @Deprecated
+  public static DruidExpression of(final SimpleExtraction simpleExtraction, final String expression)
+  {
+    return new DruidExpression(
+        NodeType.EXPRESSION,
+        null,
+        simpleExtraction,
+        new LiteralExpressionBuilder(expression),
+        Collections.emptyList(),
+        null
+    );
+  }
+
+  /**
+   * @deprecated use {@link #ofColumn(ColumnType, String)} or {@link #ofColumn(ColumnType, String, SimpleExtraction)}
+   * instead
+   */
+  @Deprecated
+  public static DruidExpression fromColumn(final String column)
+  {
+    return new DruidExpression(
+        NodeType.EXPRESSION,
+        null,
+        SimpleExtraction.of(column, null),
+        new IdentifierExpressionBuilder(column),
+        Collections.emptyList(),
+        null
+    );
+  }
+
+  /**
+   * @deprecated use {@link #ofExpression(ColumnType, ExpressionBuilder, List)} instead to participate in virtual
+   * column and expression optimization
+   */
+  @Deprecated
+  public static DruidExpression fromExpression(final String expression)
+  {
+    return new DruidExpression(
+        NodeType.EXPRESSION,
+        null,
+        null,
+        new LiteralExpressionBuilder(expression),
+        Collections.emptyList(),
+        null
+    );
+  }
+
+  /**
+   * @deprecated use {@link #ofFunctionCall(ColumnType, String, List)} instead to participate in virtual column and
+   * expression optimization
+   */
+  @Deprecated
+  public static DruidExpression fromFunctionCall(final String functionName, final List<DruidExpression> args)
+  {
+    return new DruidExpression(
+        NodeType.EXPRESSION,
+        null,
+        null,
+        new LiteralExpressionBuilder(functionCall(functionName, args)),
+        Collections.emptyList(),
+        null
+    );
+  }
+
   private final NodeType nodeType;
   @Nullable
-  private final ColumnType druidType; // todo(clint): is this under-utilized or just not important?
+  private final ColumnType druidType;
   private final List<DruidExpression> arguments;
   @Nullable
   private final SimpleExtraction simpleExtraction;
@@ -270,6 +351,11 @@ public class DruidExpression
     return Preconditions.checkNotNull(simpleExtraction);
   }
 
+  public List<DruidExpression> getArguments()
+  {
+    return arguments;
+  }
+
   public Expr parse(final ExprMacroTable macroTable)
   {
     return Parser.parse(expression.get(), macroTable);
@@ -294,18 +380,29 @@ public class DruidExpression
     return druidType;
   }
 
-  // todo(clint): this function seems strange now, maybe it should go away..
   public DruidExpression map(
       final Function<SimpleExtraction, SimpleExtraction> extractionMap,
       final Function<String, String> expressionMap
   )
   {
     return new DruidExpression(
-        nodeType, // todo(clint): hmm, is this best?
+        nodeType,
         druidType,
         simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
         (args) -> expressionMap.apply(expressionBuilder.buildExpression(args)),
         arguments,
+        virtualColumnBuilder
+    );
+  }
+
+  public DruidExpression withArguments(List<DruidExpression> newArgs)
+  {
+    return new DruidExpression(
+        nodeType,
+        druidType,
+        simpleExtraction,
+        expressionBuilder,
+        newArgs,
         virtualColumnBuilder
     );
   }
@@ -335,13 +432,14 @@ public class DruidExpression
     return Objects.equals(simpleExtraction, that.simpleExtraction) &&
            Objects.equals(nodeType, that.nodeType) &&
            Objects.equals(druidType, that.druidType) &&
+           Objects.equals(arguments, that.arguments) &&
            Objects.equals(expression.get(), that.expression.get());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nodeType, druidType, simpleExtraction, expression.get());
+    return Objects.hash(nodeType, druidType, simpleExtraction, arguments, expression.get());
   }
 
   @Override
@@ -397,7 +495,7 @@ public class DruidExpression
 
     public IdentifierExpressionBuilder(String identifier)
     {
-      this.identifier = identifier;
+      this.identifier = escape(identifier);
     }
 
     @Override

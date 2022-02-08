@@ -53,7 +53,7 @@ public class CeilOperatorConversion implements SqlOperatorConversion
 
     if (call.getOperands().size() == 1) {
       // CEIL(expr) -- numeric CEIL
-      return OperatorConversions.convertSimpleCall(plannerContext, rowSignature, call, "ceil");
+      return OperatorConversions.convertDirectCall(plannerContext, rowSignature, call, "ceil");
     } else if (call.getOperands().size() == 2) {
       // CEIL(expr TO timeUnit) -- time CEIL
       return DruidExpression.ofFunctionCall(

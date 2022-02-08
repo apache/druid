@@ -153,6 +153,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
         dimensionSelectorFromSupplier(settableSupplier),
+        false,
         false
     );
 

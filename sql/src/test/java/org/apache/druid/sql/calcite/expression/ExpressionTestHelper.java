@@ -255,17 +255,45 @@ class ExpressionTestHelper
     testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
   }
 
+  /**
+   * @deprecated use {@link #testExpression(SqlOperator, RexNode, DruidExpression, Object)} instead which does a
+   * deep comparison of {@link DruidExpression} instead of just comparing the output of
+   * {@link DruidExpression#getExpression()}
+   */
+  @Deprecated
+  void testExpressionString(
+      final SqlOperator op,
+      final List<? extends RexNode> exprs,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult, false);
+  }
+
   void testExpression(
       final RexNode rexNode,
       final DruidExpression expectedExpression,
       final Object expectedResult
   )
   {
+    testExpression(rexNode, expectedExpression, expectedResult, true);
+  }
+
+  void testExpression(
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult,
+      final boolean deepCompare
+  )
+  {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
     Assert.assertNotNull(expression);
-    // todo(clint): it would be way more cool to compare DruidExpression to validate the expected tree structure
-    // only compare the built expression so that test writers do not need to match the tree structure perfectly
-    Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
+    if (deepCompare) {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    } else {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
+    }
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
                                .eval(InputBindings.withMap(bindings));

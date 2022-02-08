@@ -87,7 +87,7 @@ public class TDigestSketchUtils
     // Check input for equivalence.
     final boolean inputMatches;
     final DruidExpression virtualInput =
-        virtualColumnRegistry.findVirtualColumns(factory.requiredFields())
+        virtualColumnRegistry.findVirtualColumnExpressions(factory.requiredFields())
                              .stream()
                              .findFirst()
                              .orElse(null);

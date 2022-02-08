@@ -71,8 +71,9 @@ import java.util.stream.IntStream;
  */
 public class OperatorConversions
 {
+
   @Nullable
-  public static DruidExpression convertSimpleCall(
+  public static DruidExpression convertDirectCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -92,7 +93,7 @@ public class OperatorConversions
   }
 
   @Nullable
-  public static DruidExpression convertSimpleCallWithExtraction(
+  public static DruidExpression convertDirectCallWithExtraction(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -113,6 +114,7 @@ public class OperatorConversions
     );
   }
 
+  @Nullable
   public static DruidExpression convertCallBuilder(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -153,6 +155,37 @@ public class OperatorConversions
     }
 
     return expressionFunction.buildExpression(druidExpressions);
+  }
+
+  @Deprecated
+  @Nullable
+  public static DruidExpression convertCall(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String functionName
+  )
+  {
+    return convertDirectCall(plannerContext, rowSignature, rexNode, functionName);
+  }
+
+  @Deprecated
+  @Nullable
+  public static DruidExpression convertCall(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String functionName,
+      final Function<List<DruidExpression>, SimpleExtraction> simpleExtractionFunction
+  )
+  {
+    return convertDirectCallWithExtraction(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        functionName,
+        simpleExtractionFunction
+    );
   }
 
   /**

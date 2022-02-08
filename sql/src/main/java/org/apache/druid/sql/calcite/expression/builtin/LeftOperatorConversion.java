@@ -67,7 +67,7 @@ public class LeftOperatorConversion implements SqlOperatorConversion
     if (call.getOperands().size() != 2) {
       return null;
     }
-    return OperatorConversions.convertSimpleCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,

@@ -122,7 +122,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        String virtualColumnName  = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             columnArg,
             dataType
         );

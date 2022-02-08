@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -91,7 +93,7 @@ public class VirtualColumnRegistry
       ColumnType typeHint
   )
   {
-    ExpressionAndTypeHint candidate = wrap(expression, typeHint);
+    final ExpressionAndTypeHint candidate = wrap(expression, typeHint);
     if (!virtualColumnsByExpression.containsKey(candidate)) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
 
@@ -147,12 +149,13 @@ public class VirtualColumnRegistry
     final RowSignature.Builder builder =
         RowSignature.builder().addAll(baseRowSignature);
 
-    RowSignature baseSignature = builder.build();
+    final RowSignature baseSignature = builder.build();
 
     for (Map.Entry<String, ExpressionAndTypeHint> virtualColumn : virtualColumnsByName.entrySet()) {
       final String columnName = virtualColumn.getKey();
 
-      // todo(clint): this too expensive, but i'm too afraid to trust the type in DruidExpression yet..
+      // this is expensive, maybe someday it could use the typeHint, or the inferred type, but for now use native
+      // expression type inference
       builder.add(
           columnName,
           virtualColumn.getValue().getExpression().toVirtualColumn(
@@ -161,9 +164,6 @@ public class VirtualColumnRegistry
               macroTable
           ).capabilities(baseSignature, columnName).toColumnType()
       );
-      // could always do this instead... assuming i got things right...
-      // builder.add(columnName, virtualColumn.getValue().getTypeHint());
-      // or use the type of the DruidExpression itself? or the hinted type?
     }
 
     return builder.build();
@@ -172,12 +172,38 @@ public class VirtualColumnRegistry
   /**
    * Given a list of column names, find any corresponding {@link VirtualColumn} with the same name
    */
-  public List<DruidExpression> findVirtualColumns(List<String> allColumns)
+  public List<DruidExpression> findVirtualColumnExpressions(List<String> allColumns)
   {
     return allColumns.stream()
                      .filter(this::isVirtualColumnDefined)
                      .map(name -> virtualColumnsByName.get(name).getExpression())
                      .collect(Collectors.toList());
+  }
+
+  public void visitAll(DruidExpression.DruidExpressionShuttle shuttle)
+  {
+    final Set<String> keys = virtualColumnsByName.keySet();
+    for (String key : keys) {
+      final ExpressionAndTypeHint wrapped = virtualColumnsByName.get(key);
+      virtualColumnsByExpression.remove(wrapped);
+      final DruidExpression newExpression = shuttle.visit(wrapped.getExpression());
+      final ExpressionAndTypeHint newWrapped = wrap(newExpression, wrapped.getTypeHint());
+      virtualColumnsByName.put(key, newWrapped);
+      virtualColumnsByExpression.put(newWrapped, key);
+    }
+  }
+
+  public void visitAllSubExpressions(DruidExpression.DruidExpressionShuttle shuttle)
+  {
+    final Set<String> keys = virtualColumnsByName.keySet();
+    for (String key : keys) {
+      final ExpressionAndTypeHint wrapped = virtualColumnsByName.get(key);
+      virtualColumnsByExpression.remove(wrapped);
+      final List<DruidExpression> newArgs = shuttle.visitAll(wrapped.getExpression().getArguments());
+      final ExpressionAndTypeHint newWrapped = wrap(wrapped.getExpression().withArguments(newArgs), wrapped.getTypeHint());
+      virtualColumnsByName.put(key, newWrapped);
+      virtualColumnsByExpression.put(newWrapped, key);
+    }
   }
 
   public Collection<? extends VirtualColumn> getAllVirtualColumns(List<String> requiredColumns)
@@ -186,6 +212,63 @@ public class VirtualColumnRegistry
                           .filter(this::isVirtualColumnDefined)
                           .map(this::getVirtualColumn)
                           .collect(Collectors.toList());
+  }
+
+  /**
+   * @deprecated use {@link #findVirtualColumnExpressions(List)} instead
+   */
+  @Deprecated
+  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
+  {
+    return allColumns.stream()
+                     .filter(this::isVirtualColumnDefined)
+                     .map(this::getVirtualColumn)
+                     .collect(Collectors.toList());
+  }
+
+  /**
+   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)} instead
+   */
+  @Deprecated
+  public VirtualColumn getOrCreateVirtualColumnForExpression(
+      PlannerContext plannerContext,
+      DruidExpression expression,
+      ColumnType valueType
+  )
+  {
+    final String name = getOrCreateVirtualColumnForExpression(expression, valueType);
+    return virtualColumnsByName.get(name).expression.toVirtualColumn(name, valueType, macroTable);
+  }
+
+  /**
+   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} instead
+   */
+  @Deprecated
+  public VirtualColumn getOrCreateVirtualColumnForExpression(
+      PlannerContext plannerContext,
+      DruidExpression expression,
+      RelDataType dataType
+  )
+  {
+    return getOrCreateVirtualColumnForExpression(
+        plannerContext,
+        expression,
+        Calcites.getColumnTypeForRelDataType(dataType)
+    );
+  }
+
+  /**
+   * @deprecated use {@link #getVirtualColumnByExpression(DruidExpression, RelDataType)} instead
+   */
+  @Deprecated
+  @Nullable
+  public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
+  {
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(type);
+    ExpressionAndTypeHint wrapped = wrap(DruidExpression.fromExpression(expression), columnType);
+    return Optional.ofNullable(virtualColumnsByExpression.get(wrapped))
+                   .map(this::getVirtualColumn)
+                   .orElse(null);
   }
 
   private static ExpressionAndTypeHint wrap(DruidExpression expression, ColumnType typeHint)
