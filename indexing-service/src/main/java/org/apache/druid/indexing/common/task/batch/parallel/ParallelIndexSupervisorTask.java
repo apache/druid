@@ -104,6 +104,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -112,6 +113,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -930,57 +932,49 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    // Maintain sorted bucketIds to retain order while assigning partitionIds
-    final Map<Interval, Set<Integer>> intervalToSortedBucketIds = new HashMap<>();
-
-    // Populate map from partition (interval, bucketId) to partition stats
-    final Map<Pair<Interval, Integer>, List<Pair<PartitionStat, String>>>
-        partitionToStats = new HashMap<>();
-    for (Entry<String, GeneratedPartitionsReport> entry : subTaskIdToReport.entrySet()) {
-      final String subTaskId = entry.getKey();
-      for (PartitionStat partitionStat : entry.getValue().getPartitionStats()) {
-        final Interval interval = partitionStat.getInterval();
-        final int bucketId = partitionStat.getBucketId();
-
-        partitionToStats
-            .computeIfAbsent(Pair.of(interval, bucketId), k -> new ArrayList<>())
-            .add(Pair.of(partitionStat, subTaskId));
-
-        intervalToSortedBucketIds
-            .computeIfAbsent(interval, i -> new TreeSet<>())
-            .add(bucketId);
-      }
-    }
-
-    // Populate the map from partition to partition locations
-    final Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = new HashMap<>();
-    intervalToSortedBucketIds.forEach(
-        (interval, bucketIds) -> {
-          int partitionCounter = 0;
-          for (Integer bucketId : bucketIds) {
-            // Assign partitionIds in the same order as bucketIds
-            final int partitionId = partitionCounter;
-            final Pair<Interval, Integer> partition = Pair.of(interval, bucketId);
-
-            // Create a PartitionLocation for each PartitionStat
-            BuildingShardSpec<?> shardSpec = null;
-            final List<PartitionLocation> locationsOfPartition = new ArrayList<>();
-            for (Pair<PartitionStat, String> statAndTaskId : partitionToStats.get(partition)) {
-              final PartitionStat partitionStat = statAndTaskId.lhs;
-              if (shardSpec == null) {
-                shardSpec = partitionStat.getSecondaryPartition().convert(partitionId);
-              }
-
-              locationsOfPartition.add(
-                  partitionStat.toPartitionLocation(statAndTaskId.rhs, shardSpec)
-              );
-            }
-
-            partitionToLocations.put(partition, locationsOfPartition);
-            ++partitionCounter;
-          }
-        }
+    // Create a sorted set of PartitionStats so that partitionIds are assigned
+    // in the same order as bucketIds
+    final Set<Pair<PartitionStat, String>> partitionStatTaskIdPairs = new TreeSet<>(
+        Comparator
+            .comparingLong((Pair<PartitionStat, String> pair) -> pair.lhs.getInterval().getStartMillis())
+            .thenComparingInt(pair -> pair.lhs.getBucketId())
+            .thenComparing(pair -> pair.rhs)
     );
+    subTaskIdToReport.forEach(
+        (subTaskId, report) -> report.getPartitionStats().forEach(
+            partitionStat -> partitionStatTaskIdPairs.add(Pair.of(partitionStat, subTaskId))
+        )
+    );
+
+    // Create locations for each partition (interval + bucketId -> locations)
+    final Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = new HashMap<>();
+    final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> partitionToShardSpecs = new HashMap<>();
+
+    Interval prevInterval = null;
+    final AtomicInteger partitionId = new AtomicInteger(0);
+    for (Pair<PartitionStat, String> partitionStatTaskIdPair : partitionStatTaskIdPairs) {
+      final PartitionStat partitionStat = partitionStatTaskIdPair.lhs;
+
+      // Reset the partitionId if this is a new interval
+      final Interval interval = partitionStat.getInterval();
+      if (!interval.equals(prevInterval)) {
+        partitionId.set(0);
+        prevInterval = interval;
+      }
+
+      // Create a shard spec for this partition if not already created
+      final Pair<Interval, Integer> partition = Pair.of(interval, partitionStat.getBucketId());
+      BuildingShardSpec<?> shardSpec = partitionToShardSpecs.computeIfAbsent(
+          partition,
+          p -> partitionStat.getSecondaryPartition()
+                            .convert(partitionId.getAndIncrement())
+      );
+
+      final String subTaskId = partitionStatTaskIdPair.rhs;
+      partitionToLocations
+          .computeIfAbsent(partition, p -> new ArrayList<>())
+          .add(partitionStat.toPartitionLocation(subTaskId, shardSpec));
+    }
 
     return partitionToLocations;
   }
