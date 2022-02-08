@@ -31,6 +31,14 @@ import java.util.function.IntSupplier;
 
 public final class BitmapIndexes
 {
+  /**
+   * Returns a bitmapIndex for null-only columns.
+   *
+   * @param rowCountSupplier a supplier that returns the row count of the segment that the column belongs to.
+   *                         Getting from the supplier the row count can be expensive and thus should be
+   *                         evaluated lazily.
+   * @param bitmapFactory    a bitmapFactory to create a bitmapIndex.
+   */
   public static BitmapIndex forNullOnlyColumn(IntSupplier rowCountSupplier, BitmapFactory bitmapFactory)
   {
     return new BitmapIndex()

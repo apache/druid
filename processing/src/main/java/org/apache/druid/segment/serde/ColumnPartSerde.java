@@ -49,10 +49,13 @@ public interface ColumnPartSerde
   Serializer getSerializer();
 
   /**
-   * TODO
-   * @param rowCountSupplier          can be expensive. do not call eagerly
-   * @param segmentBitmapSerdeFactory
-   * @return
+   * Returns a Deserializer to read a column from a segment.
+   *
+   * @param rowCountSupplier          a supplier that returns the row count of the segment that the column belongs to.
+   *                                  Getting from the supplier the row count can be expensive and thus should be
+   *                                  evaluated lazily.
+   * @param segmentBitmapSerdeFactory bitmapSerdeFactory stored in the segment. Each columnPartSerde may have their own
+   *                                  bitmapSerdeFactory.
    */
   Deserializer getDeserializer(IntSupplier rowCountSupplier, BitmapSerdeFactory segmentBitmapSerdeFactory);
 

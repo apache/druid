@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
@@ -42,7 +41,6 @@ import java.util.function.IntSupplier;
  */
 public class ColumnDescriptor implements Serializer
 {
-  private static final Logger LOG = new Logger(ColumnDescriptor.class);
   public static Builder builder()
   {
     return new Builder();
@@ -114,7 +112,6 @@ public class ColumnDescriptor implements Serializer
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
-      LOG.info("part class: %s", part.getClass().getName());
       part.getDeserializer(rowCountSupplier, segmentBitmapSerdeFactory).read(buffer, builder, columnConfig);
     }
 

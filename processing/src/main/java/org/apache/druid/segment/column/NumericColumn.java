@@ -27,9 +27,11 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 public interface NumericColumn extends BaseColumn, HotLoopCallee
 {
   /**
-   *  TODO: this returns column.size() as its length(), but column.size() doesn't seem to include nulls
-   *        however, it seems fine as length() is being called only for the time column which does not have nulls.
-   * @return
+   * Returns the row count of this column.
+   *
+   * Note that this method currently counts only non-null values. Using this method to get the length of a column
+   * that contains nulls will not work as expected. This method should be used only for non-nullable numeric columns
+   * such as the "__time" column.
    */
   int length();
 

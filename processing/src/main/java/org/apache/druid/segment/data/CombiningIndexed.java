@@ -26,6 +26,16 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * An Indexed that combines multiple underlying Indexed objects.
+ * Callers can use this class to access those underlying Indexed objects in a way as if they were concatenated.
+ * For example, suppose you have a CombiningIndexed that has 2 underlying Indexeds. Those underlying Indexeds
+ * have the size of 3 and 2, respectively. You can read the items in the first Indexed using an index
+ * in a range of 0 - 2. For the second Indexed, you can use an index in a range of 3 - 4 to read items in it.
+ *
+ * NOTE: this class assumes that the underlying Indexeds have distinct values. Deduplication should be done
+ * outside this class if needed.
+ */
 public class CombiningIndexed<T> implements Indexed<T>
 {
   private final List<Indexed<T>> delegates;
@@ -62,7 +72,7 @@ public class CombiningIndexed<T> implements Indexed<T>
     int startIndex = 0;
     for (Indexed<T> indexed : delegates) {
       final int index = indexed.indexOf(value);
-      if (index > 0) {
+      if (index >= 0) {
         return startIndex + index;
       }
       startIndex += indexed.size();

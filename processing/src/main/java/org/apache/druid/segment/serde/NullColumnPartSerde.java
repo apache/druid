@@ -45,16 +45,12 @@ import java.nio.channels.WritableByteChannel;
 import java.util.function.IntSupplier;
 
 /**
- * TODO
+ * A ColumnPartSerde to read and write null-only columns.
+ * Its serializer is no-op as nothing is stored for null-only columns.
+ * Its deserializer creates necessary column metadata and indexes when the column is read.
  */
 public class NullColumnPartSerde implements ColumnPartSerde
 {
-  @JsonCreator
-  public static NullColumnPartSerde getInstance()
-  {
-    return INSTANCE;
-  }
-
   private static final NullColumnPartSerde INSTANCE = new NullColumnPartSerde();
   private static final Serializer NOOP_SERIALIZER = new Serializer()
   {
@@ -69,6 +65,12 @@ public class NullColumnPartSerde implements ColumnPartSerde
     {
     }
   };
+
+  @JsonCreator
+  public static NullColumnPartSerde getInstance()
+  {
+    return INSTANCE;
+  }
 
   private NullColumnPartSerde()
   {

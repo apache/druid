@@ -177,6 +177,7 @@ public class IndexMergerV9 implements IndexMerger
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions, // should have both explicit and implicit dimensions
+      // a subset of mergedDimensions that are explicitly specified in DimensionsSpec
       final Set<String> explicitDimensions,
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
@@ -360,9 +361,7 @@ public class IndexMergerV9 implements IndexMerger
     final Set<String> finalNullOnlyDimensions = new LinkedHashSet<>();
     final Set<String> finalColumns = new LinkedHashSet<>(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
-      // 1. the column has a non-null.
-      // 2. the column is null-only but should be stored.
-      if (!mergers.get(i).hasOnlyNulls() || mergers.get(i).shouldStore()) {
+      if (mergers.get(i).shouldStore() || !mergers.get(i).hasOnlyNulls()) {
         finalColumns.add(mergedDimensions.get(i));
         finalDimensions.add(mergedDimensions.get(i));
       }
