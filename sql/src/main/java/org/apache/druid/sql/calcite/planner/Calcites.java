@@ -173,14 +173,11 @@ public class Calcites
       }
       return ColumnType.UNKNOWN_COMPLEX;
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
-      SqlTypeName componentType = type.getComponentType().getSqlTypeName();
-      if (isDoubleType(componentType)) {
-        return ColumnType.DOUBLE_ARRAY;
+      ColumnType elementType = getValueTypeForRelDataTypeFull(type.getComponentType());
+      if (elementType != null) {
+        return ColumnType.ofArray(elementType);
       }
-      if (isLongType(componentType)) {
-        return ColumnType.LONG_ARRAY;
-      }
-      return ColumnType.STRING_ARRAY;
+      return null;
     } else {
       return null;
     }
@@ -264,6 +261,7 @@ public class Calcites
       final boolean nullable
   )
   {
+
 
     final RelDataType dataType = typeFactory.createArrayType(
         createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),

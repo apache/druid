@@ -43,9 +43,7 @@ public class MultiValueStringToArrayOperatorConversion implements SqlOperatorCon
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("MV_TO_ARRAY")
-      .operandTypeChecker(
-              OperandTypes.family(SqlTypeFamily.STRING)
-      )
+      .operandTypeChecker(OperandTypes.family(SqlTypeFamily.STRING))
       .functionCategory(SqlFunctionCategory.STRING)
       .returnTypeNullableArray(SqlTypeName.VARCHAR)
       .build();

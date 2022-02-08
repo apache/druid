@@ -270,27 +270,27 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testLiteralArraysExplicitTypedEmpties()
   {
     // legacy explicit array format
-    validateConstantExpression("<STRING>[]", new Object[0]);
-    validateConstantExpression("<DOUBLE>[]", new Object[0]);
-    validateConstantExpression("<LONG>[]", new Object[0]);
+    validateConstantExpression("ARRAY<STRING>[]", new Object[0]);
+    validateConstantExpression("ARRAY<DOUBLE>[]", new Object[0]);
+    validateConstantExpression("ARRAY<LONG>[]", new Object[0]);
   }
 
   @Test
   public void testLiteralArraysExplicitAllNull()
   {
     // legacy explicit array format
-    validateConstantExpression("<DOUBLE>[null, null, null]", new Object[]{null, null, null});
-    validateConstantExpression("<LONG>[null, null, null]", new Object[]{null, null, null});
-    validateConstantExpression("<STRING>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<DOUBLE>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<LONG>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<STRING>[null, null, null]", new Object[]{null, null, null});
   }
 
   @Test
   public void testLiteralArraysExplicitTypes()
   {
     // legacy explicit array format
-    validateConstantExpression("<DOUBLE>[1.0, null, 2000.0]", new Object[]{1.0, null, 2000.0});
-    validateConstantExpression("<LONG>[3, null, 4]", new Object[]{3L, null, 4L});
-    validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new Object[]{"foo", "bar", "baz"});
+    validateConstantExpression("ARRAY<DOUBLE>[1.0, null, 2000.0]", new Object[]{1.0, null, 2000.0});
+    validateConstantExpression("ARRAY<LONG>[3, null, 4]", new Object[]{3L, null, 4L});
+    validateConstantExpression("ARRAY<STRING>['foo', 'bar', 'baz']", new Object[]{"foo", "bar", "baz"});
   }
 
   @Test
@@ -298,11 +298,11 @@ public class ParserTest extends InitializedNullHandlingTest
   {
     // legacy explicit array format
     // explicit typed numeric arrays mixed numeric types should coerce to the correct explicit type
-    validateConstantExpression("<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-    validateConstantExpression("<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
     // explicit typed string arrays should accept any literal and convert to string
-    validateConstantExpression("<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
   }
 
   @Test

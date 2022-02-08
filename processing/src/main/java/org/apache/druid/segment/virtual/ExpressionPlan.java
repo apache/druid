@@ -275,8 +275,8 @@ public class ExpressionPlan
       // the complete set of input types
       if (any(Trait.NON_SCALAR_OUTPUT, Trait.NEEDS_APPLIED)) {
         // if the hint requested a string, use a string
-        if (Types.is(outputTypeHint, ValueType.STRING)) {
-          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ColumnType.STRING);
+        if (Types.is(outputTypeHint, ValueType.STRING) || inferredValueType.is(ValueType.STRING)) {
+          return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities().setHasMultipleValues(true);
         }
         // maybe something is looking for a little fun and wants arrays? let whatever it is through
         return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ExpressionType.toColumnType(outputType));
