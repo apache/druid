@@ -932,8 +932,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    // Create a sorted set of PartitionStats so that partitionIds are assigned
-    // in the same order as bucketIds
+    // Create a set of PartitionStats, sorted by (interval, bucketId, subTaskId)
+    // This ensures that within an interval, partitionIds are assigned in the
+    // same order as bucketIds. Comparison on subTaskId is needed to retain parts
+    // of the same partition written by different tasks, which will later be merged.
     final Set<Pair<PartitionStat, String>> partitionStatTaskIdPairs = new TreeSet<>(
         Comparator
             .comparingLong((Pair<PartitionStat, String> pair) -> pair.lhs.getInterval().getStartMillis())
