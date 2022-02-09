@@ -963,11 +963,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         prevInterval = interval;
       }
 
-      // This list would always be non-empty
+      // Use any PartitionStat of this partition to create a shard spec
       final List<PartitionReport> reportsOfPartition = entry.getValue();
       final BuildingShardSpec<?> shardSpec = reportsOfPartition
           .get(0).getPartitionStat().getSecondaryPartition()
           .convert(partitionId.getAndIncrement());
+
+      // Create a PartitionLocation for each PartitionStat
       List<PartitionLocation> locationsOfPartition = reportsOfPartition
           .stream()
           .map(report -> report.getPartitionStat().toPartitionLocation(report.getSubTaskId(), shardSpec))

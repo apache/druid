@@ -348,14 +348,15 @@ public class ParallelIndexSupervisorTaskTest
       final String task1 = "task1";
       final String task2 = "task2";
 
-      Map<String, GeneratedPartitionsReport> reports = new HashMap<>();
-      reports.put(task1, new GeneratedPartitionsReport(task1, Arrays.asList(
+      // Create task reports
+      Map<String, GeneratedPartitionsReport> taskIdToReport = new HashMap<>();
+      taskIdToReport.put(task1, new GeneratedPartitionsReport(task1, Arrays.asList(
           createRangePartitionStat(day1, 1),
           createRangePartitionStat(day2, 7),
           createRangePartitionStat(day1, 0),
           createRangePartitionStat(day2, 1)
       )));
-      reports.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
+      taskIdToReport.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
           createRangePartitionStat(day1, 4),
           createRangePartitionStat(day1, 6),
           createRangePartitionStat(day2, 1),
@@ -363,10 +364,10 @@ public class ParallelIndexSupervisorTaskTest
       )));
 
       Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations
-          = ParallelIndexSupervisorTask.getPartitionToLocations(reports);
+          = ParallelIndexSupervisorTask.getPartitionToLocations(taskIdToReport);
       Assert.assertEquals(6, partitionToLocations.size());
 
-      // Verify locations and partitionId for all the partitions
+      // Verify that partitionIds are packed and in the same order as bucketIds
       verifyPartitionIdAndLocations(day1, 0, partitionToLocations,
                                     0, task1);
       verifyPartitionIdAndLocations(day1, 1, partitionToLocations,
