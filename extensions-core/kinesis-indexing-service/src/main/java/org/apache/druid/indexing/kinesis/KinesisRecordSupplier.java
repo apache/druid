@@ -755,10 +755,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   /**
    * Is costly and requires polling the shard to determine if it's empty
    * @param stream to which shard belongs
-   * @param shardId of the shard
-   * @return if the shard is empty
+   * @param shardId of the closed shard
+   * @return if the closed shard is empty
    */
-  public boolean isShardEmpty(String stream, String shardId)
+  public boolean isClosedShardEmpty(String stream, String shardId)
   {
     String shardIterator = kinesis.getShardIterator(stream,
                                                     shardId,

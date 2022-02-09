@@ -50,6 +50,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -1022,5 +1023,62 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Assert.assertEquals(Collections.emptyMap(), recordSupplier.getPartitionsTimeLag(STREAM, offsets));
     }
     verifyAll();
+  }
+
+  @Test
+  public void isClosedShardEmpty()
+  {
+    AmazonKinesis mockKinesis = EasyMock.mock(AmazonKinesis.class);
+    KinesisRecordSupplier target = new KinesisRecordSupplier(mockKinesis,
+                                                             recordsPerFetch,
+                                                             0,
+                                                             2,
+                                                             false,
+                                                             100,
+                                                             5000,
+                                                             5000,
+                                                             60000,
+                                                             5,
+                                                             true
+    );
+    Record record = new Record();
+    String shardId;
+
+    // No records and null iterator -> empty
+    shardId = "0";
+    isClosedShardEmptyHelper(mockKinesis, shardId, new ArrayList<>(), null);
+    Assert.assertTrue(target.isClosedShardEmpty(STREAM, shardId));
+
+    // no records and non-null iterator -> non-empty
+    shardId = "1";
+    isClosedShardEmptyHelper(mockKinesis, shardId, new ArrayList<>(), "nextIterator");
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardId));
+
+    // non-empty records and null iterator -> non-empty
+    shardId = "2";
+    isClosedShardEmptyHelper(mockKinesis, shardId, Collections.singletonList(record), null);
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardId));
+
+    // non-empty records and non-null iterator -> non-empty
+    shardId = "3";
+    isClosedShardEmptyHelper(mockKinesis, shardId, Collections.singletonList(record), "nextIterator");
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardId));
+  }
+
+  private void isClosedShardEmptyHelper(AmazonKinesis kinesis, String shardId,
+                                        List<Record> expectedRecords, String expectedNextIterator)
+  {
+    EasyMock.reset(kinesis);
+    String shardIteratorType = ShardIteratorType.TRIM_HORIZON.toString();
+    String shardIterator = "shardIterator" + shardId;
+    GetShardIteratorResult shardIteratorResult = EasyMock.mock(GetShardIteratorResult.class);
+    EasyMock.expect(kinesis.getShardIterator(STREAM, shardId, shardIteratorType)).andReturn(shardIteratorResult).once();
+    EasyMock.expect(shardIteratorResult.getShardIterator()).andReturn(shardIterator).once();
+    GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1);
+    GetRecordsResult result = EasyMock.mock(GetRecordsResult.class);
+    EasyMock.expect(kinesis.getRecords(request)).andReturn(result).once();
+    EasyMock.expect(result.getNextShardIterator()).andReturn(expectedNextIterator).once();
+    EasyMock.expect(result.getRecords()).andReturn(expectedRecords).once();
+    EasyMock.replay(shardIteratorResult, result, kinesis);
   }
 }

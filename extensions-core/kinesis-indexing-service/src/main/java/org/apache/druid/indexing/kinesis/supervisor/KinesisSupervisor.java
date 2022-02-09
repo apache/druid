@@ -434,7 +434,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
    * Closed and empty shards can be ignored for ingestion,
    * Use this method if skipIgnorablePartitions is true in the spec
    *
-   * These partitions can be safely ignored for both ingesetion task assignment and autoscaler limits
+   * These partitions can be safely ignored for both ingestion task assignment and autoscaler limits
    *
    * @return the set of ignorable shards' ids
    */
@@ -450,7 +450,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     String stream = spec.getSource();
     Set<Shard> allActiveShards = ((KinesisRecordSupplier) recordSupplier).getShards(stream);
     Set<String> activeClosedShards = allActiveShards.stream()
-                                                    .filter(shard -> isShardOpen(shard))
+                                                    .filter(shard -> isShardClosed(shard))
                                                     .map(Shard::getShardId).collect(Collectors.toSet());
 
     // clear stale shards
@@ -534,14 +534,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   /**
-   * Open shards iff they don't have an ending sequence number
+   * Closed shards iff they have an ending sequence number
    *
    * @param shard to be checked
-   * @return if shard is open
+   * @return if shard is closed
    */
-  private boolean isShardOpen(Shard shard)
+  private boolean isShardClosed(Shard shard)
   {
-    return shard.getSequenceNumberRange().getEndingSequenceNumber() == null;
+    return shard.getSequenceNumberRange().getEndingSequenceNumber() != null;
   }
 
   /**
@@ -563,6 +563,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     }
 
     // Make an expensive call to kinesis
-    return ((KinesisRecordSupplier) recordSupplier).isShardEmpty(stream, shardId);
+    return ((KinesisRecordSupplier) recordSupplier).isClosedShardEmpty(stream, shardId);
   }
 }
