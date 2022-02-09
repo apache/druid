@@ -40,12 +40,22 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * todo(clint): rewrite javadocs
- *
  * Represents two kinds of expression-like concepts that native Druid queries support:
  *
  * (1) SimpleExtractions, which are direct column access, possibly with an extractionFn
- * (2) native Druid expressions.
+ * (2) native Druid expressions and virtual columns
+ *
+ * When added to {@link org.apache.druid.sql.calcite.rel.VirtualColumnRegistry} whenever used by projections, filters,
+ * aggregators, or other query components, these will be converted into native virtual columns using
+ * {@link #toVirtualColumn(String, ColumnType, ExprMacroTable)}
+ *
+ * Approximate expression structure is retained in the {@link #arguments}, which when fed into the
+ * {@link ExpressionBuilder} that all {@link DruidExpression} must be created with will produce the final String
+ * expression (which will be later parsed into {@link Expr} during native processing).
+ *
+ * This allows using the {@link DruidExpressionShuttle} to examine this expression "tree" and potentially rewrite some
+ * or all of the tree as it visits nodes, and the {@link #nodeType} property provides high level classification of
+ * the types of expression which a node produces.
  */
 public class DruidExpression
 {

@@ -1155,8 +1155,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{0, 4L},
             new Object[]{1, 2L}
         ) : ImmutableList.of(
-            new Object[]{null, 2L},
-            new Object[]{0, 2L},
+            // the fallback expression would actually produce 3 rows, 2 nulls, 2 0's, and 2 1s
+            // instead of 4 nulls and two 1's we get when using the 'native' list filtered virtual column
+            // this is because of slight differences between filter and the native
+            // selector, which treats a 0 length array as null instead of an empty array like is produced by filter
+            new Object[]{null, 4L},
             new Object[]{1, 2L}
         )
     );
