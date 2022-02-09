@@ -938,7 +938,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         // Sort by (interval, bucketId) to maintain order of partitionIds within interval
         Comparator
             .comparingLong((Partition partition) -> partition.getInterval().getStartMillis())
-            .thenComparingLong(stat -> stat.getInterval().getEndMillis())
+            .thenComparingLong(partition -> partition.getInterval().getEndMillis())
             .thenComparingInt(Partition::getBucketId)
     );
     subTaskIdToReport.forEach(
@@ -953,17 +953,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Interval prevInterval = null;
     final AtomicInteger partitionId = new AtomicInteger(0);
-    for (Partition partition : partitionToReports.keySet()) {
-      final Interval interval = partition.getInterval();
+    for (Entry<Partition, List<PartitionReport>> entry : partitionToReports.entrySet()) {
+      final Partition partition = entry.getKey();
 
       // Reset the partitionId if this is a new interval
+      Interval interval = partition.getInterval();
       if (!interval.equals(prevInterval)) {
         partitionId.set(0);
         prevInterval = interval;
       }
 
       // This list would always be non-empty
-      final List<PartitionReport> reportsOfPartition = partitionToReports.get(partition);
+      final List<PartitionReport> reportsOfPartition = entry.getValue();
       final BuildingShardSpec<?> shardSpec = reportsOfPartition
           .get(0).getPartitionStat().getSecondaryPartition()
           .convert(partitionId.getAndIncrement());
