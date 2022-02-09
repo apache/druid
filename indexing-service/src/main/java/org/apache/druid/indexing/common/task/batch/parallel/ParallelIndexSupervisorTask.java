@@ -933,17 +933,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    // Sort by (interval, bucketId) to maintain order of partitionIds within interval
-    final Map<PartitionStat, List<String>> partitionStatToTaskIds = new TreeMap<>(
+    // Create a map from partition to list of reports (PartitionStat and subTaskId)
+    final Map<Partition, List<PartitionReport>> partitionToReports = new TreeMap<>(
+        // Sort by (interval, bucketId) to maintain order of partitionIds within interval
         Comparator
-            .comparingLong((PartitionStat stat) -> stat.getInterval().getStartMillis())
-            .thenComparingInt(PartitionStat::getBucketId)
+            .comparingLong((Partition partition) -> partition.getInterval().getStartMillis())
+            .thenComparingLong(stat -> stat.getInterval().getEndMillis())
+            .thenComparingInt(Partition::getBucketId)
     );
     subTaskIdToReport.forEach(
         (subTaskId, report) -> report.getPartitionStats().forEach(
-            partitionStat -> partitionStatToTaskIds
-                .computeIfAbsent(partitionStat, p -> new ArrayList<>())
-                .add(subTaskId)
+            partitionStat -> partitionToReports
+                .computeIfAbsent(Partition.fromStat(partitionStat), p -> new ArrayList<>())
+                .add(new PartitionReport(subTaskId, partitionStat))
         )
     );
 
@@ -951,8 +953,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Interval prevInterval = null;
     final AtomicInteger partitionId = new AtomicInteger(0);
-    for (PartitionStat partitionStat : partitionStatToTaskIds.keySet()) {
-      final Interval interval = partitionStat.getInterval();
+    for (Partition partition : partitionToReports.keySet()) {
+      final Interval interval = partition.getInterval();
 
       // Reset the partitionId if this is a new interval
       if (!interval.equals(prevInterval)) {
@@ -960,16 +962,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         prevInterval = interval;
       }
 
-      // Create a PartitionLocation for each unique pair of PartitionStat and subTaskId
-      final BuildingShardSpec<?> shardSpec = partitionStat
-          .getSecondaryPartition().convert(partitionId.getAndIncrement());
-      List<PartitionLocation> locationsOfPartition = partitionStatToTaskIds
-          .get(partitionStat)
+      // This list would always be non-empty
+      final List<PartitionReport> reportsOfPartition = partitionToReports.get(partition);
+      final BuildingShardSpec<?> shardSpec = reportsOfPartition
+          .get(0).getPartitionStat().getSecondaryPartition()
+          .convert(partitionId.getAndIncrement());
+      List<PartitionLocation> locationsOfPartition = reportsOfPartition
           .stream()
-          .map(subTaskId -> partitionStat.toPartitionLocation(subTaskId, shardSpec))
+          .map(report -> report.getPartitionStat().toPartitionLocation(report.getSubTaskId(), shardSpec))
           .collect(Collectors.toList());
 
-      Partition partition = new Partition(interval, partitionStat.getBucketId());
       partitionToLocations.put(partition, locationsOfPartition);
     }
 
@@ -1646,6 +1648,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final Interval interval;
     final int bucketId;
 
+    private static Partition fromStat(PartitionStat partitionStat)
+    {
+      return new Partition(partitionStat.getInterval(), partitionStat.getBucketId());
+    }
+
     Partition(Interval interval, int bucketId)
     {
       this.interval = interval;
@@ -1689,6 +1696,31 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
              "interval=" + interval +
              ", bucketId=" + bucketId +
              '}';
+    }
+  }
+
+  /**
+   * Encapsulates a {@link PartitionStat} and the subTaskId that generated it.
+   */
+  private static class PartitionReport
+  {
+    private final PartitionStat partitionStat;
+    private final String subTaskId;
+
+    PartitionReport(String subTaskId, PartitionStat partitionStat)
+    {
+      this.subTaskId = subTaskId;
+      this.partitionStat = partitionStat;
+    }
+
+    String getSubTaskId()
+    {
+      return subTaskId;
+    }
+
+    PartitionStat getPartitionStat()
+    {
+      return partitionStat;
     }
   }
 
