@@ -312,10 +312,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
         status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-        rank:
-          IngestionView.statusRanking[
-            d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode
-          ],
+        rank: IngestionView.statusRanking[
+          d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode
+        ],
       };
     });
   };
@@ -713,13 +712,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
   }
 
   renderTaskTable() {
-    const {
-      tasksState,
-      taskFilter,
-      groupTasksBy,
-      hiddenTaskColumns,
-      supervisorFilter,
-    } = this.state;
+    const { tasksState, taskFilter, groupTasksBy, hiddenTaskColumns, supervisorFilter } =
+      this.state;
 
     const tasks = tasksState.data || [];
     return (

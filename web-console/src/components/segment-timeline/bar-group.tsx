@@ -40,14 +40,8 @@ export class BarGroup extends React.Component<BarGroupProps> {
   }
 
   render(): JSX.Element[] | null {
-    const {
-      dataToRender,
-      changeActiveDatasource,
-      xScale,
-      yScale,
-      onHoverBar,
-      barWidth,
-    } = this.props;
+    const { dataToRender, changeActiveDatasource, xScale, yScale, onHoverBar, barWidth } =
+      this.props;
     if (dataToRender === undefined) return null;
 
     return dataToRender.map((entry: BarUnitData, i: number) => {
