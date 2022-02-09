@@ -110,8 +110,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -728,7 +729,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     // 2. Partial segment merge phase
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
+    Map<Partition, List<PartitionLocation>> partitionToLocations =
         getPartitionToLocations(indexingRunner.getReports());
     final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
@@ -814,7 +815,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations =
+    Map<Partition, List<PartitionLocation>> partitionToLocations =
         getPartitionToLocations(indexingRunner.getReports());
     final List<PartialSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
@@ -928,55 +929,48 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * PartitionLocations. Note that the bucketId maybe different from the final
    * partitionId (refer to {@link BuildingShardSpec} for more details).
    */
-  private static Map<Pair<Interval, Integer>, List<PartitionLocation>> getPartitionToLocations(
+  static Map<Partition, List<PartitionLocation>> getPartitionToLocations(
       Map<String, GeneratedPartitionsReport> subTaskIdToReport
   )
   {
-    // Create a set of PartitionStats, sorted by (interval, bucketId, subTaskId).
-    // This ensures that within an interval, partitionIds are assigned in the
-    // same order as bucketIds. Comparison on subTaskId ensures that different
-    // PartitionStats of the same partition are not ignored as duplicates.
-    final Set<Pair<PartitionStat, String>> partitionStatTaskIdPairs = new TreeSet<>(
+    // Sort by (interval, bucketId) to maintain order of partitionIds within interval
+    final Map<PartitionStat, List<String>> partitionStatToTaskIds = new TreeMap<>(
         Comparator
-            .comparingLong((Pair<PartitionStat, String> pair) -> pair.lhs.getInterval().getStartMillis())
-            .thenComparingInt(pair -> pair.lhs.getBucketId())
-            .thenComparing(pair -> pair.rhs)
+            .comparingLong((PartitionStat stat) -> stat.getInterval().getStartMillis())
+            .thenComparingInt(PartitionStat::getBucketId)
     );
     subTaskIdToReport.forEach(
         (subTaskId, report) -> report.getPartitionStats().forEach(
-            partitionStat -> partitionStatTaskIdPairs.add(Pair.of(partitionStat, subTaskId))
+            partitionStat -> partitionStatToTaskIds
+                .computeIfAbsent(partitionStat, p -> new ArrayList<>())
+                .add(subTaskId)
         )
     );
 
-    // Map from partition (interval + bucketId) to list of partition locations
-    final Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations = new HashMap<>();
-    final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> partitionToShardSpecs = new HashMap<>();
+    final Map<Partition, List<PartitionLocation>> partitionToLocations = new HashMap<>();
 
-    // Create a location for each PartitionStat
     Interval prevInterval = null;
     final AtomicInteger partitionId = new AtomicInteger(0);
-    for (Pair<PartitionStat, String> partitionStatTaskIdPair : partitionStatTaskIdPairs) {
-      final PartitionStat partitionStat = partitionStatTaskIdPair.lhs;
+    for (PartitionStat partitionStat : partitionStatToTaskIds.keySet()) {
+      final Interval interval = partitionStat.getInterval();
 
       // Reset the partitionId if this is a new interval
-      final Interval interval = partitionStat.getInterval();
       if (!interval.equals(prevInterval)) {
         partitionId.set(0);
         prevInterval = interval;
       }
 
-      // Create a shard spec for this partition if not already created
-      final Pair<Interval, Integer> partition = Pair.of(interval, partitionStat.getBucketId());
-      BuildingShardSpec<?> shardSpec = partitionToShardSpecs.computeIfAbsent(
-          partition,
-          p -> partitionStat.getSecondaryPartition()
-                            .convert(partitionId.getAndIncrement())
-      );
+      // Create a PartitionLocation for each unique pair of PartitionStat and subTaskId
+      final BuildingShardSpec<?> shardSpec = partitionStat
+          .getSecondaryPartition().convert(partitionId.getAndIncrement());
+      List<PartitionLocation> locationsOfPartition = partitionStatToTaskIds
+          .get(partitionStat)
+          .stream()
+          .map(subTaskId -> partitionStat.toPartitionLocation(subTaskId, shardSpec))
+          .collect(Collectors.toList());
 
-      final String subTaskId = partitionStatTaskIdPair.rhs;
-      partitionToLocations
-          .computeIfAbsent(partition, p -> new ArrayList<>())
-          .add(partitionStat.toPartitionLocation(subTaskId, shardSpec));
+      Partition partition = new Partition(interval, partitionStat.getBucketId());
+      partitionToLocations.put(partition, locationsOfPartition);
     }
 
     return partitionToLocations;
@@ -984,7 +978,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private static List<PartialSegmentMergeIOConfig> createGenericMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<PartitionLocation>> partitionToLocations
+      Map<Partition, List<PartitionLocation>> partitionToLocations
   )
   {
     return createMergeIOConfigs(
@@ -997,7 +991,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   @VisibleForTesting
   static <M extends PartialSegmentMergeIOConfig, L extends PartitionLocation> List<M> createMergeIOConfigs(
       int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<L>> partitionToLocations,
+      Map<Partition, List<L>> partitionToLocations,
       Function<List<L>, M> createPartialSegmentMergeIOConfig
   )
   {
@@ -1011,7 +1005,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // Randomly shuffle partitionIds to evenly distribute partitions of potentially different sizes
     // This will be improved once we collect partition stats properly.
     // See PartitionStat in GeneratedPartitionsReport.
-    final List<Pair<Interval, Integer>> partitions = new ArrayList<>(partitionToLocations.keySet());
+    final List<Partition> partitions = new ArrayList<>(partitionToLocations.keySet());
     Collections.shuffle(partitions, ThreadLocalRandom.current());
 
     final List<M> assignedPartitionLocations = new ArrayList<>(numMergeTasks);
@@ -1020,7 +1014,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       final List<L> assignedToSameTask = partitions
           .subList(partitionBoundaries.lhs, partitionBoundaries.rhs)
           .stream()
-          .flatMap(intervalAndPartitionId -> partitionToLocations.get(intervalAndPartitionId).stream())
+          .flatMap(partition -> partitionToLocations.get(partition).stream())
           .collect(Collectors.toList());
       assignedPartitionLocations.add(createPartialSegmentMergeIOConfig.apply(assignedToSameTask));
     }
@@ -1641,4 +1635,61 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     return Response.ok(doGetLiveReports(full)).build();
   }
+
+  /**
+   * Represents a partition uniquely identified by an Interval and a bucketId.
+   *
+   * @see org.apache.druid.timeline.partition.BucketNumberedShardSpec
+   */
+  static class Partition
+  {
+    final Interval interval;
+    final int bucketId;
+
+    Partition(Interval interval, int bucketId)
+    {
+      this.interval = interval;
+      this.bucketId = bucketId;
+    }
+
+    public int getBucketId()
+    {
+      return bucketId;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Partition that = (Partition) o;
+      return getBucketId() == that.getBucketId()
+             && Objects.equals(getInterval(), that.getInterval());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(getInterval(), getBucketId());
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Partition{" +
+             "interval=" + interval +
+             ", bucketId=" + bucketId +
+             '}';
+    }
+  }
+
 }
