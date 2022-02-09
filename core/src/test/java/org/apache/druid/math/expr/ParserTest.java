@@ -726,6 +726,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Expr parsedFlat = Parser.parse(expr, ExprMacroTable.nil(), true);
     Assert.assertTrue(parsed.isLiteral());
     Assert.assertTrue(parsedFlat.isLiteral());
+    Assert.assertFalse(parsed.isIdentifier());
     Assert.assertEquals(type, parsed.getOutputType(emptyBinding));
     Assert.assertEquals(type, parsedFlat.getOutputType(emptyBinding));
     Assert.assertEquals(expected, parsed.getLiteralValue());
@@ -770,6 +771,11 @@ public class ParserTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    if (parsed instanceof IdentifierExpr) {
+      Assert.assertTrue(parsed.isIdentifier());
+    } else {
+      Assert.assertFalse(parsed.isIdentifier());
+    }
     final Expr.BindingAnalysis deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
     Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());

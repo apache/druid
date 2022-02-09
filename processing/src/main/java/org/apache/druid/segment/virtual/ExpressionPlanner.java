@@ -69,6 +69,8 @@ public class ExpressionPlanner
     // check and set traits which allow optimized selectors to be created
     if (columns.isEmpty()) {
       traits.add(ExpressionPlan.Trait.CONSTANT);
+    } else if (expression.isIdentifier()) {
+      traits.add(ExpressionPlan.Trait.IDENTIFIER);
     } else if (columns.size() == 1) {
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = inspector.getColumnCapabilities(column);
@@ -105,7 +107,14 @@ public class ExpressionPlanner
 
     // if we didn't eliminate this expression as a single input scalar or mappable expression, it might need
     // automatic transformation to map across multi-valued inputs (or row by row detection in the worst case)
-    if (ExpressionPlan.none(traits, ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+    if (
+        ExpressionPlan.none(
+            traits,
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
+            ExpressionPlan.Trait.CONSTANT,
+            ExpressionPlan.Trait.IDENTIFIER
+        )
+    ) {
       final Set<String> definitelyMultiValued = new HashSet<>();
       final Set<String> definitelyArray = new HashSet<>();
       for (String column : analysis.getRequiredBindings()) {
