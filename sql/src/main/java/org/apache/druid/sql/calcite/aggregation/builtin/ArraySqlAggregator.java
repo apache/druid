@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -118,8 +117,7 @@ public class ArraySqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
     if (aggregateCall.isDistinct()) {

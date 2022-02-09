@@ -32,7 +32,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
@@ -41,6 +40,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -341,22 +341,27 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      final StringBuilder builder;
-      if (isAllowList()) {
-        builder = new StringBuilder("filter((x) -> array_contains(");
-      } else {
-        builder = new StringBuilder("filter((x) -> !array_contains(");
-      }
+      final DruidExpression.ExpressionBuilder builder = (args) -> {
+        final StringBuilder expressionBuilder;
+        if (isAllowList()) {
+          expressionBuilder = new StringBuilder("filter((x) -> array_contains(");
+        } else {
+          expressionBuilder = new StringBuilder("filter((x) -> !array_contains(");
+        }
 
-      builder.append(druidExpressions.get(1).getExpression())
-             .append(", x), ")
-             .append(druidExpressions.get(0).getExpression())
-             .append(")");
+        expressionBuilder.append(args.get(1).getExpression())
+                         .append(", x), ")
+                         .append(args.get(0).getExpression())
+                         .append(")");
+        return expressionBuilder.toString();
+      };
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
-        DruidExpression druidExpression = DruidExpression.forVirtualColumn(
-            builder.toString(),
-            (name, outputType, macroTable) -> new ListFilteredVirtualColumn(
+        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            builder,
+            druidExpressions,
+            (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
                 name,
                 druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 ImmutableSet.copyOf(lit),
@@ -367,18 +372,17 @@ public class MultiValueStringOperatorConversions
         // if the join expression VC registry is present, it means that this expression is part of a join condition
         // and since that's the case, create virtual column here itself for optimized usage in join matching
         if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          VirtualColumn vc = plannerContext.getJoinExpressionVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
-              plannerContext,
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
               druidExpression,
               ColumnType.STRING
           );
-          return DruidExpression.fromColumn(vc.getOutputName());
+          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
         }
 
         return druidExpression;
       }
 
-      return DruidExpression.fromExpression(builder.toString());
+      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
     }
   }
 

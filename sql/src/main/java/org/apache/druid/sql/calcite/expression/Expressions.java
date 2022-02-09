@@ -50,8 +50,8 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
@@ -65,6 +65,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -222,11 +223,12 @@ public class Expressions
     // Translate field references.
     final RexInputRef ref = (RexInputRef) rexNode;
     final String columnName = rowSignature.getColumnName(ref.getIndex());
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getIndex());
     if (columnName == null) {
       throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
-    return DruidExpression.fromColumn(columnName);
+    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
   }
 
   private static DruidExpression rexCallToDruidExpression(
@@ -258,7 +260,7 @@ public class Expressions
         if (postAggregator != null) {
           postAggregatorVisitor.addPostAgg(postAggregator);
           String exprName = postAggregator.getName();
-          return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
+          return DruidExpression.ofColumn(postAggregator.getType(rowSignature), exprName);
         }
       }
 
@@ -272,6 +274,7 @@ public class Expressions
     }
   }
 
+  @Nullable
   private static DruidExpression literalToDruidExpression(
       final PlannerContext plannerContext,
       final RexNode rexNode
@@ -280,32 +283,34 @@ public class Expressions
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
 
     // Translate literal.
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(milliseconds));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(milliseconds));
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(months));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
       } else {
-        return DruidExpression.fromExpression(
+        return DruidExpression.ofLiteral(
+            columnType,
             DruidExpression.numberLiteral(
                 Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
             )
         );
       }
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
     } else {
       // Can't translate other literals.
       return null;
@@ -470,14 +475,13 @@ public class Expressions
             druidExpression.getSimpleExtraction().getExtractionFn()
         );
       } else if (virtualColumnRegistry != null) {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
-            virtualColumn.getOutputName(),
+            virtualColumn,
             NullHandling.defaultStringValue(),
             null
         );
@@ -559,13 +563,10 @@ public class Expressions
         column = lhsExpression.getSimpleExtraction().getColumn();
         extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
       } else if (virtualColumnRegistry != null) {
-        VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             lhsExpression,
             lhs.getType()
         );
-
-        column = virtualLhs.getOutputName();
         extractionFn = null;
       } else {
         return null;

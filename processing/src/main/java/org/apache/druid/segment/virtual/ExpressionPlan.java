@@ -46,6 +46,10 @@ public class ExpressionPlan
       */
     CONSTANT,
     /**
+     * expression is a simple identifier expression, do not transform
+     */
+    IDENTIFIER,
+    /**
      * expression has a single, single valued input, and is dictionary encoded if the value is a string, and does
      * not produce non-scalar output
      */
