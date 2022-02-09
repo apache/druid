@@ -1026,7 +1026,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void isClosedShardEmpty()
+  public void testIsClosedShardEmpty()
   {
     AmazonKinesis mockKinesis = EasyMock.mock(AmazonKinesis.class);
     KinesisRecordSupplier target = new KinesisRecordSupplier(mockKinesis,

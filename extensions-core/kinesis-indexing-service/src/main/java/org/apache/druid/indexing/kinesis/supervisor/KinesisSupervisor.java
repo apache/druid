@@ -442,7 +442,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected Set<String> getIgnorablePartitionIds()
   {
     updateClosedShardCache();
-    return ImmutableSet.copyOf(emptyClosedShardIds);
+    return getEmptyClosedShardIds();
   }
 
   private void updateClosedShardCache()
@@ -564,5 +564,21 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
 
     // Make an expensive call to kinesis
     return ((KinesisRecordSupplier) recordSupplier).isClosedShardEmpty(stream, shardId);
+  }
+
+  /**
+   * @return immutable copy of cache for empty, closed shards
+   */
+  Set<String> getEmptyClosedShardIds()
+  {
+    return ImmutableSet.copyOf(emptyClosedShardIds);
+  }
+
+  /**
+   * @return immutable copy of cache for non-empty, closed shards
+   */
+  Set<String> getNonEmptyClosedShardIds()
+  {
+    return ImmutableSet.copyOf(nonEmptyClosedShardIds);
   }
 }
