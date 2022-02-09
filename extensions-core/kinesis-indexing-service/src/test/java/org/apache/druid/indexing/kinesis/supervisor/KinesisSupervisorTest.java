@@ -5002,8 +5002,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   private Set<Shard> getActiveShards(Shard openShard, boolean isOpenShardActive,
-                                      Shard emptyClosedShard, boolean isEmptyClosedShardActive,
-                                      Shard nonEmptyClosedShard, boolean isNonEmptyClosedShardActive)
+                                     Shard emptyClosedShard, boolean isEmptyClosedShardActive,
+                                     Shard nonEmptyClosedShard, boolean isNonEmptyClosedShardActive)
   {
     ImmutableSet.Builder<Shard> activeShards = ImmutableSet.builder();
 
