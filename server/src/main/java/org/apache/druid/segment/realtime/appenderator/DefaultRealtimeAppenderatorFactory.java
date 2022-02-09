@@ -125,7 +125,8 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
             0
         ),
-        true
+        true,
+        false
     );
   }
 

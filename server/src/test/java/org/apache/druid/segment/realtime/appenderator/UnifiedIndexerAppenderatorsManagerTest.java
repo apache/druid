@@ -112,6 +112,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
         new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
+        true,
         true
     );
   }
@@ -177,8 +178,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // Three forms of persist.
 
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, null));
-    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null));
+    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, null, true));
+    Assert.assertEquals(file, limitedPoolIndexMerger.persist(null, null, file, null, null, true));
 
     // Need a mocked index for this test, since getInterval is called on it.
     final IncrementalIndex index = EasyMock.createMock(IncrementalIndex.class);
@@ -202,7 +203,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     Assert.assertThrows(
         "failed",
         RuntimeException.class, // Wrapped IOException
-        () -> limitedPoolIndexMerger.persist(null, null, file, null, null, null)
+        () -> limitedPoolIndexMerger.persist(null, null, file, null, null, null, true)
     );
   }
 
@@ -230,7 +231,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
             null,
             null,
             null,
-            -1
+            -1,
+            true
         )
     );
   }
@@ -260,7 +262,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
             null,
             null,
             null,
-            -1
+            -1,
+            true
         )
     );
   }
@@ -278,7 +281,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
-    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
+    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1, true));
   }
 
   /**
@@ -305,7 +308,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        boolean storeEmptyColumns
     ) throws IOException
     {
       if (failCalls) {
@@ -326,7 +330,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         IndexSpec indexSpecForIntermediatePersists,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
+        int maxColumnsToMerge,
+        boolean storeEmptyColumns
     ) throws IOException
     {
       if (failCalls) {
@@ -344,7 +349,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         File outDir,
         DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
-        int maxColumnsToMerge
+        int maxColumnsToMerge,
+        boolean storeEmptyColumns
     ) throws IOException
     {
       if (failCalls) {

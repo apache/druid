@@ -1346,7 +1346,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         tmpDirMerged,
         null,
         indexSpec,
-        -1
+        -1,
+        true
     );
   }
 
@@ -1397,7 +1398,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         tmpDirMerged,
         null,
         indexSpec,
-        -1
+        -1,
+        true
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1469,7 +1471,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         tmpDirMerged,
         null,
         indexSpec,
-        -1
+        -1,
+        true
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(indexIO.loadIndex(
         merged)));
@@ -1534,7 +1537,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         tmpDirMerged,
         null,
         indexSpec,
-        -1
+        -1,
+        true
     );
 
     // Since D was not present in any of the indices, it is not present in the output
@@ -1580,7 +1584,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         tmpDirMerged,
         null,
         indexSpec,
-        -1
+        -1,
+        true
     );
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(
         closer.closeLater(indexIO.loadIndex(merged))

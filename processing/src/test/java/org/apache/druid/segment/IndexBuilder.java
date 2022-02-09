@@ -193,7 +193,8 @@ public class IndexBuilder
               indexSpec,
               new BaseProgressIndicator(),
               null,
-              -1
+              -1,
+              true
           )
       );
       for (QueryableIndex index : persisted) {

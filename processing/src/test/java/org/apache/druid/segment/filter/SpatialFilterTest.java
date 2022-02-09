@@ -498,9 +498,9 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
       thirdFile.deleteOnExit();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
-      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
-      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
+      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null, true);
+      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, indexSpec, null, true);
+      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null, true);
 
       QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(

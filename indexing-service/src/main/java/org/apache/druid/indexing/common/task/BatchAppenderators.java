@@ -45,7 +45,8 @@ public final class BatchAppenderators
       AppenderatorConfig appenderatorConfig,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return newAppenderator(
@@ -58,7 +59,8 @@ public final class BatchAppenderators
         toolbox.getSegmentPusher(),
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 
@@ -72,7 +74,8 @@ public final class BatchAppenderators
       DataSegmentPusher segmentPusher,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.OPEN_SEGMENTS) {
@@ -87,8 +90,9 @@ public final class BatchAppenderators
           toolbox.getIndexMergerV9(),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
-          );
+          useMaxMemoryEstimates,
+          storeEmptyColumns
+      );
     } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS) {
       return appenderatorsManager.createClosedSegmentsOfflineAppenderatorForTask(
           taskId,
@@ -101,8 +105,9 @@ public final class BatchAppenderators
           toolbox.getIndexMergerV9(),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
-          );
+          useMaxMemoryEstimates,
+          storeEmptyColumns
+      );
     } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS) {
       return appenderatorsManager.createOfflineAppenderatorForTask(
           taskId,
@@ -115,8 +120,9 @@ public final class BatchAppenderators
           toolbox.getIndexMergerV9(),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
-          );
+          useMaxMemoryEstimates,
+          storeEmptyColumns
+      );
     } else {
       throw new IAE("Invalid batchProcesingMode[%s]", toolbox.getConfig().getBatchProcessingMode());
     }

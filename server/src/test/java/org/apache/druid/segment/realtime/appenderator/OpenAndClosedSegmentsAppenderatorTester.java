@@ -223,7 +223,9 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true);
+          true,
+          true
+      );
     } else {
       appenderator = Appenderators.createClosedSegmentsOffline(
           schema.getDataSource(),
@@ -236,7 +238,9 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true);
+          true,
+          true
+      );
     }
   }
 

@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -269,7 +270,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             segmentFilesToMerge,
             tuningConfig.getMaxNumSegmentsToMerge(),
             persistDir,
-            0
+            0,
+            getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, toolbox.getConfig().isStoreEmptyColumns())
         );
         final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
                                                .map(AggregatorFactory::getName)
@@ -313,7 +315,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       List<File> indexes,
       int maxNumSegmentsToMerge,
       File baseOutDir,
-      int outDirSuffix
+      int outDirSuffix,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     int suffix = outDirSuffix;
@@ -346,7 +349,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               tuningConfig.getIndexSpecForIntermediatePersists(),
               new BaseProgressIndicator(),
               tuningConfig.getSegmentWriteOutMediumFactory(),
-              tuningConfig.getMaxColumnsToMerge()
+              tuningConfig.getMaxColumnsToMerge(),
+              storeEmptyColumns
           )
       );
 
@@ -364,7 +368,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
           mergedFiles,
           maxNumSegmentsToMerge,
           baseOutDir,
-          suffix
+          suffix,
+          storeEmptyColumns
       );
     }
   }

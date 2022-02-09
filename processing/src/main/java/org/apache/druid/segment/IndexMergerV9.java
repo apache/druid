@@ -183,7 +183,8 @@ public class IndexMergerV9 implements IndexMerger
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
       final IndexSpec indexSpec,
-      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      final boolean storeEmptyColumns
   ) throws IOException
   {
     progress.start();
@@ -249,7 +250,7 @@ public class IndexMergerV9 implements IndexMerger
                 indexSpec,
                 segmentWriteOutMedium,
                 dimCapabilities.get(i),
-                explicitDimensions.contains(handler.getDimensionName()),
+                storeEmptyColumns && explicitDimensions.contains(handler.getDimensionName()),
                 progress,
                 closer
             )
@@ -838,7 +839,8 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     if (index.isEmpty()) {
@@ -879,7 +881,8 @@ public class IndexMergerV9 implements IndexMerger
         indexSpec,
         progress,
         segmentWriteOutMediumFactory,
-        -1
+        -1,
+        storeEmptyColumns
     );
   }
 
@@ -894,7 +897,8 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
+      int maxColumnsToMerge,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     return multiphaseMerge(
@@ -907,7 +911,8 @@ public class IndexMergerV9 implements IndexMerger
         indexSpecForIntermediatePersists,
         progress,
         segmentWriteOutMediumFactory,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        storeEmptyColumns
     );
   }
 
@@ -919,7 +924,8 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       DimensionsSpec dimensionsSpec,
       IndexSpec indexSpec,
-      int maxColumnsToMerge
+      int maxColumnsToMerge,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     return multiphaseMerge(
@@ -932,7 +938,8 @@ public class IndexMergerV9 implements IndexMerger
         indexSpec,
         new BaseProgressIndicator(),
         null,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        storeEmptyColumns
     );
   }
 
@@ -946,7 +953,8 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
+      int maxColumnsToMerge,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -963,7 +971,8 @@ public class IndexMergerV9 implements IndexMerger
           outDir,
           indexSpec,
           progress,
-          segmentWriteOutMediumFactory
+          segmentWriteOutMediumFactory,
+          storeEmptyColumns
       );
     }
 
@@ -998,7 +1007,8 @@ public class IndexMergerV9 implements IndexMerger
               phaseOutDir,
               isFinalPhase ? indexSpec : indexSpecForIntermediatePersists,
               progress,
-              segmentWriteOutMediumFactory
+              segmentWriteOutMediumFactory,
+              storeEmptyColumns
           );
           currentOutputs.add(phaseOutput);
         }
@@ -1089,7 +1099,8 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean storeEmptyColumns
   ) throws IOException
   {
     final List<String> mergedDimensions = IndexMerger.getMergedDimensions(indexes, dimensionsSpec);
@@ -1149,7 +1160,8 @@ public class IndexMergerV9 implements IndexMerger
         rowMergerFn,
         true,
         indexSpec,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        storeEmptyColumns
     );
   }
 

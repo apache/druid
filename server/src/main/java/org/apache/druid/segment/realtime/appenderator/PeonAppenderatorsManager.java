@@ -79,7 +79,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     if (realtimeAppenderator != null) {
@@ -106,7 +107,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           cachePopulatorStats,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
     }
     return realtimeAppenderator;
@@ -124,7 +126,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -142,7 +145,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       return batchAppenderator;
     }
@@ -160,7 +164,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -178,7 +183,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       return batchAppenderator;
     }
@@ -196,7 +202,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
@@ -214,7 +221,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       return batchAppenderator;
     }

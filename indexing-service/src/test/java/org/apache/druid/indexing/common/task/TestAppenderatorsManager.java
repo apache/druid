@@ -68,7 +68,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -90,7 +91,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cachePopulatorStats,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        true,
+        storeEmptyColumns
     );
     return realtimeAppenderator;
   }
@@ -107,7 +109,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return Appenderators.createOpenSegmentsOffline(
@@ -121,7 +124,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        true,
+        storeEmptyColumns
     );
   }
 
@@ -137,7 +141,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return Appenderators.createClosedSegmentsOffline(
@@ -151,7 +156,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 
@@ -167,7 +173,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return Appenderators.createOffline(
@@ -181,7 +188,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        true,
+        storeEmptyColumns
     );
   }
 

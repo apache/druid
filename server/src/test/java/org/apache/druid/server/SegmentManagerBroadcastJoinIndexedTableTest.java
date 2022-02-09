@@ -356,7 +356,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
             null,
             factory
         ),
-        null
+        null,
+        true
     );
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, factory);

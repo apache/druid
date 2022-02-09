@@ -601,7 +601,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       return HadoopDruidIndexerConfig.INDEX_MERGER_V9
-          .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null);
+          .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null, false);
     }
 
     protected File mergeQueryableIndex(
@@ -623,7 +623,8 @@ public class IndexGeneratorJob implements Jobby
               config.getIndexSpecForIntermediatePersists(),
               progressIndicator,
               null,
-              -1
+              -1,
+              false
           );
     }
 

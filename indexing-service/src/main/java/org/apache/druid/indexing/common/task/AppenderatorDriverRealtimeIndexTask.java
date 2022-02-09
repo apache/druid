@@ -781,7 +781,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, toolbox.getConfig().isStoreEmptyColumns())
     );
   }
 

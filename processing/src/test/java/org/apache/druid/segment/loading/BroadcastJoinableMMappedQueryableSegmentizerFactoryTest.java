@@ -99,7 +99,8 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
             null,
             expectedFactory
         ),
-        null
+        null,
+        true
     );
 
     File factoryJson = new File(persistedSegmentRoot, "factory.json");

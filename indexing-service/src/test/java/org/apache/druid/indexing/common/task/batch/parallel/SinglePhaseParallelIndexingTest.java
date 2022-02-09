@@ -373,6 +373,56 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   }
 
   @Test
+  public void testRunInParallelIngestNullColumn_storeEmptyColumnsOff_shouldNotStoreEmptyColumns()
+  {
+    if (!useInputFormatApi) {
+      return;
+    }
+    // Ingest all data.
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                "dataSource",
+                DEFAULT_TIMESTAMP_SPEC,
+                DEFAULT_DIMENSIONS_SPEC.withDimensions(
+                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim", "unknownDim"))
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("val", "val")
+                },
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2017-12/P1M"))
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new SettableSplittableLocalInputSource(inputDir, VALID_INPUT_SOURCE_FILTER, true),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING
+        ),
+        null
+    );
+
+    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+    }
+  }
+
+  @Test
   public void testRunInParallelTaskReports()
   {
     ParallelIndexSupervisorTask task = runTestTask(

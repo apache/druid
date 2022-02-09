@@ -258,6 +258,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
+              true,
               true
           );
           break;
@@ -281,6 +282,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
+              true,
               true
           );
 
@@ -305,6 +307,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
+              true,
               true
           );
           break;
@@ -580,7 +583,8 @@ public class BatchAppenderatorsTest
                 null,
                 false,
                 false,
-                mode.name()
+                mode.name(),
+                null
             ),
             null,
             null,

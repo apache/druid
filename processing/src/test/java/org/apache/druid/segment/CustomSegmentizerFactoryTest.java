@@ -89,7 +89,8 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
             null,
             null
         ),
-        null
+        null,
+        true
     );
 
     File factoryJson = new File(persisted, "factory.json");
@@ -114,7 +115,8 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
             null,
             new CustomSegmentizerFactory()
         ),
-        null
+        null,
+        true
     );
 
     File factoryJson = new File(persisted, "factory.json");

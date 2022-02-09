@@ -443,9 +443,9 @@ public class SpatialFilterBonusTest
       thirdFile.deleteOnExit();
       mergedFile.deleteOnExit();
 
-      indexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
-      indexMerger.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
-      indexMerger.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
+      indexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec, null, true);
+      indexMerger.persist(second, DATA_INTERVAL, secondFile, indexSpec, null, true);
+      indexMerger.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null, true);
 
       QueryableIndex mergedRealtime = indexIO.loadIndex(
           indexMerger.mergeQueryableIndex(

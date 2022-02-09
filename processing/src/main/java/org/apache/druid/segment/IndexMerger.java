@@ -189,9 +189,12 @@ public interface IndexMerger
   }
 
   /**
-   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory)}
+   * This method should be used only for testing.
+   *
+   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, boolean)}
    * without a progress indicator and with interval set to {@link IncrementalIndex#getInterval()}.
    */
+  @VisibleForTesting
   default File persist(
       IncrementalIndex index,
       File outDir,
@@ -205,12 +208,13 @@ public interface IndexMerger
         outDir,
         indexSpec,
         new BaseProgressIndicator(),
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        true
     );
   }
 
   /**
-   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory)}
+   * Equivalent to {@link #persist(IncrementalIndex, Interval, File, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, boolean)}
    * without a progress indicator.
    */
   default File persist(
@@ -218,10 +222,19 @@ public interface IndexMerger
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean storeEmptyColumns
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
+    return persist(
+        index,
+        dataInterval,
+        outDir,
+        indexSpec,
+        new BaseProgressIndicator(),
+        segmentWriteOutMediumFactory,
+        storeEmptyColumns
+    );
   }
 
   /**
@@ -248,14 +261,15 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean storeEmptyColumns
   ) throws IOException;
 
   /**
    * Merge a collection of {@link QueryableIndex}.
    *
    * Only used as a convenience method in tests. In production code, use the full version
-   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int, boolean)}.
    */
   @VisibleForTesting
   default File mergeQueryableIndex(
@@ -278,7 +292,8 @@ public interface IndexMerger
         indexSpec,
         new BaseProgressIndicator(),
         segmentWriteOutMediumFactory,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        true
     );
   }
 
@@ -295,14 +310,15 @@ public interface IndexMerger
       IndexSpec indexSpecForIntermediatePersists,
       ProgressIndicator progress,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      int maxColumnsToMerge
+      int maxColumnsToMerge,
+      boolean storeEmptyColumns
   ) throws IOException;
 
   /**
    * Only used as a convenience method in tests.
    *
    * In production code, to merge multiple {@link QueryableIndex}, use
-   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int)}.
+   * {@link #mergeQueryableIndex(List, boolean, AggregatorFactory[], DimensionsSpec, File, IndexSpec, IndexSpec, ProgressIndicator, SegmentWriteOutMediumFactory, int, boolean)}.
    * To merge multiple {@link IncrementalIndex}, call one of the {@link #persist} methods and then merge the resulting
    * {@link QueryableIndex}.
    */
@@ -314,7 +330,8 @@ public interface IndexMerger
       File outDir,
       DimensionsSpec dimensionsSpec,
       IndexSpec indexSpec,
-      int maxColumnsToMerge
+      int maxColumnsToMerge,
+      boolean storeEmptyColumns
   ) throws IOException;
 
   /**

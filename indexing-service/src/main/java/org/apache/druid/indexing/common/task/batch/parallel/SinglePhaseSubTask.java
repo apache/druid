@@ -406,7 +406,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         tuningConfig,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, toolbox.getConfig().isStoreEmptyColumns())
     );
     boolean exceptionOccurred = false;
     try (

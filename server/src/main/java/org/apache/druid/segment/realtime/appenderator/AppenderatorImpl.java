@@ -175,6 +175,8 @@ public class AppenderatorImpl implements Appenderator
 
   private final boolean isOpenSegments;
   private final boolean useMaxMemoryEstimates;
+  private final boolean storeEmptyColumns;
+
   /**
    * Use next Map to store metadata (File, SegmentId) for a hydrant for batch appenderator
    * in order to facilitate the mapping of the QueryableIndex associated with a given hydrant
@@ -211,7 +213,8 @@ public class AppenderatorImpl implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean isOpenSegments,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     this.myId = id;
@@ -240,13 +243,13 @@ public class AppenderatorImpl implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
+    this.storeEmptyColumns = storeEmptyColumns;
 
     if (isOpenSegments) {
-      log.info("Running open segments appenderator");
+      log.debug("Running open segments appenderator");
     } else {
-      log.info("Running closed segments appenderator");
+      log.debug("Running closed segments appenderator");
     }
-
   }
 
   @Override
@@ -503,7 +506,7 @@ public class AppenderatorImpl implements Appenderator
           useMaxMemoryEstimates,
           null
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -930,7 +933,8 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getIndexSpecForIntermediatePersists(),
             new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
-            tuningConfig.getMaxColumnsToMerge()
+            tuningConfig.getMaxColumnsToMerge(),
+            storeEmptyColumns
         );
 
         mergeFinishTime = System.nanoTime();
@@ -1351,7 +1355,7 @@ public class AppenderatorImpl implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
@@ -1527,7 +1531,8 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
             tuningConfig.getIndexSpecForIntermediatePersists(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            storeEmptyColumns
         );
 
         log.info(
@@ -1595,7 +1600,7 @@ public class AppenderatorImpl implements Appenderator
     return total;
   }
 
-  private int calculateSinkMemoryInUsed(Sink sink)
+  private int calculateSinkMemoryInUsed()
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;

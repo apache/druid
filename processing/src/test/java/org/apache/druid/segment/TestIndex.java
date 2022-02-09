@@ -199,8 +199,8 @@ public class TestIndex
       bottomFile.deleteOnExit();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
-      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null, true);
+      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, INDEX_SPEC, null, true);
 
       return INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(

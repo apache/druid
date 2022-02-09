@@ -116,6 +116,7 @@ public class BatchAppenderator implements Appenderator
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
   private final boolean useMaxMemoryEstimates;
+  private final boolean storeEmptyColumns;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -162,7 +163,8 @@ public class BatchAppenderator implements Appenderator
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     this.myId = id;
@@ -180,6 +182,7 @@ public class BatchAppenderator implements Appenderator
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+    this.storeEmptyColumns = storeEmptyColumns;
   }
 
   @Override
@@ -737,8 +740,6 @@ public class BatchAppenderator implements Appenderator
       final Sink sink
   )
   {
-
-
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
     final File mergedTarget = new File(persistDir, "merged");
@@ -802,7 +803,8 @@ public class BatchAppenderator implements Appenderator
             tuningConfig.getIndexSpecForIntermediatePersists(),
             new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
-            tuningConfig.getMaxColumnsToMerge()
+            tuningConfig.getMaxColumnsToMerge(),
+            storeEmptyColumns
         );
 
         mergeFinishTime = System.nanoTime();
@@ -1151,7 +1153,8 @@ public class BatchAppenderator implements Appenderator
           identifier.getInterval(),
           new File(persistDir, String.valueOf(sm.getNumHydrants())),
           tuningConfig.getIndexSpecForIntermediatePersists(),
-          tuningConfig.getSegmentWriteOutMediumFactory()
+          tuningConfig.getSegmentWriteOutMediumFactory(),
+          storeEmptyColumns
       );
       sm.setPersistedFileDir(persistDir);
 

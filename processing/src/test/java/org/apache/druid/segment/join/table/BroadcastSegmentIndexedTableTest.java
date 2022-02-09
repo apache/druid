@@ -120,7 +120,8 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         testInterval,
         segment,
         new IndexSpec(),
-        null
+        null,
+        true
     );
     File factoryJson = new File(persisted, "factory.json");
     Assert.assertTrue(factoryJson.exists());

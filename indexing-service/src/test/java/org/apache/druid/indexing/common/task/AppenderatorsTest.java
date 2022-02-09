@@ -246,6 +246,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              true,
               true
           );
           break;
@@ -261,6 +262,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              true,
               true
           );
 
@@ -277,6 +279,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              true,
               true
           );
           break;

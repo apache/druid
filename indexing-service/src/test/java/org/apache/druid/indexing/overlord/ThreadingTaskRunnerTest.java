@@ -62,7 +62,8 @@ public class ThreadingTaskRunnerTest
             ImmutableList.of(),
             false,
             false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null
         ),
         new WorkerConfig(),
         new NoopTaskLogs(),

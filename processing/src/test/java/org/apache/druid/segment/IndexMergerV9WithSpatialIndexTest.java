@@ -493,9 +493,9 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       FileUtils.mkdirp(thirdFile);
       FileUtils.mkdirp(mergedFile);
 
-      indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
-      indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
-      indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
+      indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null, true);
+      indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null, true);
+      indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null, true);
 
       try {
         QueryableIndex mergedRealtime = indexIO.loadIndex(

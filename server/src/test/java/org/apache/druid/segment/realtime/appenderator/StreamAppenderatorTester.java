@@ -291,6 +291,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CachePopulatorStats(),
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        true,
         true
     );
   }

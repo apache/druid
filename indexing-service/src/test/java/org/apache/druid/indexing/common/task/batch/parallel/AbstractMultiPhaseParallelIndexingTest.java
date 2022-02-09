@@ -41,8 +41,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -214,7 +212,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
               DATASOURCE,
               timestampSpec,
               dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null
           ),
@@ -235,9 +233,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                   new StringInputRowParser(parseSpec, null),
                   Map.class
               ),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null,
               getObjectMapper()

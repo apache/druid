@@ -60,7 +60,8 @@ public class Appenderators
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return new StreamAppenderator(
@@ -90,7 +91,8 @@ public class Appenderators
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 
@@ -105,7 +107,8 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     // Use newest, slated to be the permanent batch appenderator but for now keeping it as a non-default
@@ -122,7 +125,8 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 
@@ -137,7 +141,8 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     // fallback to original code known to be working, this is just a fallback option in case new
@@ -158,7 +163,8 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         true,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 
@@ -173,7 +179,8 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     return new AppenderatorImpl(
@@ -191,7 +198,8 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         false,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        storeEmptyColumns
     );
   }
 }

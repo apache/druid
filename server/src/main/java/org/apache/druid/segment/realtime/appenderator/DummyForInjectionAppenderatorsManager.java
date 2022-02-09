@@ -73,7 +73,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     throw new UOE(ERROR_MSG);
@@ -91,7 +92,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     throw new UOE(ERROR_MSG);
@@ -109,7 +111,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     throw new UOE(ERROR_MSG);
@@ -127,7 +130,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     throw new UOE(ERROR_MSG);

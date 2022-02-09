@@ -91,7 +91,8 @@ public class EmptyIndexTest
           tmpDir,
           DimensionsSpec.EMPTY,
           new IndexSpec(),
-          -1
+          -1,
+          true
       );
 
       QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);

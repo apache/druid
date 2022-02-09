@@ -138,6 +138,7 @@ public class StreamAppenderator implements Appenderator
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
   private final boolean useMaxMemoryEstimates;
+  private final boolean storeEmptyColumns;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -187,7 +188,8 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     this.myId = id;
@@ -215,6 +217,7 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+    this.storeEmptyColumns = storeEmptyColumns;
   }
 
   @Override
@@ -866,7 +869,8 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getIndexSpecForIntermediatePersists(),
             new BaseProgressIndicator(),
             tuningConfig.getSegmentWriteOutMediumFactory(),
-            tuningConfig.getMaxColumnsToMerge()
+            tuningConfig.getMaxColumnsToMerge(),
+            storeEmptyColumns
         );
 
         mergeFinishTime = System.nanoTime();
@@ -1447,7 +1451,8 @@ public class StreamAppenderator implements Appenderator
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
             tuningConfig.getIndexSpecForIntermediatePersists(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            storeEmptyColumns
         );
 
         log.info(

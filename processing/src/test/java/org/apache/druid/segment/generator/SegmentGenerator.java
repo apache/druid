@@ -193,7 +193,8 @@ public class SegmentGenerator implements Closeable
                               indexSpec,
                               new BaseProgressIndicator(),
                               null,
-                              -1
+                              -1,
+                              true
                           )
             );
 

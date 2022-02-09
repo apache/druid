@@ -166,7 +166,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     synchronized (this) {
@@ -189,7 +190,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -209,7 +211,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     synchronized (this) {
@@ -229,7 +232,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -248,7 +252,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     synchronized (this) {
@@ -268,7 +273,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -287,7 +293,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      boolean storeEmptyColumns
   )
   {
     synchronized (this) {
@@ -307,7 +314,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          storeEmptyColumns
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -598,7 +606,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        boolean storeEmptyColumns
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -609,7 +618,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                   outDir,
                   indexSpec,
                   progress,
-                  segmentWriteOutMediumFactory
+                  segmentWriteOutMediumFactory,
+                  storeEmptyColumns
               )
       );
 
@@ -629,7 +639,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
-        int maxColumnsToMerge
+        int maxColumnsToMerge,
+        boolean storeEmptyColumns
     )
     {
       // Only used in certain tests. No need to implement.
@@ -647,7 +658,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         IndexSpec indexSpecForIntermediatePersists,
         ProgressIndicator progress,
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-        int maxColumnsToMerge
+        int maxColumnsToMerge,
+        boolean storeEmptyColumns
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -662,7 +674,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                   indexSpecForIntermediatePersists,
                   new BaseProgressIndicator(),
                   segmentWriteOutMediumFactory,
-                  maxColumnsToMerge
+                  maxColumnsToMerge,
+                  storeEmptyColumns
               )
       );
 

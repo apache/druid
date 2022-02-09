@@ -906,7 +906,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         tuningConfig,
         buildSegmentsMeters,
         buildSegmentsParseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, toolbox.getConfig().isStoreEmptyColumns())
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
