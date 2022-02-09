@@ -542,6 +542,22 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
   }
 
+  @Test
+  public void testInsertWithoutPartitionedBy()
+  {
+    SqlPlanningException e = Assert.assertThrows(
+        SqlPlanningException.class,
+        () ->
+            testQuery(
+                StringUtils.format("INSERT INTO dst SELECT * FROM %s", externSql(externalDataSource)),
+                ImmutableList.of(),
+                ImmutableList.of()
+            )
+    );
+    Assert.assertEquals("INSERT statements should specify PARTITIONED BY clause explictly", e.getMessage());
+    didTest = true;
+  }
+
   // Currently EXPLAIN PLAN FOR doesn't work with the modified syntax
   @Ignore
   @Test
