@@ -383,7 +383,7 @@ public class ExpressionSelectors
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (selector.getObject() == null) {
+        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
           if (homogenize) {
             return new Object[]{null};
           } else {
