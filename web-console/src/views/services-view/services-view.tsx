@@ -537,12 +537,8 @@ ORDER BY
               const { service_type } = row.original;
               switch (service_type) {
                 case 'historical': {
-                  const {
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  } = row.original;
+                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
+                    row.original;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,

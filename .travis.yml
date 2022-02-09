@@ -385,7 +385,7 @@ jobs:
       install: web-console/script/druid build
       before_script:
         - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 10.24.0
+        - nvm install 14.19.0
         - web-console/script/druid start
       script: (cd web-console && npm run test-e2e)
       after_script: web-console/script/druid stop

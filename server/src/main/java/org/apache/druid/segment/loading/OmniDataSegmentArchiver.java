@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -59,5 +60,11 @@ public class OmniDataSegmentArchiver implements DataSegmentArchiver
     }
 
     return archiver;
+  }
+
+  @VisibleForTesting
+  public Map<String, DataSegmentArchiver> getArchivers()
+  {
+    return archivers;
   }
 }

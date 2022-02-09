@@ -275,15 +275,8 @@ END AS "partitioning"`,
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
       processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
-        const {
-          page,
-          pageSize,
-          filtered,
-          sorted,
-          visibleColumns,
-          capabilities,
-          groupByInterval,
-        } = query;
+        const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
+          query;
 
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
