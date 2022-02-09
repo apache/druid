@@ -63,6 +63,11 @@ public interface Expr extends Cacheable
     return false;
   }
 
+  default boolean isIdentifier()
+  {
+    return false;
+  }
+
   /**
    * Returns the value of expr if expr is a literal, or throws an exception otherwise.
    *

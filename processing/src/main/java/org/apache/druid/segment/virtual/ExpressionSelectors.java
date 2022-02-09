@@ -350,7 +350,8 @@ public class ExpressionSelectors
    *
    * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
    */
-  private static <T> Supplier<T> makeNullableNumericSupplier(
+  @VisibleForTesting
+  public static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )
@@ -382,7 +383,7 @@ public class ExpressionSelectors
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0) {
+        if (selector.getObject() == null) {
           if (homogenize) {
             return new Object[]{null};
           } else {
