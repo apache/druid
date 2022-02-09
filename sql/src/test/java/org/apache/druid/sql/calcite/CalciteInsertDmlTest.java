@@ -334,6 +334,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                     .put("DAY", Granularities.DAY)
                     .put("MONTH", Granularities.MONTH)
                     .put("YEAR", Granularities.YEAR)
+                    .put("ALL", Granularities.ALL)
                     .put("ALL TIME", Granularities.ALL)
                     .put("FLOOR(__time TO QUARTER)", Granularities.QUARTER)
                     .put("TIME_FLOOR(__time, 'PT1H')", Granularities.HOUR)

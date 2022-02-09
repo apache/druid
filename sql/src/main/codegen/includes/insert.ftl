@@ -96,11 +96,17 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
       unparseString = "YEAR";
     }
   |
-    <ALL> <TIME>
+    <ALL>
     {
       granularity = Granularities.ALL;
-      unparseString = "ALL TIME";
+      unparseString = "ALL";
     }
+    [
+      <TIME>
+      {
+        unparseString += " TIME";
+      }
+    ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
