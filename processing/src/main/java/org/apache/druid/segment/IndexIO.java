@@ -93,11 +93,11 @@ public class IndexIO
   public static final BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
+  static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   private final Map<Integer, IndexLoader> indexLoaders;
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
-  private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   private final ObjectMapper mapper;
 

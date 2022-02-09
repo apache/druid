@@ -358,18 +358,27 @@ public class IndexMergerV9 implements IndexMerger
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> finalDimensions = new LinkedHashSet<>();
+    final Set<String> finalNonNullOnlyDimensions = new LinkedHashSet<>();
+    final Set<String> finalNonNullOnlyColumns = new LinkedHashSet<>(mergedMetrics);
+    final Set<String> finalNullOnlyColumns = new LinkedHashSet<>();
     final Set<String> finalNullOnlyDimensions = new LinkedHashSet<>();
-    final Set<String> finalColumns = new LinkedHashSet<>(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
-      if (mergers.get(i).shouldStore() || !mergers.get(i).hasOnlyNulls()) {
-        finalColumns.add(mergedDimensions.get(i));
-        finalDimensions.add(mergedDimensions.get(i));
+      if (!mergers.get(i).hasOnlyNulls()) {
+        finalNonNullOnlyDimensions.add(mergedDimensions.get(i));
+        finalNonNullOnlyColumns.add(mergedDimensions.get(i));
+      } else if (mergers.get(i).shouldStore()) {
+        // shouldStore AND hasOnlyNulls
+        finalNullOnlyDimensions.add(mergedDimensions.get(i));
+        finalNullOnlyColumns.add(mergedDimensions.get(i));
       }
     }
 
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalNonNullOnlyColumns, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> dims = GenericIndexed.fromIterable(
+        finalNonNullOnlyDimensions,
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String> nullCols = GenericIndexed.fromIterable(finalNullOnlyColumns, GenericIndexed.STRING_STRATEGY);
     GenericIndexed<String> nullDims = GenericIndexed.fromIterable(
         finalNullOnlyDimensions,
         GenericIndexed.STRING_STRATEGY
@@ -378,6 +387,7 @@ public class IndexMergerV9 implements IndexMerger
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
+                          + nullCols.getSerializedSize()
                           + nullDims.getSerializedSize()
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
@@ -403,6 +413,7 @@ public class IndexMergerV9 implements IndexMerger
       // Store null-only dimensions at the end of this section,
       // so that historicals of an older version can ignore them instead of exploding while reading this segment.
       // Those historicals will still serve any query that reads null-only columns.
+      nullCols.writeTo(writer, v9Smoosher);
       nullDims.writeTo(writer, v9Smoosher);
     }
 
