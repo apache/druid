@@ -84,8 +84,14 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
       fieldName = arg.getDirectColumn();
       expression = null;
     } else {
-      fieldName = null;
-      expression = arg.getExpression();
+      // sharing is caring, make a virtual column for anything more complicated than a literal to maximize re-use
+      if (arg.getType() == DruidExpression.NodeType.LITERAL) {
+        fieldName = null;
+        expression = arg.getExpression();
+      } else {
+        fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, aggregateCall.getType());
+        expression = null;
+      }
     }
 
     return getAggregation(name, aggregateCall, macroTable, fieldName, expression);

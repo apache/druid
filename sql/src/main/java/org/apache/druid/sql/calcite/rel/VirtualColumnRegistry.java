@@ -262,6 +262,19 @@ public class VirtualColumnRegistry
     return new ExpressionAndTypeHint(expression, typeHint);
   }
 
+  /**
+   * Wrapper class for a {@link DruidExpression} and the output {@link ColumnType} "hint" that callers can specify when
+   * adding a virtual column with {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} or
+   * {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)}. This "hint"  will be passed into
+   * {@link DruidExpression#toVirtualColumn(String, ColumnType, ExprMacroTable)}.
+   *
+   * The type hint might be different than {@link DruidExpression#getDruidType()} since that value is the captured value
+   * of {@link org.apache.calcite.rex.RexNode#getType()} converted to the Druid type system, while callers might still
+   * explicitly specify a different type to use for the hint. Additionally, the method used to convert Calcite types to
+   * Druid types does not completely map the former to the latter, and the method typically used to do the conversion,
+   * {@link Calcites#getColumnTypeForRelDataType(RelDataType)}, might return null, where the caller might know what
+   * the type should be.
+   */
   private static class ExpressionAndTypeHint
   {
     private final DruidExpression expression;

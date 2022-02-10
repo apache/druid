@@ -115,9 +115,13 @@ public class AvgSqlAggregator implements SqlAggregator
           project,
           Iterables.getOnlyElement(aggregateCall.getArgList())
       );
-      String vc = virtualColumnRegistry.getVirtualColumnByExpression(arg, resolutionArg.getType());
-      fieldName = vc != null ? vc : null;
-      expression = vc != null ? null : arg.getExpression();
+      if (arg.getType() == DruidExpression.NodeType.LITERAL) {
+        fieldName = null;
+        expression = arg.getExpression();
+      } else {
+        fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, resolutionArg.getType());
+        expression = null;
+      }
     }
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(

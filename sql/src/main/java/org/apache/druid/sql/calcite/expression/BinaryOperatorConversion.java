@@ -81,7 +81,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
     );
   }
 
-  private DruidExpression.DruidExpressionBuilder getOperatorFunction(RexNode rexNode)
+  private DruidExpression.DruidExpressionCreator getOperatorFunction(RexNode rexNode)
   {
     return operands -> {
       if (operands.size() < 2) {

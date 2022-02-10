@@ -965,10 +965,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "CAST(\"a0\", 'DOUBLE')", ColumnType.DOUBLE)
+                        )
                         .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory(
                             "_a0",
+                            "v0",
                             null,
-                            "CAST(\"a0\", 'DOUBLE')",
                             ExprMacroTable.nil()
                         )))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -1013,10 +1016,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "CAST(\"a0\", 'DOUBLE')", ColumnType.DOUBLE)
+                        )
                         .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory(
                             "_a0",
+                            "v0",
                             null,
-                            "CAST(\"a0\", 'DOUBLE')",
                             ExprMacroTable.nil()
                         )))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -1120,10 +1126,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "CAST(\"a0\", 'DOUBLE')", ColumnType.DOUBLE)
+                        )
                         .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory(
                             "_a0",
+                            "v0",
                             null,
-                            "CAST(\"a0\", 'DOUBLE')",
                             ExprMacroTable.nil()
                         )))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -4975,19 +4984,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  LN(SUM(cnt) + SUM(m1)),\n"
         + "  MOD(SUM(cnt), 4),\n"
         + "  SUM(CHARACTER_LENGTH(CAST(cnt * 10 AS VARCHAR))),\n"
-        + "  MAX(CHARACTER_LENGTH(dim2) + LN(m1))\n"
+        + "  MAX(CHARACTER_LENGTH(dim2) + LN(m1)),\n"
+        + "  MIN(CHARACTER_LENGTH(dim2) + LN(m1))\n"
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"cnt\" * 3)", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "strlen(CAST((\"cnt\" * 10), 'STRING'))", ColumnType.LONG),
+                      expressionVirtualColumn("v2", "(strlen(\"dim2\") + log(\"m1\"))", ColumnType.DOUBLE)
+                  )
                   .aggregators(aggregators(
-                      new LongSumAggregatorFactory("a0", null, "(\"cnt\" * 3)", macroTable),
+                      new LongSumAggregatorFactory("a0", "v0", null, macroTable),
                       new LongSumAggregatorFactory("a1", "cnt"),
                       new DoubleSumAggregatorFactory("a2", "m1"),
-                      new LongSumAggregatorFactory("a3", null, "strlen(CAST((\"cnt\" * 10), 'STRING'))", macroTable),
-                      new DoubleMaxAggregatorFactory("a4", null, "(strlen(\"dim2\") + log(\"m1\"))", macroTable)
+                      new LongSumAggregatorFactory("a3", "v1", null, macroTable),
+                      new DoubleMaxAggregatorFactory("a4", "v2", null, macroTable),
+                      new DoubleMinAggregatorFactory("a5", "v2", null, macroTable)
                   ))
                   .postAggregators(
                       expressionPostAgg("p0", "log((\"a1\" + \"a2\"))"),
@@ -4997,7 +5013,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{18L, 3.295836866004329, 2, 12L, 3f + (Math.log(5.0))}
+            new Object[]{18L, 3.295836866004329, 2, 12L, 3f + (Math.log(5.0)), 0.6931471805599453}
         )
     );
   }
@@ -5884,11 +5900,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "CAST(\"dim1\", 'LONG')", ColumnType.LONG)
+                  )
                   .aggregators(aggregators(
                       new LongSumAggregatorFactory(
                           "a0",
+                          "v0",
                           null,
-                          "CAST(\"dim1\", 'LONG')",
                           CalciteTests.createExprMacroTable()
                       )
                   ))
@@ -5914,11 +5933,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "CAST(substring(\"dim1\", 0, 10), 'LONG')", ColumnType.LONG)
+                  )
                   .aggregators(aggregators(
                       new LongSumAggregatorFactory(
                           "a0",
+                          "v0",
                           null,
-                          "CAST(substring(\"dim1\", 0, 10), 'LONG')",
                           CalciteTests.createExprMacroTable()
                       )
                   ))
@@ -8201,6 +8223,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     "v0",
                                                     "case_searched(((947005200000 <= \"__time\") && (\"__time\" < 1641402000000)),\"dim1\",null)",
                                                     ColumnType.STRING
+                                                ),
+                                                expressionVirtualColumn(
+                                                    "v1",
+                                                    "case_searched(((947005200000 <= \"__time\") && (\"__time\" < 1641402000000)),1,0)",
+                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
@@ -8216,8 +8243,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 aggregators(
                                                     new LongSumAggregatorFactory(
                                                         "a0",
+                                                        "v1",
                                                         null,
-                                                        "case_searched(((947005200000 <= \"__time\") && (\"__time\" < 1641402000000)),1,0)",
                                                         ExprMacroTable.nil()
                                                     ),
                                                     new GroupingAggregatorFactory(

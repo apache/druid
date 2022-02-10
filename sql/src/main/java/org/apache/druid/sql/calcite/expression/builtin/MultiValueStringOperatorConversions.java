@@ -341,7 +341,7 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      final DruidExpression.ExpressionBuilder builder = (args) -> {
+      final DruidExpression.ExpressionGenerator builder = (args) -> {
         final StringBuilder expressionBuilder;
         if (isAllowList()) {
           expressionBuilder = new StringBuilder("filter((x) -> array_contains(");

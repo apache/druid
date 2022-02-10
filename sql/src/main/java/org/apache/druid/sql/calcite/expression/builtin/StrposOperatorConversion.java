@@ -63,7 +63,7 @@ public class StrposOperatorConversion implements SqlOperatorConversion
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             (args) -> StringUtils.format(
                 "(%s + 1)",
-                DruidExpression.functionCall("strpos").buildExpression(args)
+                DruidExpression.functionCall("strpos").compile(args)
             ),
             druidExpressions
         )
