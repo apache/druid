@@ -46,32 +46,30 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String expression
+      final String fieldName
   )
   {
     final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (valueType == null) {
       return null;
     }
-    return Aggregation.create(createSumAggregatorFactory(valueType.getType(), name, fieldName, expression, macroTable));
+    return Aggregation.create(createSumAggregatorFactory(valueType.getType(), name, fieldName, macroTable));
   }
 
   static AggregatorFactory createSumAggregatorFactory(
       final ValueType aggregationType,
       final String name,
       final String fieldName,
-      final String expression,
       final ExprMacroTable macroTable
   )
   {
     switch (aggregationType) {
       case LONG:
-        return new LongSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongSumAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
-        return new FloatSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatSumAggregatorFactory(name, fieldName, null, macroTable);
       case DOUBLE:
-        return new DoubleSumAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
         throw new UnsupportedSQLQueryException("Sum aggregation is not supported for '%s' type", aggregationType);
     }

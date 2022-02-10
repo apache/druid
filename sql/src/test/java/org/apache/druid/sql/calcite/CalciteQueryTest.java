@@ -12668,11 +12668,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               new CountAggregatorFactory("a0"),
               not(selector("v0", null, null))
           ),
-          new LongSumAggregatorFactory("a1:sum", null, "325323", TestExprMacroTable.INSTANCE),
+          new LongSumAggregatorFactory("a1:sum", "v1", null, TestExprMacroTable.INSTANCE),
           new CountAggregatorFactory("a1:count")
       );
       virtualColumns = ImmutableList.of(
-          expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING)
+          expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING),
+          expressionVirtualColumn("v1", "325323", ColumnType.LONG)
       );
     } else {
       aggs = ImmutableList.of(
@@ -13652,19 +13653,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .filters(selector("dim1", "none", null))
                              .granularity(Granularities.ALL)
                              .virtualColumns(
-                                 expressionVirtualColumn(
-                                     "v0",
-                                     "'none'",
-                                     ColumnType.STRING
-                                 )
+                                 expressionVirtualColumn("v0", "'none'", ColumnType.STRING),
+                                 expressionVirtualColumn("v1", "0", ColumnType.LONG),
+                                 expressionVirtualColumn("v2", "0", ColumnType.DOUBLE)
                              )
                              .dimension(
                                  new DefaultDimensionSpec("v0", "d0")
                              )
                              .aggregators(
                                  aggregators(
-                                     new LongSumAggregatorFactory("a0", null, "0", ExprMacroTable.nil()),
-                                     new DoubleSumAggregatorFactory("a1", null, "0", ExprMacroTable.nil())
+                                     new LongSumAggregatorFactory("a0", "v1", null, ExprMacroTable.nil()),
+                                     new DoubleSumAggregatorFactory("a1", "v2", null, ExprMacroTable.nil())
                                  ))
                              .context(QUERY_CONTEXT_DEFAULT)
                              .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))

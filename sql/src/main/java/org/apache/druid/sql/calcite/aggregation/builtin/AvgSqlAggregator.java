@@ -28,7 +28,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -103,24 +102,24 @@ public class AvgSqlAggregator implements SqlAggregator
       sumType = ValueType.DOUBLE;
     }
 
-    // if the filter or anywhere else defined a virtual column for us, re-use it
-    final RexNode resolutionArg = Expressions.fromFieldAccess(
-        rowSignature,
-        project,
-        Iterables.getOnlyElement(aggregateCall.getArgList())
-    );
-    final Pair<String, String> fieldAndExpression = SimpleSqlAggregator.getFieldOrExpression(
-        virtualColumnRegistry,
-        arg,
-        resolutionArg.getType()
-    );
+    final String fieldName;
+
+    if (arg.isDirectColumnAccess()) {
+      fieldName = arg.getDirectColumn();
+    } else {
+      final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rowSignature,
+          project,
+          Iterables.getOnlyElement(aggregateCall.getArgList())
+      );
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, resolutionArg.getType());
+    }
 
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
         sumType,
         sumName,
-        fieldAndExpression.lhs,
-        fieldAndExpression.rhs,
+        fieldName,
         macroTable
     );
 

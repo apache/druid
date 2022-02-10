@@ -46,32 +46,30 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String expression
+      final String fieldName
   )
   {
     final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (valueType == null) {
       return null;
     }
-    return Aggregation.create(createMaxAggregatorFactory(valueType.getType(), name, fieldName, expression, macroTable));
+    return Aggregation.create(createMaxAggregatorFactory(valueType.getType(), name, fieldName, macroTable));
   }
 
   private static AggregatorFactory createMaxAggregatorFactory(
       final ValueType aggregationType,
       final String name,
       final String fieldName,
-      final String expression,
       final ExprMacroTable macroTable
   )
   {
     switch (aggregationType) {
       case LONG:
-        return new LongMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongMaxAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
-        return new FloatMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatMaxAggregatorFactory(name, fieldName, null, macroTable);
       case DOUBLE:
-        return new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
       default:
         throw new UnsupportedSQLQueryException("Max aggregation is not supported for '%s' type", aggregationType);
     }
