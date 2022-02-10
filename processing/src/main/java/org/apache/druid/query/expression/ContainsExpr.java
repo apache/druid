@@ -39,20 +39,31 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
 {
   private final Function<String, Boolean> searchFunction;
   private final Expr searchStrExpr;
+  private final Function<Shuttle, Expr> visitFunction;
 
-  ContainsExpr(String functioName, Expr arg, Expr searchStrExpr, boolean caseSensitive)
+  ContainsExpr(
+      final String functionName,
+      final Expr arg,
+      final Expr searchStrExpr,
+      final boolean caseSensitive,
+      final Function<Shuttle, Expr> visitFunction
+  )
   {
-    super(functioName, arg);
-    this.searchStrExpr = validateSearchExpr(searchStrExpr, functioName);
-    // Creates the function eagerly to avoid branching in eval.
-    this.searchFunction = createFunction(searchStrExpr, caseSensitive);
+    this(functionName, arg, searchStrExpr, createFunction(searchStrExpr, caseSensitive), visitFunction);
   }
 
-  private ContainsExpr(String functioName, Expr arg, Expr searchStrExpr, Function<String, Boolean> searchFunction)
+  private ContainsExpr(
+      final String functionName,
+      final Expr arg,
+      final Expr searchStrExpr,
+      final Function<String, Boolean> searchFunction,
+      final Function<Shuttle, Expr> visitFunction
+  )
   {
-    super(functioName, arg);
+    super(functionName, arg);
     this.searchFunction = searchFunction;
-    this.searchStrExpr = validateSearchExpr(searchStrExpr, functioName);
+    this.searchStrExpr = validateSearchExpr(searchStrExpr, functionName);
+    this.visitFunction = visitFunction;
   }
 
   @Nonnull
@@ -80,8 +91,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   @Override
   public Expr visit(Expr.Shuttle shuttle)
   {
-    Expr newArg = arg.visit(shuttle);
-    return shuttle.visit(new ContainsExpr(name, newArg, searchStrExpr, searchFunction));
+    return visitFunction.apply(shuttle);
   }
 
   @Override
@@ -90,20 +100,20 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     return StringUtils.format("%s(%s, %s)", name, arg.stringify(), searchStrExpr.stringify());
   }
 
-  private Function<String, Boolean> createFunction(Expr searchStrExpr, boolean caseSensitive)
-  {
-    String searchStr = StringUtils.nullToEmptyNonDruidDataString((String) searchStrExpr.getLiteralValue());
-    if (caseSensitive) {
-      return s -> s.contains(searchStr);
-    }
-    return s -> org.apache.commons.lang.StringUtils.containsIgnoreCase(s, searchStr);
-  }
-
   private Expr validateSearchExpr(Expr searchExpr, String functioName)
   {
     if (!ExprUtils.isStringLiteral(searchExpr)) {
       throw new IAE("Function[%s] substring must be a string literal", functioName);
     }
     return searchExpr;
+  }
+
+  private static Function<String, Boolean> createFunction(Expr searchStrExpr, boolean caseSensitive)
+  {
+    String searchStr = StringUtils.nullToEmptyNonDruidDataString((String) searchStrExpr.getLiteralValue());
+    if (caseSensitive) {
+      return s -> s.contains(searchStr);
+    }
+    return s -> org.apache.commons.lang.StringUtils.containsIgnoreCase(s, searchStr);
   }
 }

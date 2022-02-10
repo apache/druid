@@ -36,10 +36,9 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
-import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -162,7 +161,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -260,7 +259,7 @@ public class SystemSchemaTest extends CalciteTestBase
     druidSchema.awaitInitialization();
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
+    serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,

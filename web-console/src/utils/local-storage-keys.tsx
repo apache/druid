@@ -44,10 +44,20 @@ export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorage
 
 // ----------------------------
 
+let localStorageNamespace: string | undefined;
+
+export function setLocalStorageNamespace(namespace: string) {
+  localStorageNamespace = namespace;
+}
+
+function prependNamespace(key: string): string {
+  return localStorageNamespace ? `${localStorageNamespace}:${key}` : key;
+}
+
 export function localStorageSet(key: LocalStorageKeys, value: string): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(prependNamespace(key), value);
   } catch (e) {
     console.error('Issue setting local storage key', e);
   }
@@ -60,7 +70,7 @@ export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
 export function localStorageGet(key: LocalStorageKeys): string | undefined {
   if (typeof localStorage === 'undefined') return;
   try {
-    return localStorage.getItem(key) || undefined;
+    return localStorage.getItem(prependNamespace(key)) || localStorage.getItem(key) || undefined;
   } catch (e) {
     console.error('Issue getting local storage key', e);
     return;
@@ -80,7 +90,7 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
 export function localStorageRemove(key: LocalStorageKeys): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.removeItem(key);
+    localStorage.removeItem(prependNamespace(key));
   } catch (e) {
     console.error('Issue removing local storage key', e);
   }

@@ -32,16 +32,8 @@ export interface SuggestibleInputProps extends Omit<FormattedInputProps, 'format
 }
 
 export const SuggestibleInput = React.memo(function SuggestibleInput(props: SuggestibleInputProps) {
-  const {
-    className,
-    value,
-    onValueChange,
-    onFinalize,
-    onBlur,
-    onFocus,
-    suggestions,
-    ...rest
-  } = props;
+  const { className, value, onValueChange, onFinalize, onBlur, onFocus, suggestions, ...rest } =
+    props;
 
   const lastFocusValue = useRef<string>();
 

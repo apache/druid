@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -54,6 +55,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -163,33 +165,37 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         .build();
 
 
-    ExpressionProcessing.initializeForTests(true);
-    // if nested arrays are allowed, dim3 is a multi-valued string column, so the automatic translation will turn this
-    // expression into
-    //
-    //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
-    //
-    // this works, but we still translate the output into a string since that is the current output type
-    // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
+    try {
+      ExpressionProcessing.initializeForTests(true);
+      // if nested arrays are allowed, dim3 is a multi-valued string column, so the automatic translation will turn this
+      // expression into
+      //
+      //    `map((dim3) -> array(concat(dim3,'word'),'up'), dim3)`
+      //
+      // this works, but we still translate the output into a string since that is the current output type
+      // in some future this might not auto-convert to a string type (when we support grouping on arrays maybe?)
 
-    testQuery(
-        sql,
-        ImmutableList.of(scanQuery),
-        ImmutableList.of(
-            new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
-            new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
-            new Object[]{"[[\"dword\",\"up\"]]", "2"},
-            new Object[]{"[[\"word\",\"up\"]]", "1"},
-            useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
-        )
-    );
-
-    ExpressionProcessing.initializeForTests(null);
+      testQuery(
+          sql,
+          ImmutableList.of(scanQuery),
+          ImmutableList.of(
+              new Object[]{"[[\"aword\",\"up\"],[\"bword\",\"up\"]]", ""},
+              new Object[]{"[[\"bword\",\"up\"],[\"cword\",\"up\"]]", "10.1"},
+              new Object[]{"[[\"dword\",\"up\"]]", "2"},
+              new Object[]{"[[\"word\",\"up\"]]", "1"},
+              useDefault ? new Object[]{"[[\"word\",\"up\"]]", "def"} : new Object[]{"[[null,\"up\"]]", "def"}
+          )
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
 
     // if nested arrays are not enabled, this doesn't work
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true");
+        "Cannot create a nested array type [ARRAY<ARRAY<STRING>>], 'druid.expressions.allowNestedArrays' must be set to true"
+    );
     testQuery(
         sql,
         ImmutableList.of(scanQuery),
@@ -507,8 +513,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{useDefault ? "" : null}
+            new Object[]{"[\"a\",\"b\"]"}
         )
     );
   }
@@ -648,10 +653,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"", 2, 1L},
             new Object[]{"10.1", 2, 1L},
-            new Object[]{"1", 1, 1L},
-            new Object[]{"2", 1, 1L},
-            new Object[]{"abc", 1, 1L},
-            new Object[]{"def", 1, 1L}
+            useDefault ? new Object[]{"2", 1, 1L} : new Object[]{"1", 1, 1L},
+            useDefault ? new Object[]{"1", 0, 1L} : new Object[]{"2", 1, 1L},
+            new Object[]{"abc", useDefault ? 0 : null, 1L},
+            new Object[]{"def", useDefault ? 0 : null, 1L}
         )
     );
   }
@@ -779,14 +784,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo,null", "null,foo", 3L},
+          new Object[]{"", "", 3L},
           new Object[]{"foo,a,b", "a,b,foo", 1L},
           new Object[]{"foo,b,c", "b,c,foo", 1L},
           new Object[]{"foo,d", "d,foo", 1L}
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo,null", "null,foo", 2L},
+          new Object[]{null, null, 2L},
           new Object[]{"foo,", ",foo", 1L},
           new Object[]{"foo,a,b", "a,b,foo", 1L},
           new Object[]{"foo,b,c", "b,c,foo", 1L},
@@ -1044,11 +1049,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
                             "array(\"f1\")",
-                            ColumnType.DOUBLE_ARRAY
+                            ColumnType.ofArray(ColumnType.FLOAT)
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE_ARRAY)
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.ofArray(ColumnType.FLOAT))
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1199,8 +1204,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{useDefault ? -1 : null, 4L},
+        useDefault
+        ? ImmutableList.of(
+            new Object[]{0, 4L},
+            new Object[]{-1, 1L},
+            new Object[]{1, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{null, 4L},
             new Object[]{0, 1L},
             new Object[]{1, 1L}
         )
@@ -1242,8 +1253,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{useDefault ? -1 : null, 4L},
+        useDefault
+        ? ImmutableList.of(
+            new Object[]{0, 3L},
+            new Object[]{-1, 1L},
+            new Object[]{1, 1L},
+            new Object[]{2, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{null, 4L},
             new Object[]{1, 1L},
             new Object[]{2, 1L}
         )
@@ -1315,14 +1333,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{ImmutableList.of("", "d"), 3L},
           new Object[]{ImmutableList.of("a", "b", "d"), 1L},
           new Object[]{ImmutableList.of("b", "c", "d"), 1L},
           new Object[]{ImmutableList.of("d", "d"), 1L}
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{null, 2L},
           new Object[]{ImmutableList.of("", "d"), 1L},
           new Object[]{ImmutableList.of("a", "b", "d"), 1L},
           new Object[]{ImmutableList.of("b", "c", "d"), 1L},
@@ -1385,9 +1401,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("dim1"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"dim1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
@@ -1399,9 +1417,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a1",
                               ImmutableSet.of("dim1"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"dim1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
@@ -1414,9 +1434,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   "a2",
                                   ImmutableSet.of("dim1"),
                                   "__acc",
-                                  "[]",
-                                  "[]",
+                                  "ARRAY<STRING>[]",
+                                  "ARRAY<STRING>[]",
                                   true,
+                                  true,
+                                  false,
                                   "array_set_add(\"__acc\", \"dim1\")",
                                   "array_set_add_all(\"__acc\", \"a2\")",
                                   null,
@@ -1433,10 +1455,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             useDefault
-            ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"2\",\"abc\",\"def\",\"10.1\"]", null}
+            ? new Object[]{"[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]", "[\"1\",\"10.1\",\"2\",\"abc\",\"def\"]", null}
             : new Object[]{
                 "[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]",
-                "[\"\",\"1\",\"2\",\"abc\",\"def\",\"10.1\"]",
+                "[\"\",\"1\",\"10.1\",\"2\",\"abc\",\"def\"]",
                 null
             }
         )
@@ -1460,9 +1482,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("dim3"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"dim3\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
@@ -1474,9 +1498,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a1",
                               ImmutableSet.of("dim3"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"dim3\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
@@ -1492,7 +1518,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             useDefault
             ? new Object[]{"[\"a\",\"b\",\"b\",\"c\",\"d\",null,null,null]", "[null,\"a\",\"b\",\"c\",\"d\"]"}
-            : new Object[]{"[\"a\",\"b\",\"b\",\"c\",\"d\",\"\",null,null]", "[\"\",null,\"a\",\"b\",\"c\",\"d\"]"}
+            : new Object[]{"[\"a\",\"b\",\"b\",\"c\",\"d\",\"\",null,null]", "[null,\"\",\"a\",\"b\",\"c\",\"d\"]"}
         )
     );
   }
@@ -1514,9 +1540,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("l1"),
                               "__acc",
-                              "<LONG>[]",
-                              "<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"l1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
@@ -1528,9 +1556,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a1",
                               ImmutableSet.of("l1"),
                               "__acc",
-                              "<LONG>[]",
-                              "<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"l1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
@@ -1542,9 +1572,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a2",
                               ImmutableSet.of("d1"),
                               "__acc",
-                              "<DOUBLE>[]",
-                              "<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"d1\")",
                               "array_concat(\"__acc\", \"a2\")",
                               null,
@@ -1556,9 +1588,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a3",
                               ImmutableSet.of("d1"),
                               "__acc",
-                              "<DOUBLE>[]",
-                              "<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"d1\")",
                               "array_set_add_all(\"__acc\", \"a3\")",
                               null,
@@ -1570,9 +1604,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a4",
                               ImmutableSet.of("f1"),
                               "__acc",
-                              "<DOUBLE>[]",
-                              "<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"f1\")",
                               "array_concat(\"__acc\", \"a4\")",
                               null,
@@ -1584,9 +1620,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a5",
                               ImmutableSet.of("f1"),
                               "__acc",
-                              "<DOUBLE>[]",
-                              "<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
+                              "ARRAY<DOUBLE>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"f1\")",
                               "array_set_add_all(\"__acc\", \"a5\")",
                               null,
@@ -1605,18 +1643,242 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 "[7,325323,0,0,0,0]",
                 "[0,7,325323]",
                 "[1.0,1.7,0.0,0.0,0.0,0.0]",
-                "[1.0,0.0,1.7]",
+                "[0.0,1.0,1.7]",
                 "[1.0,0.10000000149011612,0.0,0.0,0.0,0.0]",
-                "[1.0,0.10000000149011612,0.0]"
+                "[0.0,0.10000000149011612,1.0]"
             }
             : new Object[]{
                 "[7,325323,0,null,null,null]",
-                "[0,null,7,325323]",
+                "[null,0,7,325323]",
                 "[1.0,1.7,0.0,null,null,null]",
-                "[1.0,0.0,null,1.7]",
+                "[null,0.0,1.0,1.7]",
                 "[1.0,0.10000000149011612,0.0,null,null,null]",
-                "[1.0,0.10000000149011612,0.0,null]"
+                "[null,0.0,0.10000000149011612,1.0]"
             }
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggArrays() throws Exception
+  {
+    try {
+      ExpressionProcessing.initializeForTests(true);
+      cannotVectorize();
+      testQuery(
+          "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
+          QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+          ImmutableList.of(
+              Druids.newTimeseriesQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE3)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .granularity(Granularities.ALL)
+                    .virtualColumns(
+                        expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                    )
+                    .aggregators(
+                        aggregators(
+                            new ExpressionLambdaAggregatorFactory(
+                                "a0",
+                                ImmutableSet.of("v0"),
+                                "__acc",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                true,
+                                true,
+                                false,
+                                "array_append(\"__acc\", \"v0\")",
+                                "array_concat(\"__acc\", \"a0\")",
+                                null,
+                                null,
+                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                TestExprMacroTable.INSTANCE
+                            ),
+                            new ExpressionLambdaAggregatorFactory(
+                                "a1",
+                                ImmutableSet.of("v0"),
+                                "__acc",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                "ARRAY<ARRAY<LONG>>[]",
+                                true,
+                                true,
+                                false,
+                                "array_set_add(\"__acc\", \"v0\")",
+                                "array_set_add_all(\"__acc\", \"a1\")",
+                                null,
+                                null,
+                                ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                    )
+                    .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                    .build()
+          ),
+          (sql, results) -> {
+            // ordering is not stable in array_agg and array_concat_agg
+            List<Object[]> expected = ImmutableList.of(
+                useDefault ?
+                new Object[]{
+                    Arrays.asList(
+                        Arrays.asList(7L, 0L),
+                        Arrays.asList(325323L, 325323L),
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(0L, 0L)
+                    ),
+                    Arrays.asList(
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(7L, 0L),
+                        Arrays.asList(325323L, 325323L)
+                    )
+                }
+                           :
+                new Object[]{
+                    Arrays.asList(
+                        Arrays.asList(7L, null),
+                        Arrays.asList(325323L, 325323L),
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(null, null),
+                        Arrays.asList(null, null),
+                        Arrays.asList(null, null)
+                    ),
+                    Arrays.asList(
+                        Arrays.asList(null, null),
+                        Arrays.asList(0L, 0L),
+                        Arrays.asList(7L, null),
+                        Arrays.asList(325323L, 325323L)
+                    )
+                }
+            );
+            assertResultsDeepEquals(sql, expected, results);
+          }
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
+  }
+
+  @Test
+  public void testArrayAggArraysNoNest() throws Exception
+  {
+    cannotVectorize();
+    testQueryThrows(
+        "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_append(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_set_add(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                  .build()
+        ),
+        expected -> {
+          expected.expect(IAE.class);
+          expected.expectMessage("Cannot create a nested array type [ARRAY<ARRAY<LONG>>], 'druid.expressions.allowNestedArrays' must be set to true");
+        }
+    );
+  }
+
+  @Test
+  public void testArrayConcatAggArrays() throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_CONCAT_AGG(ARRAY[l1, l2]), ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_concat(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_set_add_all(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[7,0,325323,325323,0,0,0,0,0,0,0,0]", "[0,7,325323]"}
+            : new Object[]{"[7,null,325323,325323,0,0,null,null,null,null,null,null]", "[null,0,7,325323]"}
         )
     );
   }
@@ -1639,9 +1901,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("dim1"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"dim1\")",
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
@@ -1656,7 +1920,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            useDefault ? new Object[]{"1,2,abc,def,10.1"} : new Object[]{",1,2,abc,def,10.1"}
+            useDefault ? new Object[]{"1,10.1,2,abc,def"} : new Object[]{",1,10.1,2,abc,def"}
         )
     );
   }
@@ -1681,9 +1945,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("v0"),
                               "__acc",
-                              "[]",
-                              "[]",
+                              "ARRAY<STRING>[]",
+                              "ARRAY<STRING>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"v0\")",
                               "array_set_add_all(\"__acc\", \"a0\")",
                               null,
@@ -1698,7 +1964,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            useDefault ? new Object[]{"1a,a,2,abc,10.1,defabc"} : new Object[]{"null,1a,a,2,defabc"}
+            useDefault ? new Object[]{"10.1,1a,2,a,abc,defabc"} : new Object[]{"null,1a,2,a,defabc"}
         )
     );
   }
@@ -1720,9 +1986,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a0",
                               ImmutableSet.of("l1"),
                               "__acc",
-                              "<LONG>[]",
-                              "<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
                               true,
+                              true,
+                              false,
                               "array_append(\"__acc\", \"l1\")",
                               "array_concat(\"__acc\", \"a0\")",
                               null,
@@ -1734,9 +2002,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               "a1",
                               ImmutableSet.of("l1"),
                               "__acc",
-                              "<LONG>[]",
-                              "<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
                               true,
+                              true,
+                              false,
                               "array_set_add(\"__acc\", \"l1\")",
                               "array_set_add_all(\"__acc\", \"a1\")",
                               null,
@@ -1752,7 +2022,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             useDefault
             ? new Object[]{"[7,325323,0,0,0,0]", "[0,7,325323]"}
-            : new Object[]{"[7,325323,0,null,null,null]", "[0,null,7,325323]"}
+            : new Object[]{"[7,325323,0,null,null,null]", "[null,0,7,325323]"}
         )
     );
   }
@@ -1764,18 +2034,18 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     List<Object[]> expectedResults;
     if (useDefault) {
       expectedResults = ImmutableList.of(
-          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
-          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
-          new Object[]{"a", "[\"2\",\"10.1\"]", "2,10.1"},
+          new Object[]{"a", "[\"10.1\",\"2\"]", "10.1,2"},
+          new Object[]{"a", "[\"10.1\",\"2\"]", "10.1,2"},
+          new Object[]{"a", "[\"10.1\",\"2\"]", "10.1,2"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"}
       );
     } else {
       expectedResults = ImmutableList.of(
-          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
-          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
-          new Object[]{"a", "[\"\",\"2\",\"10.1\"]", ",2,10.1"},
+          new Object[]{"a", "[\"\",\"10.1\",\"2\"]", ",10.1,2"},
+          new Object[]{"a", "[\"\",\"10.1\",\"2\"]", ",10.1,2"},
+          new Object[]{"a", "[\"\",\"10.1\",\"2\"]", ",10.1,2"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"},
           new Object[]{"b", "[\"1\",\"abc\",\"def\"]", "1,abc,def"}
@@ -1801,9 +2071,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                       "a0",
                                                       ImmutableSet.of("dim1"),
                                                       "__acc",
-                                                      "[]",
-                                                      "[]",
+                                                      "ARRAY<STRING>[]",
+                                                      "ARRAY<STRING>[]",
                                                       true,
+                                                      true,
+                                                      false,
                                                       "array_set_add(\"__acc\", \"dim1\")",
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
@@ -1866,9 +2138,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                 "a0",
                                 ImmutableSet.of("dim1"),
                                 "__acc",
-                                "[]",
-                                "[]",
+                                "ARRAY<STRING>[]",
+                                "ARRAY<STRING>[]",
                                 true,
+                                true,
+                                false,
                                 "array_set_add(\"__acc\", \"dim1\")",
                                 "array_set_add_all(\"__acc\", \"a0\")",
                                 null,
@@ -1890,12 +2164,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         useDefault ?
         ImmutableList.of(
-            new Object[]{"", ImmutableList.of("2", "abc", "10.1"), 1L},
+            new Object[]{"", ImmutableList.of("10.1", "2", "abc"), 1L},
             new Object[]{"a", ImmutableList.of("1"), 1L},
             new Object[]{"abc", ImmutableList.of("def"), 1L}
         ) :
         ImmutableList.of(
-            new Object[]{null, ImmutableList.of("abc", "10.1"), 1L},
+            new Object[]{null, ImmutableList.of("10.1", "abc"), 1L},
             new Object[]{"", ImmutableList.of("2"), 1L},
             new Object[]{"a", ImmutableList.of("", "1"), 1L},
             new Object[]{"abc", ImmutableList.of("def"), 1L}
@@ -1945,9 +2219,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                 "a0",
                                                 ImmutableSet.of("dim1"),
                                                 "__acc",
-                                                "[]",
-                                                "[]",
+                                                "ARRAY<STRING>[]",
+                                                "ARRAY<STRING>[]",
                                                 true,
+                                                true,
+                                                false,
                                                 "array_set_add(\"__acc\", \"dim1\")",
                                                 "array_set_add_all(\"__acc\", \"a0\")",
                                                 null,
@@ -2022,9 +2298,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                       "a0",
                                                       ImmutableSet.of("dim1"),
                                                       "__acc",
-                                                      "[]",
-                                                      "[]",
+                                                      "ARRAY<STRING>[]",
+                                                      "ARRAY<STRING>[]",
                                                       true,
+                                                      true,
+                                                      false,
                                                       "array_set_add(\"__acc\", \"dim1\")",
                                                       "array_set_add_all(\"__acc\", \"a0\")",
                                                       null,
@@ -2060,5 +2338,30 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         expectedResults
     );
+
+  }
+
+  public static void assertResultsDeepEquals(String sql, List<Object[]> expected, List<Object[]> results)
+  {
+    for (int row = 0; row < results.size(); row++) {
+      for (int col = 0; col < results.get(row).length; col++) {
+        final String rowString = StringUtils.format("result #%d: %s", row + 1, sql);
+        assertDeepEquals(rowString + " - column: " + col + ":", expected.get(row)[col], results.get(row)[col]);
+      }
+    }
+  }
+
+  public static void assertDeepEquals(String path, Object expected, Object actual)
+  {
+    if (expected instanceof List && actual instanceof List) {
+      List expectedList = (List) expected;
+      List actualList = (List) actual;
+      Assert.assertEquals(path + " arrays length mismatch", expectedList.size(), actualList.size());
+      for (int i = 0; i < expectedList.size(); i++) {
+        assertDeepEquals(path + "[" + i + "]", expectedList.get(i), actualList.get(i));
+      }
+    } else {
+      Assert.assertEquals(path, expected, actual);
+    }
   }
 }

@@ -45,6 +45,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -53,8 +54,10 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -122,6 +125,7 @@ public class OverlordResource
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
+  private final ProvisioningStrategy provisioningStrategy;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -135,7 +139,8 @@ public class OverlordResource
       JacksonConfigManager configManager,
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
-      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
+      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
+      ProvisioningStrategy provisioningStrategy
   )
   {
     this.taskMaster = taskMaster;
@@ -146,6 +151,7 @@ public class OverlordResource
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
+    this.provisioningStrategy = provisioningStrategy;
   }
 
   /**
@@ -420,6 +426,69 @@ public class OverlordResource
     }
 
     return Response.ok(workerConfigRef.get()).build();
+  }
+
+  /**
+   * Gets the total worker capacity of varies states of the cluster.
+   */
+  @GET
+  @Path("/totalWorkerCapacity")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  public Response getTotalWorkerCapacity()
+  {
+    // Calculate current cluster capacity
+    int currentCapacity;
+    Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    if (!taskRunnerOptional.isPresent()) {
+      // Cannot serve call as not leader
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
+    TaskRunner taskRunner = taskRunnerOptional.get();
+    Collection<ImmutableWorkerInfo> workers;
+    if (taskRunner instanceof WorkerTaskRunner) {
+      workers = ((WorkerTaskRunner) taskRunner).getWorkers();
+      currentCapacity = workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+    } else {
+      log.debug(
+          "Cannot calculate capacity as task runner [%s] of type [%s] does not support listing workers",
+          taskRunner,
+          taskRunner.getClass().getName()
+      );
+      workers = ImmutableList.of();
+      currentCapacity = -1;
+    }
+
+    // Calculate maximum capacity with auto scale
+    int maximumCapacity;
+    if (workerConfigRef == null) {
+      workerConfigRef = configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class);
+    }
+    WorkerBehaviorConfig workerBehaviorConfig = workerConfigRef.get();
+    if (workerBehaviorConfig == null) {
+      // Auto scale not setup
+      log.debug("Cannot calculate maximum worker capacity as worker behavior config is not configured");
+      maximumCapacity = -1;
+    } else if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
+      DefaultWorkerBehaviorConfig defaultWorkerBehaviorConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
+      if (defaultWorkerBehaviorConfig.getAutoScaler() == null) {
+        // Auto scale not setup
+        log.debug("Cannot calculate maximum worker capacity as auto scaler not configured");
+        maximumCapacity = -1;
+      } else {
+        int maxWorker = defaultWorkerBehaviorConfig.getAutoScaler().getMaxNumWorkers();
+        int expectedWorkerCapacity = provisioningStrategy.getExpectedWorkerCapacity(workers);
+        maximumCapacity = expectedWorkerCapacity == -1 ? -1 : maxWorker * expectedWorkerCapacity;
+      }
+    } else {
+      // Auto scale is not using DefaultWorkerBehaviorConfig
+      log.debug("Cannot calculate maximum worker capacity as WorkerBehaviorConfig [%s] of type [%s] does not support getting max capacity",
+                workerBehaviorConfig,
+                workerBehaviorConfig.getClass().getSimpleName()
+      );
+      maximumCapacity = -1;
+    }
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
   }
 
   // default value is used for backwards compatibility

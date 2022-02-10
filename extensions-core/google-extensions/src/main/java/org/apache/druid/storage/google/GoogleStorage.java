@@ -22,22 +22,32 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.AbstractInputStreamContent;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.Storage.Objects.Get;
+import com.google.common.base.Supplier;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 public class GoogleStorage
 {
-  private final Storage storage;
+  /**
+   * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
+   * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
+   * if we have a Storage instead of a supplier of it, it can cause unnecessary config validation
+   * against Google storage even when it's not used at all. To perform the config validation
+   * only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
+  private final Supplier<Storage> storage;
 
-  public GoogleStorage(Storage storage)
+  public GoogleStorage(Supplier<Storage> storage)
   {
     this.storage = storage;
   }
 
   public void insert(final String bucket, final String path, AbstractInputStreamContent mediaContent) throws IOException
   {
-    Storage.Objects.Insert insertObject = storage.objects().insert(bucket, null, mediaContent);
+    Storage.Objects.Insert insertObject = storage.get().objects().insert(bucket, null, mediaContent);
     insertObject.setName(path);
     insertObject.getMediaHttpUploader().setDirectUploadEnabled(false);
     insertObject.execute();
@@ -50,7 +60,7 @@ public class GoogleStorage
 
   public InputStream get(final String bucket, final String path, long start) throws IOException
   {
-    final Get get = storage.objects().get(bucket, path);
+    final Get get = storage.get().objects().get(bucket, path);
     InputStream inputStream = get.executeMediaAsInputStream();
     inputStream.skip(start);
     return inputStream;
@@ -58,13 +68,13 @@ public class GoogleStorage
 
   public void delete(final String bucket, final String path) throws IOException
   {
-    storage.objects().delete(bucket, path).execute();
+    storage.get().objects().delete(bucket, path).execute();
   }
 
   public boolean exists(final String bucket, final String path)
   {
     try {
-      return storage.objects().get(bucket, path).executeUsingHead().isSuccessStatusCode();
+      return storage.get().objects().get(bucket, path).executeUsingHead().isSuccessStatusCode();
     }
     catch (Exception e) {
       return false;
@@ -73,16 +83,16 @@ public class GoogleStorage
    
   public long size(final String bucket, final String path) throws IOException
   {
-    return storage.objects().get(bucket, path).execute().getSize().longValue();
+    return storage.get().objects().get(bucket, path).execute().getSize().longValue();
   }
 
   public String version(final String bucket, final String path) throws IOException
   {
-    return storage.objects().get(bucket, path).execute().getEtag();
+    return storage.get().objects().get(bucket, path).execute().getEtag();
   }
 
   public Storage.Objects.List list(final String bucket) throws IOException
   {
-    return storage.objects().list(bucket);
+    return storage.get().objects().list(bucket);
   }
 }

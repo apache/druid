@@ -54,12 +54,13 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
       final DateTimeZone timeZone
   )
   {
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        timeExpression.getDruidType(),
         "timestamp_extract",
         ImmutableList.of(
             timeExpression,
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(unit.name())),
-            DruidExpression.fromExpression(DruidExpression.stringLiteral(timeZone.getID()))
+            DruidExpression.ofStringLiteral(unit.name()),
+            DruidExpression.ofStringLiteral(timeZone.getID())
         )
     );
   }

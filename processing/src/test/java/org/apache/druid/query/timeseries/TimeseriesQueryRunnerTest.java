@@ -3031,6 +3031,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0",
                                               null,
                                               false,
+                                              false,
+                                              false,
                                               "__acc + 1",
                                               "__acc + diy_count",
                                               null,
@@ -3045,6 +3047,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0.0",
                                               null,
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               null,
                                               null,
@@ -3057,8 +3061,10 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               ImmutableSet.of("index"),
                                               null,
                                               "0.0",
-                                              "<DOUBLE>[]",
+                                              "ARRAY<DOUBLE>[]",
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               "array_concat(__acc, diy_decomposed_sum)",
                                               null,
@@ -3073,6 +3079,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,
@@ -3094,7 +3102,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 6626.151569,
                     "diy_decomposed_sum", 6626.151569,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         ),
@@ -3105,7 +3113,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 5833.209718,
                     "diy_decomposed_sum", 5833.209718,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         )
@@ -3137,6 +3145,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,

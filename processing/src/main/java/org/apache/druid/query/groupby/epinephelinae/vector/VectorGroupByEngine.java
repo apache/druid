@@ -47,7 +47,6 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -106,7 +105,7 @@ public class VectorGroupByEngine
                 return false;
               }
 
-              if (dimension.getOutputType().getType().equals(ValueType.ARRAY)) {
+              if (dimension.getOutputType().isArray()) {
                 // group by on arrays is not currently supported in the vector processing engine
                 return false;
               }

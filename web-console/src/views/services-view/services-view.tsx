@@ -245,7 +245,7 @@ ORDER BY
           services = services.map(s => {
             const loadQueueInfo = loadQueues[s.service];
             if (loadQueueInfo) {
-              s = Object.assign(s, loadQueueInfo);
+              s = { ...s, ...loadQueueInfo };
             }
             return s;
           });
@@ -278,7 +278,7 @@ ORDER BY
           services = services.map(s => {
             const middleManagerInfo = middleManagersLookup[s.service];
             if (middleManagerInfo) {
-              s = Object.assign(s, middleManagerInfo);
+              s = { ...s, ...middleManagerInfo };
             }
             return s;
           });
@@ -537,12 +537,8 @@ ORDER BY
               const { service_type } = row.original;
               switch (service_type) {
                 case 'historical': {
-                  const {
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  } = row.original;
+                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
+                    row.original;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,

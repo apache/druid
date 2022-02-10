@@ -296,7 +296,8 @@ public class ExpressionSelectors
       } else if (capabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
-            multiVal
+            multiVal,
+            homogenizeNullMultiValueStringArrays
         );
       } else {
         // complex type just pass straight through
@@ -349,7 +350,8 @@ public class ExpressionSelectors
    *
    * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
    */
-  private static <T> Supplier<T> makeNullableNumericSupplier(
+  @VisibleForTesting
+  public static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )
@@ -371,7 +373,7 @@ public class ExpressionSelectors
    * arrays if specified.
    */
   @VisibleForTesting
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray, boolean homogenize)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
@@ -381,8 +383,12 @@ public class ExpressionSelectors
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0) {
-          return new Object[]{null};
+        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+          if (homogenize) {
+            return new Object[]{null};
+          } else {
+            return null;
+          }
         }
         final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection

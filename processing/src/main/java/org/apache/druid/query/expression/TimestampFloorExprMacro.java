@@ -34,7 +34,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -111,9 +110,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-
-      return shuttle.visit(new TimestampFloorExpr(newArgs));
+      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -189,8 +186,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

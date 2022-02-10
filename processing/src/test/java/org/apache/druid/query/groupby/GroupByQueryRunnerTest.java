@@ -1734,8 +1734,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ExprMacroTable.nil()
         ))
         .setDimensions(
-            new ExtractionDimensionSpec("v0", "alias", ColumnType.STRING,
-                                        new SubstringDimExtractionFn(1, 1)
+            new ExtractionDimensionSpec(
+                "v0",
+                "alias",
+                ColumnType.STRING,
+                new SubstringDimExtractionFn(1, 1)
             )
         )
 
@@ -12031,6 +12034,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0",
                 null,
                 false,
+                false,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -12045,6 +12050,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0.0",
                 null,
                 null,
+                false,
+                false,
                 "__acc + index",
                 null,
                 null,
@@ -12265,6 +12272,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "hyper_unique()",
                 null,
                 null,
+                false,
+                false,
                 "hyper_unique_add(quality, __acc)",
                 "hyper_unique_add(carExpr, __acc)",
                 null,
@@ -12311,6 +12320,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "hyper_unique()",
                 null,
                 null,
+                false,
+                false,
                 "hyper_unique_add(quality, __acc)",
                 null,
                 null,
@@ -12353,6 +12364,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0",
                 null,
                 false,
+                false,
+                false,
                 "__acc + 1",
                 "__acc + rows",
                 null,
@@ -12367,6 +12380,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "0.0",
                 null,
                 true,
+                false,
+                false,
                 "__acc + index",
                 null,
                 null,
@@ -12381,6 +12396,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "[]",
                 null,
                 null,
+                true,
+                false,
                 "array_set_add(acc, market)",
                 "array_set_add_all(acc, array_agg_distinct)",
                 null,
@@ -12451,7 +12468,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2871.8866900000003d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -12475,7 +12492,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2900.798647d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -12560,7 +12577,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2448.830613d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -12584,7 +12601,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             2506.415148d,
             "array_agg_distinct",
-            new String[] {"upfront", "spot", "total_market"}
+            new String[] {"spot", "total_market", "upfront"}
         ),
         makeRow(
             query,
@@ -12640,6 +12657,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 "[]",
                 null,
                 null,
+                true,
+                false,
                 "array_set_add(acc, placementish)",
                 "array_set_add_all(acc, array_agg_distinct)",
                 null,
@@ -12714,7 +12733,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "technology",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
         makeRow(
             query,
@@ -12722,7 +12741,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "travel",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
 
         makeRow(
@@ -12787,7 +12806,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "technology",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         ),
         makeRow(
             query,
@@ -12795,7 +12814,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "alias",
             "travel",
             "array_agg_distinct",
-            new String[] {"t", "preferred"}
+            new String[] {"preferred", "t"}
         )
     );
 

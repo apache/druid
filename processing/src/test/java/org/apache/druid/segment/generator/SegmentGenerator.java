@@ -35,6 +35,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -211,6 +212,57 @@ public class SegmentGenerator implements Closeable
     return retVal;
   }
 
+  public IncrementalIndex generateIncrementalIndex(
+
+      final DataSegment dataSegment,
+      final GeneratorSchemaInfo schemaInfo,
+      final Granularity granularity,
+      final int numRows
+  )
+  {
+    // In case we need to generate hyperUniques.
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+
+    final String dataHash = Hashing.sha256()
+                                   .newHasher()
+                                   .putString(dataSegment.getId().toString(), StandardCharsets.UTF_8)
+                                   .putString(schemaInfo.toString(), StandardCharsets.UTF_8)
+                                   .putString(granularity.toString(), StandardCharsets.UTF_8)
+                                   .putInt(numRows)
+                                   .hash()
+                                   .toString();
+
+
+    final DataGenerator dataGenerator = new DataGenerator(
+        schemaInfo.getColumnSchemas(),
+        dataSegment.getId().hashCode(), /* Use segment identifier hashCode as seed */
+        schemaInfo.getDataInterval(),
+        numRows
+    );
+
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(schemaInfo.getDimensionsSpec())
+        .withMetrics(schemaInfo.getAggsArray())
+        .withRollup(schemaInfo.isWithRollup())
+        .withQueryGranularity(granularity)
+        .build();
+
+    final List<InputRow> rows = new ArrayList<>();
+
+    for (int i = 0; i < numRows; i++) {
+      final InputRow row = dataGenerator.nextRow();
+      rows.add(row);
+
+      if ((i + 1) % 20000 == 0) {
+        log.info("%,d/%,d rows generated for[%s].", i + 1, numRows, dataSegment);
+      }
+    }
+
+    log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
+
+    return makeIncrementalIndex(dataSegment.getId(), dataHash, 0, rows, indexSchema);
+  }
+
   @Override
   public void close() throws IOException
   {
@@ -234,6 +286,23 @@ public class SegmentGenerator implements Closeable
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .rows(rows)
         .buildMMappedIndex();
+  }
+
+  private IncrementalIndex makeIncrementalIndex(
+      final SegmentId identifier,
+      final String dataHash,
+      final int indexNumber,
+      final List<InputRow> rows,
+      final IncrementalIndexSchema indexSchema
+  )
+  {
+    return IndexBuilder
+        .create()
+        .schema(indexSchema)
+        .tmpDir(new File(getSegmentDir(identifier, dataHash), String.valueOf(indexNumber)))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .rows(rows)
+        .buildIncrementalIndex();
   }
 
   private File getSegmentDir(final SegmentId identifier, final String dataHash)

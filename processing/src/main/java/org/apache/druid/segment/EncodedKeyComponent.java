@@ -42,7 +42,7 @@ public class EncodedKeyComponent<K>
    *                           must account for the footprint of both the original
    *                           and encoded dimension values, as applicable.
    */
-  EncodedKeyComponent(@Nullable K component, long effectiveSizeBytes)
+  public EncodedKeyComponent(@Nullable K component, long effectiveSizeBytes)
   {
     this.component = component;
     this.effectiveSizeBytes = effectiveSizeBytes;

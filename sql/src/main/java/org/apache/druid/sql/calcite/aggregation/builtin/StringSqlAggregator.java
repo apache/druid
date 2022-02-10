@@ -43,7 +43,6 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -135,8 +134,7 @@ public class StringSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
     final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
@@ -152,6 +150,8 @@ public class StringSqlAggregator implements SqlAggregator
                   initialvalue,
                   null,
                   true,
+                  false,
+                  false,
                   StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
                   StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
                   null,
@@ -173,6 +173,8 @@ public class StringSqlAggregator implements SqlAggregator
                   initialvalue,
                   null,
                   true,
+                  false,
+                  false,
                   StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
                   StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
                   null,
