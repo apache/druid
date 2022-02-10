@@ -181,7 +181,6 @@ historical:
   ##
   enabled: true
   name: historical
-  replicaCount: 1
   port: 8083
   serviceType: ClusterIP
 

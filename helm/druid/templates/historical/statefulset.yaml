@@ -41,7 +41,7 @@ metadata:
   name: {{ $druidHistoricalFullName }}-{{ $key }}
 spec:
   serviceName: {{ $druidHistoricalFullName }}-{{ $key }}
-  replicas: {{ $historicalValue.replicaCount }}
+  replicas: {{ $value.replicaCount }}
   selector:
     matchLabels:
       app: {{ $druidName }}-{{ $key }}
