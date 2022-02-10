@@ -16,6 +16,17 @@
  limitations under the License.
 
 */}}
+{{- $druidName := include "druid.name" . }}
+{{- $druidHistoricalFullName := include "druid.historical.fullname" . }}
+{{- $chartValue := $.Chart }}
+{{- $releaseValue := $.Release }}
+{{- $historicalValue := $.Values.historical }}
+{{- $imageValue := $.Values.image }}
+{{- $gCloudValue := $.Values.gCloudStorage }}
+
+
+{{- range $key, $value := .Values.historical.tiers }}
+
 
 {{- if .Values.historical.enabled -}}
 apiVersion: apps/v1
@@ -156,4 +167,6 @@ spec:
         requests:
           storage: "{{ .Values.historical.persistence.size }}"
   {{- end }}
+{{- end }}
+---
 {{- end }}

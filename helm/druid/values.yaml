@@ -244,6 +244,16 @@ historical:
   updateStrategy:
     type: RollingUpdate
 
+  tiers:
+    default:
+      replicaCount: 1
+      env:
+        druid_server_tier: default
+    cold:
+      replicaCount: 1
+      env:
+        druid_server_tier: cold
+
 middleManager:
   ## If false, middleManager will not be installed
   ##
