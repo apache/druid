@@ -22,7 +22,9 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -77,24 +79,13 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
-    final String fieldName;
-    final String expression;
+    final Pair<String, String> fieldAndExpression = getFieldOrExpression(
+        virtualColumnRegistry,
+        arg,
+        aggregateCall.getType()
+    );
 
-    if (arg.isDirectColumnAccess()) {
-      fieldName = arg.getDirectColumn();
-      expression = null;
-    } else {
-      // sharing is caring, make a virtual column for anything more complicated than a literal to maximize re-use
-      if (arg.getType() == DruidExpression.NodeType.LITERAL) {
-        fieldName = null;
-        expression = arg.getExpression();
-      } else {
-        fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, aggregateCall.getType());
-        expression = null;
-      }
-    }
-
-    return getAggregation(name, aggregateCall, macroTable, fieldName, expression);
+    return getAggregation(name, aggregateCall, macroTable, fieldAndExpression.lhs, fieldAndExpression.rhs);
   }
 
   abstract Aggregation getAggregation(
@@ -104,4 +95,32 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
       String fieldName,
       String expression
   );
+
+  public static Pair<String, String> getFieldOrExpression(
+      VirtualColumnRegistry virtualColumnRegistry,
+      DruidExpression arg,
+      RelDataType type
+  )
+  {
+
+    final String fieldName;
+    final String expression;
+
+    if (arg.isDirectColumnAccess()) {
+      fieldName = arg.getDirectColumn();
+      expression = null;
+    } else {
+      // sharing is caring, make a virtual column for anything more complicated than a literal to maximize re-use
+      if (arg.getType() == DruidExpression.NodeType.LITERAL) {
+        // though if it is already defined by someone else, we can use it anyway...
+        fieldName = virtualColumnRegistry.getVirtualColumnByExpression(arg, type);
+        expression = fieldName == null ? arg.getExpression() : null;
+      } else {
+        fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, type);
+        expression = null;
+      }
+    }
+
+    return new Pair<>(fieldName, expression);
+  }
 }

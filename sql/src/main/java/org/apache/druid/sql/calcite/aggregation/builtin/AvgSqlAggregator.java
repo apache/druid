@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -91,10 +92,7 @@ public class AvgSqlAggregator implements SqlAggregator
         project
     );
 
-    final String fieldName;
-    final String expression;
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
-
 
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
     final ValueType sumType;
@@ -105,30 +103,24 @@ public class AvgSqlAggregator implements SqlAggregator
       sumType = ValueType.DOUBLE;
     }
 
-    if (arg.isDirectColumnAccess()) {
-      fieldName = arg.getDirectColumn();
-      expression = null;
-    } else {
-      // if the filter or anywhere else defined a virtual column for us, re-use it
-      final RexNode resolutionArg = Expressions.fromFieldAccess(
-          rowSignature,
-          project,
-          Iterables.getOnlyElement(aggregateCall.getArgList())
-      );
-      if (arg.getType() == DruidExpression.NodeType.LITERAL) {
-        fieldName = null;
-        expression = arg.getExpression();
-      } else {
-        fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, resolutionArg.getType());
-        expression = null;
-      }
-    }
+    // if the filter or anywhere else defined a virtual column for us, re-use it
+    final RexNode resolutionArg = Expressions.fromFieldAccess(
+        rowSignature,
+        project,
+        Iterables.getOnlyElement(aggregateCall.getArgList())
+    );
+    final Pair<String, String> fieldAndExpression = SimpleSqlAggregator.getFieldOrExpression(
+        virtualColumnRegistry,
+        arg,
+        resolutionArg.getType()
+    );
+
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
         sumType,
         sumName,
-        fieldName,
-        expression,
+        fieldAndExpression.lhs,
+        fieldAndExpression.rhs,
         macroTable
     );
 
