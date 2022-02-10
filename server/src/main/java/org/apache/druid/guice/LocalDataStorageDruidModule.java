@@ -77,10 +77,10 @@ public class LocalDataStorageDruidModule implements DruidModule
              .to(LocalFileTimestampVersionFinder.class)
              .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
-            .addBinding(SCHEME)
-            .to(LocalDataSegmentKiller.class)
-            .in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder)
+           .addBinding(SCHEME)
+           .to(LocalDataSegmentKiller.class)
+           .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
             .addBinding(SCHEME)

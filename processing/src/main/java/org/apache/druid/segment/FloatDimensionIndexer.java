@@ -43,7 +43,6 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   private volatile boolean hasNulls = false;
 
-  @Nullable
   @Override
   public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {

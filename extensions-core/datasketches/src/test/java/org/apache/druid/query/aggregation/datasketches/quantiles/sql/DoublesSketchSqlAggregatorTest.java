@@ -564,7 +564,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p3",
-                          "(p2 + 1000)",
+                          "(\"p2\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -578,7 +578,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p6",
-                          "(p5 + 1000)",
+                          "(\"p5\" + 1000)",
                           null,
                           TestExprMacroTable.INSTANCE
                       ),
@@ -590,7 +590,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator("p9", "abs(p8)", null, TestExprMacroTable.INSTANCE),
+                      new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
                       new DoublesSketchToQuantilesPostAggregator(
                           "p11",
                           new FieldAccessPostAggregator(
@@ -633,7 +633,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ),
                       new ExpressionPostAggregator(
                           "p20",
-                          "replace(replace(p19,'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
+                          "replace(replace(\"p19\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
                           + "'Combined Buffer Capacity     : 6',"
                           + "'Combined Buffer Capacity     : 8')",
                           null,

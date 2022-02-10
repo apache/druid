@@ -145,12 +145,21 @@ public class CompactionResourceTestClient
     }
   }
 
-  public void updateCompactionTaskSlot(Double compactionTaskSlotRatio, Integer maxCompactionTaskSlots) throws Exception
+  public void updateCompactionTaskSlot(Double compactionTaskSlotRatio, Integer maxCompactionTaskSlots, Boolean useAutoScaleSlots) throws Exception
   {
-    String url = StringUtils.format("%sconfig/compaction/taskslots?ratio=%s&max=%s",
-                                    getCoordinatorURL(),
-                                    StringUtils.urlEncode(compactionTaskSlotRatio.toString()),
-                                    StringUtils.urlEncode(maxCompactionTaskSlots.toString()));
+    String url;
+    if (useAutoScaleSlots == null) {
+      url = StringUtils.format("%sconfig/compaction/taskslots?ratio=%s&max=%s",
+                                      getCoordinatorURL(),
+                                      StringUtils.urlEncode(compactionTaskSlotRatio.toString()),
+                                      StringUtils.urlEncode(maxCompactionTaskSlots.toString()));
+    } else {
+      url = StringUtils.format("%sconfig/compaction/taskslots?ratio=%s&max=%s&useAutoScaleSlots=%s",
+                                      getCoordinatorURL(),
+                                      StringUtils.urlEncode(compactionTaskSlotRatio.toString()),
+                                      StringUtils.urlEncode(maxCompactionTaskSlots.toString()),
+                                      StringUtils.urlEncode(useAutoScaleSlots.toString()));
+    }
     StatusResponseHolder response = httpClient.go(new Request(HttpMethod.POST, new URL(url)), responseHandler).get();
     if (!response.getStatus().equals(HttpResponseStatus.OK)) {
       throw new ISE(

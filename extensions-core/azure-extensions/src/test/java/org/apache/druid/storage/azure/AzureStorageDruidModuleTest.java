@@ -19,11 +19,14 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.ListBlobItem;
@@ -33,6 +36,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
@@ -125,8 +129,10 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
 
-    CloudBlobClient cloudBlobClient = injector.getInstance(CloudBlobClient.class);
-    StorageCredentials storageCredentials = cloudBlobClient.getCredentials();
+    Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
+        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
+    );
+    StorageCredentials storageCredentials = cloudBlobClient.get().getCredentials();
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, storageCredentials.getAccountName());
   }
@@ -136,13 +142,15 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
 
-    CloudBlobClient cloudBlobClient = injector.getInstance(CloudBlobClient.class);
-    StorageCredentials storageCredentials = cloudBlobClient.getCredentials();
+    Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
+        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
+    );
+    StorageCredentials storageCredentials = cloudBlobClient.get().getCredentials();
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, storageCredentials.getAccountName());
 
     AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
-    Assert.assertSame(cloudBlobClient, azureStorage.getCloudBlobClient());
+    Assert.assertSame(cloudBlobClient.get(), azureStorage.getCloudBlobClient());
   }
 
   @Test
@@ -220,6 +228,22 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
+  }
+
+  @Test
+  public void testSegmentKillerBoundSingleton()
+  {
+    Injector injector = makeInjectorWithProperties(PROPERTIES);
+    OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
+    Assert.assertTrue(killer.getKillers().containsKey(AzureStorageDruidModule.SCHEME));
+    Assert.assertSame(
+        AzureDataSegmentKiller.class,
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).getClass()
+    );
+    Assert.assertSame(
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME),
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME)
+    );
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

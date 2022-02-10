@@ -267,8 +267,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
                                   remoteTaskRunnerConfig,
                                   workerConfig,
                                   pendingTasks,
-                                  workers,
-                                  config.getWorkerCapacityHint()
+                                  workers
                               );
       log.debug("More workers needed: %d", moreWorkersNeeded);
 
@@ -296,8 +295,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         final WorkerTaskRunnerConfig workerTaskRunnerConfig,
         final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<Task> pendingTasks,
-        final Collection<ImmutableWorkerInfo> workers,
-        final int workerCapacityHint
+        final Collection<ImmutableWorkerInfo> workers
     )
     {
       final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
@@ -312,7 +310,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       }
       WorkerSelectStrategy workerSelectStrategy = workerConfig.getSelectStrategy();
       int need = 0;
-      int capacity = getExpectedWorkerCapacity(workers, workerCapacityHint);
+      int capacity = getExpectedWorkerCapacity(workers);
       log.info("Expected worker capacity: %d", capacity);
 
       // Simulate assigning tasks to dummy workers using configured workerSelectStrategy
@@ -458,14 +456,15 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return currValidWorkers;
   }
 
-  private static int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers, final int workerCapacityHint)
+  @Override
+  public int getExpectedWorkerCapacity(final Collection<ImmutableWorkerInfo> workers)
   {
     int size = workers.size();
     if (size == 0) {
       // No existing workers
-      if (workerCapacityHint > 0) {
+      if (config.getWorkerCapacityHint() > 0) {
         // Return workerCapacityHint if it is set in config
-        return workerCapacityHint;
+        return config.getWorkerCapacityHint();
       } else {
         // Assume capacity per worker as 1
         return 1;

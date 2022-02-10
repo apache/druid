@@ -116,10 +116,10 @@ public class TimeFormatOperatorConversionTest extends ExpressionTestBase
       exprsBuilder.add(testHelper.makeLiteral(timezone));
     }
 
-    testHelper.testExpression(
+    testHelper.testExpressionString(
         target.calciteOperator(),
         exprsBuilder.build(),
-        DruidExpression.fromExpression(expectedExpression),
+        makeExpression(expectedExpression),
         expectedResult
     );
   }

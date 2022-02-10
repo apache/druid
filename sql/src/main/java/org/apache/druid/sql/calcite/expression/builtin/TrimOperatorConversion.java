@@ -26,10 +26,12 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -40,7 +42,8 @@ public class TrimOperatorConversion implements SqlOperatorConversion
   public static DruidExpression makeTrimExpression(
       final SqlTrimFunction.Flag trimStyle,
       final DruidExpression stringExpression,
-      final DruidExpression charsExpression
+      final DruidExpression charsExpression,
+      final ColumnType druidType
   )
   {
     final String functionName;
@@ -61,7 +64,7 @@ public class TrimOperatorConversion implements SqlOperatorConversion
     }
 
     // Druid version of trim is multi-function (ltrim/rtrim/trim) and the other two args are swapped.
-    return DruidExpression.fromFunctionCall(functionName, ImmutableList.of(stringExpression, charsExpression));
+    return DruidExpression.ofFunctionCall(druidType, functionName, ImmutableList.of(stringExpression, charsExpression));
   }
 
   @Override
@@ -99,6 +102,11 @@ public class TrimOperatorConversion implements SqlOperatorConversion
       return null;
     }
 
-    return makeTrimExpression(trimStyle, stringExpression, charsExpression);
+    return makeTrimExpression(
+        trimStyle,
+        stringExpression,
+        charsExpression,
+        Calcites.getColumnTypeForRelDataType(rexNode.getType())
+    );
   }
 }
