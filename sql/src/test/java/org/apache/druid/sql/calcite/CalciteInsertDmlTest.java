@@ -555,7 +555,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("INSERT statements should specify PARTITIONED BY clause explictly", e.getMessage());
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
     didTest = true;
   }
 
