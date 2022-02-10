@@ -241,11 +241,9 @@ public class ImmutableWorkerInfoTest
     when(parallelIndexTask.getTaskResource()).thenReturn(taskResource0);
 
     // Since task satisifies parallel and total slot constraints, can run
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(parallelIndexTask, 0.5));
     Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, 0.5));
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
-    Assert.assertFalse(workerInfo.canRunParallelIndexTask(parallelIndexTask, 0.1));
     Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, 0.1));
 
 
@@ -258,7 +256,6 @@ public class ImmutableWorkerInfoTest
 
     // Not a parallel index task ->  satisfies parallel index constraint
     // But does not satisfy the total slot constraint and cannot run (11 > 10)
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(anyOtherTask, 0.5));
     Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, 0.5));
 
 
@@ -271,42 +268,7 @@ public class ImmutableWorkerInfoTest
     when(grp1Task.getTaskResource()).thenReturn(taskResource2);
 
     // Satisifies parallel index and total index slot constraints but cannot run due availability
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(grp1Task, 0.3));
     Assert.assertFalse(workerInfo.canRunTask(grp1Task, 0.3));
-  }
-
-  @Test
-  public void test_canRunParallelIndexTask()
-  {
-    ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
-        new Worker(
-            "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
-        ),
-        2,
-        0,
-        ImmutableSet.of("grp1", "grp2"),
-        ImmutableSet.of("task1", "task2"),
-        DateTimes.of("2015-01-01T01:01:02Z")
-    );
-
-    TaskResource taskResource = mock(TaskResource.class);
-    when(taskResource.getRequiredCapacity()).thenReturn(3);
-
-    Task parallelIndexTask = mock(ParallelIndexSupervisorTask.class);
-    when(parallelIndexTask.getType()).thenReturn(ParallelIndexSupervisorTask.TYPE);
-    when(parallelIndexTask.getTaskResource()).thenReturn(taskResource);
-    // 5 parallel index task slots available, 3 needed -> can run
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(parallelIndexTask, 0.5));
-    // 1 parallel index task slots available, 3 needed -> can't run
-    Assert.assertFalse(workerInfo.canRunParallelIndexTask(parallelIndexTask, 0.1));
-
-    Task anyOtherTask = mock(IndexTask.class);
-    when(anyOtherTask.getType()).thenReturn("index");
-    when(anyOtherTask.getTaskResource()).thenReturn(taskResource);
-    // Not a parallel index task -> can run irrespective of available slots
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(anyOtherTask, 0.5));
-    // Not a parallel index task -> can run irrespective of available slots
-    Assert.assertTrue(workerInfo.canRunParallelIndexTask(anyOtherTask, 0.1));
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)
