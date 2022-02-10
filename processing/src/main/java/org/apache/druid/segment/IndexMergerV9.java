@@ -387,8 +387,8 @@ public class IndexMergerV9 implements IndexMerger
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
     final long numBytes = cols.getSerializedSize()
                           + dims.getSerializedSize()
-                          + nullCols.getSerializedSize()
-                          + nullDims.getSerializedSize()
+                          + (finalNullOnlyColumns.isEmpty() ? 0 : nullCols.getSerializedSize())
+                          + (finalNullOnlyColumns.isEmpty() ? 0 : nullDims.getSerializedSize())
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
@@ -413,8 +413,10 @@ public class IndexMergerV9 implements IndexMerger
       // Store null-only dimensions at the end of this section,
       // so that historicals of an older version can ignore them instead of exploding while reading this segment.
       // Those historicals will still serve any query that reads null-only columns.
-      nullCols.writeTo(writer, v9Smoosher);
-      nullDims.writeTo(writer, v9Smoosher);
+      if (!finalNullOnlyColumns.isEmpty()) {
+        nullCols.writeTo(writer, v9Smoosher);
+        nullDims.writeTo(writer, v9Smoosher);
+      }
     }
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
@@ -1106,7 +1108,7 @@ public class IndexMergerV9 implements IndexMerger
       List<IndexableAdapter> indexes,
       final boolean rollup,
       final AggregatorFactory[] metricAggs,
-      @Nullable DimensionsSpec dimensionsSpec, // TODO: nullable??
+      @Nullable DimensionsSpec dimensionsSpec,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,

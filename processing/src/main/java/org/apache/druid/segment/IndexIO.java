@@ -575,16 +575,21 @@ public class IndexIO
             BitmapSerdeFactory.class
         );
 
-        nullCols = GenericIndexed.read(
-            indexBuffer,
-            GenericIndexed.STRING_STRATEGY,
-            smooshedFiles
-        );
-        nullDims = GenericIndexed.read(
-            indexBuffer,
-            GenericIndexed.STRING_STRATEGY,
-            smooshedFiles
-        );
+        if (indexBuffer.hasRemaining()) {
+          nullCols = GenericIndexed.read(
+              indexBuffer,
+              GenericIndexed.STRING_STRATEGY,
+              smooshedFiles
+          );
+          nullDims = GenericIndexed.read(
+              indexBuffer,
+              GenericIndexed.STRING_STRATEGY,
+              smooshedFiles
+          );
+        } else {
+          nullCols = null;
+          nullDims = null;
+        }
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
         nullCols = null;

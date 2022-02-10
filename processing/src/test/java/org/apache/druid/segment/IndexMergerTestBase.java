@@ -76,6 +76,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -773,7 +774,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
       final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-      Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter.getDimensionNames()));
+      Assert.assertEquals(ImmutableSet.of("dimA", "dimB"), new HashSet<>(adapter.getDimensionNames()));
       Assert.assertEquals(5, rowList.size());
 
       Assert.assertEquals(Arrays.asList(null, "1"), rowList.get(0).dimensionValues());
