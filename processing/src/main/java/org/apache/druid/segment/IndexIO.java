@@ -567,6 +567,7 @@ public class IndexIO
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
        * this information is appended to the end of index.drd.
        */
+      @Nullable final GenericIndexed<String> nullCols;
       @Nullable final GenericIndexed<String> nullDims;
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(
@@ -574,6 +575,11 @@ public class IndexIO
             BitmapSerdeFactory.class
         );
 
+        nullCols = GenericIndexed.read(
+            indexBuffer,
+            GenericIndexed.STRING_STRATEGY,
+            smooshedFiles
+        );
         nullDims = GenericIndexed.read(
             indexBuffer,
             GenericIndexed.STRING_STRATEGY,
@@ -581,6 +587,7 @@ public class IndexIO
         );
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
+        nullCols = null;
         nullDims = null;
       }
 
@@ -634,10 +641,10 @@ public class IndexIO
       );
 
       // Register all null-only dimensions.
-      if (nullDims != null) {
+      if (nullCols != null) {
         registerColumnHolders(
             inDir,
-            nullDims,
+            nullCols,
             lazy,
             columns,
             mapper,
