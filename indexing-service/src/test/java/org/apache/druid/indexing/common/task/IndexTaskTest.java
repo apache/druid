@@ -264,7 +264,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
     Assert.assertEquals(1, segments.size());
-    Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
+    // null-only columns appear later than others
+    Assert.assertEquals(ImmutableList.of("ts", "valDim", "dim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
   }
 
