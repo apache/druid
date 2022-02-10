@@ -99,7 +99,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final List<String> dimensions;
   private final List<String> metrics;
   private final ShardSpec shardSpec;
-  private final boolean isTombstone;
 
   /**
    * Stores some configurations of the compaction task which created this segment.
@@ -215,8 +214,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
-    // compute tombstone flag before loadspec being potentially pruned...
-    isTombstone = computeTombstoneFlag(loadSpec);
     // prune loadspec if needed
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
@@ -352,21 +349,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   public boolean isTombstone()
   {
-    return isTombstone;
-  }
-
-  private boolean computeTombstoneFlag(Map<String, Object> loadSpec)
-  {
-    boolean isTombstone = false;
-    if (loadSpec != null) {
-      Object loadSpecType = loadSpec.get("type");
-      if (loadSpecType != null) {
-        if (loadSpecType instanceof String && TOMBSTONE_LOADSPEC_TYPE.equals(loadSpecType)) {
-          isTombstone = true;
-        }
-      }
-    }
-    return isTombstone;
+    return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
   }
 
   @Override

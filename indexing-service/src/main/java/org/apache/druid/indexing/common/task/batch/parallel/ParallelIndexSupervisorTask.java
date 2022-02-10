@@ -62,7 +62,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -1086,17 +1085,21 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           toolbox.getTaskActionClient()
       );
       List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
-      Map<Interval, String> tombstonesAndVersions = new HashMap<>();
-      for (Interval interval : tombstoneIntervals) {
-        NonnullPair<Interval, String> intervalAndVersion =
-            findIntervalAndVersion(((ParallelIndexPhaseRunner) getCurrentRunner()).getToolbox(),
-                                   ingestionSchema,
-                                   interval.getStart());
-        tombstonesAndVersions.put(interval, intervalAndVersion.rhs);
+      if (!tombstoneIntervals.isEmpty()) {
+
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAnShards.put(interval, segmentIdWithShardSpec);
+        }
+        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        newSegments.addAll(tombStones);
+        LOG.debugSegments(tombStones, "To publish tombstones");
       }
-      tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
-      newSegments.addAll(tombStones);
-      LOG.debugSegments(tombStones, "To publish tombstones");
     }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->

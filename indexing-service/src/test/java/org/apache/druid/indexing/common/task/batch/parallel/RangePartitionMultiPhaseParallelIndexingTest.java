@@ -190,6 +190,39 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     return intervalToDims;
   }
 
+  private static SetMultimap<Interval, List<Object>> createInputFilesForReplace(File inputDir, boolean useMultivalueDim)
+      throws IOException
+  {
+    SetMultimap<Interval, List<Object>> intervalToDims = HashMultimap.create();
+
+    Set<Integer> fileIds = new HashSet<>();
+    fileIds.add(1);
+    fileIds.add(7);
+    fileIds.add(9);
+    for (Integer fileIndex : fileIds) {
+      Path path = new File(inputDir, TEST_FILE_NAME_PREFIX + fileIndex).toPath();
+      try (final Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+        for (int i = 11; i < 2 * (NUM_ROW / DIM_FILE_CARDINALITY); i++) {
+          for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
+            int rowIndex = i * DIM_FILE_CARDINALITY + d;
+            String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
+          }
+        }
+      }
+    }
+
+    return intervalToDims;
+  }
+
   @Nullable
   private static String createDim1Value(int rowIndex, int fileIndex, boolean useMultivalueDim)
   {
@@ -233,12 +266,65 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             false
         ),
         useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
+        inputDir,
+        false,
         false
     );
 
     if (!useMultivalueDim) {
-      assertRangePartitions(publishedSegments);
+      assertRangePartitions(publishedSegments, intervalToDims, NUM_PARTITION);
     }
+  }
+
+  @Test
+  public void createsCorrectRangePartitionsWithReplace() throws Exception
+  {
+    if (intervalToIndex == null || useMultivalueDim) {
+      // dropExisting requires intervals
+      return;
+    }
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    final Set<DataSegment> publishedSegments = runTestTask(
+        new DimensionRangePartitionsSpec(
+            targetRowsPerSegment,
+            null,
+            Collections.singletonList(DIM1),
+            false
+        ),
+        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
+        this.inputDir,
+        false,
+        false
+    );
+
+    if (!useMultivalueDim) {
+      assertRangePartitions(publishedSegments, intervalToDims, NUM_PARTITION);
+    }
+
+    File inputDirectory = temporaryFolder.newFolder("dataReplace");
+    SetMultimap<Interval, List<Object>> intervalToDimensions = createInputFilesForReplace(inputDirectory, useMultivalueDim);
+
+    final Set<DataSegment> publishedSegmentsAfterReplace = runTestTask(
+        new DimensionRangePartitionsSpec(
+            targetRowsPerSegment,
+            null,
+            Collections.singletonList(DIM1),
+            false
+        ),
+        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
+        inputDirectory,
+        false,
+        true
+    );
+
+    int tombstones = 0;
+    for (DataSegment ds : publishedSegmentsAfterReplace) {
+      if (ds.isTombstone()) {
+        tombstones++;
+      }
+    }
+    Assert.assertEquals(11, tombstones);
+    Assert.assertEquals(10, publishedSegmentsAfterReplace.size() - tombstones);
   }
 
   @Test
@@ -258,6 +344,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
                 false
             ),
             TaskState.SUCCESS,
+            inputDir,
+            false,
             false
         )
     );
@@ -266,7 +354,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         runTestTask(
             new DynamicPartitionsSpec(5, null),
             TaskState.SUCCESS,
-            true
+            inputDir,
+            true,
+            false
         )
     );
     // And append again
@@ -274,7 +364,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
-            true
+            inputDir,
+            true,
+            false
         )
     );
 
@@ -309,7 +401,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private Set<DataSegment> runTestTask(
       PartitionsSpec partitionsSpec,
       TaskState expectedTaskState,
-      boolean appendToExisting
+      File inputDirectory,
+      boolean appendToExisting,
+      boolean dropExisting
   )
   {
     if (isUseInputFormatApi()) {
@@ -319,12 +413,13 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           INPUT_FORMAT,
           null,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
           expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     } else {
       return runTestTask(
@@ -333,29 +428,32 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           null,
           PARSE_SPEC,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
           expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          dropExisting
       );
     }
   }
 
-  private void assertRangePartitions(Set<DataSegment> publishedSegments) throws IOException
+  private void assertRangePartitions(Set<DataSegment> publishedSegments,
+                                     SetMultimap<Interval, List<Object>> intervalToDims,
+                                     int numPartitions
+  ) throws IOException
   {
     Multimap<Interval, DataSegment> intervalToSegments = ArrayListMultimap.create();
     publishedSegments.forEach(s -> intervalToSegments.put(s.getInterval(), s));
 
     Set<Interval> publishedIntervals = intervalToSegments.keySet();
-    assertHasExpectedIntervals(publishedIntervals);
+    assertHasExpectedIntervals(publishedIntervals, intervalToDims);
 
     File tempSegmentDir = temporaryFolder.newFolder();
 
     intervalToSegments.asMap().forEach((interval, segments) -> {
-      assertNumPartition(segments);
-
+      assertNumPartition(numPartitions, segments);
       List<StringTuple> allValues = new ArrayList<>(NUM_ROW);
       for (DataSegment segment : segments) {
         List<StringTuple> values = getColumnValues(segment, tempSegmentDir);
@@ -367,14 +465,17 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     });
   }
 
-  private void assertHasExpectedIntervals(Set<Interval> publishedSegmentIntervals)
+  private void assertHasExpectedIntervals(
+      Set<Interval> publishedSegmentIntervals,
+      SetMultimap<Interval, List<Object>> intervalToDimensions
+  )
   {
-    Assert.assertEquals(intervalToDims.keySet(), publishedSegmentIntervals);
+    Assert.assertEquals(intervalToDimensions.keySet(), publishedSegmentIntervals);
   }
 
-  private static void assertNumPartition(Collection<DataSegment> segments)
+  private static void assertNumPartition(int numPartitions, Collection<DataSegment> segments)
   {
-    Assert.assertEquals(NUM_PARTITION, segments.size());
+    Assert.assertEquals(numPartitions, segments.size());
   }
 
   private List<StringTuple> getColumnValues(DataSegment segment, File tempDir)

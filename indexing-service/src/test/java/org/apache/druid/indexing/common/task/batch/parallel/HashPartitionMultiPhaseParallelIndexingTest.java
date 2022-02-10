@@ -40,6 +40,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -168,6 +169,8 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
             ImmutableList.of("dim1", "dim2")
         ),
         TaskState.SUCCESS,
+        inputDir,
+        false,
         false
     );
 
@@ -176,6 +179,72 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         numShards
     );
     assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
+  }
+
+  @Test
+  public void testRunWithReplace() throws Exception
+  {
+    if (intervalToIndex == null) {
+      // replace only works when intervals are provided
+      return;
+    }
+    final Integer maxRowsPerSegment = numShards == null ? 10 : null;
+    final Set<DataSegment> publishedSegments = runTestTask(
+        new HashedPartitionsSpec(
+            maxRowsPerSegment,
+            numShards,
+            ImmutableList.of("dim1", "dim2")
+        ),
+        TaskState.SUCCESS,
+        inputDir,
+        false,
+        false
+    );
+    final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
+        maxRowsPerSegment,
+        numShards
+    );
+    assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
+
+    final Set<DataSegment> publishedSegmentsAfterReplace = runTestTask(
+        new HashedPartitionsSpec(
+            maxRowsPerSegment,
+            numShards,
+            ImmutableList.of("dim1", "dim2")
+        ),
+        TaskState.SUCCESS,
+        newInputDirForReplace(),
+        false,
+        true
+    );
+
+    final Map<Interval, Integer> expectedIntervalToNumSegmentsAfterReplace = computeExpectedIntervalToNumSegments(
+        maxRowsPerSegment,
+        numShards
+    );
+
+
+    // Regardless of whether numShards is set or not the replace will put data in six intervals.
+    // When numShards are set (2) it will generate 12 segments. When not, the hash ingestion code will estimate
+    // one shard perinterval thus siz segments:
+
+    // adjust expected wrt to tombstones:
+    int tombstones = 0;
+    for (DataSegment ds : publishedSegmentsAfterReplace) {
+      if (ds.isTombstone()) {
+        expectedIntervalToNumSegmentsAfterReplace.put(ds.getInterval(), 1);
+        tombstones++;
+      } else if (numShards == null) {
+        expectedIntervalToNumSegmentsAfterReplace.put(ds.getInterval(), 1);
+      }
+    }
+    Assert.assertEquals(5, tombstones); // five tombstones
+    int expectedSegments = 12;
+    if (numShards == null) {
+      expectedSegments = 6;
+    }
+    Assert.assertEquals(expectedSegments, publishedSegmentsAfterReplace.size() - tombstones); //  six segments
+    assertHashedPartition(publishedSegmentsAfterReplace, expectedIntervalToNumSegmentsAfterReplace);
   }
 
   @Test
@@ -190,6 +259,8 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
             HashPartitionFunction.MURMUR3_32_ABS
         ),
         TaskState.SUCCESS,
+        inputDir,
+        false,
         false
     );
     final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
@@ -227,6 +298,8 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         runTestTask(
             new HashedPartitionsSpec(null, numShards, ImmutableList.of("dim1", "dim2")),
             TaskState.SUCCESS,
+            inputDir,
+            false,
             false
         )
     );
@@ -235,7 +308,9 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         runTestTask(
             new DynamicPartitionsSpec(5, null),
             TaskState.SUCCESS,
-            true
+            inputDir,
+            true,
+            false
         )
     );
     // And append again
@@ -243,7 +318,9 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
-            true
+            inputDir,
+            true,
+            false
         )
     );
 
@@ -278,7 +355,9 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private Set<DataSegment> runTestTask(
       PartitionsSpec partitionsSpec,
       TaskState expectedTaskState,
-      boolean appendToExisting
+      File inputDirectory,
+      boolean appendToExisting,
+      boolean isReplace
   )
   {
     if (isUseInputFormatApi()) {
@@ -288,12 +367,13 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           INPUT_FORMAT,
           null,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           "test_*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
           expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          isReplace
       );
     } else {
       return runTestTask(
@@ -302,12 +382,13 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           null,
           PARSE_SPEC,
           intervalToIndex,
-          inputDir,
+          inputDirectory,
           "test_*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
           expectedTaskState,
-          appendToExisting
+          appendToExisting,
+          isReplace
       );
     }
   }
@@ -328,30 +409,62 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       List<DataSegment> segmentsInInterval = entry.getValue();
       Assert.assertEquals(expectedIntervalToNumSegments.get(interval).intValue(), segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
-        Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
-        final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-        Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
+        HashBasedNumberedShardSpec shardSpec = null;
+        if (!segment.isTombstone()) {
+          Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+          shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+          Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
+        } else {
+          Assert.assertSame(TombstoneShardSpec.class, segment.getShardSpec().getClass());
+        }
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
-        final int hash = shardSpec.getPartitionFunction().hash(
-            HashBasedNumberedShardSpec.serializeGroupKey(
-                getObjectMapper(),
-                (List<Object>) results.get(0).getEvents()
-            ),
-            shardSpec.getNumBuckets()
-        );
-        for (ScanResultValue value : results) {
-          Assert.assertEquals(
-              hash,
-              shardSpec.getPartitionFunction().hash(
-                  HashBasedNumberedShardSpec.serializeGroupKey(
-                      getObjectMapper(),
-                      (List<Object>) value.getEvents()
-                  ),
-                  shardSpec.getNumBuckets()
-              )
+        if (segment.isTombstone()) {
+          Assert.assertTrue(results.isEmpty());
+        } else {
+          final int hash = shardSpec.getPartitionFunction().hash(
+              HashBasedNumberedShardSpec.serializeGroupKey(
+                  getObjectMapper(),
+                  (List<Object>) results.get(0).getEvents()
+              ),
+              shardSpec.getNumBuckets()
           );
+          for (ScanResultValue value : results) {
+            Assert.assertEquals(
+                hash,
+                shardSpec.getPartitionFunction().hash(
+                    HashBasedNumberedShardSpec.serializeGroupKey(
+                        getObjectMapper(),
+                        (List<Object>) value.getEvents()
+                    ),
+                    shardSpec.getNumBuckets()
+                )
+            );
+          }
         }
       }
     }
   }
+
+  private File newInputDirForReplace() throws IOException
+  {
+    File inputDirectory = temporaryFolder.newFolder("dataReplace");
+    // set up data
+    Set<Integer> fileIds = new HashSet<>();
+    fileIds.add(3);
+    fileIds.add(7);
+    fileIds.add(9);
+    for (Integer i : fileIds) {
+      try (final Writer writer =
+               Files.newBufferedWriter(new File(inputDirectory, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
+        for (int j = 0; j < 10; j++) {
+          writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", i + 1, j + 10, i));
+          writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", i + 2, j + 11, i));
+        }
+      }
+    }
+
+    return inputDirectory;
+  }
+
+
 }

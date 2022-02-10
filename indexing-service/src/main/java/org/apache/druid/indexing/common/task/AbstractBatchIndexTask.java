@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -68,12 +69,15 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -84,6 +88,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -119,6 +124,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   private TaskLockHelper taskLockHelper;
 
   private final int maxAllowedLockCount;
+
+  // Store lock versions
+  Map<Interval, String> intervalToVersion = new HashMap<>();
 
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
@@ -438,6 +446,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
       }
       locksAcquired++;
+      intervalToVersion.put(cur, lock.getVersion());
     }
     return true;
   }
@@ -813,6 +822,43 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       this.intervals = intervals;
       this.segments = segments;
     }
+  }
+
+  /**
+   * Get the version from the locks for a given timestamp. This will work if the locks were acquired upfront
+   * @param timestamp
+   * @return The interval andversion if n interval that contains an interval was found or null otherwise
+   */
+  @Nullable
+  Pair<Interval, String> lookupVersion(DateTime timestamp)
+  {
+    java.util.Optional<Map.Entry<Interval, String>> intervalAndVersion = intervalToVersion.entrySet()
+                                                                                          .stream()
+                                                                                          .filter(e -> e.getKey()
+                                                                                                        .contains(
+                                                                                                            timestamp))
+                                                                                          .findFirst();
+    if (!intervalAndVersion.isPresent()) {
+      return null;
+    }
+    return new Pair(intervalAndVersion.get().getKey(), intervalAndVersion.get().getValue());
+  }
+
+  protected SegmentIdWithShardSpec allocateNewSegmentForTombstone(
+      IngestionSpec ingestionSchema,
+      DateTime timestamp,
+      TaskToolbox toolbox
+  )
+  {
+    // Since tombstones are derived from inputIntervals, inputIntervals cannot be empty for replace, and locks are
+    // all acquired upfront then the following stream query should always find the version
+    Pair<Interval, String> intervalAndVersion = lookupVersion(timestamp);
+    return new SegmentIdWithShardSpec(
+        ingestionSchema.getDataSchema().getDataSource(),
+        intervalAndVersion.lhs,
+        intervalAndVersion.rhs,
+        new TombstoneShardSpec()
+    );
   }
 
 }

@@ -26,7 +26,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 public class TombstoneHelperTest
 {
 
-  private TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+  private final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
 
   @Test
   public void noTombstonesWhenNoDataInInputIntervalAndNoExistingSegments() throws Exception
@@ -68,7 +71,7 @@ public class TombstoneHelperTest
     List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
     Assert.assertTrue(tombstoneIntervals.isEmpty());
 
-    Map<Interval, String> intervalToLockVersion = Collections.emptyMap();
+    Map<Interval, SegmentIdWithShardSpec> intervalToLockVersion = Collections.emptyMap();
     Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(intervalToLockVersion);
 
     Assert.assertEquals(0, tombstones.size());
@@ -95,6 +98,7 @@ public class TombstoneHelperTest
                    .version("oldVersion")
                    .size(100)
                    .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
     Mockito.when(taskActionClient.submit(any(TaskAction.class)))
            .thenReturn(Collections.singletonList(existingUsedSegment));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(
@@ -105,11 +109,16 @@ public class TombstoneHelperTest
 
     List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
     Assert.assertEquals(3, tombstoneIntervals.size());
-    Map<Interval, String> intervalToVersion = new HashMap<>();
+    Map<Interval, SegmentIdWithShardSpec> intervalToVersion = new HashMap<>();
     for (Interval ti : tombstoneIntervals) {
-      intervalToVersion.put(ti, "version");
+      intervalToVersion.put(
+          ti,
+          new SegmentIdWithShardSpec("test", ti, "newVersion", new TombstoneShardSpec())
+      );
     }
     Set<DataSegment> tombstones = tombstoneHelper.computeTombstones(intervalToVersion);
     Assert.assertEquals(3, tombstones.size());
+    tombstones.forEach(ts -> Assert.assertTrue(ts.isTombstone()));
   }
+
 }

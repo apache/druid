@@ -26,7 +26,9 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -62,7 +64,7 @@ public class TombstoneHelper
   }
 
 
-  private List<Interval> getPushedSegmentsIntervals()
+  private List<Interval> getCondensedPushedSegmentsIntervals()
   {
     List<Interval> pushedSegmentsIntervals = new ArrayList<>();
     for (DataSegment pushedSegment : pushedSegments) {
@@ -71,16 +73,17 @@ public class TombstoneHelper
     return JodaUtils.condenseIntervals(pushedSegmentsIntervals);
   }
 
-  public Set<DataSegment> computeTombstones(Map<Interval, String> tombstoneIntervalsAndVersions)
+  public Set<DataSegment> computeTombstones(Map<Interval, SegmentIdWithShardSpec> tombstoneIntervalsAndVersions)
   {
     Set<DataSegment> retVal = new HashSet<>();
     String dataSource = dataSchema.getDataSource();
-    for (Map.Entry<Interval, String> tombstoneIntervalAndVersion : tombstoneIntervalsAndVersions.entrySet()) {
+    for (Map.Entry<Interval, SegmentIdWithShardSpec> tombstoneIntervalAndVersion : tombstoneIntervalsAndVersions.entrySet()) {
       // now we have all the metadata to create the tombstone:
       DataSegment tombstone =
           createTombstoneForTimeChunkInterval(
               dataSource,
-              tombstoneIntervalAndVersion.getValue(),
+              tombstoneIntervalAndVersion.getValue().getVersion(),
+              tombstoneIntervalAndVersion.getValue().getShardSpec(),
               tombstoneIntervalAndVersion.getKey()
           );
       retVal.add(tombstone);
@@ -92,8 +95,8 @@ public class TombstoneHelper
   {
     List<Interval> retVal = new ArrayList<>();
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    List<Interval> pushedSegmentsIntervals = getPushedSegmentsIntervals();
-    List<Interval> intervalsForUsedSegments = getUsedIntervals();
+    List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals();
+    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals();
     for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
       // is it an empty time chunk?
       boolean isEmpty = true;
@@ -119,7 +122,7 @@ public class TombstoneHelper
     return retVal;
   }
 
-  private DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, Interval timeChunkInterval)
+  private DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, ShardSpec shardSpec, Interval timeChunkInterval)
   {
 
 
@@ -136,8 +139,9 @@ public class TombstoneHelper
                    .dataSource(dataSource)
                    .interval(timeChunkInterval) // interval is different
                    .version(version)
+                   .shardSpec(shardSpec)
                    .loadSpec(tombstoneLoadSpec) // load spec is special for tombstone
-                   .size(0); // it is empty
+                   .size(1); // in case coordinator segment balancing chokes with zero size
 
     return dataSegmentBuilder.build();
 
@@ -150,7 +154,7 @@ public class TombstoneHelper
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
-  public List<Interval> getUsedIntervals() throws IOException
+  public List<Interval> getCondensedUsedIntervals() throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
 
@@ -172,7 +176,7 @@ public class TombstoneHelper
       }
     }
 
-    return retVal;
+    return JodaUtils.condenseIntervals(retVal);
   }
 
 }

@@ -68,7 +68,6 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -94,6 +93,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -948,15 +948,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
         // now find the versions for the tombstone intervals
-        Map<Interval, String> tombstonesAndVersions = new HashMap<>();
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
         for (Interval interval : tombstoneIntervals) {
-          NonnullPair<Interval, String> intervalAndVersion =
-              findIntervalAndVersion(
-                  toolbox,
-                  ingestionSchema,
-                  interval.getStart()
-              );
-          tombstonesAndVersions.put(interval, intervalAndVersion.rhs);
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
         tombStones = tombstoneHelper.computeTombstones(tombstonesAndVersions);
         log.debugSegments(tombStones, "To publish tombstones");

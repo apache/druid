@@ -64,6 +64,10 @@ public class ScanQueryEngine
       final ResponseContext responseContext
   )
   {
+    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
+      return Sequences.empty();
+    }
+
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
