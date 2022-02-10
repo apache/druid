@@ -222,9 +222,7 @@ public class ImmutableWorkerInfoTest
   public void test_canRunTask()
   {
     ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
-        new Worker(
-            "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
-        ),
+        new Worker("http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY),
         6,
         0,
         ImmutableSet.of("grp1", "grp2"),
