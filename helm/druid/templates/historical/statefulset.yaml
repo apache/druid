@@ -110,6 +110,10 @@ spec:
         - name: {{ $key }}
           value: {{ $val | quote }}
         {{- end}}
+        {{- range $key, $val := $value.env }}
+        - name: {{ $key }}
+          value: {{ $val | quote }}
+        {{- end}}
         envFrom:
           - configMapRef:
               name: {{ $druidName }}
