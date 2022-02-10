@@ -2296,6 +2296,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * Use this method if skipIgnorablePartitions is true in the spec
+   *
+   * These partitions can be safely ignored for both ingestion task assignment and autoscaler limits
+   *
+   * @return set of ids of ignorable partitions
+   */
   protected Set<PartitionIdType> getIgnorablePartitionIds()
   {
     return ImmutableSet.of();

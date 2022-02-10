@@ -217,7 +217,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @JsonProperty
-  public boolean shouldSkipIgnorableShards()
+  public boolean isSkipIgnorableShards()
   {
     return skipIgnorableShards;
   }
@@ -256,7 +256,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
-           ", skipIgnorableShards=" + shouldSkipIgnorableShards() +
+           ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }
 
