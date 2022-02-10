@@ -228,6 +228,17 @@ public class GroupByQueryEngineV2
                     processingBuffer
                 );
 
+                final boolean allSingleValueDims = hasNoExplodingDimensions(columnSelectorFactory,
+                                                                            query.getDimensions());
+                if (!(query.getContextValue(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true))
+                    && !allSingleValueDims) {
+                  throw new ISE(
+                      "Group by on multi value columns not allowed."
+                      + " Please set %s in query context to true",
+                      GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+                  );
+                }
+
                 if (cardinalityForArrayAggregation >= 0) {
                   return new ArrayAggregateIterator(
                       query,
@@ -236,7 +247,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions()),
+                      allSingleValueDims,
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -247,7 +258,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions())
+                      allSingleValueDims
                   );
                 }
               }

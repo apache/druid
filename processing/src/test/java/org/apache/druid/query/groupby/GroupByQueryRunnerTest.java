@@ -1311,6 +1311,35 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testMultiValueDimensionNotAllowed()
+  {
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expectMessage(String.format(
+          "GroupBy v1 does not support %s as false",
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+      ));
+    } else if (!vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Group by on multi value columns not allowed");
+    } else {
+      cannotVectorize();
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
   public void testMultiValueDimensionAsArray()
   {
     // array types don't work with group by v1

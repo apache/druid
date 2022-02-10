@@ -91,7 +91,13 @@ public class GroupByQueryEngine
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
-
+    if (!query.getContextValue(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true)) {
+      throw new UnsupportedOperationException(String.format(
+          "GroupBy v1 does not support %s as false. Set %s to true",
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+      ));
+    }
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
