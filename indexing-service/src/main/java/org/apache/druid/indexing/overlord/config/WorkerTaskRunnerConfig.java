@@ -36,11 +36,11 @@ public class WorkerTaskRunnerConfig
 
   /**
    * The number of task slots that a parallel indexing task can take is restricted using this config as a multiplier
-   * Tasks of other types are not restricted and can take slots in this pool as well
    *
-   * A value of 1 means that there are no restrictions and is the default.
-   * A value of 0.5 is ideal to prevent deadlocks
-   * For greater concurrency of k subtasks per task, configure this parameter to 1 / (k + 1)
+   * A value of 1 means no restriction on the number of slots ParallelIndexSupervisorTasks can occupy (default behaviour)
+   * A value of 0 means ParallelIndexSupervisorTasks can occupy no slots.
+   * Deadlocks can occur if the all task slots are occupied by ParallelIndexSupervisorTasks,
+   * as no sub task would ever get a slot. Set this config to a value < 1 to prevent deadlocks.
    *
    * @return ratio of task slots available to a parallel indexing task at a worker level
    */
