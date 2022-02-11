@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql-syntax.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -91,7 +91,7 @@ SELECT k, v FROM lookup.countries
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
+Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql-syntax.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
@@ -102,7 +102,7 @@ To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
 > Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql.md#string-functions).
+> SQL [`LOOKUP` function](sql-scalar.md#string-functions).
 > However, the join operator must evaluate the condition on each row, whereas the
 > `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
 > usually faster than joining to a lookup datasource.
@@ -139,10 +139,10 @@ FROM (
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
-applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
+applied directly to tables, called a ["table-level union"](sql-syntax.md#table-level). In native queries, this is done with a
 "union" datasource.
 
-With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
+With SQL [table-level unions](sql-syntax.md#table-level) the same columns must be selected from each table in the same order,
 and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
 numeric types). For this reason, it is more robust to write your queries to select specific columns.
 
@@ -322,7 +322,7 @@ a table on the left-hand side, but not the right, so a subquery is needed.
 - Join conditions where the right-hand expression is not a direct column access.
 
 For more information about how Druid translates SQL to native queries, refer to the
-[Druid SQL](sql.md#query-translation) documentation.
+[Druid SQL](sql-translation.md) documentation.
 
 #### Joins in native queries
 
@@ -341,10 +341,10 @@ Native join datasources have the following properties. All are required.
 Joins are a feature that can significantly affect performance of your queries. Some performance tips and notes:
 
 1. Joins are especially useful with [lookup datasources](#lookup), but in most cases, the
-[`LOOKUP` function](sql.md#string-functions) performs better than a join. Consider using the `LOOKUP` function if
+[`LOOKUP` function](sql-scalar.md#string-functions) performs better than a join. Consider using the `LOOKUP` function if
 it is appropriate for your use case.
 2. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
-your queries. Refer to the [Druid SQL](sql.md#query-translation) documentation for more details about when this happens
+your queries. Refer to the [Druid SQL](sql-translation.md) documentation for more details about when this happens
 and how to detect it.
 3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will

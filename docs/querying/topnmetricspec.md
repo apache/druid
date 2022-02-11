@@ -24,7 +24,7 @@ title: "Sorting (topN)"
 
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
-> language. For information about sorting in SQL, refer to the [SQL documentation](sql.md#order-by).
+> language. For information about sorting in SQL, refer to the [SQL documentation](sql-syntax.md#order-by).
 
 In Apache Druid, the topN metric spec specifies how topN values should be sorted.
 

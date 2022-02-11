@@ -26,7 +26,7 @@ sidebar_label: "GroupBy"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql.md#query-types).
+> [SQL documentation](sql-translation.md#query-types).
 
 These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
