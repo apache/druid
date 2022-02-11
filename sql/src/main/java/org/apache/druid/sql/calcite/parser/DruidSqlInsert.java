@@ -48,12 +48,18 @@ public class DruidSqlInsert extends SqlInsert
   @Nullable
   private final SqlNodeList clusteredBy;
 
+  /**
+   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
+   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
+   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
+   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   */
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
-      @Nonnull Granularity partitionedBy,
-      @Nonnull String partitionedByStringForUnparse,
+      @Nullable Granularity partitionedBy,
+      @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy
-  )
+  ) throws ParseException
   {
     super(
         insertNode.getParserPosition(),
@@ -62,10 +68,14 @@ public class DruidSqlInsert extends SqlInsert
         insertNode.getSource(),
         insertNode.getTargetColumnList()
     );
-    Preconditions.checkNotNull(partitionedBy); // Shouldn't hit due to how the parser is written
+    if (partitionedBy == null) {
+      throw new ParseException("INSERT statements must specify PARTITIONED BY clause explictly");
+    }
     this.partitionedBy = partitionedBy;
+
     Preconditions.checkNotNull(partitionedByStringForUnparse);
     this.partitionedByStringForUnparse = partitionedByStringForUnparse;
+
     this.clusteredBy = clusteredBy;
   }
 

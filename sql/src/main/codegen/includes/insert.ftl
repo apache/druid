@@ -21,13 +21,15 @@
 SqlNode DruidSqlInsert() :
 {
   SqlNode insertNode;
-  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = null;
+  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
   SqlNodeList clusteredBy = null;
 }
 {
   insertNode = SqlInsert()
-  <PARTITIONED> <BY>
-  partitionedBy = PartitionGranularity()
+  [
+    <PARTITIONED> <BY>
+    partitionedBy = PartitionGranularity()
+  ]
   [
     <CLUSTERED> <BY>
     clusteredBy = ClusterItems()
@@ -65,7 +67,7 @@ SqlNodeList ClusterItems() :
 org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
 {
   SqlNode e = null;
-  org.apache.druid.java.util.common.granularity.Granularity granularity = null;
+  Granularity granularity = null;
   String unparseString = null;
 }
 {
@@ -94,11 +96,17 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
       unparseString = "YEAR";
     }
   |
-    <ALL> <TIME>
+    <ALL>
     {
       granularity = Granularities.ALL;
-      unparseString = "ALL TIME";
+      unparseString = "ALL";
     }
+    [
+      <TIME>
+      {
+        unparseString += " TIME";
+      }
+    ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
