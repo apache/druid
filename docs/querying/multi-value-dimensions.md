@@ -375,3 +375,8 @@ This query returns the following result:
 Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
 `dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
+
+## Disable GroupBy on multivalue columns
+
+As grouping on multivalue columns causes implicit unnest, users can avoid this behaviour by setting
+`groupByEnableMultiValueUnnesting` in the query context to `false`. This will result the query to error out.

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
@@ -121,7 +122,13 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         exception -> {
           exception.expect(RuntimeException.class);
-          exception.expectMessage("Group by on multi value columns not allowed");
+          exception.expectMessage(StringUtils.format(
+              "Encountered multi-value dimensions %s that cannot be processed with %s set to false."
+              + " Consider changing these dimensions to arrays or setting %s to true.",
+              "[v0]",
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+          ));
         }
     );
   }

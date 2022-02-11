@@ -253,7 +253,7 @@ public class GroupByQueryConfig
         getNumParallelCombineThreads()
     );
     newConfig.vectorize = query.getContextBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
-    newConfig.enableMultiValueUnnesting = query.getContextValue(
+    newConfig.enableMultiValueUnnesting = query.getContextBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );

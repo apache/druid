@@ -1316,13 +1316,19 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
       expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage(String.format(
+      expectedException.expectMessage(StringUtils.format(
           "GroupBy v1 does not support %s as false",
           GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
       ));
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("Group by on multi value columns not allowed");
+      expectedException.expectMessage(StringUtils.format(
+          "Encountered multi-value dimensions %s that cannot be processed with %s set to false."
+          + " Consider changing these dimensions to arrays or setting %s to true.",
+          ImmutableList.of("placementish").toString(),
+          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+      ));
     } else {
       cannotVectorize();
     }
