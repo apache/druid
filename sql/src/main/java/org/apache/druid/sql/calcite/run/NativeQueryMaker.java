@@ -142,13 +142,15 @@ public class NativeQueryMaker implements QueryMaker
       if (query.getFilter() instanceof OrDimFilter) {
         OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
         if (orDimFilter.getFields().size() > numFilters) {
-          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-          throw new UOE(StringUtils.format(
-              "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
-              dimension,
-              numFilters,
-              orDimFilter.getFields().size()
-          ));
+          if (orDimFilter.getFields().get(0) instanceof BoundDimFilter) {
+            String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
+            throw new UOE(StringUtils.format(
+                "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
+                dimension,
+                numFilters,
+                orDimFilter.getFields().size()
+            ));
+          }
         }
       }
     }
