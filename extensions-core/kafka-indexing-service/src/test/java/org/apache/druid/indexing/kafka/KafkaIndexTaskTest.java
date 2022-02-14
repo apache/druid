@@ -34,6 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.client.cache.CacheConfig;
@@ -49,8 +50,10 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
@@ -247,6 +250,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
   private Period intermediateHandoffPeriod = null;
+  private boolean ignoreOutOfOrderSequenceNumber = false;
 
   private AppenderatorsManager appenderatorsManager;
   private String topic;
@@ -2811,7 +2815,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        ignoreOutOfOrderSequenceNumber
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();

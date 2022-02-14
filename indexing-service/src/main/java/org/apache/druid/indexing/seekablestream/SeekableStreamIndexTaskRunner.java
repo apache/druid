@@ -1880,12 +1880,22 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     final int comparisonToCurrent = recordSequenceNumber.compareTo(currentSequenceNumber);
     if (comparisonToCurrent < 0) {
-      throw new ISE(
+      String msg = StringUtils.format(
           "Record sequenceNumber[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
           recordOffset,
           currOffset,
-          partition
-      );
+          partition);
+
+      // Supposedly, records should be of monotonically increasing sequence number, but there are
+      // cases where stream returns records of out of order sequence numbers, e.g.,
+      // 100, 101, 100, 101, 102, in this case, 100 and 101 are safe to ignore and will be skipped
+      // by isRecordAlreadyRead below. Optionally just log a warning message instead of throwing an
+      // exception to fail the ingestion job
+      if (tuningConfig.isIgnoreOutOfOrderSequenceNumber()) {
+        log.warn(msg);
+      } else {
+        throw new ISE(msg);
+      }
     }
 
     // Check if the record has already been read.
