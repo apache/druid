@@ -30,12 +30,14 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BalancerStrategy;
+import org.apache.druid.server.coordinator.CachingCostBalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
@@ -48,6 +50,7 @@ import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -89,6 +92,8 @@ public class LoadRuleTest
   private ListeningExecutorService exec;
   private BalancerStrategy balancerStrategy;
 
+  private CachingCostBalancerStrategy cachingCostBalancerStrategy;
+
   private BalancerStrategy mockBalancerStrategy;
 
   @Before
@@ -100,6 +105,8 @@ public class LoadRuleTest
 
     exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
   }
@@ -377,6 +384,50 @@ public class LoadRuleTest
     Assert.assertEquals(0L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
+  }
+
+  @Test
+  public void testLoadUsedSegmentsForAllSegmentGranularityAndCachingCostBalancerStrategy()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(false).anyTimes();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 1));
+
+    DataSegment segment = createDataSegmentWithInterval(createDataSegment("foo"),
+                                                        JodaUtils.MIN_INSTANT,
+                                                        JodaUtils.MAX_INSTANT);
+    DataSegment segment1 = createDataSegmentWithInterval(createDataSegment("foo"),
+                                                         JodaUtils.MIN_INSTANT,
+                                                         JodaUtils.MAX_INSTANT);
+
+    final LoadQueuePeon loadingPeon1 = createLoadingPeon(ImmutableList.of(), true);
+
+    final LoadQueuePeon loadingPeon2 = createLoadingPeon(ImmutableList.of(segment), true);
+
+    loadingPeon1.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
+    EasyMock.expectLastCall().once();
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(cachingCostBalancerStrategy)
+            .anyTimes();
+
+    EasyMock.replay(throttler, loadingPeon1, loadingPeon2, mockBalancerStrategy);
+
+    ImmutableDruidServer server1 =
+        new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "tier1", 1).toImmutableDruidServer();
+
+    DruidCluster druidCluster1 = DruidClusterBuilder
+        .newBuilder()
+        .addTier("tier1", new ServerHolder(server1, loadingPeon1))
+        .build();
+
+    DruidCluster druidCluster2 = DruidClusterBuilder
+        .newBuilder()
+        .addTier("tier1", new ServerHolder(server1, loadingPeon2))
+        .build();
+
+    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster1, segment, segment1), segment);
+    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster2, segment, segment1), segment1);
   }
 
   @Test
@@ -808,6 +859,12 @@ public class LoadRuleTest
         0,
         0
     );
+  }
+
+  private DataSegment createDataSegmentWithInterval(DataSegment dataSegment, long startMillis, long endMillis)
+  {
+    DataSegment.Builder builder = new DataSegment.Builder(dataSegment);
+    return builder.interval(new Interval(startMillis, endMillis)).build();
   }
 
   private static LoadRule createLoadRule(final Map<String, Integer> tieredReplicants)
