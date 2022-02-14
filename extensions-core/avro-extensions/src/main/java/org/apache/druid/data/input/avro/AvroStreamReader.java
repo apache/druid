@@ -71,6 +71,13 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
   }
 
   @Override
+  protected InputEntity sourceForParseException()
+  {
+    return source;
+  }
+
+
+  @Override
   protected List<InputRow> parseInputRows(GenericRecord intermediateRow) throws ParseException
   {
     return Collections.singletonList(

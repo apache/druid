@@ -19,21 +19,24 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
  * ParseException can be thrown on both ingestion side and query side.
- *
+ * <p>
  * During ingestion, ParseException can be thrown in two places, i.e., {@code InputSourceReader#read()}
  * and {@code IncrementalIndex#addToFacts()}. To easily handle ParseExceptions, consider using
  * {@code FilteringCloseableInputRowIterator} and {@code ParseExceptionHandler} to iterate input rows and
  * to add rows to IncrementalIndex, respectively.
- *
+ * <p>
  * When you use {@code InputSourceReader#sample()}, the ParseException will not be thrown, but be stored in
  * {@code InputRowListPlusRawValues}.
- *
+ * <p>
  * During query, ParseException can be thrown in SQL planning. It should be never thrown once a query plan is
  * constructed.
  */
@@ -54,6 +57,18 @@ public class ParseException extends RuntimeException
    * A string representation of the input data that had a parse exception.
    */
   private final String input;
+
+  /**
+   * The position of the "input" in the source
+   */
+  @Nullable
+  private Long recordNumber = null;
+
+  /**
+   * Source reading which this ParseException was generated
+   */
+  @Nullable
+  private InputEntity source = null;
 
   public ParseException(@Nullable String input, String formatText, Object... arguments)
   {
@@ -76,6 +91,26 @@ public class ParseException extends RuntimeException
     this(input, false, StringUtils.nonStrictFormat(formatText, arguments), cause);
   }
 
+  /**
+   * To be called from the Builder
+   */
+  private ParseException(
+      @Nullable String input,
+      @Nullable Throwable cause,
+      @Nonnull String message,
+      boolean fromPartiallyValidRow,
+      @Nullable Long recordNumber,
+      @Nullable InputEntity source
+  )
+  {
+    super(StringUtils.nonStrictFormat(message, cause));
+    this.timeOfExceptionMillis = System.currentTimeMillis();
+    this.fromPartiallyValidRow = fromPartiallyValidRow;
+    this.input = input;
+    this.source = source;
+    this.recordNumber = recordNumber;
+  }
+
   public boolean isFromPartiallyValidRow()
   {
     return fromPartiallyValidRow;
@@ -90,5 +125,73 @@ public class ParseException extends RuntimeException
   public String getInput()
   {
     return input;
+  }
+
+  @Nullable
+  public Long getRecordNumber()
+  {
+    return recordNumber;
+  }
+
+  @Nullable
+  public InputEntity getSource()
+  {
+    return source;
+  }
+
+  /**
+   * Builder for {@link ParseException}
+   */
+  public static class Builder
+  {
+
+    String input = null;
+    String message = null;
+    Throwable cause = null;
+    boolean fromPartiallyValidRow = false;
+    Long recordNumber = null; // TODO: rename to recordNumber
+    InputEntity source = null;
+
+    public Builder setInput(String input)
+    {
+      this.input = input;
+      return this;
+    }
+
+    public Builder setMessage(String formatString, Object... arguments)
+    {
+      this.message = StringUtils.nonStrictFormat(formatString, arguments);
+      return this;
+    }
+
+    public Builder setCause(Throwable cause)
+    {
+      this.cause = cause;
+      return this;
+    }
+
+    public Builder setFromPartiallyValidRow(boolean fromPartiallyValidRow)
+    {
+      this.fromPartiallyValidRow = fromPartiallyValidRow;
+      return this;
+    }
+
+    public Builder setRecordNumber(@Nullable Long recordNumber)
+    {
+      this.recordNumber = recordNumber;
+      return this;
+    }
+
+    public Builder setSource(@Nullable InputEntity source)
+    {
+      this.source = source;
+      return this;
+    }
+
+    public ParseException build()
+    {
+      Preconditions.checkNotNull(message, "message not supplied to the builder");
+      return new ParseException(input, cause, message, fromPartiallyValidRow, recordNumber, source);
+    }
   }
 }

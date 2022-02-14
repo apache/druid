@@ -87,6 +87,12 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
     };
   }
 
+  @Override
+  protected InputEntity sourceForParseException()
+  {
+    return source;
+  }
+
   /**
    * Parses the given line into a list of {@link InputRow}s. Note that some file formats can explode a single line of
    * input into multiple inputRows.

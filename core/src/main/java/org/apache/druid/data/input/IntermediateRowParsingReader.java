@@ -52,6 +52,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       // good idea. Subclasses could implement read() with some duplicate codes to avoid unnecessary iteration on
       // a singleton list.
       Iterator<InputRow> rows = null;
+      long currentRecordNumber = 1;
 
       @Override
       public boolean hasNext()
@@ -63,17 +64,33 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           final T row = intermediateRowIterator.next();
           try {
             rows = parseInputRows(row).iterator();
+            ++currentRecordNumber;
           }
           catch (IOException e) {
-            rows = new ExceptionThrowingIterator(new ParseException(
-                String.valueOf(row),
-                e,
-                "Unable to parse row [%s]",
-                row
-            ));
+            rows = new ExceptionThrowingIterator(
+                new ParseException.Builder()
+                    .setInput(String.valueOf(row))
+                    .setCause(e)
+                    .setMessage("Unable to parse row [%s]", row)
+                    .setRecordNumber(currentRecordNumber)
+                    .setSource(sourceForParseException())
+                    .build()
+            );
           }
           catch (ParseException e) {
-            rows = new ExceptionThrowingIterator(e);
+            ParseException.Builder enrichedParseExceptionBuilder =
+                new ParseException.Builder()
+                    .setInput(e.getInput())
+                    .setMessage(e.getMessage())
+                    .setCause(e.getCause())
+                    .setFromPartiallyValidRow(e.isFromPartiallyValidRow());
+            if (e.getRecordNumber() == null) {
+              enrichedParseExceptionBuilder.setRecordNumber(currentRecordNumber);
+            }
+            if (e.getSource() == null) {
+              enrichedParseExceptionBuilder.setSource(sourceForParseException());
+            }
+            rows = new ExceptionThrowingIterator(enrichedParseExceptionBuilder.build());
           }
         }
 
@@ -138,6 +155,11 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * {@link #toMap}.
    */
   protected abstract CloseableIterator<T> intermediateRowIterator() throws IOException;
+
+  /**
+   * @return InputEntity which the subclass is reading from. Useful in generating informative {@link ParseException}s
+   */
+  protected abstract InputEntity sourceForParseException();
 
   /**
    * Parses the given intermediate row into a list of {@link InputRow}s.
