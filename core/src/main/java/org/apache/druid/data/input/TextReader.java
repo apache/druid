@@ -20,7 +20,9 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.LineIterator;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract {@link InputEntityReader} for text format readers such as CSV or JSON.
@@ -51,7 +54,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIterator<String> intermediateRowIterator()
+  public CloseableIterator<Pair<String, Map<String, Object>>> intermediateRowIteratorWithContext()
       throws IOException
   {
     final LineIterator delegate = new LineIterator(
@@ -65,8 +68,9 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       processHeaderLine(delegate.nextLine());
     }
 
-    return new CloseableIterator<String>()
+    return new CloseableIterator<Pair<String, Map<String, Object>>>()
     {
+      long currentLineNumber = 1 + numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
       @Override
       public boolean hasNext()
       {
@@ -74,9 +78,12 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       }
 
       @Override
-      public String next()
+      public Pair<String, Map<String, Object>> next()
       {
-        return delegate.nextLine();
+        String line = delegate.nextLine();
+        long currentLineNumberCopy = currentLineNumber;
+        ++currentLineNumber;
+        return Pair.of(line, ImmutableMap.of(ParseException.Context.LINE_NUMBER_KEY, currentLineNumberCopy));
       }
 
       @Override

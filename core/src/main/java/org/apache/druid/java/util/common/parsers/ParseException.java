@@ -20,11 +20,14 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputEntity;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * ParseException can be thrown on both ingestion side and query side.
@@ -58,17 +61,34 @@ public class ParseException extends RuntimeException
    */
   private final String input;
 
-  /**
-   * The position of the "input" in the source
-   */
-  @Nullable
-  private Long recordNumber = null;
 
   /**
-   * Source reading which this ParseException was generated
+   * Carries additional information associated with the ParseException. If set using the builder, it will create a
+   * shallow copy of the context object
    */
-  @Nullable
-  private InputEntity source = null;
+  private Map<String, Object> context = new HashMap<>();
+
+  /**
+   * Namespace for holding the common keys that can be used in the context map for the exception
+   */
+  public static final class Context
+  {
+    /**
+     * The source object which contained the record generating the ParseException
+     */
+    public static final String SOURCE_KEY = "source";
+
+    /**
+     * Position of the unparseable record in the InputEntity
+     */
+    public static final String RECORD_NUMBER_KEY = "recordNumber";
+
+    /**
+     * The line number (corresponding to the physical line where the error occured) in the InputEntity. This is only
+     * populated by the {@link org.apache.druid.data.input.TextReader} and its implementations
+     */
+    public static final String LINE_NUMBER_KEY = "lineNumber";
+  }
 
   public ParseException(@Nullable String input, String formatText, Object... arguments)
   {
@@ -99,16 +119,16 @@ public class ParseException extends RuntimeException
       @Nullable Throwable cause,
       @Nonnull String message,
       boolean fromPartiallyValidRow,
-      @Nullable Long recordNumber,
-      @Nullable InputEntity source
+      @Nullable Map<String, Object> context
   )
   {
     super(StringUtils.nonStrictFormat(message, cause));
     this.timeOfExceptionMillis = System.currentTimeMillis();
     this.fromPartiallyValidRow = fromPartiallyValidRow;
     this.input = input;
-    this.source = source;
-    this.recordNumber = recordNumber;
+    this.context = (context == null)
+                   ? Collections.emptyMap()
+                   : ImmutableMap.<String, Object>builder().putAll(context).build();
   }
 
   public boolean isFromPartiallyValidRow()
@@ -127,16 +147,10 @@ public class ParseException extends RuntimeException
     return input;
   }
 
-  @Nullable
-  public Long getRecordNumber()
+  @Nonnull
+  public Map<String, Object> getContext()
   {
-    return recordNumber;
-  }
-
-  @Nullable
-  public InputEntity getSource()
-  {
-    return source;
+    return context;
   }
 
   /**
@@ -149,8 +163,20 @@ public class ParseException extends RuntimeException
     String message = null;
     Throwable cause = null;
     boolean fromPartiallyValidRow = false;
-    Long recordNumber = null; // TODO: rename to recordNumber
-    InputEntity source = null;
+    Map<String, Object> context = new HashMap<>();
+
+    public Builder()
+    {
+    }
+
+    public Builder(ParseException partialException)
+    {
+      this.input = partialException.getInput();
+      this.message = partialException.getMessage();
+      this.cause = partialException.getCause();
+      this.fromPartiallyValidRow = partialException.isFromPartiallyValidRow();
+      this.context = new HashMap<>(partialException.getContext());
+    }
 
     public Builder setInput(String input)
     {
@@ -176,22 +202,22 @@ public class ParseException extends RuntimeException
       return this;
     }
 
-    public Builder setRecordNumber(@Nullable Long recordNumber)
+    public Builder addToContext(String key, Object value)
     {
-      this.recordNumber = recordNumber;
+      context.put(key, value);
       return this;
     }
 
-    public Builder setSource(@Nullable InputEntity source)
+    public Builder addAllToContext(Map<? extends String, ?> m)
     {
-      this.source = source;
+      context.putAll(m);
       return this;
     }
 
     public ParseException build()
     {
       Preconditions.checkNotNull(message, "message not supplied to the builder");
-      return new ParseException(input, cause, message, fromPartiallyValidRow, recordNumber, source);
+      return new ParseException(input, cause, message, fromPartiallyValidRow, context);
     }
   }
 }
