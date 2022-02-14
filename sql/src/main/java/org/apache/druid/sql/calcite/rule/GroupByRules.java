@@ -72,9 +72,10 @@ public class GroupByRules
         return null;
       }
 
-      final RexNode expression = project.getChildExps().get(call.filterArg);
+      final RexNode expression = project.getProjects().get(call.filterArg);
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
+          rexBuilder,
           rowSignature,
           virtualColumnRegistry,
           expression

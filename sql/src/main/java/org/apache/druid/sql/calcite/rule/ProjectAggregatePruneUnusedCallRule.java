@@ -56,7 +56,7 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
     final Project project = call.rel(0);
     final Aggregate aggregate = call.rel(1);
 
-    final ImmutableBitSet projectBits = RelOptUtil.InputFinder.bits(project.getChildExps(), null);
+    final ImmutableBitSet projectBits = RelOptUtil.InputFinder.bits(project.getProjects(), null);
 
     final int fieldCount = aggregate.getGroupCount() + aggregate.getAggCallList().size();
     if (fieldCount != aggregate.getRowType().getFieldCount()) {
@@ -110,11 +110,11 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
           call.builder()
               .push(newAggregate)
               .project(fixUpProjects)
-              .project(project.getChildExps())
+              .project(project.getProjects())
               .build()
       );
 
-      call.getPlanner().setImportance(project, 0.0);
+      call.getPlanner().prune(project);
     }
   }
 }

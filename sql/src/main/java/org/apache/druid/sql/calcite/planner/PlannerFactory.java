@@ -26,6 +26,7 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
+import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
@@ -146,12 +147,11 @@ public class PlannerFactory
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
-        .configBuilder()
+        .config()
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
-        .withInSubQueryThreshold(Integer.MAX_VALUE)
-        .build();
+        .withInSubQueryThreshold(Integer.MAX_VALUE);
     return Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
@@ -169,29 +169,44 @@ public class PlannerFactory
           @SuppressWarnings("unchecked")
           public <C> C unwrap(final Class<C> aClass)
           {
-            if (aClass.equals(CalciteConnectionConfig.class)) {
+            if (CalciteConnectionConfig.class.isAssignableFrom(aClass)) {
               // This seems to be the best way to provide our own SqlConformance instance. Otherwise, Calcite's
               // validator will not respect it.
               final Properties props = new Properties();
-              return (C) new CalciteConnectionConfigImpl(props)
-              {
-                @Override
-                public <T> T typeSystem(Class<T> typeSystemClass, T defaultTypeSystem)
-                {
-                  return (T) DruidTypeSystem.INSTANCE;
-                }
-
-                @Override
-                public SqlConformance conformance()
-                {
-                  return DruidConformance.instance();
-                }
-              };
+              return (C) new DruidCalciteConnectionConfigImpl(props);
             } else {
               return null;
             }
           }
         })
         .build();
+  }
+
+  private static class DruidCalciteConnectionConfigImpl extends CalciteConnectionConfigImpl
+  {
+    public DruidCalciteConnectionConfigImpl(Properties properties)
+    {
+      super(properties);
+    }
+
+    @Override
+    public <T> T typeSystem(Class<T> typeSystemClass, T defaultTypeSystem)
+    {
+      return (T) DruidTypeSystem.INSTANCE;
+    }
+
+    @Override
+    public SqlConformance conformance()
+    {
+      return DruidConformance.instance();
+    }
+
+    @Override
+    public CalciteConnectionConfigImpl set(CalciteConnectionProperty property, String value)
+    {
+      final Properties newProperties = (Properties) properties.clone();
+      newProperties.setProperty(property.camelName(), value);
+      return new DruidCalciteConnectionConfigImpl(newProperties);
+    }
   }
 }

@@ -80,11 +80,13 @@
         <apache.kafka.version>3.0.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
-        <avatica.version>1.17.0</avatica.version>
+        <avatica.version>1.20.0</avatica.version>
+        <shaded.avatica.version>1.20.0-druid-shaded</shaded.avatica.version>
         <avro.version>1.9.2</avro.version>
         <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
           updated when upgrading Calcite. Refer to the top-level comments in that file for details. -->
-        <calcite.version>1.21.0</calcite.version>
+        <calcite.version>1.29.0</calcite.version>
+        <shaded.calcite.version>1.29.0-druid-shaded</shaded.calcite.version>
         <datasketches.version>3.0.0</datasketches.version>
         <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
@@ -216,6 +218,12 @@
         <repository>
           <id>sigar</id>
           <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+        </repository>
+
+      <!-- Only used to download calcite-shaded jars. Source - https://github.com/abhishekagarwal87/calcite-shaded -->
+        <repository>
+          <id>calcite-shaded</id>
+          <url>https://static.imply.io/maven/thirdparty/</url>
         </repository>
     </repositories>
 
@@ -366,8 +374,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
-                <version>${calcite.version}</version>
+                <artifactId>calcite-core-shaded</artifactId>
+                <version>${shaded.calcite.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -391,8 +399,13 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
-                <artifactId>avatica-server</artifactId>
-                <version>${avatica.version}</version>
+                <artifactId>avatica-server-shaded</artifactId>
+                <version>${shaded.avatica.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>com.esri.geometry</groupId>
+              <artifactId>esri-geometry-api</artifactId>
+              <version>2.2.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hive</groupId>
@@ -913,9 +926,8 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
-                <version>${calcite.version}</version>
-                <type>test-jar</type>
+                <artifactId>calcite-testkit-shaded</artifactId>
+                <version>${shaded.calcite.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

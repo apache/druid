@@ -53,7 +53,7 @@ public class DruidViewMacro implements TableMacro
   }
 
   @Override
-  public TranslatableTable apply(final List<Object> arguments)
+  public TranslatableTable apply(final List<?> arguments)
   {
     final RelDataType rowType;
     try (final DruidPlanner planner = plannerFactory.createPlanner(viewSql, null)) {

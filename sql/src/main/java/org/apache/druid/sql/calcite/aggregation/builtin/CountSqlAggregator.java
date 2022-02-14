@@ -81,6 +81,7 @@ public class CountSqlAggregator implements SqlAggregator
     if (rexNode.getType().isNullable()) {
       final DimFilter nonNullFilter = Expressions.toFilter(
           plannerContext,
+          rexBuilder,
           rowSignature,
           virtualColumnRegistry,
           rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))

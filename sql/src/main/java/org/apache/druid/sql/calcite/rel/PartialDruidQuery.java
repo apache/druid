@@ -429,7 +429,7 @@ public class PartialDruidQuery
 
     // Account for the cost of post-scan expressions.
     if (getSelectProject() != null) {
-      for (final RexNode rexNode : getSelectProject().getChildExps()) {
+      for (final RexNode rexNode : getSelectProject().getProjects()) {
         if (!rexNode.isA(SqlKind.INPUT_REF)) {
           cost += CostEstimates.COST_EXPRESSION;
         }
@@ -459,7 +459,7 @@ public class PartialDruidQuery
 
     // Account for the cost of post-aggregation expressions.
     if (getAggregateProject() != null) {
-      for (final RexNode rexNode : getAggregateProject().getChildExps()) {
+      for (final RexNode rexNode : getAggregateProject().getProjects()) {
         if (!rexNode.isA(SqlKind.INPUT_REF)) {
           cost += CostEstimates.COST_EXPRESSION;
         }
@@ -468,7 +468,7 @@ public class PartialDruidQuery
 
     // Account for the cost of post-sort expressions.
     if (getSortProject() != null) {
-      for (final RexNode rexNode : getSortProject().getChildExps()) {
+      for (final RexNode rexNode : getSortProject().getProjects()) {
         if (!rexNode.isA(SqlKind.INPUT_REF)) {
           cost += CostEstimates.COST_EXPRESSION;
         }

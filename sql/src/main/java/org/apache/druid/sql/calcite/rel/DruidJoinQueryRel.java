@@ -256,12 +256,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   }
 
   @Override
-  public List<RexNode> getChildExps()
-  {
-    return ImmutableList.of(joinRel.getCondition());
-  }
-
-  @Override
   public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
   {
     return new DruidJoinQueryRel(
@@ -411,6 +405,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final RexNode condition = filter.getCondition();
     final DimFilter dimFilter = Expressions.toFilter(
         plannerContext,
+        filter.getCluster().getRexBuilder(),
         rowSignature,
         null,
         condition

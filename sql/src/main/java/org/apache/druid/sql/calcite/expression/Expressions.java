@@ -23,10 +23,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -96,7 +98,7 @@ public class Expressions
       // I don't think the factory impl matters here.
       return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
-      return project.getChildExps().get(fieldNumber);
+      return project.getProjects().get(fieldNumber);
     }
   }
 
@@ -328,44 +330,50 @@ public class Expressions
   @Nullable
   public static DimFilter toFilter(
       final PlannerContext plannerContext,
+      final RexBuilder rexBuilder,
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexNode expression
   )
   {
-    final SqlKind kind = expression.getKind();
+    final RexNode expandedExpr = RexUtil.expandSearch(rexBuilder, null, expression);
+    final SqlKind kind = expandedExpr.getKind();
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
       return toFilter(
           plannerContext,
+          rexBuilder,
           rowSignature,
           virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
+          Iterables.getOnlyElement(((RexCall) expandedExpr).getOperands())
       );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
       return new NotDimFilter(
           toFilter(
               plannerContext,
+              rexBuilder,
               rowSignature,
               virtualColumnRegistry,
-              Iterables.getOnlyElement(((RexCall) expression).getOperands())
+              Iterables.getOnlyElement(((RexCall) expandedExpr).getOperands())
           )
       );
-    } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+    } else if (kind == SqlKind.CAST && expandedExpr.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(
           plannerContext,
+          rexBuilder,
           rowSignature,
           virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
+          Iterables.getOnlyElement(((RexCall) expandedExpr).getOperands())
       );
     } else if (kind == SqlKind.AND
                || kind == SqlKind.OR
                || kind == SqlKind.NOT) {
       final List<DimFilter> filters = new ArrayList<>();
-      for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
+      for (final RexNode rexNode : ((RexCall) expandedExpr).getOperands()) {
         final DimFilter nextFilter = toFilter(
             plannerContext,
+            rexBuilder,
             rowSignature,
             virtualColumnRegistry,
             rexNode
@@ -386,7 +394,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, expression);
+      return toLeafFilter(plannerContext, rowSignature, virtualColumnRegistry, expandedExpr);
     }
   }
 

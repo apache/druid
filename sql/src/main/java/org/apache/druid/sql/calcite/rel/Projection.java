@@ -202,7 +202,7 @@ public class Projection
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits(basePrefix, inputRowSignature.getColumnNames());
     final PostAggregatorVisitor postAggVisitor = new PostAggregatorVisitor(outputNamePrefix);
 
-    for (final RexNode postAggregatorRexNode : project.getChildExps()) {
+    for (final RexNode postAggregatorRexNode : project.getProjects()) {
       if (postAggregatorRexNode.getKind() == SqlKind.INPUT_REF || postAggregatorRexNode.getKind() == SqlKind.LITERAL) {
         postAggregationHandleInputRefOrLiteral(
             project,
@@ -240,7 +240,7 @@ public class Projection
   {
     final List<DruidExpression> expressions = new ArrayList<>();
 
-    for (final RexNode rexNode : project.getChildExps()) {
+    for (final RexNode rexNode : project.getProjects()) {
       final DruidExpression expression = Expressions.toDruidExpression(
           plannerContext,
           inputRowSignature,
@@ -272,7 +272,7 @@ public class Projection
       } else {
         String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             expression,
-            project.getChildExps().get(i).getType()
+            project.getProjects().get(i).getType()
         );
         virtualColumns.add(virtualColumnName);
         rowOrder.add(virtualColumnName);

@@ -52,7 +52,7 @@ public class ExternalTableMacro implements TableMacro
   }
 
   @Override
-  public TranslatableTable apply(final List<Object> arguments)
+  public TranslatableTable apply(final List<?> arguments)
   {
     try {
       final InputSource inputSource = jsonMapper.readValue((String) arguments.get(0), InputSource.class);

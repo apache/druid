@@ -42,6 +42,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.io.Closeable;
+import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
@@ -421,10 +422,10 @@ public class DruidStatement implements Closeable
       return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.INTEGER) {
       // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
+      return ColumnMetaData.Rep.of(BigDecimal.class);
     } else if (sqlType == SqlTypeName.BIGINT) {
       // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
+      return ColumnMetaData.Rep.of(BigDecimal.class);
     } else if (sqlType == SqlTypeName.FLOAT) {
       return ColumnMetaData.Rep.of(Float.class);
     } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {

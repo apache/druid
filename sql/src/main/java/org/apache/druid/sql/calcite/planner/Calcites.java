@@ -104,9 +104,9 @@ public class Calcites
     // system properties, so we'll have to set those...
 
     final String charset = ConversionUtil.NATIVE_UTF16_CHARSET_NAME;
-    System.setProperty("saffron.default.charset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.nationalcharset", Calcites.defaultCharset().name());
-    System.setProperty("saffron.default.collation.name", StringUtils.format("%s$en_US", charset));
+    System.setProperty("calcite.default.charset", Calcites.defaultCharset().name());
+    System.setProperty("calcite.default.nationalcharset", Calcites.defaultCharset().name());
+    System.setProperty("calcite.default.collation.name", StringUtils.format("%s$en_US", charset));
   }
 
   public static Charset defaultCharset()

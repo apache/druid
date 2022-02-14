@@ -134,7 +134,7 @@ public class DruidTable implements TranslatableTable
       // Must use our own class that computes its own digest.
       return new ExternalTableScan(context.getCluster(), objectMapper, this);
     } else {
-      return LogicalTableScan.create(context.getCluster(), table);
+      return LogicalTableScan.create(context.getCluster(), table, context.getTableHints());
     }
   }
 

@@ -124,7 +124,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core</artifactId>
+      <artifactId>calcite-core-shaded</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

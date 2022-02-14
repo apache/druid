@@ -577,7 +577,7 @@ public class DruidPlanner implements Closeable
       );
     }
 
-    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation);
+    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation, root.hints);
   }
 
   /**
@@ -610,11 +610,13 @@ public class DruidPlanner implements Closeable
         connectionConfig
     );
 
+    final SqlValidator.Config config = SqlValidator.Config.DEFAULT
+        .withSqlConformance(DruidConformance.instance());
     return SqlValidatorUtil.newValidator(
         frameworkConfig.getOperatorTable(),
         catalogReader,
         planner.getTypeFactory(),
-        DruidConformance.instance()
+        config
     );
   }
 
