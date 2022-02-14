@@ -49,7 +49,16 @@ public interface IndexingServiceClient
       @Nullable Map<String, Object> context
   );
 
+  /**
+   * Gets the total worker capacity of the current state of the cluster. This can be -1 if it cannot be determined.
+   */
   int getTotalWorkerCapacity();
+
+  /**
+   * Gets the total worker capacity of the cluster including auto scaling capability (scaling to max workers).
+   * This can be -1 if it cannot be determined or if auto scaling is not configured.
+   */
+  int getTotalWorkerCapacityWithAutoScale();
 
   String runTask(String taskId, Object taskObject);
 

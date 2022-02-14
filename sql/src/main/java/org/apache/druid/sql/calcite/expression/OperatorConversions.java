@@ -71,8 +71,9 @@ import java.util.stream.IntStream;
  */
 public class OperatorConversions
 {
+
   @Nullable
-  public static DruidExpression convertCall(
+  public static DruidExpression convertDirectCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -83,12 +84,16 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.fromFunctionCall(functionName, druidExpressions)
+        druidExpressions -> DruidExpression.ofFunctionCall(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            functionName,
+            druidExpressions
+        )
     );
   }
 
   @Nullable
-  public static DruidExpression convertCall(
+  public static DruidExpression convertDirectCallWithExtraction(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
@@ -100,9 +105,31 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         rexNode,
-        druidExpressions -> DruidExpression.of(
+        druidExpressions -> DruidExpression.ofExpression(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             simpleExtractionFunction == null ? null : simpleExtractionFunction.apply(druidExpressions),
-            DruidExpression.functionCall(functionName, druidExpressions)
+            DruidExpression.functionCall(functionName),
+            druidExpressions
+        )
+    );
+  }
+
+  @Nullable
+  public static DruidExpression convertCallBuilder(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final DruidExpression.ExpressionBuilder expressionBuilder
+  )
+  {
+    return convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        (operands) -> DruidExpression.ofExpression(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            expressionBuilder,
+            operands
         )
     );
   }
@@ -112,7 +139,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final Function<List<DruidExpression>, DruidExpression> expressionFunction
+      final DruidExpression.DruidExpressionBuilder expressionFunction
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -127,7 +154,38 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.apply(druidExpressions);
+    return expressionFunction.buildExpression(druidExpressions);
+  }
+
+  @Deprecated
+  @Nullable
+  public static DruidExpression convertCall(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String functionName
+  )
+  {
+    return convertDirectCall(plannerContext, rowSignature, rexNode, functionName);
+  }
+
+  @Deprecated
+  @Nullable
+  public static DruidExpression convertCall(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode,
+      final String functionName,
+      final Function<List<DruidExpression>, SimpleExtraction> simpleExtractionFunction
+  )
+  {
+    return convertDirectCallWithExtraction(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        functionName,
+        simpleExtractionFunction
+    );
   }
 
   /**
@@ -153,7 +211,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final Function<List<DruidExpression>, DruidExpression> expressionFunction,
+      final DruidExpression.DruidExpressionBuilder expressionFunction,
       final PostAggregatorVisitor postAggregatorVisitor
   )
   {
@@ -170,7 +228,7 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.apply(druidExpressions);
+    return expressionFunction.buildExpression(druidExpressions);
   }
 
   /**

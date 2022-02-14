@@ -140,9 +140,8 @@ export class DruidError extends Error {
       };
     }
 
-    const matchLexical = /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(
-      errorMessage,
-    );
+    const matchLexical =
+      /Lexical error at line (\d+), column (\d+).\s+Encountered: "\\u201\w"/.exec(errorMessage);
     if (matchLexical) {
       return {
         label: 'Replace fancy quotes with ASCII quotes',
@@ -158,9 +157,10 @@ export class DruidError extends Error {
 
     // Incorrect quoting on table
     // ex: org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table
-    const matchQuotes = /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
-      errorMessage,
-    );
+    const matchQuotes =
+      /org.apache.calcite.runtime.CalciteContextException: From line (\d+), column (\d+) to line \d+, column \d+: Column '([^']+)' not found in any table/.exec(
+        errorMessage,
+      );
     if (matchQuotes) {
       const line = Number(matchQuotes[1]);
       const column = Number(matchQuotes[2]);

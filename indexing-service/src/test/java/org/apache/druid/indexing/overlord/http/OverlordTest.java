@@ -229,7 +229,8 @@ public class OverlordTest
         null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        workerTaskRunnerQueryAdapter
+        workerTaskRunnerQueryAdapter,
+        null
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

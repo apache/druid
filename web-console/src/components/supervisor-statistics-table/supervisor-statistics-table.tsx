@@ -106,18 +106,16 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
       columns = columns.concat(
         Object.keys(movingAveragesBuildSegments)
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-          .map(
-            (interval: string): Column<SupervisorStatisticsTableRow> => {
-              return {
-                Header: interval,
-                id: interval,
-                accessor: d => {
-                  return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
-                },
-                Cell: renderCell,
-              };
-            },
-          ),
+          .map((interval: string): Column<SupervisorStatisticsTableRow> => {
+            return {
+              Header: interval,
+              id: interval,
+              accessor: d => {
+                return deepGet(d, `summary.movingAverages.buildSegments.${interval}`);
+              },
+              Cell: renderCell,
+            };
+          }),
       );
     }
 

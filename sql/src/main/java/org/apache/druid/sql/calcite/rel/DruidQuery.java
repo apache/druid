@@ -162,7 +162,7 @@ public class DruidQuery
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
     if (virtualColumnRegistry == null) {
-      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature);
+      virtualColumnRegistry = VirtualColumnRegistry.create(sourceRowSignature, plannerContext.getExprMacroTable());
     }
 
     // Now the fun begins.
@@ -412,17 +412,14 @@ public class DruidQuery
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
 
-      final VirtualColumn virtualColumn;
-
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
       if (!druidExpression.isSimpleExtraction()) {
-        virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             dataType
         );
         dimensions.add(DimensionExpression.ofVirtualColumn(
-            virtualColumn.getOutputName(),
+            virtualColumn,
             dimOutputName,
             druidExpression,
             outputType
@@ -627,6 +624,29 @@ public class DruidQuery
     // the various transforms and optimizations
     Set<VirtualColumn> virtualColumns = new HashSet<>();
 
+
+    // rewrite any "specialized" virtual column expressions as top level virtual columns so that their native
+    // implementation can be used instead of being composed as part of some expression tree in an expresson virtual
+    // column
+    Set<String> specialized = new HashSet<>();
+    virtualColumnRegistry.visitAllSubExpressions((expression) -> {
+      switch (expression.getType()) {
+        case SPECIALIZED:
+          // add the expression to the top level of the registry as a standalone virtual column
+          final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+              expression,
+              expression.getDruidType()
+          );
+          specialized.add(name);
+          // replace with an identifier expression of the new virtual column name
+          return DruidExpression.ofColumn(expression.getDruidType(), name);
+        default:
+          // do nothing
+          return expression;
+      }
+    });
+
+
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
       for (String columnName : filter.getRequiredColumns()) {
@@ -637,7 +657,11 @@ public class DruidQuery
     }
 
     if (selectProjection != null) {
-      virtualColumns.addAll(selectProjection.getVirtualColumns());
+      for (String columnName : selectProjection.getVirtualColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+        }
+      }
     }
 
     if (grouping != null) {
@@ -650,13 +674,18 @@ public class DruidQuery
       }
 
       for (Aggregation aggregation : grouping.getAggregations()) {
-        virtualColumns.addAll(virtualColumnRegistry.findVirtualColumns(aggregation.getRequiredColumns()));
+        virtualColumns.addAll(virtualColumnRegistry.getAllVirtualColumns(aggregation.getRequiredColumns()));
       }
     }
 
     if (sorting != null && sorting.getProjection() != null && grouping == null) {
       // Sorting without grouping means we might have some post-sort Projection virtual columns.
-      virtualColumns.addAll(sorting.getProjection().getVirtualColumns());
+
+      for (String columnName : sorting.getProjection().getVirtualColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+        }
+      }
     }
 
     if (dataSource instanceof JoinDataSource) {
@@ -664,6 +693,12 @@ public class DruidQuery
         if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
           virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
         }
+      }
+    }
+
+    for (String columnName : specialized) {
+      if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+        virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
       }
     }
 

@@ -33,7 +33,6 @@ import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -104,16 +103,15 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
           null
       );
     } else if (virtualColumnRegistry != null) {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           druidExpression,
           operands.get(0).getType()
       );
-      if (virtualColumn == null) {
+      if (virtualColumnName == null) {
         return null;
       }
       return new BloomDimFilter(
-          virtualColumn.getOutputName(),
+          virtualColumnName,
           holder,
           null,
           null

@@ -34,8 +34,8 @@
   <properties>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <druid.console.skip>false</druid.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v14.16.1</node.version>
-    <npm.version>6.14.12</npm.version>
+    <node.version>v14.19.0</node.version>
+    <npm.version>6.14.16</npm.version>
   </properties>
 
   <build>
