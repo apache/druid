@@ -1063,20 +1063,20 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord Process](../design/overlord.md).
 
-| Property                                             | Description                                                                                                                                                                         |Default|
-|------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
-| `druid.indexer.runner.taskAssignmentTimeout`         | How long to wait after a task as been assigned to a MiddleManager before throwing an error.                                                                                         |PT5M|
-| `druid.indexer.runner.minWorkerVersion`              | The minimum MiddleManager version to send tasks to.                                                                                                                                 |"0"|
-| `druid.indexer.runner.parallelIndexTaskSlotRatio`    | The ratio of slots available for parallel batch indexing task for each worker.<br/> A value less than 1 when workers are configured to have at least 2 slots can prevent deadlocks. |1|
-| `druid.indexer.runner.compressZnodes`                | Indicates whether or not the Overlord should expect MiddleManagers to compress Znodes.                                                                                              |true|
-| `druid.indexer.runner.maxZnodeBytes`                 | The maximum size Znode in bytes that can be created in Zookeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.            | 512 KiB |
-| `druid.indexer.runner.taskCleanupTimeout`            | How long to wait before failing a task after a MiddleManager is disconnected from Zookeeper.                                                                                        |PT15M|
-| `druid.indexer.runner.taskShutdownLinkTimeout`       | How long to wait on a shutdown request to a MiddleManager before timing out                                                                                                         |PT1M|
-| `druid.indexer.runner.pendingTasksRunnerNumThreads`  | Number of threads to allocate pending-tasks to workers, must be at least 1.                                                                                                         |1|
-| `druid.indexer.runner.maxRetriesBeforeBlacklist`     | Number of consecutive times the MiddleManager can fail tasks,  before the worker is blacklisted, must be at least 1                                                                 |5|
-| `druid.indexer.runner.workerBlackListBackoffTime`    | How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.                                                |PT15M|
-| `druid.indexer.runner.workerBlackListCleanupPeriod`  | A duration after which the cleanup thread will startup to clean blacklisted workers.                                                                                                |PT5M|
-| `druid.indexer.runner.maxPercentageBlacklistWorkers` | The maximum percentage of workers to blacklist, this must be between 0 and 100.                                                                                                     |20|
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task as been assigned to a MiddleManager before throwing an error.|PT5M|
+|`druid.indexer.runner.minWorkerVersion`|The minimum MiddleManager version to send tasks to. |"0"|
+| `druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of slots available for parallel batch indexing task for each worker.<br/> A value less than 1 when workers are configured to have at least 2 slots can prevent deadlocks.|1|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect MiddleManagers to compress Znodes.|true|
+|`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.| 512 KiB |
+|`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a MiddleManager is disconnected from Zookeeper.|PT15M|
+|`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a MiddleManager before timing out|PT1M|
+|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
+|`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the MiddleManager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
+|`druid.indexer.runner.workerBlackListBackoffTime`|How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.|PT15M|
+|`druid.indexer.runner.workerBlackListCleanupPeriod`|A duration after which the cleanup thread will startup to clean blacklisted workers.|PT5M|
+|`druid.indexer.runner.maxPercentageBlacklistWorkers`|The maximum percentage of workers to blacklist, this must be between 0 and 100.|20|
 
 There are additional configs for autoscaling (if it is enabled):
 
