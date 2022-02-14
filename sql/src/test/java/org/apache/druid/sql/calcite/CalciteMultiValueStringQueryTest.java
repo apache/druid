@@ -122,10 +122,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         exception -> {
           exception.expect(RuntimeException.class);
-          exception.expectMessage(StringUtils.format(
-              "Encountered multi-value dimensions %s that cannot be processed with %s set to false."
-              + " Consider changing these dimensions to arrays or setting %s to true.",
-              "[v0]",
+          expectedException.expectMessage(StringUtils.format(
+              "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+              + " Consider setting %s to true.",
+              "v0",
               GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
               GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
           ));

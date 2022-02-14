@@ -378,5 +378,7 @@ Having specs are applied at the outermost level of groupBy query processing.
 
 ## Disable GroupBy on multivalue columns
 
-As grouping on multivalue columns causes implicit unnest, users can avoid this behaviour by setting
-`groupByEnableMultiValueUnnesting` in the query context to `false`. This will result the query to error out.
+You can disable the implicit unnesting behavior for groupBy by setting groupByEnableMultiValueUnnesting: false in your 
+query context. In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 
+feature for situations where you believe that all dimensions are singly-valued and want the engine to reject any 
+multi-valued dimensions that were inadvertently included.

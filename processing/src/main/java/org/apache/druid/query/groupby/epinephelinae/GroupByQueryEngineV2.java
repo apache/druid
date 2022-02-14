@@ -80,7 +80,6 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -229,23 +228,6 @@ public class GroupByQueryEngineV2
                     processingBuffer
                 );
 
-                final List<String> explodingDimensions = findAllProbableExplodingDimensions(
-                    columnSelectorFactory,
-                    query.getDimensions()
-                );
-
-                final boolean allSingleValueDims = explodingDimensions.size() == 0;
-                if (!(query.getContextValue(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true))
-                    && !allSingleValueDims) {
-                  throw new ISE(
-                      "Encountered multi-value dimensions %s that cannot be processed with %s set to false."
-                      + " Consider changing these dimensions to arrays or setting %s to true.",
-                      explodingDimensions.toString(),
-                      GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
-                      GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
-                  );
-                }
-
                 if (cardinalityForArrayAggregation >= 0) {
                   return new ArrayAggregateIterator(
                       query,
@@ -254,7 +236,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      allSingleValueDims,
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions()),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -265,7 +247,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      allSingleValueDims
+                      hasNoExplodingDimensions(columnSelectorFactory, query.getDimensions())
                   );
                 }
               }
@@ -345,46 +327,35 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Returns all dimension names that are or could be multi valued, or if the input column specified a type that
-   * {@link ColumnType#isArray()}. Both cases indicate we want to explode the under-lying multi value column. Since
-   * selectors on non-existent columns will show up as full of nulls, they are effectively single valued, however
-   * capabilites on columns can also be null, for example during broker merge with an 'inline' datasource subquery. We
-   * mark columns with null capabilites as candidates for explosion.
+   * Checks whether all "dimensions" are either single-valued, or if the input column or output dimension spec has
+   * specified a type that {@link ColumnType#isArray()}. Both cases indicate we don't want to explode the under-lying
+   * multi value column. Since selectors on non-existent columns will show up as full of nulls, they are effectively
+   * single valued, however capabilites on columns can also be null, for example during broker merge with an 'inline'
+   * datasource subquery, so we only return true from this method when capabilities are fully known.
    */
-  public static List<String> findAllProbableExplodingDimensions(
+  public static boolean hasNoExplodingDimensions(
       final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )
   {
     return dimensions
         .stream()
-        .filter(
+        .allMatch(
             dimension -> {
               if (dimension.mustDecorate()) {
                 // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
-                // To be safe, we must return true here.
-                return true;
-              }
-
-              // DimensionSpecs of type arrays do not explode
-              if (dimension.getOutputType().isArray()) {
+                // To be safe, we must return false here.
                 return false;
               }
 
-              // Now check column capabilities, which if present may be multi-valued or explicitly arrays
+              // Now check column capabilities, which must be present and explicitly not multi-valued and not arrays
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-
-              // if the column capabilites are null then the col might be multi value
-              if (columnCapabilities == null) {
-                return true;
-              } else if (columnCapabilities.hasMultipleValues().isMaybeTrue()) {
-                return true;
-              } else if (columnCapabilities.isArray()) {
-                return true;
-              } else {
-                return false;
-              }
-            }).map(dimension -> dimension.getDimension()).collect(Collectors.toList());
+              return dimension.getOutputType().isArray()
+                     || (columnCapabilities != null
+                         && columnCapabilities.hasMultipleValues().isFalse()
+                         && !columnCapabilities.isArray()
+                     );
+            });
   }
 
   public static void convertRowTypesToOutputTypes(
@@ -488,6 +459,8 @@ public class GroupByQueryEngineV2
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
+    protected final boolean allowMultiValueGrouping;
+
 
     public GroupByEngineIterator(
         final GroupByQuery query,
@@ -509,6 +482,10 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
+      this.allowMultiValueGrouping = query.getContextBoolean(
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          true
+      );
     }
 
     private CloseableGrouperIterator<KeyType, ResultRow> initNewDelegate()
@@ -620,6 +597,19 @@ public class GroupByQueryEngineV2
     {
       Preconditions.checkArgument(indexedInts.size() < 2, "should be single value");
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
+    }
+
+    protected void checkIfMultiValueGroupingIsAllowed(String dimName)
+    {
+      if (!allowMultiValueGrouping) {
+        throw new ISE(
+            "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+            + " Consider setting %s to true.",
+            dimName,
+            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+        );
+      }
     }
 
   }
@@ -793,6 +783,9 @@ public class GroupByQueryEngineV2
             );
 
             if (doAggregate) {
+              // this check is done during the row aggregation as a dimension can become multi-value col if
+              // {@link org.apache.druid.segment.column.ColumnCapabilities} is unkown.
+              checkIfMultiValueGroupingIsAllowed(dims[stackPointer].getName());
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
                 dims[i].getColumnSelectorStrategy().initGroupingKeyColumnValue(
@@ -918,12 +911,17 @@ public class GroupByQueryEngineV2
       }
 
       while (!cursor.isDone()) {
-        int multiValuesSize = multiValues.size();
+        final int multiValuesSize = multiValues.size();
         if (multiValuesSize == 0) {
           if (!grouper.aggregate(GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE).isOk()) {
             return;
           }
         } else {
+          if (multiValuesSize > 1) {
+            // this check is done during the row aggregation as a dimension can become multi-value col if
+            // {@link org.apache.druid.segment.column.ColumnCapabilities} is unkown.
+            checkIfMultiValueGroupingIsAllowed(dim.getName());
+          }
           for (; nextValIndex < multiValuesSize; nextValIndex++) {
             if (!grouper.aggregate(multiValues.get(nextValIndex)).isOk()) {
               return;

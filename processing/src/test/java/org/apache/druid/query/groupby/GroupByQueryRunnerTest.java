@@ -1323,9 +1323,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     } else if (!vectorize) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage(StringUtils.format(
-          "Encountered multi-value dimensions %s that cannot be processed with %s set to false."
-          + " Consider changing these dimensions to arrays or setting %s to true.",
-          ImmutableList.of("placementish").toString(),
+          "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+          + " Consider setting %s to true.",
+          "placementish",
           GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
           GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
       ));
