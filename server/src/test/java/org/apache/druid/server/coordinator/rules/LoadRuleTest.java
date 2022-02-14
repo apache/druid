@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import junit.framework.AssertionFailedError;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -406,6 +407,8 @@ public class LoadRuleTest
 
     loadingPeon1.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
     EasyMock.expectLastCall().once();
+    loadingPeon2.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
+    EasyMock.expectLastCall().andThrow(new AssertionFailedError()).anyTimes();
 
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(cachingCostBalancerStrategy)
