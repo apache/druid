@@ -19,27 +19,20 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-
-import javax.annotation.Nullable;
 
 /**
  * Function that converts a String or a Multi Value direct column to an array.
  * Input expressions are not supported as one should use the array function for such cases.
  **/
 
-public class MultiValueStringToArrayOperatorConversion implements SqlOperatorConversion
+public class MultiValueStringToArrayOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("MV_TO_ARRAY")
@@ -48,25 +41,8 @@ public class MultiValueStringToArrayOperatorConversion implements SqlOperatorCon
       .returnTypeNullableArray(SqlTypeName.VARCHAR)
       .build();
 
-  @Override
-  public SqlOperator calciteOperator()
+  public MultiValueStringToArrayOperatorConversion()
   {
-    return SQL_FUNCTION;
+    super(SQL_FUNCTION, "mv_to_array");
   }
-
-  @Nullable
-  @Override
-  public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
-  {
-    return OperatorConversions.convertCall(
-        plannerContext,
-        rowSignature,
-        rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            DruidExpression.functionCall("mv_to_array", druidExpressions)
-        )
-    );
-  }
-
 }

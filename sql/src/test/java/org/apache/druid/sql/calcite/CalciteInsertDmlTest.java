@@ -333,6 +333,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                     .put("DAY", Granularities.DAY)
                     .put("MONTH", Granularities.MONTH)
                     .put("YEAR", Granularities.YEAR)
+                    .put("ALL", Granularities.ALL)
                     .put("ALL TIME", Granularities.ALL)
                     .put("FLOOR(__time TO QUARTER)", Granularities.QUARTER)
                     .put("TIME_FLOOR(__time, 'PT1H')", Granularities.HOUR)
@@ -539,6 +540,22 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     finally {
       didTest = true;
     }
+  }
+
+  @Test
+  public void testInsertWithoutPartitionedBy()
+  {
+    SqlPlanningException e = Assert.assertThrows(
+        SqlPlanningException.class,
+        () ->
+            testQuery(
+                StringUtils.format("INSERT INTO dst SELECT * FROM %s", externSql(externalDataSource)),
+                ImmutableList.of(),
+                ImmutableList.of()
+            )
+    );
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
+    didTest = true;
   }
 
   @Test

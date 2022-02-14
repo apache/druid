@@ -294,7 +294,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     testExpressionWithBindings(expr, parsed, bindings);
   }
 
-  private static void testExpressionWithBindings(
+  public static void testExpressionWithBindings(
       String expr,
       Expr parsed,
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings
@@ -321,7 +321,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     }
   }
 
-  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
+  public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
       int vectorSize,
       Map<String, ExpressionType> types
   )
@@ -338,7 +338,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     );
   }
 
-  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeSequentialBinding(
+  public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeSequentialBinding(
       int vectorSize,
       Map<String, ExpressionType> types
   )

@@ -224,9 +224,10 @@ function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolea
       return sampleEntries.map(showDruidLine).join('\n');
     }
 
-    return (sampleEntries.every(l => !l.parsed)
-      ? sampleEntries.map(showBlankLine)
-      : sampleEntries.map(showRawLine)
+    return (
+      sampleEntries.every(l => !l.parsed)
+        ? sampleEntries.map(showBlankLine)
+        : sampleEntries.map(showRawLine)
     ).join('\n');
   } else {
     return 'No data returned from sampler';
@@ -1687,9 +1688,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1705,9 +1705,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': timestampSpec,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1811,13 +1810,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderTransformStep() {
-    const {
-      spec,
-      columnFilter,
-      specialColumnsOnly,
-      transformQueryState,
-      selectedTransform,
-    } = this.state;
+    const { spec, columnFilter, specialColumnsOnly, transformQueryState, selectedTransform } =
+      this.state;
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 

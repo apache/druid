@@ -27,6 +27,7 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.StorageClass;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -49,16 +50,24 @@ public class OssDataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(OssDataSegmentMover.class);
 
-  private final OSS client;
+  /**
+   * Any implementation of DataSegmentMover is initialized when an ingestion job starts if the extension is loaded
+   * even when the implementation of DataSegmentMover is not used. As a result, if we accept an OSS client instead
+   * of a supplier of it, it can cause unnecessary config validation for OSS even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentMover for how DataSegmentMovers are initialized.
+   */
+  private final Supplier<OSS> clientSupplier;
   private final OssStorageConfig config;
 
   @Inject
   public OssDataSegmentMover(
-      OSS client,
+      Supplier<OSS> client,
       OssStorageConfig config
   )
   {
-    this.client = client;
+    this.clientSupplier = client;
     this.config = config;
   }
 
@@ -167,6 +176,7 @@ public class OssDataSegmentMover implements DataSegmentMover
       log.info("No need to move file[%s://%s/%s] onto itself", OssStorageDruidModule.SCHEME, srcBucket, srcPath);
       return;
     }
+    final OSS client = this.clientSupplier.get();
     if (client.doesObjectExist(srcBucket, srcPath)) {
       final ObjectListing listResult = client.listObjects(
           new ListObjectsRequest(srcBucket, srcPath, null, null, 1)
@@ -238,7 +248,7 @@ public class OssDataSegmentMover implements DataSegmentMover
     RetryUtils.retry(
         () -> {
           try {
-            client.deleteObject(bucket, path);
+            clientSupplier.get().deleteObject(bucket, path);
             return null;
           }
           catch (Exception e) {

@@ -26,7 +26,7 @@ sidebar_label: "Dimensions"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql.md#scalar-functions).
+> [SQL documentation](sql-scalar.md).
 
 The following JSON fields can be used in a query to operate on dimension values.
 

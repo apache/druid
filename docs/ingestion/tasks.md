@@ -35,7 +35,7 @@ Task APIs are available in two main places:
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
 review logs and reports, and more. Refer to the [Tasks API reference page](../operations/api-reference.md#tasks) for a
 full list.
-- Druid SQL includes a [`sys.tasks`](../querying/sql.md#tasks-table) table that provides information about currently
+- Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
 running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
 the Overlord APIs.
 
