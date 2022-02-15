@@ -142,7 +142,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }

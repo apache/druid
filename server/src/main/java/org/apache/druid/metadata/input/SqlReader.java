@@ -76,7 +76,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }

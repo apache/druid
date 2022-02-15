@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * Like {@link CloseableIterator}, but has a parseContext() method, which returns a Map<String, Object> about the current

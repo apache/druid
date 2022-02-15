@@ -71,7 +71,7 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }

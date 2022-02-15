@@ -20,14 +20,10 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * ParseException can be thrown on both ingestion side and query side.
@@ -60,28 +56,6 @@ public class ParseException extends RuntimeException
    * A string representation of the input data that had a parse exception.
    */
   private final String input;
-
-  /**
-   * Namespace for holding the common keys that can be used in the context map for the exception
-   */
-  public static final class Context
-  {
-    /**
-     * The source object which contained the record generating the ParseException
-     */
-    public static final String SOURCE_KEY = "source";
-
-    /**
-     * Position of the unparseable record in the InputEntity
-     */
-    public static final String RECORD_NUMBER_KEY = "recordNumber";
-
-    /**
-     * The line number (corresponding to the physical line where the error occured) in the InputEntity. This is only
-     * populated by the {@link org.apache.druid.data.input.TextReader} and its implementations
-     */
-    public static final String LINE_NUMBER_KEY = "lineNumber";
-  }
 
   public ParseException(@Nullable String input, String formatText, Object... arguments)
   {

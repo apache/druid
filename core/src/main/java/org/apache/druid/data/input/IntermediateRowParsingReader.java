@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.collect.Maps;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithParseContext;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -27,6 +29,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -76,12 +79,24 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                 new ParseException.Builder()
                     .setInput(String.valueOf(row))
                     .setCause(e)
-                    .setMessage("Unable to parse row [%s]", row)
+                    .setMessage(buildParseExceptionMessage(
+                        "Unable to parse row [%s]",
+                        source(),
+                        currentRecordNumber,
+                        context,
+                        row
+                    ))
                     .build()
             );
           }
           catch (ParseException e) {
             ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
+            enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
+                e.getMessage(),
+                source(),
+                currentRecordNumber,
+                context
+            ));
             rows = new ExceptionThrowingIterator(enrichedParseExceptionBuilder.build());
           }
         }
@@ -122,7 +137,13 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             new ParseException.Builder()
                 .setInput(String.valueOf(row))
                 .setCause(e)
-                .setMessage("Unable to parse row [%s] into JSON", row)
+                .setMessage(buildParseExceptionMessage(
+                    "Unable to parse row [%s] into JSON",
+                    source(),
+                    null,
+                    context,
+                    row
+                ))
                 .build()
         );
       }
@@ -132,7 +153,13 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             null,
             new ParseException.Builder()
                 .setInput(String.valueOf(row))
-                .setMessage("No map object parsed for row [%s]", row)
+                .setMessage(buildParseExceptionMessage(
+                    "No map object parsed for row [%s]",
+                    source(),
+                    null,
+                    context,
+                    row
+                ))
                 .build()
         );
       }
@@ -143,13 +170,25 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       }
       catch (ParseException e) {
         ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
+        enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
+            e.getMessage(),
+            source(),
+            null,
+            context
+        ));
         return InputRowListPlusRawValues.ofList(rawColumnsList, enrichedParseExceptionBuilder.build());
       }
       catch (IOException e) {
         ParseException exception = new ParseException.Builder()
             .setInput(String.valueOf(row))
             .setCause(e)
-            .setMessage("Unable to parse row [%s]", row)
+            .setMessage(buildParseExceptionMessage(
+                "No map object parsed for row [%s]",
+                source(),
+                null,
+                context,
+                row
+            ))
             .build();
         return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
       }
@@ -180,7 +219,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * @return InputEntity which the subclass is reading from. Useful in generating informative {@link ParseException}s
    */
   @Nullable
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return null;
   }
@@ -200,6 +239,24 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    * This should return a non-empty list with the same size of the list returned by {@link #parseInputRows} or the returned objects will be discarded
    */
   protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
+
+  private String buildParseExceptionMessage(
+      String formatString,
+      @Nullable InputEntity source,
+      @Nullable Long recordNumber,
+      Map<String, Object> additionalContext,
+      Object... baseArgs
+  )
+  {
+    Map<String, Object> temp = Maps.newHashMap(additionalContext);
+    if (source != null) {
+      temp.put("source", source.getUri());
+    }
+    if(recordNumber != null) {
+      temp.put("recordNumber", recordNumber);
+    }
+    return StringUtils.nonStrictFormat(formatString, baseArgs, temp);
+  }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
   {

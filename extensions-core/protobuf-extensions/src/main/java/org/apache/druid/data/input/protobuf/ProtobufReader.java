@@ -84,7 +84,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }

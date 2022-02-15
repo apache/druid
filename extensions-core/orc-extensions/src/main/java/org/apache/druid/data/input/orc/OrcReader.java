@@ -143,7 +143,7 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }

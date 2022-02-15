@@ -132,7 +132,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
   }
 
   @Override
-  protected InputEntity sourceForParseException()
+  protected InputEntity source()
   {
     return source;
   }
