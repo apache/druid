@@ -161,6 +161,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final ConcurrentMap<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
   private final ConcurrentMap<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
 
+  // Max timestamp gaps between the time record being put on stream and the time record being processed by Druid
+  private final ConcurrentMap<PartitionIdType, Long> timestampGaps = new ConcurrentHashMap<>();
+
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
   // the ingestion loop has been stopped at the returned sequences and will not ingest any more data until resumed. The
@@ -704,6 +707,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               // here for kafka is to +1 while for kinesis we simply save the current sequence number
               lastReadOffsets.put(record.getPartitionId(), record.getSequenceNumber());
               currOffsets.put(record.getPartitionId(), getNextStartOffset(record.getSequenceNumber()));
+              timestampGaps.put(record.getPartitionId(), Math.max(timestampGaps.getOrDefault(record.getPartitionId(), Long.MIN_VALUE), System.currentTimeMillis() - record.getSequenceTimestamp()));
             }
 
             // Use record.getSequenceNumber() in the moreToRead check, since currOffsets might not have been
@@ -1484,6 +1488,30 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public ConcurrentMap<PartitionIdType, SequenceOffsetType> getCurrentOffsets()
   {
     return currOffsets;
+  }
+
+  @POST
+  @Path("/timestamp/gaps")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Map<PartitionIdType, Long> getAndClearTimestampGaps(
+      @QueryParam("clear") @DefaultValue("false") final boolean clear,
+      @Context final HttpServletRequest req)
+  {
+    authorizationCheck(req, Action.READ);
+    return getAndClearTimestampGaps(clear);
+  }
+
+  public ConcurrentMap<PartitionIdType, Long> getAndClearTimestampGaps(boolean clear)
+  {
+    // There's a small gap between copy and clear so some data will lost, but we tolerate that to
+    // avoid too much synchronization overhead
+    ConcurrentMap<PartitionIdType, Long> curTimestampGaps = new ConcurrentHashMap<>(timestampGaps);
+
+    if (clear) {
+      timestampGaps.clear();
+    }
+
+    return curTimestampGaps;
   }
 
   @GET

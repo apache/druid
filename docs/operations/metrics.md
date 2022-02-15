@@ -153,6 +153,9 @@ These metrics are applicable for the Kafka Indexing Service.
 |`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
+|`ingest/kafka/timeLag`|Total lag in milliseconds between the time records being put on kafka topic and the time records being processed by Druid across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
+|`ingest/kafka/maxTimeLag`|Max lag in milliseconds between the time records being put on kafka topic and the time records being processed by Druid across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
+|`ingest/kafka/avgTimeLag`|Average lag in milliseconds between the time records being put on kafka topic and the time records being processed by Druid across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
 ## Ingestion Metrics (Kinesis Indexing Service)
 

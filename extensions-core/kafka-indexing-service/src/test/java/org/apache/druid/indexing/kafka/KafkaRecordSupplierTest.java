@@ -128,6 +128,7 @@ public class KafkaRecordSupplierTest
           topic,
           r.partition(),
           offset,
+          0,
           r.value() == null ? null : Collections.singletonList(new KafkaRecordEntity(
               new ConsumerRecord<>(r.topic(), r.partition(), offset, r.key(), r.value())
           ))
