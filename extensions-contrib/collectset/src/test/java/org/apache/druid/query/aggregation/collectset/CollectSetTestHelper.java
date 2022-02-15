@@ -19,48 +19,43 @@
 
 package org.apache.druid.query.aggregation.collectset;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class CollectSetTestHelper
 {
   public static final String DATETIME = "t";
-  public static final String[] DIMENSIONS = {"dim1", "dim2", "dim3", "dim4"};
+  public static final String[] DIMENSIONS = {"dim1", "dim2", "dim3"};
+  public static final String[][] ROWS =
+  {
+      {"2000-01-01T00:00:00.000Z", "0", "iphone", "video"},
+      {"2000-01-01T00:00:00.001Z", "1", "iphone", "video"},
+      {"2000-01-01T00:00:00.002Z", "0", "android", "image"},
+      {"2000-01-01T00:00:00.003Z", "2", "android", "video"},
+      {"2000-01-01T00:00:00.004Z", "0", "iphone", "text"}
+  };
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(DATETIME, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              ImmutableList.of(
-                  new StringDimensionSchema("dim1"),
-                  new StringDimensionSchema("dim2"),
-                  new StringDimensionSchema("dim3"),
-                  new StringDimensionSchema("dim4")
-              ),
-              null,
-              null
+  static final List<InputRow> INPUT_ROWS = new ArrayList<>();
+
+  static {
+    for (String[] row : ROWS) {
+      INPUT_ROWS.add(
+          new MapBasedInputRow(
+              DateTimes.of(row[0]),
+              Arrays.asList(DIMENSIONS),
+              ImmutableMap.of(
+                  DIMENSIONS[0], row[1],
+                  DIMENSIONS[1], row[2],
+                  DIMENSIONS[2], row[3]
+              )
           )
-      )
-  );
-
-  public static final List<InputRow> INPUT_ROWS = ImmutableList.<Map<String, Object>>of(
-      ImmutableMap.of(DIMENSIONS[0], "0", DIMENSIONS[1], "iphone", DIMENSIONS[2], "video", DIMENSIONS[3], ImmutableList.of("tag1", "tag2", "tag3")),
-      ImmutableMap.of(DIMENSIONS[0], "1", DIMENSIONS[1], "iphone", DIMENSIONS[2], "video", DIMENSIONS[3], ""),
-      ImmutableMap.of(DIMENSIONS[0], "0", DIMENSIONS[1], "android", DIMENSIONS[2], "image", DIMENSIONS[3], ImmutableList.of("tag1", "tag4", "tag5", "tag6")),
-      ImmutableMap.of(DIMENSIONS[0], "2", DIMENSIONS[1], "android", DIMENSIONS[2], "video", DIMENSIONS[3], "tag2"),
-      ImmutableMap.of(DIMENSIONS[0], "0", DIMENSIONS[1], "iphone", DIMENSIONS[2], "text", DIMENSIONS[3], ImmutableList.of("tag4", "tag5", "tag7", "tag8"))
-  ).stream().map(e -> PARSER.parseBatch(e).get(0)).collect(Collectors.toList());
-
+      );
+    }
+  }
 }

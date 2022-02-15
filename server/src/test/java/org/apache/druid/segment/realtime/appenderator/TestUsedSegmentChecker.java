@@ -42,7 +42,13 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
   public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-    VersionedIntervalTimeline.addSegments(timeline, pushedSegments.iterator());
+    for (DataSegment dataSegment : pushedSegments) {
+      timeline.add(
+          dataSegment.getInterval(),
+          dataSegment.getVersion(),
+          dataSegment.getShardSpec().createChunk(dataSegment)
+      );
+    }
 
     final Set<DataSegment> retVal = new HashSet<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {

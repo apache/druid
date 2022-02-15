@@ -863,13 +863,19 @@ public class DataSourcesResource
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("interval") final String interval,
       @QueryParam("partitionNumber") final int partitionNumber,
-      @QueryParam("version") final String version
+      @QueryParam("version") final String version,
+      @QueryParam("partitionIdentifier") final String partitionIdentifier
   )
   {
     try {
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
       final Interval theInterval = Intervals.of(interval);
-      final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
+      final SegmentDescriptor descriptor = new SegmentDescriptor(
+          theInterval,
+          version,
+          partitionNumber,
+          partitionIdentifier
+      );
       final DateTime now = DateTimes.nowUtc();
       // dropped means a segment will never be handed off, i.e it completed hand off
       // init to true, reset to false only if this segment can be loaded by rules
@@ -912,6 +918,8 @@ public class DataSourcesResource
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : servedSegments) {
       if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getIdentifier().toString().equals(
+              descriptor.getPartitionIdentifier().toString())
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
           && Iterables.any(

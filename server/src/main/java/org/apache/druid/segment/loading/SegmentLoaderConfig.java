@@ -64,6 +64,12 @@ public class SegmentLoaderConfig
 
   private long combinedMaxSize = 0;
 
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnDownload")
+  private int numLoadingThreadsToLoadSegmentsIntoPageCacheOnDownload = 0;
+
+  @JsonProperty("numThreadsToLoadSegmentsIntoPageCacheOnBootstrap")
+  private Integer numThreadsToLoadSegmentsIntoPageCacheOnBootstrap = null;
+
   public List<StorageLocationConfig> getLocations()
   {
     return locations;
@@ -97,6 +103,18 @@ public class SegmentLoaderConfig
   public int getNumBootstrapThreads()
   {
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
+  }
+
+  public int getNumLoadingThreadsToLoadSegmentsIntoPageCacheOnDownload()
+  {
+    return numLoadingThreadsToLoadSegmentsIntoPageCacheOnDownload;
+  }
+
+  public int getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap()
+  {
+    return numThreadsToLoadSegmentsIntoPageCacheOnBootstrap == null ?
+           numLoadingThreadsToLoadSegmentsIntoPageCacheOnDownload :
+           numThreadsToLoadSegmentsIntoPageCacheOnBootstrap;
   }
 
   public File getInfoDir()

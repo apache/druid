@@ -19,9 +19,13 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 /**
@@ -49,6 +53,9 @@ public class MetadataStorageConnectorConfig
   @JsonProperty("dbcp")
   private Properties dbcpProperties;
 
+  @JsonIgnore
+  private String cachedURI = "<Unset Connection URI>";
+
   @JsonProperty
   public boolean isCreateTables()
   {
@@ -72,6 +79,26 @@ public class MetadataStorageConnectorConfig
   {
     if (connectURI == null) {
       return StringUtils.format("jdbc:derby://%s:%s/druid;create=true", host, port);
+    }
+
+    // replicaset:<FILE_TO_READ>:<DB_NAME>
+    if (connectURI.startsWith("replicaset:")) {
+      try {
+        // tokens[0] = "replicaset", tokens[1] = path to file containing URI, tokens[2] = database name
+        String[] tokens = connectURI.split(":");
+        String loc = tokens[1];
+        String dbName = "";
+        if (tokens.length > 2) {
+          dbName = tokens[2];
+        }
+        String uri = Files.readAllLines(Paths.get(loc)).get(0); // Form: jdbc:mysql://<host>:<port>/
+        String connectionString = uri + dbName;
+        cachedURI = connectionString;
+        return connectionString;
+      }
+      catch (IOException e) {
+        return cachedURI;
+      }
     }
     return connectURI;
   }

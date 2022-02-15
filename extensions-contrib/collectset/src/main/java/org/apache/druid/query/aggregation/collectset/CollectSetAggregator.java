@@ -19,29 +19,23 @@
 
 package org.apache.druid.query.aggregation.collectset;
 
-import gnu.trove.set.hash.THashSet;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
-
-import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 public class CollectSetAggregator implements Aggregator
 {
   private final ColumnValueSelector<Object> selector;
-  private final int limit;
   private Set<Object> set;
 
   public CollectSetAggregator(
-      ColumnValueSelector<Object> selector,
-      int limit
+      ColumnValueSelector<Object> selector
   )
   {
     this.selector = selector;
-
-    this.limit = limit;
-    this.set = new THashSet<>();
+    this.set = new HashSet<>();
   }
 
   @Override
@@ -52,14 +46,9 @@ public class CollectSetAggregator implements Aggregator
       return;
     }
 
-    if (limit >= 0 && set.size() >= limit) {
-      return;
-    }
-
     synchronized (this) {
-      if (value instanceof Collection) {
-        Collection<?> valueCollection = (Collection<?>) value;
-        CollectSetUtil.addCollectionWithLimit(set, valueCollection, limit);
+      if (value instanceof Set) {
+        set.addAll((Set<Object>) value);
       } else {
         set.add(value);
       }
@@ -69,7 +58,7 @@ public class CollectSetAggregator implements Aggregator
   @Override
   public synchronized Object get()
   {
-    return new THashSet<>(set);
+    return new HashSet<>(set);
   }
 
   @Override

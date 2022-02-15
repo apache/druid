@@ -92,6 +92,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -126,7 +127,7 @@ public class DruidCoordinator
    * cluster has availability problems and struggling to make all segments available immediately, at least we try to
    * make more "important" (more recent) segments available as soon as possible.
    */
-  static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
+  public static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
       .from(Comparators.intervalsByEndThenStart())
       .onResultOf(DataSegment::getInterval)
       .compound(Ordering.<DataSegment>natural())
@@ -280,6 +281,11 @@ public class DruidCoordinator
     this.compactSegments = compactSegments;
   }
 
+  public DruidCoordinatorConfig getConfig()
+  {
+    return config;
+  }
+
   public boolean isLeader()
   {
     return coordLeaderSelector.isLeader();
@@ -357,6 +363,36 @@ public class DruidCoordinator
     }
 
     return numsUnavailableUsedSegmentsPerDataSource;
+  }
+
+  public Map<String, List<String>> getUnloadedStatus()
+  {
+    Map<String, List<String>> unloadedStatus = new HashMap<>();
+    final Collection<ImmutableDruidDataSource> dataSources =
+        segmentsMetadata.getImmutableDataSourcesWithAllUsedSegments();
+
+    for (ImmutableDruidDataSource dataSource : dataSources) {
+      final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
+
+      // remove loaded segments
+      for (DruidServer druidServer : serverInventoryView.getInventory()) {
+        final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
+        if (loadedView != null) {
+          // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
+          // Please see https://github.com/apache/incubator-druid/pull/5632 and LoadStatusBenchmark for more info.
+          for (DataSegment serverSegment : loadedView.getSegments()) {
+            segments.remove(serverSegment);
+          }
+        }
+      }
+
+      unloadedStatus.put(dataSource.getName(), segments.stream()
+          .map(segment -> segment.getId().toString())
+          .collect(Collectors.toList())
+      );
+    }
+
+    return unloadedStatus;
   }
 
   public Map<String, Double> getLoadStatus()
@@ -872,6 +908,12 @@ public class DruidCoordinator
           }
         }
 
+        boolean skipCoordinatorRun = getDynamicConfigs().isSkipCoordinatorRun();
+        if (skipCoordinatorRun) {
+          log.warn("Coordinator run skipped.");
+          return;
+        }
+
         initBalancerExecutor();
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
@@ -997,13 +1039,15 @@ public class DruidCoordinator
     DruidCluster prepareCluster(DruidCoordinatorRuntimeParams params, List<ImmutableDruidServer> currentServers)
     {
       Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
+      Set<String> mirroringTiers = new HashSet<>(config.getTierToMirroringTierMap().values());
       final DruidCluster cluster = new DruidCluster();
       for (ImmutableDruidServer server : currentServers) {
         cluster.add(
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                mirroringTiers.contains(server.getTier())
             )
         );
       }

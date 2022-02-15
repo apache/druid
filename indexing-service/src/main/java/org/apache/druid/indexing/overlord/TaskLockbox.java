@@ -539,7 +539,8 @@ public class TaskLockbox
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
-        request.isSkipSegmentLineageCheck()
+        request.isSkipSegmentLineageCheck(),
+        request.getNameSpace()
     );
   }
 
@@ -750,7 +751,7 @@ public class TaskLockbox
    * @param task task to unlock
    * @param interval interval to unlock
    */
-  public void unlock(final Task task, final Interval interval, @Nullable Integer partitionId)
+  public void unlock(final Task task, final Interval interval, @Nullable Object partitionId)
   {
     giant.lock();
 
@@ -785,7 +786,7 @@ public class TaskLockbox
         final boolean match = (partitionId == null && taskLock.getGranularity() == LockGranularity.TIME_CHUNK)
                               || (partitionId != null
                                   && taskLock.getGranularity() == LockGranularity.SEGMENT
-                                  && ((SegmentLock) taskLock).getPartitionId() == partitionId);
+                                  && ((SegmentLock) taskLock).getPartitionId().equals(partitionId));
 
         if (match) {
           // Remove task from live list
@@ -1005,7 +1006,7 @@ public class TaskLockbox
               interval
           );
         } else {
-          final Map<Integer, TaskLockPosse> partitionIdsOfLocks = new HashMap<>();
+          final Map<Object, TaskLockPosse> partitionIdsOfLocks = new HashMap<>();
           for (TaskLockPosse posse : filteredPosses) {
             final SegmentLock segmentLock = (SegmentLock) posse.getTaskLock();
             partitionIdsOfLocks.put(segmentLock.getPartitionId(), posse);
@@ -1147,7 +1148,7 @@ public class TaskLockbox
               final SpecificSegmentLockRequest specificSegmentLockRequest = (SpecificSegmentLockRequest) request;
               return segmentLock.getInterval().contains(specificSegmentLockRequest.getInterval())
                      && segmentLock.getGroupId().equals(specificSegmentLockRequest.getGroupId())
-                     && specificSegmentLockRequest.getPartitionId() == segmentLock.getPartitionId();
+                     && specificSegmentLockRequest.getPartitionId().equals(segmentLock.getPartitionId());
             } else {
               throw new ISE("Unknown request type[%s]", request);
             }

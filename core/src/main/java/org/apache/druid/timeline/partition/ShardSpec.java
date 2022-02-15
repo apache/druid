@@ -40,6 +40,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = ShardSpec.Type.NUMBERED, value = NumberedShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.HASHED, value = HashBasedNumberedShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.NUMBERED_OVERWRITE, value = NumberedOverwriteShardSpec.class),
+    @JsonSubTypes.Type(name = ShardSpec.Type.NAMED_NUMBERED, value = NamedNumberedShardSpec.class),
     // BuildingShardSpecs are the shardSpec with missing numCorePartitions, and thus must not be published.
     // See BuildingShardSpec for more details.
     @JsonSubTypes.Type(name = ShardSpec.Type.BUILDING_NUMBERED, value = BuildingNumberedShardSpec.class),
@@ -124,6 +125,15 @@ public interface ShardSpec
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
   /**
+   * Added in for NamedNumberedShardSpec
+   * @return unique identifier for ShardSpec
+   */
+  default Object getIdentifier()
+  {
+    return this.getPartitionNum();
+  }
+
+  /**
    * Get the type name of this ShardSpec.
    */
   @JsonIgnore
@@ -159,6 +169,7 @@ public interface ShardSpec
     String HASHED = "hashed";
 
     String NUMBERED_OVERWRITE = "numbered_overwrite";
+    String NAMED_NUMBERED = "named_numbered";
 
     String BUILDING_NUMBERED = "building_numbered";
     String BUILDING_HASHED = "building_hashed";

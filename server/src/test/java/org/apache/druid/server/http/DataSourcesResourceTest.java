@@ -56,9 +56,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.NamedNumberedPartitionChunk;
+import org.apache.druid.timeline.partition.NamedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
@@ -643,7 +645,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(databaseRuleManager);
 
     String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
-    Response response1 = dataSourcesResource.isHandOffComplete("dataSource1", interval1, 1, "v1");
+    Response response1 = dataSourcesResource.isHandOffComplete("dataSource1", interval1, 1, "v1", "1");
     Assert.assertTrue((boolean) response1.getEntity());
 
     EasyMock.verify(databaseRuleManager);
@@ -659,7 +661,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(inventoryView, databaseRuleManager);
 
     String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
-    Response response2 = dataSourcesResource.isHandOffComplete("dataSource1", interval2, 1, "v1");
+    Response response2 = dataSourcesResource.isHandOffComplete("dataSource1", interval2, 1, "v1", "1");
     Assert.assertFalse((boolean) response2.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
@@ -668,14 +670,16 @@ public class DataSourcesResourceTest
     String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
     SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
-    VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
-        new VersionedIntervalTimeline<String, SegmentLoadInfo>(null)
+    NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> timeline = new NamespacedVersionedIntervalTimeline(null)
     {
       @Override
       public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
       {
-        PartitionHolder<SegmentLoadInfo> partitionHolder =
-            new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segmentLoadInfo));
+        PartitionHolder<SegmentLoadInfo> partitionHolder = new PartitionHolder<>(new NumberedPartitionChunk<>(
+            1,
+            1,
+            segmentLoadInfo
+        ));
         List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
         ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
         return ret;
@@ -690,7 +694,84 @@ public class DataSourcesResourceTest
             .once();
     EasyMock.replay(inventoryView, databaseRuleManager);
 
-    Response response3 = dataSourcesResource.isHandOffComplete("dataSource1", interval3, 1, "v1");
+    Response response3 = dataSourcesResource.isHandOffComplete("dataSource1", interval3, 1, "v1", "1");
+    Assert.assertTrue((boolean) response3.getEntity());
+
+    EasyMock.verify(inventoryView, databaseRuleManager);
+  }
+
+  @Test
+  public void testIsHandOffCompleteForNamespaces()
+  {
+    MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null);
+    Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
+    DataSourcesResource dataSourcesResource = new DataSourcesResource(
+        inventoryView,
+        null,
+        databaseRuleManager,
+        null,
+        null
+    );
+
+    // test dropped
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+        .andReturn(ImmutableList.of(loadRule, dropRule))
+        .once();
+    EasyMock.replay(databaseRuleManager);
+
+    String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
+    Response response1 = dataSourcesResource.isHandOffComplete("dataSource1", interval1, 1, "v1", "onsite_1");
+    Assert.assertTrue((boolean) response1.getEntity());
+
+    EasyMock.verify(databaseRuleManager);
+
+    // test isn't dropped and no timeline found
+    EasyMock.reset(databaseRuleManager);
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+        .andReturn(ImmutableList.of(loadRule, dropRule))
+        .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource("dataSource1")))
+        .andReturn(null)
+        .once();
+    EasyMock.replay(inventoryView, databaseRuleManager);
+
+    String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
+    Response response2 = dataSourcesResource.isHandOffComplete("dataSource1", interval2, 1, "v1", "onsite_1");
+    Assert.assertFalse((boolean) response2.getEntity());
+
+    EasyMock.verify(inventoryView, databaseRuleManager);
+
+    // test isn't dropped and timeline exist
+    String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
+    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1, "onsite"));
+    segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
+    NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> timeline = new NamespacedVersionedIntervalTimeline(null)
+    {
+      @Override
+      public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
+      {
+        PartitionHolder<SegmentLoadInfo> partitionHolder = new PartitionHolder<>(new NamedNumberedPartitionChunk<>(
+            1,
+            1,
+            "onsite",
+            segmentLoadInfo
+        ));
+        List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
+        ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
+        return ret;
+      }
+    };
+    EasyMock.reset(inventoryView, databaseRuleManager);
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
+        .andReturn(ImmutableList.of(loadRule, dropRule))
+        .once();
+    EasyMock.expect(inventoryView.getTimeline(new TableDataSource("dataSource1")))
+        .andReturn(timeline)
+        .once();
+    EasyMock.replay(inventoryView, databaseRuleManager);
+
+    Response response3 = dataSourcesResource.isHandOffComplete("dataSource1", interval3, 1, "v1", "onsite_1");
     Assert.assertTrue((boolean) response3.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
@@ -1548,6 +1629,20 @@ public class DataSourcesResourceTest
         null,
         null,
         new NumberedShardSpec(partitionNumber, 100),
+        0, 0
+    );
+  }
+
+  private DataSegment createSegment(Interval interval, String version, int partitionNumber, String partitionName)
+  {
+    return new DataSegment(
+        "test_ds",
+        interval,
+        version,
+        null,
+        null,
+        null,
+        new NamedNumberedShardSpec(partitionNumber, 100, partitionName),
         0, 0
     );
   }

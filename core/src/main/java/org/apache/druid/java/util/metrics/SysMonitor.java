@@ -217,7 +217,7 @@ public class SysMonitor extends FeedDefiningMonitor
           du = sigar.getDirUsage(dir);
         }
         catch (SigarException e) {
-          log.error("Failed to get DiskUsage for [%s] due to   [%s]", dir, e.getMessage());
+          log.debug("Failed to get DiskUsage for [%s] due to   [%s]", dir, e.getMessage());
         }
         if (du != null) {
           final Map<String, Long> stats = ImmutableMap.of(
@@ -310,7 +310,7 @@ public class SysMonitor extends FeedDefiningMonitor
               du = sigar.getDiskUsage(name);
             }
             catch (SigarException e) {
-              log.error(e, "Failed to get DiskUsage[%s]", name);
+              log.debug(e, "Failed to get DiskUsage[%s]", name);
             }
             if (du != null) {
               final Map<String, Long> stats = diff.to(

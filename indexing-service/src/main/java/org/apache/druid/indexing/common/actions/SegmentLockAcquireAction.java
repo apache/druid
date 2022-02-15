@@ -41,7 +41,7 @@ public class SegmentLockAcquireAction implements TaskAction<LockResult>
   private final TaskLockType lockType;
   private final Interval interval;
   private final String version;
-  private final int partitionId;
+  private final Object partitionId;
   private final long timeoutMs;
 
   @JsonCreator
@@ -49,14 +49,14 @@ public class SegmentLockAcquireAction implements TaskAction<LockResult>
       @JsonProperty("lockType") TaskLockType lockType,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JsonProperty("partitionId") int partitionId,
+      @JsonProperty("partitionId") Object partitionIdentifier,
       @JsonProperty("timeoutMs") long timeoutMs
   )
   {
     this.lockType = Preconditions.checkNotNull(lockType, "lockType");
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.version = Preconditions.checkNotNull(version, "version");
-    this.partitionId = partitionId;
+    this.partitionId = partitionIdentifier;
     this.timeoutMs = timeoutMs;
   }
 
@@ -79,7 +79,7 @@ public class SegmentLockAcquireAction implements TaskAction<LockResult>
   }
 
   @JsonProperty
-  public int getPartitionId()
+  public Object getPartitionId()
   {
     return partitionId;
   }

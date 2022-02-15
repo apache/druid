@@ -40,6 +40,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -86,14 +87,14 @@ public final class SegmentId implements Comparable<SegmentId>
 
   private static final int DATE_TIME_SIZE_UPPER_LIMIT = "yyyy-MM-ddTHH:mm:ss.SSS+00:00".length();
 
-  public static SegmentId of(String dataSource, Interval interval, String version, int partitionNum)
+  public static SegmentId of(String dataSource, Interval interval, String version, Object partitionNum)
   {
     return new SegmentId(dataSource, interval, version, partitionNum);
   }
 
   public static SegmentId of(String dataSource, Interval interval, String version, @Nullable ShardSpec shardSpec)
   {
-    return of(dataSource, interval, version, shardSpec != null ? shardSpec.getPartitionNum() : 0);
+    return of(dataSource, interval, version, shardSpec != null ? shardSpec.getIdentifier() : 0);
   }
 
   /**
@@ -192,16 +193,16 @@ public final class SegmentId implements Comparable<SegmentId>
       return Collections.emptyList();
     }
     List<SegmentId> possibleParsings = new ArrayList<>(2);
-    String version = DELIMITER_JOINER.join(splits.subList(2, Math.max(splits.size() - 1, 3)));
-    String trail = splits.size() > 3 ? splits.get(splits.size() - 1) : null;
-    if (trail != null) {
+    // Making some assumptions to make this work for namespacing. This will break if versions have splits
+    String version = splits.get(2);
+    String trail = DELIMITER_JOINER.join(splits.subList(3, splits.size()));
+    if (splits.size() > 3) {
       Integer possiblePartitionNum = Ints.tryParse(trail);
       if (possiblePartitionNum != null && possiblePartitionNum > 0) {
         possibleParsings.add(of(dataSource, new Interval(start, end), version, possiblePartitionNum));
       }
-      version = version + '_' + trail;
     }
-    possibleParsings.add(of(dataSource, new Interval(start, end), version, 0));
+    possibleParsings.add(of(dataSource, new Interval(start, end), version, "".equals(trail) ? 0 : trail));
     return possibleParsings;
   }
 
@@ -267,6 +268,7 @@ public final class SegmentId implements Comparable<SegmentId>
   @Nullable
   private final Chronology intervalChronology;
   private final String version;
+  private final String identifier;
   private final int partitionNum;
 
   /**
@@ -275,7 +277,7 @@ public final class SegmentId implements Comparable<SegmentId>
    */
   private final int hashCode;
 
-  private SegmentId(String dataSource, Interval interval, String version, int partitionNum)
+  private SegmentId(String dataSource, Interval interval, String version, Object identifier)
   {
     this.dataSource = STRING_INTERNER.intern(Objects.requireNonNull(dataSource));
     this.intervalStartMillis = interval.getStartMillis();
@@ -284,7 +286,22 @@ public final class SegmentId implements Comparable<SegmentId>
     // Versions are timestamp-based Strings, interning of them doesn't make sense. If this is not the case, interning
     // could be conditionally allowed via a system property.
     this.version = Objects.requireNonNull(version);
-    this.partitionNum = partitionNum;
+    if (identifier instanceof Integer) {
+      this.partitionNum = (Integer) identifier;
+      this.identifier = null;
+    } else {
+      String identifierStr = identifier.toString();
+      int index = identifierStr.lastIndexOf('_');
+      if (index == -1) {
+        // Not sure how to handle this case; try falling back to default behavior
+        this.identifier = null;
+        this.partitionNum = Integer.parseInt(identifierStr);
+      } else {
+        this.identifier =
+            STRING_INTERNER.intern(Objects.requireNonNull(identifierStr.substring(0, index)));
+        this.partitionNum = Integer.parseInt(identifierStr.substring(index + 1));
+      }
+    }
     this.hashCode = computeHashCode();
   }
 
@@ -297,6 +314,7 @@ public final class SegmentId implements Comparable<SegmentId>
     hashCode = hashCode * 1000003 + version.hashCode();
 
     hashCode = hashCode * 1000003 + dataSource.hashCode();
+    hashCode = hashCode * 1000003 + (identifier != null ? identifier.hashCode() : 0);
     hashCode = hashCode * 1000003 + Long.hashCode(intervalStartMillis);
     hashCode = hashCode * 1000003 + Long.hashCode(intervalEndMillis);
     hashCode = hashCode * 1000003 + Objects.hashCode(intervalChronology);
@@ -340,6 +358,9 @@ public final class SegmentId implements Comparable<SegmentId>
 
   public SegmentDescriptor toDescriptor()
   {
+    if (identifier != null) {
+      return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum, identifier + "_" + partitionNum);
+    }
     return new SegmentDescriptor(Intervals.utc(intervalStartMillis, intervalEndMillis), version, partitionNum);
   }
 
@@ -360,7 +381,8 @@ public final class SegmentId implements Comparable<SegmentId>
            intervalStartMillis == that.intervalStartMillis &&
            intervalEndMillis == that.intervalEndMillis &&
            Objects.equals(intervalChronology, that.intervalChronology) &&
-           version.equals(that.version);
+           version.equals(that.version) &&
+           Objects.equals(identifier, that.identifier);
   }
 
   @Override
@@ -388,6 +410,10 @@ public final class SegmentId implements Comparable<SegmentId>
     if (result != 0) {
       return result;
     }
+    result = Objects.compare(identifier, o.identifier, Comparator.nullsFirst(String::compareTo));
+    if (result != 0) {
+      return result;
+    }
     return Integer.compare(partitionNum, o.partitionNum);
   }
 
@@ -402,7 +428,13 @@ public final class SegmentId implements Comparable<SegmentId>
       .append(getIntervalEnd()).append(DELIMITER)
       .append(version);
 
-    if (partitionNum != 0) {
+    if (identifier != null) {
+      sb.append(DELIMITER).append(identifier);
+    }
+
+    // We should append _0 for NamedNumberedShardSpec segments, as those are written
+    // by spark ingestion using _0.
+    if (identifier != null || partitionNum != 0) {
       sb.append(DELIMITER).append(partitionNum);
     }
 
@@ -414,6 +446,7 @@ public final class SegmentId implements Comparable<SegmentId>
     int delimiters = 4;
     int partitionNumSizeUpperLimit = 3; // less than 1000 partitions
     return dataSource.length() +
+           (identifier != null ? identifier.length() : 0) +
            version.length() +
            (DATE_TIME_SIZE_UPPER_LIMIT * 2) + // interval start and end
            delimiters +

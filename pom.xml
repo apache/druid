@@ -198,6 +198,10 @@
         <module>extensions-contrib/gce-extensions</module>
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
+        <module>extensions-contrib/name-numbered-shard-spec</module>
+        <module>extensions-contrib/knox-password-provider</module>
+        <module>extensions-contrib/hash-name-numbered-shard-spec</module>
+        <!--<module>extensions-contrib/collectset</module>-->
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1509,7 +1513,7 @@
                         <argLine>
                             @{jacocoArgLine}
                             -Xmx1500m
-                            -XX:MaxDirectMemorySize=512m
+                            -XX:MaxDirectMemorySize=1024m
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8

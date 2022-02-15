@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.collectset;
 
 import com.google.common.util.concurrent.Striped;
-import gnu.trove.set.hash.THashSet;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -28,7 +27,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
@@ -38,25 +37,22 @@ public class CollectSetBufferAggregator implements BufferAggregator
 {
   private final ColumnValueSelector<Object> selector;
   private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Set<Object>>> setCache = new IdentityHashMap<>();
-  private int limit;
 
   /** for locking per buffer position (power of 2 to make index computation faster) */
   private static final int NUM_STRIPES = 64;
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public CollectSetBufferAggregator(
-      ColumnValueSelector<Object> selector,
-      int limit
+      ColumnValueSelector<Object> selector
   )
   {
     this.selector = selector;
-    this.limit = limit;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    putSetIntoCache(buf, position, new THashSet<>());
+    putSetIntoCache(buf, position, new HashSet());
   }
 
   @Override
@@ -71,14 +67,8 @@ public class CollectSetBufferAggregator implements BufferAggregator
     try {
       final Set<Object> set = setCache.get(buf).get(position);
 
-
-      if (limit >= 0 && set.size() >= limit) {
-        return;
-      }
-
-      if (value instanceof Collection) {
-        Collection<?> valueCollection = (Collection<?>) value;
-        CollectSetUtil.addCollectionWithLimit(set, valueCollection, limit);
+      if (value instanceof Set) {
+        set.addAll((Set<Object>) value);
       } else {
         set.add(value);
       }
@@ -94,7 +84,7 @@ public class CollectSetBufferAggregator implements BufferAggregator
     final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
-      return new THashSet<>(setCache.get(buf).get(position));
+      return new HashSet<>(setCache.get(buf).get(position));
     }
     finally {
       lock.unlock();

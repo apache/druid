@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
 import org.apache.druid.query.expression.ContainsExprMacro;
 import org.apache.druid.query.expression.GuiceExprMacroTable;
+import org.apache.druid.query.expression.HashExprMacro;
 import org.apache.druid.query.expression.HyperUniqueExpressions;
 import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
@@ -70,6 +71,7 @@ public class ExpressionModule implements DruidModule
           .add(HyperUniqueExpressions.HllAddExprMacro.class)
           .add(HyperUniqueExpressions.HllEstimateExprMacro.class)
           .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
+          .add(HashExprMacro.class)
           .build();
 
   @Override

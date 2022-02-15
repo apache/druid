@@ -41,6 +41,10 @@ public class DimensionConverter
   private static final Logger log = new Logger(DimensionConverter.class);
   private Map<String, StatsDMetric> metricMap;
 
+  private static final String METRICS_AGENT_TAG_PREFIX = "_t_";
+  private static final String METRICS_AGENT_TAG_DELIMITER = ".";
+  private static final String METRICS_AGENT_TAG_HOST = "host";
+
   public DimensionConverter(ObjectMapper mapper, String dimensionMapPath)
   {
     metricMap = readMap(mapper, dimensionMapPath);
@@ -49,6 +53,7 @@ public class DimensionConverter
   @Nullable
   public StatsDMetric addFilteredUserDims(
       String service,
+      String host,
       String metric,
       Map<String, Object> userDims,
       ImmutableMap.Builder<String, String> builder
@@ -65,15 +70,28 @@ public class DimensionConverter
       statsDMetric = metricMap.get(service + "-" + metric);
     }
     if (statsDMetric != null) {
+      if (host != null) {
+        builder.put("host", getTag(METRICS_AGENT_TAG_HOST, host));
+      }
       for (String dim : statsDMetric.dimensions) {
         if (userDims.containsKey(dim)) {
-          builder.put(dim, userDims.get(dim).toString());
+          builder.put(dim, getTag(dim, userDims.get(dim).toString()));
         }
       }
       return statsDMetric;
     } else {
       return null;
     }
+  }
+
+  private String getTag(String key, String value)
+  {
+    return new StringBuilder()
+        .append(METRICS_AGENT_TAG_PREFIX)
+        .append(key)
+        .append(METRICS_AGENT_TAG_DELIMITER)
+        .append(value)
+        .toString();
   }
 
   private Map<String, StatsDMetric> readMap(ObjectMapper mapper, String dimensionMapPath)

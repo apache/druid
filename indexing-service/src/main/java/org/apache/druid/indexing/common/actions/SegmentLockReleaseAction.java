@@ -32,10 +32,10 @@ import org.joda.time.Interval;
 public class SegmentLockReleaseAction implements TaskAction<Void>
 {
   private final Interval interval;
-  private final int partitionId;
+  private final Object partitionId;
 
   @JsonCreator
-  public SegmentLockReleaseAction(@JsonProperty Interval interval, @JsonProperty int partitionId)
+  public SegmentLockReleaseAction(@JsonProperty Interval interval, @JsonProperty Object partitionId)
   {
     this.interval = interval;
     this.partitionId = partitionId;
@@ -48,7 +48,7 @@ public class SegmentLockReleaseAction implements TaskAction<Void>
   }
 
   @JsonProperty
-  public int getPartitionId()
+  public Object getPartitionId()
   {
     return partitionId;
   }

@@ -45,7 +45,7 @@ public class DruidCluster
 {
   /** This static factory method must be called only from inside DruidClusterBuilder in tests. */
   @VisibleForTesting
-  static DruidCluster createDruidClusterFromBuilderInTest(
+  public static DruidCluster createDruidClusterFromBuilderInTest(
       @Nullable Set<ServerHolder> realtimes,
       Map<String, Iterable<ServerHolder>> historicals,
       @Nullable Set<ServerHolder> brokers
@@ -65,7 +65,7 @@ public class DruidCluster
     this.brokers = new HashSet<>();
   }
 
-  private DruidCluster(
+  public DruidCluster(
       @Nullable Set<ServerHolder> realtimes,
       Map<String, Iterable<ServerHolder>> historicals,
       @Nullable Set<ServerHolder> brokers

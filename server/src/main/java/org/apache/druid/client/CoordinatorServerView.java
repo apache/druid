@@ -29,8 +29,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.NamespacedVersionedIntervalTimeline;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
 import java.util.Collection;
@@ -50,7 +50,7 @@ public class CoordinatorServerView implements InventoryView
   private final Object lock = new Object();
 
   private final Map<SegmentId, SegmentLoadInfo> segmentLoadInfos;
-  private final Map<String, VersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
+  private final Map<String, NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
 
   private final ServerInventoryView baseView;
   private final CoordinatorSegmentWatcherConfig segmentWatcherConfig;
@@ -139,13 +139,14 @@ public class CoordinatorServerView implements InventoryView
         // servers escape the scope of this object so use ConcurrentSet
         segmentLoadInfo = new SegmentLoadInfo(segment);
 
-        VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(segment.getDataSource());
+        NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(segment.getDataSource());
         if (timeline == null) {
-          timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+          timeline = new NamespacedVersionedIntervalTimeline<>(Ordering.natural());
           timelines.put(segment.getDataSource(), timeline);
         }
 
         timeline.add(
+            NamespacedVersionedIntervalTimeline.getNamespace(segment.getShardSpec().getIdentifier()),
             segment.getInterval(),
             segment.getVersion(),
             segment.getShardSpec().createChunk(segmentLoadInfo)
@@ -170,10 +171,11 @@ public class CoordinatorServerView implements InventoryView
       }
       segmentLoadInfo.removeServer(server);
       if (segmentLoadInfo.isEmpty()) {
-        VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(segment.getDataSource());
+        NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> timeline = timelines.get(segment.getDataSource());
         segmentLoadInfos.remove(segmentId);
 
         final PartitionChunk<SegmentLoadInfo> removedPartition = timeline.remove(
+            NamespacedVersionedIntervalTimeline.getNamespace(segment.getShardSpec().getIdentifier()),
             segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(
                 new SegmentLoadInfo(
                     segment
@@ -192,7 +194,7 @@ public class CoordinatorServerView implements InventoryView
     }
   }
 
-  public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
+  public NamespacedVersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
     String table = Iterables.getOnlyElement(dataSource.getTableNames());
     synchronized (lock) {

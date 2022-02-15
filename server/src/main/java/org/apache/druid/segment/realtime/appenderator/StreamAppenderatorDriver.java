@@ -340,7 +340,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             new SegmentDescriptor(
                 segmentIdentifier.getInterval(),
                 segmentIdentifier.getVersion(),
-                segmentIdentifier.getShardSpec().getPartitionNum()
+                segmentIdentifier.getShardSpec().getPartitionNum(),
+                segmentIdentifier.getShardSpec().getIdentifier()
             ),
             Execs.directExecutor(),
             () -> {

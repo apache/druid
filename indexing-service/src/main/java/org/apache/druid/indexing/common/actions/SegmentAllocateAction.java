@@ -313,7 +313,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
             task.getPriority(),
             sequenceName,
             previousSegmentId,
-            skipSegmentLineageCheck
+            skipSegmentLineageCheck,
+            task.getContextValue("nameSpace")
         )
     );
 

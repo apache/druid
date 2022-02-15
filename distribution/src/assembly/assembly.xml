@@ -45,10 +45,6 @@
             <directory>../../conf</directory>
             <includes>
                 <include>*</include>
-                <include>*/*</include>
-                <include>*/*/*</include>
-                <include>*/*/*/*</include>
-                <include>*/*/*/*/*</include>
             </includes>
             <outputDirectory>conf</outputDirectory>
         </fileSet>
@@ -102,41 +98,6 @@
             <outputDirectory>conf/druid/middleManager</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/quickstart/</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/hadoop</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/hadoop</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/tutorial/hadoop/docker</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/tutorial/hadoop/docker</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/quickstart/protobuf</directory>
-            <includes>
-                <include>*</include>
-            </includes>
-            <outputDirectory>quickstart/protobuf</outputDirectory>
-        </fileSet>
-        <fileSet>
             <directory>../../examples/bin</directory>
             <includes>
                 <include>*</include>
@@ -153,22 +114,8 @@
     </fileSets>
     <files>
         <file>
-            <source>../LICENSE.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>LICENSE</destName>
-            <lineEnding>keep</lineEnding>
-        </file>
-        <file>
-            <source>../NOTICE.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>NOTICE</destName>
-            <lineEnding>keep</lineEnding>
-        </file>
-        <file>
-            <source>../README.BINARY</source>
-            <outputDirectory>.</outputDirectory>
-            <destName>README</destName>
-            <lineEnding>keep</lineEnding>
+            <source>Dockerfile</source>
+            <outputDirectory>/</outputDirectory>
         </file>
     </files>
     <dependencySets>

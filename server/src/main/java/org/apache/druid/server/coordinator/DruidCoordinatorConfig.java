@@ -19,9 +19,15 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
+import org.skife.config.DefaultNull;
 
 /**
  */
@@ -139,4 +145,18 @@ public abstract class DruidCoordinatorConfig
     return true;
   }
 
+  @Config("druid.coordinator.tier.tierMirroringMap")
+  @DefaultNull
+  public abstract String getTierMirroringMapConfigured();
+
+  public Multimap<String, String> getTierToMirroringTierMap()
+  {
+    String configuredMap = getTierMirroringMapConfigured();
+    return configuredMap == null
+           ? ImmutableMultimap.of()
+           : Multimaps.invertFrom(
+               Multimaps.forMap(Splitter.on(',').withKeyValueSeparator(':').split(configuredMap)),
+               HashMultimap.create()
+           );
+  }
 }

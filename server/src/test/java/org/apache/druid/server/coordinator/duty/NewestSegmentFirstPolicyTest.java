@@ -44,10 +44,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
-import org.apache.druid.timeline.CompactionState;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.*;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.assertj.core.api.Assertions;
@@ -309,7 +306,7 @@ public class NewestSegmentFirstPolicyTest
   public void testClearSegmentsToCompactWhenSkippingSegments()
   {
     final long inputSegmentSizeBytes = 800000;
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-12-03T00:00:00/2017-12-04T00:00:00"),
             new Period("P1D"),
@@ -335,25 +332,27 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-04"), Partitions.ONLY_COMPLETE)
-    );
-    expectedSegmentsToCompact.sort(Comparator.naturalOrder());
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-04"), Partitions.ONLY_COMPLETE)
+      );
+      expectedSegmentsToCompact.sort(Comparator.naturalOrder());
 
-    final List<DataSegment> expectedSegmentsToCompact2 = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
-    );
-    expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
+      final List<DataSegment> expectedSegmentsToCompact2 = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
+      );
+      expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
 
-    Assertions.assertThat(iterator)
+      Assertions.assertThat(iterator)
               .toIterable()
               .containsExactly(expectedSegmentsToCompact, expectedSegmentsToCompact2);
+    }
   }
 
   @Test
   public void testIfFirstSegmentIsInSkipOffset()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-12-02T14:00:00/2017-12-03T00:00:00"),
             new Period("PT5H"),
@@ -374,7 +373,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIfFirstSegmentOverlapsSkipOffset()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-12-01T23:00:00/2017-12-03T00:00:00"),
             new Period("PT5H"),
@@ -395,7 +394,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIfSegmentsSkipOffsetWithConfiguredSegmentGranularityEqual()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2017-11-30T23:00:00/2017-12-03T00:00:00"), new Period("P1D")),
         new SegmentGenerateSpec(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), new Period("P1D"))
     );
@@ -406,19 +405,21 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    // We should only get segments in Oct
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should only get segments in Oct
+      final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
 
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+      Assert.assertTrue(iterator.hasNext());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+    }
   }
 
   @Test
   public void testIfSegmentsSkipOffsetWithConfiguredSegmentGranularityLarger()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         // This contains segment that
         // - Cross between month boundary of latest month (starts in Nov and ends in Dec). This should be skipped
         // - Fully in latest month (starts in Dec and ends in Dec). This should be skipped
@@ -433,22 +434,24 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    // We should only get segments in Oct
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should only get segments in Oct
+      final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
 
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> actual = iterator.next();
+      Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+    }
     Assert.assertFalse(iterator.hasNext());
   }
 
   @Test
   public void testIfSegmentsSkipOffsetWithConfiguredSegmentGranularitySmaller()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2017-12-01T23:00:00/2017-12-03T00:00:00"), new Period("PT5H")),
         new SegmentGenerateSpec(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), new Period("PT5H"))
     );
@@ -459,13 +462,15 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    // We should only get segments in Oct
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should only get segments in Oct
+      final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
 
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+      Assert.assertTrue(iterator.hasNext());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(Iterables.concat(ImmutableSet.copyOf(iterator))));
+    }
   }
 
   @Test
@@ -557,7 +562,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsInConfiguredSegmentGranularity()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         // Segments with day interval from Oct to Dec
         new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-12-31T00:00:00"), new Period("P1D"))
     );
@@ -568,36 +573,38 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    // We should get all segments in timeline back since skip offset is P0D.
-    // However, we only need to iterator 3 times (once for each month) since the new configured segmentGranularity is MONTH.
-    // and hence iterator would return all segments bucketed to the configured segmentGranularity
-    // Month of Dec
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-31T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    // Month of Nov
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-11-01T00:00:00/2017-12-01T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    // Month of Oct
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-11-01T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should get all segments in timeline back since skip offset is P0D.
+      // However, we only need to iterator 3 times (once for each month) since the new configured segmentGranularity is MONTH.
+      // and hence iterator would return all segments bucketed to the configured segmentGranularity
+      // Month of Dec
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-31T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      // Month of Nov
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-11-01T00:00:00/2017-12-01T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      // Month of Oct
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-11-01T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -605,7 +612,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsInMultipleIntervalIfConfiguredSegmentGranularityCrossBoundary()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2020-01-01/2020-01-08"), new Period("P7D")),
         new SegmentGenerateSpec(Intervals.of("2020-01-28/2020-02-03"), new Period("P7D")),
         new SegmentGenerateSpec(Intervals.of("2020-02-08/2020-02-15"), new Period("P7D"))
@@ -616,25 +623,27 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
-    // We should get the segment of "2020-01-28/2020-02-03" back twice when the iterator returns for Jan and when the
-    // iterator returns for Feb.
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should get the segment of "2020-01-28/2020-02-03" back twice when the iterator returns for Jan and when the
+      // iterator returns for Feb.
 
-    // Month of Feb
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> actual = iterator.next();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
-    // Month of Jan
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertTrue(iterator.hasNext());
-    actual = iterator.next();
-    Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+      // Month of Feb
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-28/2020-02-15"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> actual = iterator.next();
+      Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+      // Month of Jan
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2020-01-01/2020-02-03"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertTrue(iterator.hasNext());
+      actual = iterator.next();
+      Assert.assertEquals(expectedSegmentsToCompact.size(), actual.size());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(actual));
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -642,7 +651,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorDoesNotReturnCompactedInterval()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), new Period("P1D"))
     );
 
@@ -652,19 +661,21 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
 
-    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(iterator.next()));
-    // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertTrue(iterator.hasNext());
+      Assert.assertEquals(ImmutableSet.copyOf(expectedSegmentsToCompact), ImmutableSet.copyOf(iterator.next()));
+      // Iterator should return only once since all the "minute" interval of the iterator contains the same interval
+    }
     Assert.assertFalse(iterator.hasNext());
   }
 
   @Test
   public void testIteratorReturnsAllMixedVersionSegmentsInConfiguredSegmentGranularity()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), new Period("P1D"), "1994-04-29T00:00:00.000Z", null),
         new SegmentGenerateSpec(Intervals.of("2017-10-01T01:00:00/2017-10-01T02:00:00"), new Period("PT1H"), "1994-04-30T00:00:00.000Z", null)
     );
@@ -676,14 +687,16 @@ public class NewestSegmentFirstPolicyTest
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -697,7 +710,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -730,7 +743,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -763,7 +776,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -785,14 +798,16 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -806,7 +821,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -828,14 +843,16 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -849,7 +866,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
@@ -880,14 +897,16 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -901,7 +920,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
@@ -931,14 +950,16 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get all segments in timeline back since skip offset is P0D.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -955,7 +976,7 @@ public class NewestSegmentFirstPolicyTest
     // rollup=false for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
     // rollup=true for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // and rollup=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -982,23 +1003,25 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
-    // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1015,7 +1038,7 @@ public class NewestSegmentFirstPolicyTest
     // queryGranularity=DAY for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
     // queryGranularity=MINUTE for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // and queryGranularity=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -1043,22 +1066,24 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1076,7 +1101,7 @@ public class NewestSegmentFirstPolicyTest
     // Dimensions=["foo"] for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // Dimensions=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (dimensions was not set during last compaction)
     // and dimensionsSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (dimensionsSpec was not set during last compaction)
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -1116,30 +1141,32 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
 
@@ -1173,7 +1200,7 @@ public class NewestSegmentFirstPolicyTest
     // filter=SelectorDimFilter("dim1", "bar", null) for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // filter=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (filter was not set during last compaction)
     // and transformSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (transformSpec was not set during last compaction)
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
             new Period("P1D"),
@@ -1231,30 +1258,32 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap()
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
-    Assert.assertTrue(iterator.hasNext());
-    expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+      Assert.assertTrue(iterator.hasNext());
+      expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
 
@@ -1277,7 +1306,7 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsSmallerSegmentGranularityCoveringMultipleSegmentsInTimeline()
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), new Period("P1D"), "1994-04-29T00:00:00.000Z", null),
         new SegmentGenerateSpec(Intervals.of("2017-10-01T01:00:00/2017-10-01T02:00:00"), new Period("PT1H"), "1994-04-30T00:00:00.000Z", null)
     );
@@ -1292,14 +1321,16 @@ public class NewestSegmentFirstPolicyTest
     // Although the first iteration only covers the last hour of 2017-10-01 (2017-10-01T23:00:00/2017-10-02T00:00:00),
     // the iterator will returns all segment as the umbrella interval the DAY segment (2017-10-01T00:00:00/2017-10-02T00:00:00)
     // also convers the HOUR segment (2017-10-01T01:00:00/2017-10-01T02:00:00)
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1313,7 +1344,7 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final VersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
+    final NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
             new Period("P1D"),
@@ -1342,15 +1373,20 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
+    /*timeline.getTimelines()*/
     // We should get all segments in timeline back since indexSpec changed
-    Assert.assertTrue(iterator.hasNext());
-    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
-    );
-    Assert.assertEquals(
-        ImmutableSet.copyOf(expectedSegmentsToCompact),
-        ImmutableSet.copyOf(iterator.next())
-    );
+
+    for (VersionedIntervalTimeline versionedIntervalTimelinetimeline : timeline.getTimelines().values()) {
+      Assert.assertTrue(iterator.hasNext());
+      List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+              versionedIntervalTimelinetimeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-03T00:00:00"), Partitions.ONLY_COMPLETE)
+      );
+
+      Assert.assertEquals(
+              ImmutableSet.copyOf(expectedSegmentsToCompact),
+              ImmutableSet.copyOf(iterator.next())
+      );
+    }
     // No more
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1400,7 +1436,7 @@ public class NewestSegmentFirstPolicyTest
     }
   }
 
-  private static VersionedIntervalTimeline<String, DataSegment> createTimeline(
+  private static NamespacedVersionedIntervalTimeline<String, DataSegment> createTimeline(
       SegmentGenerateSpec... specs
   )
   {
@@ -1442,7 +1478,7 @@ public class NewestSegmentFirstPolicyTest
       }
     }
 
-    return VersionedIntervalTimeline.forSegments(segments);
+    return NamespacedVersionedIntervalTimeline.forSegments(segments);
   }
 
   private DataSourceCompactionConfig createCompactionConfig(

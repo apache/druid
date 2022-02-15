@@ -43,7 +43,7 @@ public class SegmentLock implements TaskLock
   private final String dataSource;
   private final Interval interval;
   private final String version;
-  private final int partitionId;
+  private final Object partitionId;
   private final int priority;
   private final boolean revoked;
 
@@ -54,7 +54,7 @@ public class SegmentLock implements TaskLock
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
-      @JsonProperty("partitionId") int partitionId,
+      @JsonProperty("partitionId") Object partitionId,
       @JsonProperty("priority") int priority,
       @JsonProperty("revoked") boolean revoked
   )
@@ -75,7 +75,7 @@ public class SegmentLock implements TaskLock
       String dataSource,
       Interval interval,
       String version,
-      int partitionId,
+      Object partitionId,
       int priority
   )
   {
@@ -129,7 +129,7 @@ public class SegmentLock implements TaskLock
   }
 
   @JsonProperty
-  public int getPartitionId()
+  public Object getPartitionId()
   {
     return partitionId;
   }
@@ -180,7 +180,7 @@ public class SegmentLock implements TaskLock
       if (interval.equals(request.getInterval())) {
         final SpecificSegmentLockRequest specificSegmentLockRequest = (SpecificSegmentLockRequest) request;
         // Lock conflicts only if the interval is same and the partitionIds intersect.
-        return specificSegmentLockRequest.getPartitionId() == partitionId;
+        return specificSegmentLockRequest.getPartitionId().equals(partitionId);
       } else {
         // For different interval, all overlapping intervals cause conflict.
         return interval.overlaps(request.getInterval());
@@ -200,7 +200,7 @@ public class SegmentLock implements TaskLock
       return false;
     }
     SegmentLock that = (SegmentLock) o;
-    return partitionId == that.partitionId &&
+    return Objects.equals(partitionId, that.partitionId) &&
            priority == that.priority &&
            revoked == that.revoked &&
            lockType == that.lockType &&

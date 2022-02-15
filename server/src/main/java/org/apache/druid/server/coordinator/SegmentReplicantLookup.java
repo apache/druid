@@ -49,6 +49,10 @@ public class SegmentReplicantLookup
 
     for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
+        if (serverHolder.isMirroring()) {
+          // Mirroring tier is short-lived, thus we don't count this as a replication
+          continue;
+        }
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (DataSegment segment : server.iterateAllSegments()) {
