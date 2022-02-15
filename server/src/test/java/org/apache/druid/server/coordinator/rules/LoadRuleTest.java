@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import junit.framework.AssertionFailedError;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -394,43 +393,34 @@ public class LoadRuleTest
 
     LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 1));
 
-    DataSegment segment = createDataSegmentWithInterval(createDataSegment("foo"),
+    DataSegment segment0 = createDataSegmentWithInterval(createDataSegment("foo"),
                                                         JodaUtils.MIN_INSTANT,
                                                         JodaUtils.MAX_INSTANT);
     DataSegment segment1 = createDataSegmentWithInterval(createDataSegment("foo"),
                                                          JodaUtils.MIN_INSTANT,
                                                          JodaUtils.MAX_INSTANT);
 
-    final LoadQueuePeon loadingPeon1 = createLoadingPeon(ImmutableList.of(), true);
+    final LoadQueuePeon loadingPeon = createLoadingPeon(ImmutableList.of(segment0), true);
 
-    final LoadQueuePeon loadingPeon2 = createLoadingPeon(ImmutableList.of(segment), true);
-
-    loadingPeon1.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
+    loadingPeon.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
     EasyMock.expectLastCall().once();
-    loadingPeon2.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
-    EasyMock.expectLastCall().andThrow(new AssertionFailedError()).anyTimes();
 
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(cachingCostBalancerStrategy)
             .anyTimes();
 
-    EasyMock.replay(throttler, loadingPeon1, loadingPeon2, mockBalancerStrategy);
+    EasyMock.replay(throttler, loadingPeon, mockBalancerStrategy);
 
-    ImmutableDruidServer server1 =
+    ImmutableDruidServer server =
         new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "tier1", 1).toImmutableDruidServer();
 
-    DruidCluster druidCluster1 = DruidClusterBuilder
+    DruidCluster druidCluster = DruidClusterBuilder
         .newBuilder()
-        .addTier("tier1", new ServerHolder(server1, loadingPeon1))
+        .addTier("tier1", new ServerHolder(server, loadingPeon))
         .build();
 
-    DruidCluster druidCluster2 = DruidClusterBuilder
-        .newBuilder()
-        .addTier("tier1", new ServerHolder(server1, loadingPeon2))
-        .build();
-
-    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster1, segment, segment1), segment);
-    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster2, segment, segment1), segment1);
+    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment0, segment1), segment1);
+    EasyMock.verify(loadingPeon);
   }
 
   @Test
@@ -867,7 +857,7 @@ public class LoadRuleTest
   private DataSegment createDataSegmentWithInterval(DataSegment dataSegment, long startMillis, long endMillis)
   {
     DataSegment.Builder builder = new DataSegment.Builder(dataSegment);
-    return builder.interval(new Interval(startMillis, endMillis)).build();
+    return builder.interval(new Interval(startMillis, endMillis, dataSegment.getInterval().getChronology())).build();
   }
 
   private static LoadRule createLoadRule(final Map<String, Integer> tieredReplicants)
