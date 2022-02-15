@@ -163,7 +163,7 @@ public class ImmutableWorkerInfo
   {
     int totalCapacity = worker.getCapacity();
     int workerParallelIndexCapacity = (int) Math.floor(parallelIndexTaskSlotRatio * totalCapacity);
-    if (workerParallelIndexCapacity == 0) {
+    if (workerParallelIndexCapacity < 1) {
       workerParallelIndexCapacity = 1;
     }
     return workerParallelIndexCapacity;
