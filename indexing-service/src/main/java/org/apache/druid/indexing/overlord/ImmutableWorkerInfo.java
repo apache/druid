@@ -166,6 +166,9 @@ public class ImmutableWorkerInfo
     if (workerParallelIndexCapacity < 1) {
       workerParallelIndexCapacity = 1;
     }
+    if (workerParallelIndexCapacity > totalCapacity) {
+      workerParallelIndexCapacity = totalCapacity;
+    }
     return workerParallelIndexCapacity;
   }
 
