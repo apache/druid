@@ -419,8 +419,11 @@ public class LoadRuleTest
         .addTier("tier1", new ServerHolder(server, loadingPeon))
         .build();
 
-    rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment0, segment1), segment1);
-    EasyMock.verify(loadingPeon);
+    final CoordinatorStats stats = rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment0, segment1), segment1);
+
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
+
+    EasyMock.verify(throttler, loadingPeon, mockBalancerStrategy);
   }
 
   @Test
