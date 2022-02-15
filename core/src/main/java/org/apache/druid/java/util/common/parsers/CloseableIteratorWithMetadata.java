@@ -19,32 +19,43 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import org.apache.druid.data.input.IntermediateRowParsingReader;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
- * Like {@link CloseableIterator}, but has a parseContext() method, which returns a Map<String, Object> about the current
- * value, or null if the current value is null
- * <p>
- * The returned context map is readonly and cannot be modified
+ * Like {@link CloseableIterator}, but has a metadata() method, which returns "metadata", which is effectively a Map<String, Object>
+ * about the last value returned by next()
+ *
+ * The returned metadata is read-only and cannot be modified.
+ *
+ * This metadata can be used as additional information to pin-point the root cause of a parse exception.
+ * So it can include information that helps with such exercise. For example, for a {@link org.apache.druid.data.input.TextReader}
+ * that information can be the line number. Only per row context needs to be passed here so for kafka it could be an offset.
+ * The source information is already available via {@link IntermediateRowParsingReader#source()} method and needn't be included
  */
-public interface CloseableIteratorWithParseContext<T> extends CloseableIterator<T>
+public interface CloseableIteratorWithMetadata<T> extends CloseableIterator<T>
 {
-  Map<String, Object> parseContext();
+  Map<String, Object> metadata();
 
-  default <R> CloseableIteratorWithParseContext<R> mapWithParseContext(BiFunction<T, Map<String, Object>, R> mapBiFunction)
+  /**
+   * Like {@link CloseableIterator#map(Function)} but also supplies the metadata to the mapping function
+   */
+  default <R> CloseableIteratorWithMetadata<R> mapWithMetadata(BiFunction<T, Map<String, Object>, R> mapBiFunction)
   {
-    final CloseableIteratorWithParseContext<T> delegate = this;
+    final CloseableIteratorWithMetadata<T> delegate = this;
 
-    return new CloseableIteratorWithParseContext<R>()
+    return new CloseableIteratorWithMetadata<R>()
     {
       @Override
-      public Map<String, Object> parseContext()
+      public Map<String, Object> metadata()
       {
-        return delegate.parseContext();
+        return delegate.metadata();
       }
 
       @Override
@@ -59,7 +70,7 @@ public interface CloseableIteratorWithParseContext<T> extends CloseableIterator<
         if (!hasNext()) {
           throw new NoSuchElementException();
         }
-        return mapBiFunction.apply(delegate.next(), delegate.parseContext());
+        return mapBiFunction.apply(delegate.next(), delegate.metadata());
       }
 
       @Override
@@ -70,13 +81,13 @@ public interface CloseableIteratorWithParseContext<T> extends CloseableIterator<
     };
   }
 
-  static <T> CloseableIteratorWithParseContext<T> fromCloseableIterator(CloseableIterator<T> delegate)
+  static <T> CloseableIteratorWithMetadata<T> fromCloseableIterator(CloseableIterator<T> delegate)
   {
-    return new CloseableIteratorWithParseContext<T>()
+    return new CloseableIteratorWithMetadata<T>()
     {
 
       @Override
-      public Map<String, Object> parseContext()
+      public Map<String, Object> metadata()
       {
         return Collections.emptyMap();
       }

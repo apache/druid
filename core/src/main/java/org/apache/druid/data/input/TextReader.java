@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIteratorWithParseContext;
+import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
@@ -55,7 +55,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIteratorWithParseContext<String> intermediateRowIteratorWithParseContext() throws IOException
+  public CloseableIteratorWithMetadata<String> intermediateRowIteratorWithMetadata() throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
@@ -68,15 +68,15 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       processHeaderLine(delegate.nextLine());
     }
 
-    return new CloseableIteratorWithParseContext<String>()
+    return new CloseableIteratorWithMetadata<String>()
     {
       final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
-      final Map<String, Object> parseContext = Maps.newHashMap(ImmutableMap.of("lineNumber", currentLineNumber));
+      final Map<String, Object> metadata = Maps.newHashMap(ImmutableMap.of("lineNumber", currentLineNumber));
 
       @Override
-      public Map<String, Object> parseContext()
+      public Map<String, Object> metadata()
       {
-        return Collections.unmodifiableMap(parseContext);
+        return Collections.unmodifiableMap(metadata);
       }
 
       @Override
@@ -88,7 +88,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       @Override
       public String next()
       {
-        parseContext.compute("lineNumber", (k, v) -> k + 1);
+        metadata.compute("lineNumber", (k, v) -> k + 1);
         return delegate.nextLine();
       }
 

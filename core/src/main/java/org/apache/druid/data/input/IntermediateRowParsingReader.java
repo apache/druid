@@ -22,14 +22,13 @@ package org.apache.druid.data.input;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.CloseableIteratorWithParseContext;
+import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +46,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   @Override
   public CloseableIterator<InputRow> read() throws IOException
   {
-    final CloseableIteratorWithParseContext<T> intermediateRowIteratorWithContext = intermediateRowIteratorWithParseContext();
+    final CloseableIteratorWithMetadata<T> intermediateRowIteratorWithMetadata = intermediateRowIteratorWithMetadata();
 
     return new CloseableIterator<InputRow>()
     {
@@ -64,11 +63,11 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       public boolean hasNext()
       {
         if (rows == null || !rows.hasNext()) {
-          if (!intermediateRowIteratorWithContext.hasNext()) {
+          if (!intermediateRowIteratorWithMetadata.hasNext()) {
             return false;
           }
-          final T row = intermediateRowIteratorWithContext.next();
-          final Map<String, Object> context = intermediateRowIteratorWithContext.parseContext();
+          final T row = intermediateRowIteratorWithMetadata.next();
+          final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
 
           try {
             rows = parseInputRows(row).iterator();
@@ -83,7 +82,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                         "Unable to parse row [%s]",
                         source(),
                         currentRecordNumber,
-                        context,
+                        metadata,
                         row
                     ))
                     .build()
@@ -95,7 +94,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                 e.getMessage(),
                 source(),
                 currentRecordNumber,
-                context
+                metadata
             ));
             rows = new ExceptionThrowingIterator(enrichedParseExceptionBuilder.build());
           }
@@ -117,7 +116,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       @Override
       public void close() throws IOException
       {
-        intermediateRowIteratorWithContext.close();
+        intermediateRowIteratorWithMetadata.close();
       }
     };
   }
@@ -125,7 +124,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return intermediateRowIteratorWithParseContext().mapWithParseContext((row, context) -> {
+    return intermediateRowIteratorWithMetadata().mapWithMetadata((row, metadata) -> {
 
       final List<Map<String, Object>> rawColumnsList;
       try {
@@ -141,7 +140,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                     "Unable to parse row [%s] into JSON",
                     source(),
                     null,
-                    context,
+                    metadata,
                     row
                 ))
                 .build()
@@ -157,7 +156,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                     "No map object parsed for row [%s]",
                     source(),
                     null,
-                    context,
+                    metadata,
                     row
                 ))
                 .build()
@@ -174,7 +173,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             e.getMessage(),
             source(),
             null,
-            context
+            metadata
         ));
         return InputRowListPlusRawValues.ofList(rawColumnsList, enrichedParseExceptionBuilder.build());
       }
@@ -186,7 +185,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                 "No map object parsed for row [%s]",
                 source(),
                 null,
-                context,
+                metadata,
                 row
             ))
             .build();
@@ -199,7 +198,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
 
   /**
    * Creates an iterator of intermediate rows. The returned rows will be consumed by {@link #parseInputRows} and
-   * {@link #toMap}. Either this or {@link #intermediateRowIteratorWithParseContext()} should be implemented
+   * {@link #toMap}. Either this or {@link #intermediateRowIteratorWithMetadata()} should be implemented
    */
   protected CloseableIterator<T> intermediateRowIterator() throws IOException
   {
@@ -207,12 +206,12 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   }
 
   /**
-   * Same as {@code intermediateRowIterator}, but it also contains the context map such as the line number to generate
-   * the {@link ParseException}.
+   * Same as {@code intermediateRowIterator}, but it also contains the metadata such as the line number to generate
+   * more informative {@link ParseException}.
    */
-  protected CloseableIteratorWithParseContext<T> intermediateRowIteratorWithParseContext() throws IOException
+  protected CloseableIteratorWithMetadata<T> intermediateRowIteratorWithMetadata() throws IOException
   {
-    return CloseableIteratorWithParseContext.fromCloseableIterator(intermediateRowIterator());
+    return CloseableIteratorWithMetadata.fromCloseableIterator(intermediateRowIterator());
   }
 
   /**
@@ -244,15 +243,15 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       String formatString,
       @Nullable InputEntity source,
       @Nullable Long recordNumber,
-      Map<String, Object> additionalContext,
+      Map<String, Object> metadata,
       Object... baseArgs
   )
   {
-    Map<String, Object> temp = Maps.newHashMap(additionalContext);
+    Map<String, Object> temp = Maps.newHashMap(metadata);
     if (source != null) {
       temp.put("source", source.getUri());
     }
-    if(recordNumber != null) {
+    if (recordNumber != null) {
       temp.put("recordNumber", recordNumber);
     }
     return StringUtils.nonStrictFormat(formatString, baseArgs, temp);
