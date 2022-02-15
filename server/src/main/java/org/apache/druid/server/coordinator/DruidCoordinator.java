@@ -775,13 +775,7 @@ public class DruidCoordinator
     duties.add(new LogUsedSegments());
     duties.addAll(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
-    boolean compactSegmentInCustomGroup = customDutyGroups.getCoordinatorCustomDutyGroups()
-                                                          .stream()
-                                                          .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
-                                                          .anyMatch(duty -> duty instanceof CompactSegments);
-    if (!compactSegmentInCustomGroup) {
-      duties.addAll(makeCompactSegmentsDuty());
-    }
+    duties.addAll(makeCompactSegmentsDuty());
 
     log.debug(
         "Done making indexing service duties %s",
@@ -803,9 +797,19 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
-  private List<CoordinatorDuty> makeCompactSegmentsDuty()
+  @VisibleForTesting
+  protected List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
-    return ImmutableList.of(compactSegments);
+    // We do not have to add compactSegments if it is already enabled in the custom duty group
+    boolean compactSegmentInCustomGroup = customDutyGroups.getCoordinatorCustomDutyGroups()
+                                                          .stream()
+                                                          .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
+                                                          .anyMatch(duty -> duty instanceof CompactSegments);
+    if (compactSegmentInCustomGroup) {
+      return ImmutableList.of();
+    } else {
+      return ImmutableList.of(compactSegments);
+    }
   }
 
   @VisibleForTesting

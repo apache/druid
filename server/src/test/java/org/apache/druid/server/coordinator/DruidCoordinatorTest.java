@@ -52,9 +52,12 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
+import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -74,6 +77,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -784,6 +788,175 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(thirdExec);
     Assert.assertFalse(secondExec == thirdExec);
     Assert.assertFalse(firstExec == thirdExec);
+  }
+
+  @Test
+  public void testMakeIndexingServiceDutiesCompactionDutyCreatedWhenCustomDutyGroupEmpty()
+  {
+    CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
+    coordinator = new DruidCoordinator(
+        druidCoordinatorConfig,
+        new ZkPathsConfig()
+        {
+
+          @Override
+          public String getBase()
+          {
+            return "druid";
+          }
+        },
+        null,
+        segmentsMetadataManager,
+        serverInventoryView,
+        metadataRuleManager,
+        () -> curator,
+        serviceEmitter,
+        scheduledExecutorFactory,
+        null,
+        null,
+        new NoopServiceAnnouncer()
+        {
+          @Override
+          public void announce(DruidNode node)
+          {
+            // count down when this coordinator becomes the leader
+            leaderAnnouncerLatch.countDown();
+          }
+
+          @Override
+          public void unannounce(DruidNode node)
+          {
+            leaderUnannouncerLatch.countDown();
+          }
+        },
+        druidNode,
+        loadManagementPeons,
+        null,
+        new HashSet<>(),
+        emptyCustomDutyGroups,
+        new CostBalancerStrategyFactory(),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector(),
+        new CompactSegments(druidCoordinatorConfig, null, null),
+        ZkEnablementConfig.ENABLED
+    );
+    List<CoordinatorDuty> duties = coordinator.makeCompactSegmentsDuty();
+    Assert.assertNotNull(duties);
+    Assert.assertEquals(1, duties.size());
+    Assert.assertTrue(duties.get(0) instanceof CompactSegments);
+  }
+
+  @Test
+  public void testMakeIndexingServiceDutiesCompactionDutyCreatedWhenCustomDutyGroupDoesNotContainsCompactSegments()
+  {
+    CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new KillSupervisorsCustomDuty(new Duration("PT1S"), null)));
+    CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(group));
+    coordinator = new DruidCoordinator(
+        druidCoordinatorConfig,
+        new ZkPathsConfig()
+        {
+
+          @Override
+          public String getBase()
+          {
+            return "druid";
+          }
+        },
+        null,
+        segmentsMetadataManager,
+        serverInventoryView,
+        metadataRuleManager,
+        () -> curator,
+        serviceEmitter,
+        scheduledExecutorFactory,
+        null,
+        null,
+        new NoopServiceAnnouncer()
+        {
+          @Override
+          public void announce(DruidNode node)
+          {
+            // count down when this coordinator becomes the leader
+            leaderAnnouncerLatch.countDown();
+          }
+
+          @Override
+          public void unannounce(DruidNode node)
+          {
+            leaderUnannouncerLatch.countDown();
+          }
+        },
+        druidNode,
+        loadManagementPeons,
+        null,
+        new HashSet<>(),
+        customDutyGroups,
+        new CostBalancerStrategyFactory(),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector(),
+        new CompactSegments(druidCoordinatorConfig, null, null),
+        ZkEnablementConfig.ENABLED
+    );
+    List<CoordinatorDuty> duties = coordinator.makeCompactSegmentsDuty();
+    Assert.assertNotNull(duties);
+    Assert.assertEquals(1, duties.size());
+    Assert.assertTrue(duties.get(0) instanceof CompactSegments);
+  }
+
+  @Test
+  public void testMakeIndexingServiceDutiesCompactionDutyNotCreatedWhenCustomDutyGroupContainsCompactSegments()
+  {
+    CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup("group1", Duration.standardSeconds(1), ImmutableList.of(new CompactSegments(druidCoordinatorConfig, null, null)));
+    CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
+    coordinator = new DruidCoordinator(
+        druidCoordinatorConfig,
+        new ZkPathsConfig()
+        {
+
+          @Override
+          public String getBase()
+          {
+            return "druid";
+          }
+        },
+        null,
+        segmentsMetadataManager,
+        serverInventoryView,
+        metadataRuleManager,
+        () -> curator,
+        serviceEmitter,
+        scheduledExecutorFactory,
+        null,
+        null,
+        new NoopServiceAnnouncer()
+        {
+          @Override
+          public void announce(DruidNode node)
+          {
+            // count down when this coordinator becomes the leader
+            leaderAnnouncerLatch.countDown();
+          }
+
+          @Override
+          public void unannounce(DruidNode node)
+          {
+            leaderUnannouncerLatch.countDown();
+          }
+        },
+        druidNode,
+        loadManagementPeons,
+        null,
+        new HashSet<>(),
+        customDutyGroups,
+        new CostBalancerStrategyFactory(),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector(),
+        new CompactSegments(druidCoordinatorConfig, null, null),
+        ZkEnablementConfig.ENABLED
+    );
+    List<CoordinatorDuty> duties = coordinator.makeCompactSegmentsDuty();
+    Assert.assertNotNull(duties);
+    Assert.assertTrue(duties.isEmpty());
   }
 
   @Test(timeout = 3000)
