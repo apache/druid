@@ -129,13 +129,15 @@ public class KinesisAdminClient implements StreamAdminClient
       ITRetryUtil.retryUntil(
           () -> {
             int updatedShardCount = getStreamPartitionCount(streamName);
-            // Stream should be in active or updating state AND
-            // the number of shards must have increased irrespective of the value of newShardCount
+
+            // Retry until Kinesis records the operation is either in progress (UPDATING) or completed (ACTIVE)
+            // and the shard count has changed.
+
             return verifyStreamStatus(streamName, StreamStatus.ACTIVE, StreamStatus.UPDATING)
-                   && updatedShardCount > originalShardCount;
+                   && updatedShardCount != originalShardCount;
           }, true,
           300, // higher value to avoid exceeding kinesis TPS limit
-          30,
+          100,
           "Kinesis stream resharding to start (or finished)"
       );
     }
