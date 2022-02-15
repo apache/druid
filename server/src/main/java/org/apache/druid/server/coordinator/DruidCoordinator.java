@@ -68,6 +68,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -775,7 +776,13 @@ public class DruidCoordinator
     duties.add(new LogUsedSegments());
     duties.addAll(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
-    duties.addAll(makeCompactSegmentsDuty());
+    boolean compactSegmentInCustomGroup = customDutyGroups.getCoordinatorCustomDutyGroups()
+                                                          .stream()
+                                                          .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
+                                                          .anyMatch(duty -> duty instanceof CompactSegments);
+    if (!compactSegmentInCustomGroup) {
+      duties.addAll(makeCompactSegmentsDuty());
+    }
 
     log.debug(
         "Done making indexing service duties %s",

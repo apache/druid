@@ -51,6 +51,7 @@ import org.apache.druid.initialization.DruidModule;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(name = "killSupervisors", value = KillSupervisorsCustomDuty.class),
+    @JsonSubTypes.Type(name = "compactSegments", value = CompactSegments.class),
 })
 @ExtensionPoint
 public interface CoordinatorCustomDuty extends CoordinatorDuty
