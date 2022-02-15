@@ -254,7 +254,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
     if (recordNumber != null) {
       temp.put("recordNumber", recordNumber);
     }
-    return StringUtils.nonStrictFormat(formatString, baseArgs, temp);
+    return StringUtils.nonStrictFormat(formatString + "(Additional information: [%s])", baseArgs, temp);
   }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
