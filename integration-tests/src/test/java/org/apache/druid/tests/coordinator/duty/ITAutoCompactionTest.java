@@ -102,7 +102,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void setup() throws Exception
   {
     // Set comapction slot to 5
-    updateCompactionTaskSlot(0.5, 10);
+    updateCompactionTaskSlot(0.5, 10, null);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
 
@@ -235,7 +235,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
-    updateCompactionTaskSlot(0, 0);
+    updateCompactionTaskSlot(0, 0, null);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -252,7 +252,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
-      updateCompactionTaskSlot(1, 1);
+      updateCompactionTaskSlot(1, 1, null);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -898,6 +898,24 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test
+  public void testUpdateCompactionTaskSlotWithUseAutoScaleSlots() throws Exception
+  {
+    // First try update without useAutoScaleSlots
+    updateCompactionTaskSlot(3, 5, null);
+    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    // Should be default value which is false
+    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    // Now try update from default value to useAutoScaleSlots=true
+    updateCompactionTaskSlot(3, 5, true);
+    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    Assert.assertTrue(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    // Now try update from useAutoScaleSlots=true to useAutoScaleSlots=false
+    updateCompactionTaskSlot(3, 5, false);
+    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
+  }
+
   private void loadData(String indexTask) throws Exception
   {
     loadData(indexTask, ImmutableMap.of());
@@ -1124,13 +1142,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
+  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots, Boolean useAutoScaleSlots) throws Exception
   {
-    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots);
+    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
     // Verify that the compaction config is updated correctly.
     CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
     Assert.assertEquals(coordinatorCompactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
     Assert.assertEquals(coordinatorCompactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    if (useAutoScaleSlots != null) {
+      Assert.assertEquals(coordinatorCompactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
+    }
   }
 
   private void getAndAssertCompactionStatus(

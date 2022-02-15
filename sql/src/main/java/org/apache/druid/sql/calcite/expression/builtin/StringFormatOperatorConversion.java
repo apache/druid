@@ -58,7 +58,7 @@ public class StringFormatOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "format");
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, "format");
   }
 
   private static class StringFormatOperandTypeChecker implements SqlOperandTypeChecker

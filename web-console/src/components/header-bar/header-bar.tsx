@@ -205,9 +205,8 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const { active, capabilities } = props;
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
-  const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] = useState(
-    false,
-  );
+  const [coordinatorDynamicConfigDialogOpen, setCoordinatorDynamicConfigDialogOpen] =
+    useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const loadDataPrimary = false;
 
@@ -223,7 +222,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       />
       <MenuItem
         icon={IconNames.CHAT}
-        text="ASF Slack channel"
+        text="Slack channel"
         href={getLink('SLACK')}
         target="_blank"
       />

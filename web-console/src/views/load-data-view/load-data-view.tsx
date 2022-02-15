@@ -150,7 +150,6 @@ import {
   ExampleManifest,
   getCacheRowsFromSampleResponse,
   getProxyOverlordModules,
-  HeaderAndRows,
   headerAndRowsFromSampleResponse,
   SampleEntry,
   sampleForConnect,
@@ -160,6 +159,7 @@ import {
   sampleForSchema,
   sampleForTimestamp,
   sampleForTransform,
+  SampleHeaderAndRows,
   SampleResponse,
   SampleResponseWithExtraInfo,
   SampleStrategy,
@@ -224,16 +224,17 @@ function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolea
       return sampleEntries.map(showDruidLine).join('\n');
     }
 
-    return (sampleEntries.every(l => !l.parsed)
-      ? sampleEntries.map(showBlankLine)
-      : sampleEntries.map(showRawLine)
+    return (
+      sampleEntries.every(l => !l.parsed)
+        ? sampleEntries.map(showBlankLine)
+        : sampleEntries.map(showRawLine)
     ).join('\n');
   } else {
     return 'No data returned from sampler';
   }
 }
 
-function getTimestampSpec(headerAndRows: HeaderAndRows | null): TimestampSpec {
+function getTimestampSpec(headerAndRows: SampleHeaderAndRows | null): TimestampSpec {
   if (!headerAndRows) return CONSTANT_TIMESTAMP_SPEC;
 
   const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
@@ -347,28 +348,28 @@ export interface LoadDataViewState {
   inputQueryState: QueryState<SampleResponseWithExtraInfo>;
 
   // for parser
-  parserQueryState: QueryState<HeaderAndRows>;
+  parserQueryState: QueryState<SampleHeaderAndRows>;
 
   // for flatten
   selectedFlattenField?: SelectedIndex<FlattenField>;
 
   // for timestamp
   timestampQueryState: QueryState<{
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     spec: Partial<IngestionSpec>;
   }>;
 
   // for transform
-  transformQueryState: QueryState<HeaderAndRows>;
+  transformQueryState: QueryState<SampleHeaderAndRows>;
   selectedTransform?: SelectedIndex<Transform>;
 
   // for filter
-  filterQueryState: QueryState<HeaderAndRows>;
+  filterQueryState: QueryState<SampleHeaderAndRows>;
   selectedFilter?: SelectedIndex<DruidFilter>;
 
   // for schema
   schemaQueryState: QueryState<{
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     dimensions: (string | DimensionSpec)[] | undefined;
     metricsSpec: MetricSpec[] | undefined;
   }>;
@@ -1687,9 +1688,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': CONSTANT_TIMESTAMP_SPEC,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1705,9 +1705,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   this.updateSpecPreview(
                     deepSetMulti(spec, {
                       'spec.dataSchema.timestampSpec': timestampSpec,
-                      'spec.dataSchema.transformSpec.transforms': removeTimestampTransform(
-                        transforms,
-                      ),
+                      'spec.dataSchema.transformSpec.transforms':
+                        removeTimestampTransform(transforms),
                     }),
                   );
                 }}
@@ -1811,13 +1810,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderTransformStep() {
-    const {
-      spec,
-      columnFilter,
-      specialColumnsOnly,
-      transformQueryState,
-      selectedTransform,
-    } = this.state;
+    const { spec, columnFilter, specialColumnsOnly, transformQueryState, selectedTransform } =
+      this.state;
     const transforms: Transform[] =
       deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 

@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -44,11 +45,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BinaryOperator;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.LongBinaryOperator;
@@ -502,15 +503,16 @@ public interface Function
     @Override
     ExprEval doApply(ExprEval arrayExpr, ExprEval scalarExpr)
     {
+      final ExpressionType arrayType = arrayExpr.asArrayType();
       if (!scalarExpr.type().equals(arrayExpr.elementType())) {
         // try to cast
         ExprEval coerced = scalarExpr.castTo(arrayExpr.elementType());
-        return ExprEval.ofArray(arrayExpr.asArrayType(), add(arrayExpr.asArray(), coerced.value()).toArray());
+        return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), coerced.value()).toArray());
       }
-      return ExprEval.ofArray(arrayExpr.asArrayType(), add(arrayExpr.asArray(), scalarExpr.value()).toArray());
+      return ExprEval.ofArray(arrayType, add(arrayType.getElementType(), arrayExpr.asArray(), scalarExpr.value()).toArray());
     }
 
-    abstract <T> Stream<T> add(T[] array, @Nullable T val);
+    abstract <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val);
   }
 
   /**
@@ -551,16 +553,18 @@ public interface Function
         return lhsExpr;
       }
 
+      final ExpressionType arrayType = lhsExpr.asArrayType();
+
       if (!lhsExpr.asArrayType().equals(rhsExpr.asArrayType())) {
         // try to cast if they types don't match
-        ExprEval coerced = rhsExpr.castTo(lhsExpr.asArrayType());
-        ExprEval.ofArray(lhsExpr.asArrayType(), merge(lhsExpr.asArray(), coerced.asArray()).toArray());
+        ExprEval coerced = rhsExpr.castTo(arrayType);
+        ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), coerced.asArray()).toArray());
       }
 
-      return ExprEval.ofArray(lhsExpr.asArrayType(), merge(lhsExpr.asArray(), rhsExpr.asArray()).toArray());
+      return ExprEval.ofArray(arrayType, merge(arrayType.getElementType(), lhsExpr.asArray(), rhsExpr.asArray()).toArray());
     }
 
-    abstract <T> Stream<T> merge(T[] array1, T[] array2);
+    abstract <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2);
   }
 
   abstract class ReduceFunction implements Function
@@ -2976,6 +2980,67 @@ public interface Function
     }
   }
 
+  class MVToArrayFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "mv_to_array";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return args.get(0).eval(bindings).castTo(ExpressionType.STRING_ARRAY);
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs exactly 1 argument of type String", name());
+      }
+      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
+
+      if (expr == null) {
+        throw new IAE(
+            "Arg %s should be an identifier expression ie refer to columns directaly. Use array() instead",
+            args.get(0).toString()
+        );
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING_ARRAY;
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+  }
   class ArrayConstructorFunction implements Function
   {
     @Override
@@ -2993,6 +3058,7 @@ public interface Function
       Object[] out = new Object[length];
 
       ExpressionType arrayType = null;
+
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
         arrayType = setArrayOutput(arrayType, out, i, evaluated);
@@ -3340,7 +3406,7 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(T[] array, @Nullable T val)
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(val);
@@ -3369,7 +3435,7 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(T[] array, @Nullable T val)
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array));
       l.add(0, val);
@@ -3386,7 +3452,7 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> merge(T[] array1, T[] array2)
+    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
     {
       List<T> l = new ArrayList<>(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
@@ -3403,9 +3469,10 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> add(T[] array, @Nullable T val)
+    <T> Stream<T> add(TypeSignature<ExprType> elementType, T[] array, @Nullable T val)
     {
-      Set<T> l = new HashSet<>(Arrays.asList(array));
+      Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
+      l.addAll(Arrays.asList(array));
       l.add(val);
       return l.stream();
     }
@@ -3420,9 +3487,10 @@ public interface Function
     }
 
     @Override
-    <T> Stream<T> merge(T[] array1, T[] array2)
+    <T> Stream<T> merge(TypeSignature<ExprType> elementType, T[] array1, T[] array2)
     {
-      Set<T> l = new HashSet<>(Arrays.asList(array1));
+      Set<T> l = new TreeSet<>(elementType.getNullableStrategy());
+      l.addAll(Arrays.asList(array1));
       l.addAll(Arrays.asList(array2));
       return l.stream();
     }

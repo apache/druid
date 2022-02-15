@@ -58,7 +58,10 @@ export interface QueryOutputProps {
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
   const { queryResult, onQueryAction, onLoadMore, runeMode } = props;
   const parsedQuery = queryResult.sqlQuery;
-  const [pagination, setPagination] = useState<Pagination>({ page: 0, pageSize: 20 });
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 0,
+    pageSize: SMALL_TABLE_PAGE_SIZE,
+  });
   const [showValue, setShowValue] = useState<string>();
   const [renamingColumn, setRenamingColumn] = useState<number>(-1);
 
@@ -358,7 +361,9 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
         ofText={hasMoreResults ? '' : 'of'}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={queryResult.rows.length > SMALL_TABLE_PAGE_SIZE}
+        showPagination={
+          queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
+        }
         columns={queryResult.header.map((column, i) => {
           const h = column.name;
           return {

@@ -1235,6 +1235,236 @@ exports[`QueryOutput matches snapshot 1`] = `
             </div>
           </div>
         </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -even"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rt-tr-group"
+          role="rowgroup"
+        >
+          <div
+            class="rt-tr -padRow -odd"
+            role="row"
+          >
+            <div
+              class="rt-td"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+            <div
+              class="rt-td aggregate-column"
+              role="gridcell"
+              style="flex: 100 0 auto; width: 100px;"
+            >
+              <span>
+                 
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div

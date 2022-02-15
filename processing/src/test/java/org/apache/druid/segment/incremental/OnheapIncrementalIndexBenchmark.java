@@ -123,7 +123,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          true
       );
     }
 
@@ -145,7 +146,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           false,
           true,
           maxRowCount,
-          maxBytesInMemory
+          maxBytesInMemory,
+          true
       );
     }
 

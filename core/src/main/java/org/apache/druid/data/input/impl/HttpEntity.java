@@ -89,29 +89,36 @@ public class HttpEntity extends RetryingInputEntity
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
     }
-    final String acceptRanges = urlConnection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
-    final boolean withRanges = "bytes".equalsIgnoreCase(acceptRanges);
-    if (withRanges && offset > 0) {
-      // Set header for range request.
-      // Since we need to set only the start offset, the header is "bytes=<range-start>-".
-      // See https://tools.ietf.org/html/rfc7233#section-2.1
-      urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
+    // Set header for range request.
+    // Since we need to set only the start offset, the header is "bytes=<range-start>-".
+    // See https://tools.ietf.org/html/rfc7233#section-2.1
+    urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", offset));
+    final String contentRange = urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE);
+    final boolean withContentRange = contentRange != null && contentRange.startsWith("bytes ");
+    if (withContentRange && offset > 0) {
       return urlConnection.getInputStream();
     } else {
-      if (!withRanges && offset > 0) {
+      if (!withContentRange && offset > 0) {
         LOG.warn(
             "Since the input source doesn't support range requests, the object input stream is opened from the start and "
             + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
             + " a lot."
         );
       }
-      final InputStream in = urlConnection.getInputStream();
-      final long skipped = in.skip(offset);
-      if (skipped != offset) {
-        throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+      InputStream in = urlConnection.getInputStream();
+      try {
+        final long skipped = in.skip(offset);
+        if (skipped != offset) {
+          in.close();
+          throw new ISE("Requested to skip [%s] bytes, but actual number of bytes skipped is [%s]", offset, skipped);
+        } else {
+          return in;
+        }
       }
-      return in;
+      catch (IOException ex) {
+        in.close();
+        throw ex;
+      }
     }
-
   }
 }

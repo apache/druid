@@ -49,6 +49,7 @@ describe('spec-utils', () => {
         ],
         value: 2,
       },
+      'Curveball' as any,
     ];
 
     it('works for path, ignore-arrays', () => {

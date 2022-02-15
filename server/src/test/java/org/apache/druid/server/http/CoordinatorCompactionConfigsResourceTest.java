@@ -122,6 +122,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
+        true,
         author,
         comment,
         mockHttpServletRequest
@@ -131,6 +132,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
     Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
   }
 
@@ -279,6 +281,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
+        true,
         author,
         comment,
         mockHttpServletRequest
@@ -287,6 +290,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertNull(oldConfigCaptor.getValue());
     Assert.assertNotNull(newConfigCaptor.getValue());
     Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
     Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
   }
 

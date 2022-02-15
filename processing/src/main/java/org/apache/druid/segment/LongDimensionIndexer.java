@@ -43,10 +43,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   private volatile boolean hasNulls = false;
 
-
-  @Nullable
   @Override
-  public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
@@ -56,19 +54,13 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return l;
+    return new EncodedKeyComponent<>(l, Long.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
     hasNulls = NullHandling.sqlCompatible();
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Long key)
-  {
-    return Long.BYTES;
   }
 
   @Override

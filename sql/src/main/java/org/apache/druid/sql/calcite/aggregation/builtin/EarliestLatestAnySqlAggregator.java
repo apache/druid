@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -64,7 +63,6 @@ import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -239,9 +237,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       columnName = arg.getDirectColumn();
     } else {
       final RelDataType dataType = rexNode.getType();
-      final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
-      columnName = virtualColumn.getOutputName();
+      columnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, dataType);
     }
     return columnName;
   }

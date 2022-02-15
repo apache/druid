@@ -28,7 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -85,7 +85,7 @@ public class SqlModuleTest
   private ServiceEmitter serviceEmitter;
 
   @Mock
-  private InventoryView inventoryView;
+  private FilteredServerInventoryView inventoryView;
 
   @Mock
   private TimelineServerView timelineServerView;
@@ -183,7 +183,7 @@ public class SqlModuleTest
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
               binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
-              binder.bind(InventoryView.class).toInstance(inventoryView);
+              binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
               binder.bind(DruidLeaderClient.class).annotatedWith(Coordinator.class).toInstance(druidLeaderClient);
               binder.bind(DruidLeaderClient.class).annotatedWith(IndexingService.class).toInstance(druidLeaderClient);

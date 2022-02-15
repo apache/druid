@@ -45,8 +45,8 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -206,7 +206,7 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
-      final InventoryView serverInventoryView,
+      final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -480,13 +480,13 @@ public class SystemSchema extends AbstractSchema
 
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-    private final InventoryView serverInventoryView;
+    private final FilteredServerInventoryView serverInventoryView;
     private final DruidLeaderClient overlordLeaderClient;
     private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-        InventoryView serverInventoryView,
+        FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         DruidLeaderClient overlordLeaderClient,
         DruidLeaderClient coordinatorLeaderClient

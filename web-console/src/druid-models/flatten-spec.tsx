@@ -82,13 +82,15 @@ export function computeFlattenExprsForData(
   data: Record<string, any>[],
   exprType: ExprType,
   arrayHandling: ArrayHandling,
+  includeTopLevel = false,
 ): string[] {
   const seenPaths: Record<string, boolean> = {};
   for (const datum of data) {
+    if (!datum || typeof datum !== 'object') continue;
     const datumKeys = Object.keys(datum);
     for (const datumKey of datumKeys) {
       const datumValue = datum[datumKey];
-      if (isNested(datumValue)) {
+      if (includeTopLevel || isNested(datumValue)) {
         addPath(
           seenPaths,
           exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`,

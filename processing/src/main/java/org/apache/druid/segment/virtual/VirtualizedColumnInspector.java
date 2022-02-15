@@ -51,10 +51,6 @@ public class VirtualizedColumnInspector implements ColumnInspector
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(baseInspector, columnName);
-    } else {
-      return baseInspector.getColumnCapabilities(columnName);
-    }
+    return virtualColumns.getColumnCapabilitiesWithFallback(baseInspector, columnName);
   }
 }

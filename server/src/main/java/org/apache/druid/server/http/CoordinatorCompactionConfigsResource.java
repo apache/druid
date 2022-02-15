@@ -93,6 +93,7 @@ public class CoordinatorCompactionConfigsResource
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
+      @QueryParam("useAutoScaleSlots") Boolean useAutoScaleSlots,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
@@ -104,7 +105,8 @@ public class CoordinatorCompactionConfigsResource
       final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
           current,
           compactionTaskSlotRatio,
-          maxCompactionTaskSlots
+          maxCompactionTaskSlots,
+          useAutoScaleSlots
       );
 
       return manager.set(
