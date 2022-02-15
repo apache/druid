@@ -110,6 +110,15 @@
   "ingest/kafka/avgLag": [
     "dataSource"
   ],
+  "ingest/kafka/timeLag": [
+    "dataSource"
+  ],
+  "ingest/kafka/maxTimeLag": [
+    "dataSource"
+  ],
+  "ingest/kafka/avgTimeLag": [
+    "dataSource"
+  ],
   "task/run/time": [
     "dataSource"
   ],

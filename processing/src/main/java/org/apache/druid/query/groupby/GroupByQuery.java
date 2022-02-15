@@ -477,7 +477,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   private boolean validateAndGetForceLimitPushDown()
   {
     final boolean forcePushDown = getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
-    if (forcePushDown) {
+    final boolean ignoreForcePushDownValidation = getContextBoolean(GroupByQueryConfig.CTX_KEY_IGNORE_FORCE_LIMIT_PUSH_DOWN_VALIDATION, false);
+    if (forcePushDown && !ignoreForcePushDownValidation) {
       if (!(limitSpec instanceof DefaultLimitSpec)) {
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
       }

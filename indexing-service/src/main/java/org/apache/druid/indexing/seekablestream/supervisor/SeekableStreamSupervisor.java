@@ -280,6 +280,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     volatile TaskStatus status;
     volatile DateTime startTime;
     volatile Map<PartitionIdType, SequenceOffsetType> currentSequences = new HashMap<>();
+    volatile Map<PartitionIdType, Long> timestampGaps = new HashMap<>();
 
     @Override
     public String toString()
@@ -288,6 +289,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              "status=" + status +
              ", startTime=" + startTime +
              ", checkpointSequences=" + currentSequences +
+             ", timestampGaps=" + timestampGaps +
              '}';
     }
   }

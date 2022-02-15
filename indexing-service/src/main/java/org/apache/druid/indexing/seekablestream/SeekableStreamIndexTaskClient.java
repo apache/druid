@@ -287,6 +287,28 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
     }
   }
 
+  public Map<PartitionIdType, Long> getAndClearTimestampGaps(final String id, final boolean retry)
+  {
+    log.debug("GetAndClearTimestampGaps task[%s] retry[%s]", id, retry);
+
+    try {
+      final FullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.POST,
+          "timestamp/gaps",
+          "clear=true",
+          retry
+      );
+      return deserializeMap(response.getContent(), Map.class, getPartitionType(), Long.class);
+    }
+    catch (NoTaskLocationException e) {
+      return ImmutableMap.of();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> getCheckpoints(final String id, final boolean retry)
   {
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
@@ -395,6 +417,14 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
   )
   {
     return doAsync(() -> getCurrentOffsets(id, retry));
+  }
+
+  public ListenableFuture<Map<PartitionIdType, Long>> getAndClearTimestampGapsAsync(
+      final String id,
+      final boolean retry
+  )
+  {
+    return doAsync(() -> getAndClearTimestampGaps(id, retry));
   }
 
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(final String id)

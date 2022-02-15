@@ -84,6 +84,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   private static final Duration TEST_HTTP_TIMEOUT = new Duration(5000);
   private static final long TEST_NUM_RETRIES = 0;
   private static final String URL_FORMATTER = "http://%s:%d/druid/worker/v1/chat/%s/%s";
+  private static final String URL_WITH_QUERY_FORMATTER = "http://%s:%d/druid/worker/v1/chat/%s/%s?%s";
 
   private final int numThreads;
   private HttpClient httpClient;
@@ -898,6 +899,44 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
       Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of("0", "1")), responses.get(i));
     }
   }
+
+  @Test
+  public void testGetAndClearTimestampAsync() throws Exception
+  {
+    final int numRequests = TEST_IDS.size();
+    Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
+    expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
+    expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
+    expect(httpClient.go(
+        EasyMock.capture(captured),
+        EasyMock.anyObject(FullResponseHandler.class),
+        EasyMock.eq(TEST_HTTP_TIMEOUT)
+    )).andReturn(
+        Futures.immediateFuture(responseHolder)
+    ).times(numRequests);
+    replayAll();
+
+    List<URL> expectedUrls = new ArrayList<>();
+    List<ListenableFuture<Map<String, Long>>> futures = new ArrayList<>();
+    for (String testId : TEST_IDS) {
+      expectedUrls.add(new URL(StringUtils.format(URL_WITH_QUERY_FORMATTER, TEST_HOST, TEST_PORT, testId, "offsets/current", "clear=true")));
+      futures.add(client.getAndClearTimestampGapsAsync(testId, false));
+    }
+
+    List<Map<String, Long>> responses = Futures.allAsList(futures).get();
+
+    verifyAll();
+    List<Request> requests = captured.getValues();
+
+    Assert.assertEquals(numRequests, requests.size());
+    Assert.assertEquals(numRequests, responses.size());
+    for (int i = 0; i < numRequests; i++) {
+      Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
+      Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of("0", "1")), responses.get(i));
+    }
+  }
+
 
   @Test
   public void testGetEndOffsetsAsync() throws Exception

@@ -131,6 +131,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
           record.topic(),
           record.partition(),
           record.offset(),
+          record.timestamp(),
           record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
     }

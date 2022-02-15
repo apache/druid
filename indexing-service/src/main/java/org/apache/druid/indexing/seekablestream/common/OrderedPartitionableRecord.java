@@ -40,22 +40,36 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   private final String stream;
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;
-  private final List<RecordType> data;
+  private final long sequenceTimestamp;
+  private final List<byte[]> data;
 
   public OrderedPartitionableRecord(
       String stream,
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
-      List<RecordType> data
+      long sequenceTimestamp,
+      List<byte[]> data
   )
   {
     Preconditions.checkNotNull(stream, "stream");
     Preconditions.checkNotNull(partitionId, "partitionId");
     Preconditions.checkNotNull(sequenceNumber, "sequenceNumber");
+    Preconditions.checkNotNull(sequenceTimestamp, "sequenceNumber");
     this.stream = stream;
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
+    this.sequenceTimestamp = sequenceTimestamp;
     this.data = data == null ? ImmutableList.of() : data;
+  }
+
+  public OrderedPartitionableRecord(
+      String stream,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
+      List<byte[]> data
+  )
+  {
+    this(stream, partitionId, sequenceNumber, 0, data);
   }
 
   public String getStream()
@@ -71,6 +85,11 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   public SequenceOffsetType getSequenceNumber()
   {
     return sequenceNumber;
+  }
+
+  public long getSequenceTimestamp()
+  {
+    return sequenceTimestamp;
   }
 
   /**
@@ -123,7 +142,8 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   @Override
   public int hashCode()
   {
-    final int hashOfData = data.stream().map(e -> e.getBuffer().hashCode()).collect(Collectors.toList()).hashCode();
+    final int hashOfData = data.stream().map(Arrays::hashCode).collect(Collectors.toList()).hashCode();
+    // sequenceTimestamp is intentionally not included in the hashCode calculation
     return Objects.hash(stream, partitionId, sequenceNumber, hashOfData);
   }
 }
