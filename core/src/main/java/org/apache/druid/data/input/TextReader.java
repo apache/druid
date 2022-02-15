@@ -21,16 +21,20 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.CloseableIteratorWithParseContext;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,8 +58,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIterator<Pair<String, Map<String, Object>>> intermediateRowIteratorWithContext()
-      throws IOException
+  public CloseableIteratorWithParseContext<String> intermediateRowIteratorWithParseContext() throws IOException
   {
     final LineIterator delegate = new LineIterator(
         new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
@@ -68,9 +71,17 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       processHeaderLine(delegate.nextLine());
     }
 
-    return new CloseableIterator<Pair<String, Map<String, Object>>>()
+    return new CloseableIteratorWithParseContext<String>()
     {
-      long currentLineNumber = 1 + numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
+      final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
+      final Map<String, Object> parseContext = Maps.newHashMap(ImmutableMap.of("lineNumber", currentLineNumber));
+
+      @Override
+      public Map<String, Object> parseContext()
+      {
+        return Collections.unmodifiableMap(parseContext);
+      }
+
       @Override
       public boolean hasNext()
       {
@@ -78,12 +89,10 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       }
 
       @Override
-      public Pair<String, Map<String, Object>> next()
+      public String next()
       {
-        String line = delegate.nextLine();
-        long currentLineNumberCopy = currentLineNumber;
-        ++currentLineNumber;
-        return Pair.of(line, ImmutableMap.of(ParseException.Context.LINE_NUMBER_KEY, currentLineNumberCopy));
+        parseContext.compute("lineNumber", (k, v) -> k + 1);
+        return delegate.nextLine();
       }
 
       @Override

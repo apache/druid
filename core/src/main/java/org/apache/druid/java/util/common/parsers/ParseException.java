@@ -61,13 +61,6 @@ public class ParseException extends RuntimeException
    */
   private final String input;
 
-
-  /**
-   * Carries additional information associated with the ParseException. If set using the builder, it will create a
-   * shallow copy of the context object
-   */
-  private Map<String, Object> context = new HashMap<>();
-
   /**
    * Namespace for holding the common keys that can be used in the context map for the exception
    */
@@ -118,17 +111,13 @@ public class ParseException extends RuntimeException
       @Nullable String input,
       @Nullable Throwable cause,
       @Nonnull String message,
-      boolean fromPartiallyValidRow,
-      @Nullable Map<String, Object> context
+      boolean fromPartiallyValidRow
   )
   {
     super(StringUtils.nonStrictFormat(message, cause));
     this.timeOfExceptionMillis = System.currentTimeMillis();
     this.fromPartiallyValidRow = fromPartiallyValidRow;
     this.input = input;
-    this.context = (context == null)
-                   ? Collections.emptyMap()
-                   : ImmutableMap.<String, Object>builder().putAll(context).build();
   }
 
   public boolean isFromPartiallyValidRow()
@@ -147,12 +136,6 @@ public class ParseException extends RuntimeException
     return input;
   }
 
-  @Nonnull
-  public Map<String, Object> getContext()
-  {
-    return context;
-  }
-
   /**
    * Builder for {@link ParseException}
    */
@@ -163,7 +146,6 @@ public class ParseException extends RuntimeException
     String message = null;
     Throwable cause = null;
     boolean fromPartiallyValidRow = false;
-    Map<String, Object> context = new HashMap<>();
 
     public Builder()
     {
@@ -175,7 +157,6 @@ public class ParseException extends RuntimeException
       this.message = partialException.getMessage();
       this.cause = partialException.getCause();
       this.fromPartiallyValidRow = partialException.isFromPartiallyValidRow();
-      this.context = new HashMap<>(partialException.getContext());
     }
 
     public Builder setInput(String input)
@@ -202,22 +183,10 @@ public class ParseException extends RuntimeException
       return this;
     }
 
-    public Builder addToContext(String key, Object value)
-    {
-      context.put(key, value);
-      return this;
-    }
-
-    public Builder addAllToContext(Map<? extends String, ?> m)
-    {
-      context.putAll(m);
-      return this;
-    }
-
     public ParseException build()
     {
       Preconditions.checkNotNull(message, "message not supplied to the builder");
-      return new ParseException(input, cause, message, fromPartiallyValidRow, context);
+      return new ParseException(input, cause, message, fromPartiallyValidRow);
     }
   }
 }
