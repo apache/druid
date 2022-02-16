@@ -1565,6 +1565,8 @@ outputName
 pushdown
 row1
 subtotalsSpec
+unnested
+unnesting
  - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
@@ -1595,6 +1597,8 @@ row4
 t3
 t4
 t5
+groupByEnableMultiValueUnnesting
+unnesting
  - ../docs/querying/multitenancy.md
 500ms
 tenant_id

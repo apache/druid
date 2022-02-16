@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
@@ -32,6 +33,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
@@ -43,7 +45,9 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 {
@@ -53,7 +57,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
-
+    Map<String, Object> groupByOnMultiValueColumnEnabled = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    groupByOnMultiValueColumnEnabled.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -76,6 +81,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     }
     testQuery(
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        groupByOnMultiValueColumnEnabled,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -100,6 +106,30 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         expected
+    );
+  }
+
+  @Test
+  public void testMultiValueStringGroupByDoesNotWork() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    Map<String, Object> groupByOnMultiValueColumnDisabled = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    groupByOnMultiValueColumnDisabled.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
+    testQueryThrows(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        groupByOnMultiValueColumnDisabled,
+        ImmutableList.of(),
+        exception -> {
+          exception.expect(RuntimeException.class);
+          expectedException.expectMessage(StringUtils.format(
+              "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+              + " Consider setting %s to true.",
+              "v0",
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+          ));
+        }
     );
   }
 

@@ -34,6 +34,7 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY = "forcePushDownNestedQuery";
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
+  public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -96,6 +97,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean vectorize = true;
+
+  @JsonProperty
+  private boolean enableMultiValueUnnesting = true;
 
   public String getDefaultStrategy()
   {
@@ -192,6 +196,11 @@ public class GroupByQueryConfig
     return forcePushDownNestedQuery;
   }
 
+  public boolean isMultiValueUnnestingEnabled()
+  {
+    return enableMultiValueUnnesting;
+  }
+
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -244,6 +253,10 @@ public class GroupByQueryConfig
         getNumParallelCombineThreads()
     );
     newConfig.vectorize = query.getContextBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
+    newConfig.enableMultiValueUnnesting = query.getContextBoolean(
+        CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+        isMultiValueUnnestingEnabled()
+    );
     return newConfig;
   }
 
@@ -266,6 +279,7 @@ public class GroupByQueryConfig
            ", numParallelCombineThreads=" + numParallelCombineThreads +
            ", vectorize=" + vectorize +
            ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
+           ", enableMultiValueUnnesting=" + enableMultiValueUnnesting +
            '}';
   }
 }

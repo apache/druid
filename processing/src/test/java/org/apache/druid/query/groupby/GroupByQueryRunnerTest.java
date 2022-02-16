@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -1308,6 +1309,41 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "multi-value-dim");
+  }
+
+  @Test
+  public void testMultiValueDimensionNotAllowed()
+  {
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(UOE.class);
+      expectedException.expectMessage(StringUtils.format(
+          "GroupBy v1 does not support %s as false",
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+      ));
+    } else if (!vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage(StringUtils.format(
+          "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+          + " Consider setting %s to true.",
+          "placementish",
+          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+          GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+      ));
+    } else {
+      cannotVectorize();
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("placementish", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false))
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
   @Test
