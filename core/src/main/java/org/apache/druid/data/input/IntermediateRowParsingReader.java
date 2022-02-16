@@ -79,11 +79,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                     .setInput(String.valueOf(row))
                     .setCause(e)
                     .setMessage(buildParseExceptionMessage(
-                        "Unable to parse row [%s]",
+                        StringUtils.nonStrictFormat("Unable to parse row [%s]", row),
                         source(),
                         currentRecordNumber,
-                        metadata,
-                        row
+                        metadata
                     ))
                     .build()
             );
@@ -141,11 +140,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                     .setInput(String.valueOf(row))
                     .setCause(e)
                     .setMessage(buildParseExceptionMessage(
-                        "Unable to parse row [%s] into JSON",
+                        StringUtils.nonStrictFormat("Unable to parse row [%s] into JSON", row),
                         source(),
                         null,
-                        metadata,
-                        row
+                        metadata
                     ))
                     .build()
             );
@@ -157,11 +155,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                 new ParseException.Builder()
                     .setInput(String.valueOf(row))
                     .setMessage(buildParseExceptionMessage(
-                        "No map object parsed for row [%s]",
+                        StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
                         source(),
                         null,
-                        metadata,
-                        row
+                        metadata
                     ))
                     .build()
             );
@@ -186,11 +183,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                 .setInput(String.valueOf(row))
                 .setCause(e)
                 .setMessage(buildParseExceptionMessage(
-                    "No map object parsed for row [%s]",
+                    StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
                     source(),
                     null,
-                    metadata,
-                    row
+                    metadata
                 ))
                 .build();
             return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
@@ -272,11 +268,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
 
   private String buildParseExceptionMessage(
-      String formatString,
+      String baseExceptionMessage,
       @Nullable InputEntity source,
       @Nullable Long recordNumber,
-      @Nullable Map<String, Object> metadata,
-      Object... baseArgs
+      @Nullable Map<String, Object> metadata
   )
   {
     Map<String, Object> temp;
@@ -291,7 +286,8 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
     if (recordNumber != null) {
       temp.put("recordNumber", recordNumber);
     }
-    return StringUtils.nonStrictFormat(formatString + "(Additional information: [%s])", baseArgs, temp);
+    String additionalInformationString = StringUtils.format(" (Additional info: %s)", temp.toString());
+    return baseExceptionMessage + additionalInformationString;
   }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>

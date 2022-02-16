@@ -70,7 +70,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
 
     return new CloseableIteratorWithMetadata<String>()
     {
-      final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
+      private final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
       final Map<String, Object> metadata = Maps.newHashMap(ImmutableMap.of("lineNumber", currentLineNumber));
 
       @Override
@@ -88,7 +88,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       @Override
       public String next()
       {
-        metadata.compute("lineNumber", (k, v) -> k + 1);
+        metadata.compute("lineNumber", (k, v) -> (Long) v + 1);
         return delegate.nextLine();
       }
 
