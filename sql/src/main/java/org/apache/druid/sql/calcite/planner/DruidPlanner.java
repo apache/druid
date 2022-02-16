@@ -758,7 +758,7 @@ public class DruidPlanner implements Closeable
     private final SqlExplain explain;
 
     @Nullable
-    private final SqlInsert insert;
+    private final DruidSqlInsert insert;
 
     private final SqlNode query;
 
@@ -767,7 +767,7 @@ public class DruidPlanner implements Closeable
 
     private ParsedNodes(
         @Nullable SqlExplain explain,
-        @Nullable SqlInsert insert,
+        @Nullable DruidSqlInsert insert,
         SqlNode query,
         @Nullable Granularity ingestionGranularity
     )
@@ -781,7 +781,7 @@ public class DruidPlanner implements Closeable
     static ParsedNodes create(final SqlNode node) throws ValidationException
     {
       SqlExplain explain = null;
-      SqlInsert insert = null;
+      DruidSqlInsert druidSqlInsert = null;
       SqlNode query = node;
       Granularity ingestionGranularity = null;
 
@@ -791,8 +791,8 @@ public class DruidPlanner implements Closeable
       }
 
       if (query.getKind() == SqlKind.INSERT) {
-        insert = (SqlInsert) query;
-        query = insert.getSource();
+        druidSqlInsert = (DruidSqlInsert) query;
+        query = druidSqlInsert.getSource();
 
         // Check if ORDER BY clause is not provided to the underlying query
         if (query instanceof SqlOrderBy) {
@@ -803,37 +803,31 @@ public class DruidPlanner implements Closeable
           }
         }
 
-        // Processing to be done when the original query has either of the PARTITIONED BY or CLUSTERED BY clause
-        // The following condition should always be true however added defensively
-        if (insert instanceof DruidSqlInsert) {
-          DruidSqlInsert druidSqlInsert = (DruidSqlInsert) insert;
+        ingestionGranularity = druidSqlInsert.getPartitionedBy();
 
-          ingestionGranularity = druidSqlInsert.getPartitionedBy();
+        if (druidSqlInsert.getClusteredBy() != null) {
+          // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
+          // node
+          SqlNode offset = null;
+          SqlNode fetch = null;
 
-          if (druidSqlInsert.getClusteredBy() != null) {
-            // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new SqlOrderBy
-            // node
-            SqlNode offset = null;
-            SqlNode fetch = null;
-
-            if (query instanceof SqlOrderBy) {
-              SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-              // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-              // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP BY dim1
-              // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
-              query = sqlOrderBy.query;
-              offset = sqlOrderBy.offset;
-              fetch = sqlOrderBy.fetch;
-            }
-            // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
-            query = new SqlOrderBy(
-                query.getParserPosition(),
-                query,
-                druidSqlInsert.getClusteredBy(),
-                offset,
-                fetch
-            );
+          if (query instanceof SqlOrderBy) {
+            SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+            // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+            // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP BY dim1
+            // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+            query = sqlOrderBy.query;
+            offset = sqlOrderBy.offset;
+            fetch = sqlOrderBy.fetch;
           }
+          // Creates a new SqlOrderBy query, which may have our CLUSTERED BY overwritten
+          query = new SqlOrderBy(
+              query.getParserPosition(),
+              query,
+              druidSqlInsert.getClusteredBy(),
+              offset,
+              fetch
+          );
         }
       }
 
@@ -841,7 +835,7 @@ public class DruidPlanner implements Closeable
         throw new ValidationException(StringUtils.format("Cannot execute [%s].", query.getKind()));
       }
 
-      return new ParsedNodes(explain, insert, query, ingestionGranularity);
+      return new ParsedNodes(explain, druidSqlInsert, query, ingestionGranularity);
     }
 
     @Nullable
@@ -851,7 +845,7 @@ public class DruidPlanner implements Closeable
     }
 
     @Nullable
-    public SqlInsert getInsertNode()
+    public DruidSqlInsert getInsertNode()
     {
       return insert;
     }

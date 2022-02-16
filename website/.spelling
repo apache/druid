@@ -313,6 +313,7 @@ lookback
 lookups
 mapreduce
 masse
+maxNumericInFilters
 maxNumFiles
 maxNumSegments
 max_map_count
@@ -563,6 +564,7 @@ _common
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
+druid.sql.planner.maxNumericInFilters
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
