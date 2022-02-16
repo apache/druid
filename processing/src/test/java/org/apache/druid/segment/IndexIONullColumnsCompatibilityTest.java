@@ -84,7 +84,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
                 .withMetrics(new CountAggregatorFactory("count"))
                 .withDimensionsSpec(
                     new DimensionsSpec(
-                        DimensionsSpec.getDefaultSchemas(Arrays.asList("unknownDim", "dim1", "dim2")),
+                        DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "unknownDim", "dim2")),
                         null,
                         null
                     )
@@ -114,7 +114,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
   {
     QueryableIndex queryableIndex = TestHelper.getTestIndexIO().loadIndex(segmentDir);
     Assert.assertEquals(
-        ImmutableList.of("dim1", "dim2", "unknownDim"),
+        ImmutableList.of("dim1", "unknownDim", "dim2"),
         Lists.newArrayList(queryableIndex.getAvailableDimensions().iterator())
     );
   }

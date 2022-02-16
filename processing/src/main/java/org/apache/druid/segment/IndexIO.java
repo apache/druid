@@ -27,7 +27,6 @@ import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -57,7 +56,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CombiningIndexed;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
@@ -78,7 +76,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -549,12 +549,12 @@ public class IndexIO
        * Index.drd should consist of the segment version, the columns and dimensions of the segment as generic
        * indexes, the interval start and end millis as longs (in 16 bytes), and a bitmap index type.
        */
-      final GenericIndexed<String> cols = GenericIndexed.read(
+      final GenericIndexed<String> nonNullCols = GenericIndexed.read(
           indexBuffer,
           GenericIndexed.STRING_STRATEGY,
           smooshedFiles
       );
-      final GenericIndexed<String> dims = GenericIndexed.read(
+      final GenericIndexed<String> nonNullDims = GenericIndexed.read(
           indexBuffer,
           GenericIndexed.STRING_STRATEGY,
           smooshedFiles
@@ -562,13 +562,16 @@ public class IndexIO
       final Interval dataInterval = Intervals.utc(indexBuffer.getLong(), indexBuffer.getLong());
       final BitmapSerdeFactory segmentBitmapSerdeFactory;
 
+      // These can be null if the segment is created in an older version than 0.23.0
+      // as they don't store null-only columns in the segment.
+      @Nullable final GenericIndexed<String> allCols;
+      @Nullable final GenericIndexed<String> allDims;
+
       /**
        * This is a workaround for the fact that in v8 segments, we have no information about the type of bitmap
        * index to use. Since we cannot very cleanly build v9 segments directly, we are using a workaround where
        * this information is appended to the end of index.drd.
        */
-      @Nullable final GenericIndexed<String> nullCols;
-      @Nullable final GenericIndexed<String> nullDims;
       if (indexBuffer.hasRemaining()) {
         segmentBitmapSerdeFactory = mapper.readValue(
             SERIALIZER_UTILS.readString(indexBuffer),
@@ -576,24 +579,24 @@ public class IndexIO
         );
 
         if (indexBuffer.hasRemaining()) {
-          nullCols = GenericIndexed.read(
+          allCols = GenericIndexed.read(
               indexBuffer,
               GenericIndexed.STRING_STRATEGY,
               smooshedFiles
           );
-          nullDims = GenericIndexed.read(
+          allDims = GenericIndexed.read(
               indexBuffer,
               GenericIndexed.STRING_STRATEGY,
               smooshedFiles
           );
         } else {
-          nullCols = null;
-          nullDims = null;
+          allCols = null;
+          allDims = null;
         }
       } else {
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
-        nullCols = null;
-        nullDims = null;
+        allCols = null;
+        allDims = null;
       }
 
       Metadata metadata = null;
@@ -632,10 +635,28 @@ public class IndexIO
           segmentBitmapSerdeFactory
       );
 
-      // Register all non-null columns.
+      final GenericIndexed<String> finalCols, finalDims;
+
+      if (allCols != null) {
+        // The original column order is encoded in the below arrayLists.
+        // nonNullCols/nonNullDims have only non-null columns,
+        // while allCols/allDims have null-only columns and NON_NULL_COLUMN_NAME_HOLDERs.
+        // In allCols/allDims, at the positions corresponding to non-null columns in the original column order,
+        // NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name. For other positions,
+        // null column names are stored. See IndexMergerV9.makeIndexBinary() for more details of how column order
+        // is encoded.
+        // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims.
+        final List<String> mergedCols = restoreColumns(nonNullCols, allCols);
+        final List<String> mergedDims = restoreColumns(nonNullDims, allDims);
+        finalCols = GenericIndexed.fromIterable(mergedCols, GenericIndexed.STRING_STRATEGY);
+        finalDims = GenericIndexed.fromIterable(mergedDims, GenericIndexed.STRING_STRATEGY);
+      } else {
+        finalCols = nonNullCols;
+        finalDims = nonNullDims;
+      }
       registerColumnHolders(
           inDir,
-          cols,
+          finalCols,
           lazy,
           columns,
           mapper,
@@ -645,24 +666,9 @@ public class IndexIO
           segmentBitmapSerdeFactory
       );
 
-      // Register all null-only dimensions.
-      if (nullCols != null) {
-        registerColumnHolders(
-            inDir,
-            nullCols,
-            lazy,
-            columns,
-            mapper,
-            smooshedFiles,
-            loadFailed,
-            rowCountSupplier,
-            segmentBitmapSerdeFactory
-        );
-      }
-
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval,
-          nullDims == null ? dims : new CombiningIndexed<>(ImmutableList.of(dims, nullDims)),
+          finalDims,
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
@@ -674,6 +680,41 @@ public class IndexIO
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return index;
+    }
+
+    /**
+     * Return a list of columns that contains given inputs merged. The returned column names are in
+     * the original order that is used when this segment is created.
+     *
+     * The original column order is encoded in two input GenericIndexeds. nonNullCols have only non-null columns,
+     * while allCols have null-only columns and {@link IndexMergerV9#NON_NULL_COLUMN_NAME_HOLDER}s.
+     * In allCols, NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name
+     * at the positions corresponding to non-null columns in the original column order. At other positions,
+     * the name of null columns are stored. See IndexMergerV9.makeIndexBinary() for more details of how column order
+     * is encoded.
+     */
+    private List<String> restoreColumns(GenericIndexed<String> nonNullCols, GenericIndexed<String> allCols)
+    {
+      final List<String> mergedCols = new ArrayList<>(allCols.size());
+      Iterator<String> allColsIterator = allCols.iterator();
+      Iterator<String> nonNullColsIterator = nonNullCols.iterator();
+      while (allColsIterator.hasNext()) {
+        final String next = allColsIterator.next();
+        if (IndexMergerV9.NON_NULL_COLUMN_NAME_HOLDER.equals(next)) {
+          Preconditions.checkState(
+              nonNullColsIterator.hasNext(),
+              "There is no more column name to iterate in nonNullColsIterator "
+              + "while the next column name in allColsIterator is %s. This is likely a potential bug in ingestion. "
+              + "Try reingesting your data with storeNullColumns setting to false in task context",
+              next
+          );
+          mergedCols.add(nonNullColsIterator.next());
+        } else {
+          mergedCols.add(next);
+        }
+      }
+
+      return mergedCols;
     }
 
     private void registerColumnHolders(

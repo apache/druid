@@ -84,9 +84,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class IndexMergerV9 implements IndexMerger
 {
+  public static final String NON_NULL_COLUMN_NAME_HOLDER = "%%";
+
   private static final Logger log = new Logger(IndexMergerV9.class);
 
   // merge logic for the state capabilities will be in after incremental index is persisted
@@ -358,43 +361,55 @@ public class IndexMergerV9 implements IndexMerger
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> finalNonNullOnlyDimensions = new LinkedHashSet<>();
-    final Set<String> finalNonNullOnlyColumns = new LinkedHashSet<>(mergedMetrics);
-    final Set<String> finalNullOnlyColumns = new LinkedHashSet<>();
-    final Set<String> finalNullOnlyDimensions = new LinkedHashSet<>();
+    final Set<String> nonNullOnlyDimensions = new LinkedHashSet<>();
+    final Set<String> nonNullOnlyColumns = new LinkedHashSet<>(mergedMetrics);
+    // The original column order is encoded in the below arrayLists.
+    // At the positions where there is a non-null column in mergedDimensions/mergedMetrics,
+    // NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name. At other positions,
+    // the name of null columns are stored. When the segment is loaded, original column order is restored
+    // by merging nonNullOnlyColumns/nonNullOnlyDimensions and allColumns/allDimensions.
+    // See V9IndexLoader.restoreColumns() for more details of how the original order is restored.
+    final List<String> allDimensions = new ArrayList<>(mergedDimensions.size());
+    final List<String> allColumns = new ArrayList<>(mergedDimensions.size() + mergedMetrics.size());
+    IntStream.range(0, mergedMetrics.size()).forEach(i -> allColumns.add(NON_NULL_COLUMN_NAME_HOLDER));
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       if (!mergers.get(i).hasOnlyNulls()) {
-        finalNonNullOnlyDimensions.add(mergedDimensions.get(i));
-        finalNonNullOnlyColumns.add(mergedDimensions.get(i));
+        nonNullOnlyDimensions.add(mergedDimensions.get(i));
+        nonNullOnlyColumns.add(mergedDimensions.get(i));
+        allDimensions.add(NON_NULL_COLUMN_NAME_HOLDER);
+        allColumns.add(NON_NULL_COLUMN_NAME_HOLDER);
       } else if (mergers.get(i).shouldStore()) {
         // shouldStore AND hasOnlyNulls
-        finalNullOnlyDimensions.add(mergedDimensions.get(i));
-        finalNullOnlyColumns.add(mergedDimensions.get(i));
+        allDimensions.add(mergedDimensions.get(i));
+        allColumns.add(mergedDimensions.get(i));
       }
     }
 
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalNonNullOnlyColumns, GenericIndexed.STRING_STRATEGY);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(
-        finalNonNullOnlyDimensions,
+    GenericIndexed<String> nonNullCols = GenericIndexed.fromIterable(
+        nonNullOnlyColumns,
         GenericIndexed.STRING_STRATEGY
     );
-    GenericIndexed<String> nullCols = GenericIndexed.fromIterable(finalNullOnlyColumns, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> nonNullDims = GenericIndexed.fromIterable(
+        nonNullOnlyDimensions,
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String> nullCols = GenericIndexed.fromIterable(allColumns, GenericIndexed.STRING_STRATEGY);
     GenericIndexed<String> nullDims = GenericIndexed.fromIterable(
-        finalNullOnlyDimensions,
+        allDimensions,
         GenericIndexed.STRING_STRATEGY
     );
 
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
-    final long numBytes = cols.getSerializedSize()
-                          + dims.getSerializedSize()
-                          + (finalNullOnlyColumns.isEmpty() ? 0 : nullCols.getSerializedSize())
-                          + (finalNullOnlyColumns.isEmpty() ? 0 : nullDims.getSerializedSize())
+    final long numBytes = nonNullCols.getSerializedSize()
+                          + nonNullDims.getSerializedSize()
+                          + nullCols.getSerializedSize()
+                          + nullDims.getSerializedSize()
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
     try (final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes)) {
-      cols.writeTo(writer, v9Smoosher);
-      dims.writeTo(writer, v9Smoosher);
+      nonNullCols.writeTo(writer, v9Smoosher);
+      nonNullDims.writeTo(writer, v9Smoosher);
 
       DateTime minTime = DateTimes.MAX;
       DateTime maxTime = DateTimes.MIN;
@@ -413,10 +428,8 @@ public class IndexMergerV9 implements IndexMerger
       // Store null-only dimensions at the end of this section,
       // so that historicals of an older version can ignore them instead of exploding while reading this segment.
       // Those historicals will still serve any query that reads null-only columns.
-      if (!finalNullOnlyColumns.isEmpty()) {
-        nullCols.writeTo(writer, v9Smoosher);
-        nullDims.writeTo(writer, v9Smoosher);
-      }
+      nullCols.writeTo(writer, v9Smoosher);
+      nullDims.writeTo(writer, v9Smoosher);
     }
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
