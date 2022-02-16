@@ -269,7 +269,7 @@ a  custom DynamicConfigProvider is used, be sure to register the provider with t
 
 |Key|Description|Required|Default|
 |---|-----------|--------|-------|
-|`metadata.dbType`|The metadata server's database type (`mysql`, `postrges`, and `derby` are supported out of the box)|Yes||
+|`metadata.dbType`|The metadata server's database type (`mysql`, `postgres`, and `derby` are supported out of the box)|Yes||
 |`metadata.host`|The metadata server's host name|If using derby|`localhost`|
 |`metadata.port`|The metadata server's port|If using derby|1527|
 |`metadata.connectUri`|The URI to use to connect to the metadata server|If not using derby||
