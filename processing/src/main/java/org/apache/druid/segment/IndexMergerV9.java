@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilities.CoercionLogic;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -79,6 +80,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -849,13 +851,13 @@ public class IndexMergerV9 implements IndexMerger
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
         capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
-            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
+            mergeCapabilities(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
         );
       }
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
+            mergeCapabilities(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
@@ -864,6 +866,63 @@ public class IndexMergerV9 implements IndexMerger
     for (String dim : mergedDimensions) {
       dimCapabilities.add(capabilitiesMap.get(dim));
     }
+  }
+
+  /**
+   * Creates a merged columnCapabilities to merge two queryableIndexes.
+   * This method first snapshots a pair of capabilities and then merges them.
+   */
+  @Nullable
+  private static ColumnCapabilitiesImpl mergeCapabilities(
+      @Nullable final ColumnCapabilities capabilities,
+      @Nullable final ColumnCapabilities other,
+      CoercionLogic coercionLogic
+  )
+  {
+    ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.snapshot(capabilities, coercionLogic);
+    ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.snapshot(other, coercionLogic);
+    if (merged == null) {
+      return otherSnapshot;
+    } else if (otherSnapshot == null) {
+      return merged;
+    }
+
+    if (!Objects.equals(merged.getType(), otherSnapshot.getType())
+        || !Objects.equals(merged.getComplexTypeName(), otherSnapshot.getComplexTypeName())
+        || !Objects.equals(merged.getElementType(), otherSnapshot.getElementType())) {
+      throw new ISE(
+          "Cannot merge columns of type[%s] and [%s]",
+          merged.getType(),
+          otherSnapshot.getType()
+      );
+    }
+
+    merged.setDictionaryEncoded(merged.isDictionaryEncoded().or(otherSnapshot.isDictionaryEncoded()).isTrue());
+    merged.setHasMultipleValues(merged.hasMultipleValues().or(otherSnapshot.hasMultipleValues()).isTrue());
+    merged.setDictionaryValuesSorted(
+        merged.areDictionaryValuesSorted().and(otherSnapshot.areDictionaryValuesSorted()).isTrue()
+    );
+    merged.setDictionaryValuesUnique(
+        merged.areDictionaryValuesUnique().and(otherSnapshot.areDictionaryValuesUnique()).isTrue()
+    );
+    merged.setHasNulls(merged.hasNulls().or(other.hasNulls()).isTrue());
+    // When merging persisted queryableIndexes in the same ingestion job,
+    // all queryableIndexes should have the exact same hasBitmapIndexes flag set which is set in the ingestionSpec.
+    // One exception is null-only columns as they always have bitmap indexes no matter whether the flag is set
+    // in the ingestionSpec. As a result, the mismatch checked in the if clause below can happen
+    // when one of the columnCapability is from a real column and another is from a null-only column.
+    // See NullColumnPartSerde for how columnCapability is created for null-only columns.
+    // When the mismatch is found, we prefer the flag set in the ingestionSpec over
+    // the columnCapability of null-only columns.
+    if (merged.hasBitmapIndexes() != otherSnapshot.hasBitmapIndexes()) {
+      merged.setHasBitmapIndexes(false);
+    }
+    if (merged.hasSpatialIndexes() != otherSnapshot.hasSpatialIndexes()) {
+      merged.setHasSpatialIndexes(merged.hasSpatialIndexes() || otherSnapshot.hasSpatialIndexes());
+    }
+    merged.setFilterable(merged.isFilterable() && otherSnapshot.isFilterable());
+
+    return merged;
   }
 
   @Override

@@ -231,8 +231,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   /**
    * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
    * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
-   * string columns as having multiple values. This method returns the actual capabilities of the underlying
-   * {@link IncrementalIndex}at the time this method is called.
+   * columns as having multiple values. This method returns the actual capabilities of the underlying
+   * {@link IncrementalIndex} at the time this method is called.
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
