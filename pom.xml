@@ -202,6 +202,7 @@
         <module>extensions-contrib/knox-password-provider</module>
         <module>extensions-contrib/hash-name-numbered-shard-spec</module>
         <!--<module>extensions-contrib/collectset</module>-->
+        <module>extensions-contrib/serverset-password-provider</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
