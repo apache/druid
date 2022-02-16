@@ -29,6 +29,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -74,29 +75,24 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           }
           catch (IOException e) {
             final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
-            rows = new ExceptionThrowingIterator(
-                new ParseException.Builder()
-                    .setInput(String.valueOf(row))
-                    .setCause(e)
-                    .setMessage(buildParseExceptionMessage(
-                        StringUtils.nonStrictFormat("Unable to parse row [%s]", row),
-                        source(),
-                        currentRecordNumber,
-                        metadata
-                    ))
-                    .build()
-            );
+            rows = new ExceptionThrowingIterator(new ParseException(
+                String.valueOf(row),
+                e,
+                buildParseExceptionMessage(
+                    StringUtils.format("Unable to parse row [%s]", row),
+                    source(),
+                    currentRecordNumber,
+                    metadata
+                )
+            ));
           }
           catch (ParseException e) {
             final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
-            ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
-            enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
-                e.getMessage(),
-                source(),
-                currentRecordNumber,
-                metadata
+            rows = new ExceptionThrowingIterator(new ParseException(
+                String.valueOf(row),
+                e,
+                buildParseExceptionMessage(e.getMessage(), source(), currentRecordNumber, metadata)
             ));
-            rows = new ExceptionThrowingIterator(enrichedParseExceptionBuilder.build());
           }
         }
 
@@ -136,31 +132,24 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           catch (Exception e) {
             return InputRowListPlusRawValues.of(
                 null,
-                new ParseException.Builder()
-                    .setInput(String.valueOf(row))
-                    .setCause(e)
-                    .setMessage(buildParseExceptionMessage(
-                        StringUtils.nonStrictFormat("Unable to parse row [%s] into JSON", row),
-                        source(),
-                        null,
-                        metadata
-                    ))
-                    .build()
+                new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
+                    StringUtils.nonStrictFormat("Unable to parse row [%s] into JSON", row),
+                    source(),
+                    null,
+                    metadata
+                ))
             );
           }
 
           if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
             return InputRowListPlusRawValues.of(
                 null,
-                new ParseException.Builder()
-                    .setInput(String.valueOf(row))
-                    .setMessage(buildParseExceptionMessage(
-                        StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
-                        source(),
-                        null,
-                        metadata
-                    ))
-                    .build()
+                new ParseException(String.valueOf(row), buildParseExceptionMessage(
+                    StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
+                    source(),
+                    null,
+                    metadata
+                ))
             );
           }
 
@@ -169,26 +158,19 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             rows = parseInputRows(row);
           }
           catch (ParseException e) {
-            ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
-            enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
-                e.getMessage(),
+            return InputRowListPlusRawValues.ofList(rawColumnsList, new ParseException(
+                String.valueOf(row),
+                e,
+                buildParseExceptionMessage(e.getMessage(), source(), null, metadata)
+            ));
+          }
+          catch (IOException e) {
+            ParseException exception = new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
+                StringUtils.nonStrictFormat("Unable to parse row [%s] into inputRow", row),
                 source(),
                 null,
                 metadata
             ));
-            return InputRowListPlusRawValues.ofList(rawColumnsList, enrichedParseExceptionBuilder.build());
-          }
-          catch (IOException e) {
-            ParseException exception = new ParseException.Builder()
-                .setInput(String.valueOf(row))
-                .setCause(e)
-                .setMessage(buildParseExceptionMessage(
-                    StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
-                    source(),
-                    null,
-                    metadata
-                ))
-                .build();
             return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
           }
 
@@ -274,20 +256,19 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       @Nullable Map<String, Object> metadata
   )
   {
-    Map<String, Object> temp;
-    if (metadata == null) {
-      temp = Maps.newHashMap();
-    } else {
-      temp = Maps.newHashMap(metadata);
-    }
+    StringBuilder sb = new StringBuilder(baseExceptionMessage);
+    sb.append(" (");
     if (source != null && source.getUri() != null) {
-      temp.put("source", source.getUri());
+      sb.append(StringUtils.format(" Source info: [%s].", source.getUri()));
     }
     if (recordNumber != null) {
-      temp.put("recordNumber", recordNumber);
+      sb.append(StringUtils.format(" Record number: [%d].", recordNumber));
     }
-    String additionalInformationString = StringUtils.format(" (Additional info: %s)", temp.toString());
-    return baseExceptionMessage + additionalInformationString;
+    if(metadata != null && !metadata.isEmpty()) {
+      sb.append(StringUtils.format(" Additional info: [%s].", metadata));
+    }
+    sb.append(" )");
+    return sb.toString();
   }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
