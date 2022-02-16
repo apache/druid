@@ -89,10 +89,6 @@ public abstract class AbstractIndexerTest
     }
 
     List<String> intervals = coordinator.getSegmentIntervals(dataSource);
-    if (null == intervals) {
-      LOG.info("Datasource [%s] was not found. Nothing to unload", dataSource);
-      return;
-    }
 
     // each element in intervals has this form:
     //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
