@@ -700,7 +700,7 @@ public class IndexIO
               nonNullColsIterator.hasNext(),
               "There is no more column name to iterate in nonNullColsIterator "
               + "while allColsIterator expects one. This is likely a potential bug in creating this segment. "
-              + "Try reingesting your data with storeNullColumns setting to false in task context."
+              + "Try reingesting your data with storeEmptyColumns setting to false in task context."
           );
           mergedCols.add(nonNullColsIterator.next());
         } else {

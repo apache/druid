@@ -782,7 +782,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         rowIngestionMeters,
         parseExceptionHandler,
         isUseMaxMemoryEstimates(),
-        getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, toolbox.getConfig().isStoreEmptyColumns())
+        false
     );
   }
 

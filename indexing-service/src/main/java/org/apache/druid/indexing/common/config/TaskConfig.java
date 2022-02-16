@@ -131,7 +131,7 @@ public class TaskConfig
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
-      @JsonProperty("storeNullColumns") @Nullable Boolean storeEmptyColumns
+      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
