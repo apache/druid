@@ -783,8 +783,8 @@ public class GroupByQueryEngineV2
             );
 
             if (doAggregate) {
-              // this check is done during the row aggregation as a dimension can become multi-value col if
-              // {@link org.apache.druid.segment.column.ColumnCapabilities} is unkown.
+              // this check is done during the row aggregation as a dimension can become multi-value col if column
+              // capabilities is unknown.
               checkIfMultiValueGroupingIsAllowed(dims[stackPointer].getName());
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
@@ -918,8 +918,8 @@ public class GroupByQueryEngineV2
           }
         } else {
           if (multiValuesSize > 1) {
-            // this check is done during the row aggregation as a dimension can become multi-value col if
-            // {@link org.apache.druid.segment.column.ColumnCapabilities} is unkown.
+            // this check is done during the row aggregation as a dimension can become multi-value col if column
+            // capabilities is unknown.
             checkIfMultiValueGroupingIsAllowed(dim.getName());
           }
           for (; nextValIndex < multiValuesSize; nextValIndex++) {
