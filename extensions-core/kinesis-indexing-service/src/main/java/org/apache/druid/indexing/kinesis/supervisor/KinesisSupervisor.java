@@ -23,7 +23,6 @@ import com.amazonaws.services.kinesis.model.Shard;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
@@ -439,7 +438,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected Set<String> getIgnorablePartitionIds()
   {
     updateClosedShardCache();
-    return getEmptyClosedShardIds();
+    return ImmutableSet.copyOf(emptyClosedShardIds);
   }
 
   private void updateClosedShardCache()
@@ -548,7 +547,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   /**
-   * Checking if a shard is empty requires polling for records which is quite expensive
+   * Checking if a shard is empty requires fetching records which is quite expensive
    * Fortunately, the results can be cached for closed shards as no more records can be written to them
    * Please use this method only if the info is absent from the cache
    *
@@ -559,23 +558,5 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   private boolean isClosedShardEmpty(String stream, String shardId)
   {
     return ((KinesisRecordSupplier) recordSupplier).isClosedShardEmpty(stream, shardId);
-  }
-
-  /**
-   * @return immutable copy of cache for empty, closed shards
-   */
-  @VisibleForTesting
-  Set<String> getEmptyClosedShardIds()
-  {
-    return ImmutableSet.copyOf(emptyClosedShardIds);
-  }
-
-  /**
-   * @return immutable copy of cache for non-empty, closed shards
-   */
-  @VisibleForTesting
-  Set<String> getNonEmptyClosedShardIds()
-  {
-    return ImmutableSet.copyOf(nonEmptyClosedShardIds);
   }
 }

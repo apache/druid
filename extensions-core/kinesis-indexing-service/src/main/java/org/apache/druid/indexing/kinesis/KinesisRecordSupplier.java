@@ -687,10 +687,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public Set<String> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      return ImmutableSet.copyOf(getShards(stream).stream()
-                                                  .map(shard -> shard.getShardId())
-                                                  .collect(Collectors.toList())
-      );
+      ImmutableSet.Builder<String> partitionIds = ImmutableSet.builder();
+      for (Shard shard : getShards(stream)) {
+        partitionIds.add(shard.getShardId());
+      }
+      return partitionIds.build();
     });
   }
 
@@ -753,10 +754,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   }
 
   /**
-   * Is costly and requires polling the shard to determine if it's empty
+   * Fetches records from the specified shard to determine if it is empty.
    * @param stream to which shard belongs
    * @param shardId of the closed shard
-   * @return if the closed shard is empty
+   * @return true if the closed shard is empty, false otherwise.
    */
   public boolean isClosedShardEmpty(String stream, String shardId)
   {
