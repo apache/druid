@@ -21,7 +21,6 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
@@ -32,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +71,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
     return new CloseableIteratorWithMetadata<String>()
     {
       private final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
-      final Map<String, Object> metadata = Maps.newHashMap(ImmutableMap.of("lineNumber", currentLineNumber));
+      final Map<String, Object> metadata = new HashMap<>(ImmutableMap.of("lineNumber", currentLineNumber));
 
       @Override
       public Map<String, Object> metadata()
