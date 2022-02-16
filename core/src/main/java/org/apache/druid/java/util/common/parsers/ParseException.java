@@ -25,15 +25,15 @@ import javax.annotation.Nullable;
 
 /**
  * ParseException can be thrown on both ingestion side and query side.
- * <p>
+ *
  * During ingestion, ParseException can be thrown in two places, i.e., {@code InputSourceReader#read()}
  * and {@code IncrementalIndex#addToFacts()}. To easily handle ParseExceptions, consider using
  * {@code FilteringCloseableInputRowIterator} and {@code ParseExceptionHandler} to iterate input rows and
  * to add rows to IncrementalIndex, respectively.
- * <p>
+ *
  * When you use {@code InputSourceReader#sample()}, the ParseException will not be thrown, but be stored in
  * {@code InputRowListPlusRawValues}.
- * <p>
+ *
  * During query, ParseException can be thrown in SQL planning. It should be never thrown once a query plan is
  * constructed.
  */
