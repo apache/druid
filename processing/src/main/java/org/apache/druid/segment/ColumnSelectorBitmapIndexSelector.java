@@ -216,7 +216,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       // Create a BitmapIndex so that filters applied to null columns can use
       // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
       // whether the filter is applied in the pre or post filtering stage.
-      return BitmapIndexes.forNullOnlyColumn(this::getNumRows, bitmapFactory);
+      return BitmapIndexes.forNilColumn(this::getNumRows, bitmapFactory);
     } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
       // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
       // other types of dictionary encoded columns

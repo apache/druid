@@ -39,7 +39,7 @@ public final class BitmapIndexes
    *                         evaluated lazily.
    * @param bitmapFactory    a bitmapFactory to create a bitmapIndex.
    */
-  public static BitmapIndex forNullOnlyColumn(IntSupplier rowCountSupplier, BitmapFactory bitmapFactory)
+  public static BitmapIndex forNilColumn(IntSupplier rowCountSupplier, BitmapFactory bitmapFactory)
   {
     return new BitmapIndex()
     {

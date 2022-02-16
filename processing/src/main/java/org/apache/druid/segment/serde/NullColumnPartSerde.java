@@ -217,7 +217,7 @@ public class NullColumnPartSerde implements ColumnPartSerde
              .setFilterable(true)
              .setBitmapIndex(
                  Suppliers.ofInstance(
-                     BitmapIndexes.forNullOnlyColumn(rowCountSupplier, segmentBitmapSerdeFactory.getBitmapFactory())
+                     BitmapIndexes.forNilColumn(rowCountSupplier, segmentBitmapSerdeFactory.getBitmapFactory())
                  )
              )
              .setNumericColumnSupplier(Suppliers.ofInstance(new NullNumericColumn()))
