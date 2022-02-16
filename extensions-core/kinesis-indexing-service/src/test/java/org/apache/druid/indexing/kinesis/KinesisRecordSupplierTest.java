@@ -1043,42 +1043,37 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     );
     Record record = new Record();
 
-    // Setup mock expectations
-    // No records and null iterator -> empty
-    final String emptyAndClosed = "0";
-    setupMockKinesisForShardId(mockKinesis, emptyAndClosed, new ArrayList<>(), null);
-    // no records and non-null iterator -> non-empty
-    final String emptyAndOpen = "1";
-    setupMockKinesisForShardId(mockKinesis, emptyAndOpen, new ArrayList<>(), "nextIterator");
-    // non-empty records and null iterator -> non-empty
-    final String nonEmptyAndClosed = "2";
-    setupMockKinesisForShardId(mockKinesis, nonEmptyAndClosed, Collections.singletonList(record), null);
-    // non-empty records and non-null iterator -> non-empty
-    final String nonEmptyAndOpen = "3";
-    setupMockKinesisForShardId(mockKinesis, nonEmptyAndOpen, Collections.singletonList(record), "nextIterator");
+    //Empty if and only if returned records are empty and the iterator is null
+    final String recordsAbsentAndNullNext = "0";
+    setupMockKinesisForShardId(mockKinesis, recordsAbsentAndNullNext, new ArrayList<>(), null);
+
+    final String recordsPresentAndNullNext = "1";
+    setupMockKinesisForShardId(mockKinesis, recordsPresentAndNullNext, Collections.singletonList(record), null);
+
+    final String recordsAbsentAndNonNullNext = "2";
+    setupMockKinesisForShardId(mockKinesis, recordsAbsentAndNonNullNext, new ArrayList<>(), "nextIterator");
+
+    final String recordsPresentAndNonNullNext = "3";
+    setupMockKinesisForShardId(mockKinesis, recordsPresentAndNonNullNext, Collections.singletonList(record), "nextIterator");
 
     EasyMock.replay(mockKinesis);
 
-    Assert.assertTrue(target.isClosedShardEmpty(STREAM, emptyAndClosed));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, emptyAndOpen));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, nonEmptyAndClosed));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, nonEmptyAndOpen));
+    Assert.assertTrue(target.isClosedShardEmpty(STREAM, recordsAbsentAndNullNext));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsPresentAndNullNext));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsAbsentAndNonNullNext));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsPresentAndNonNullNext));
   }
 
-  // make it less verbose
   private void setupMockKinesisForShardId(AmazonKinesis kinesis, String shardId,
                                           List<Record> expectedRecords, String expectedNextIterator)
   {
     String shardIteratorType = ShardIteratorType.TRIM_HORIZON.toString();
     String shardIterator = "shardIterator" + shardId;
-    GetShardIteratorResult shardIteratorResult = EasyMock.mock(GetShardIteratorResult.class);
+    GetShardIteratorResult shardIteratorResult = new GetShardIteratorResult().withShardIterator(shardIterator);
     EasyMock.expect(kinesis.getShardIterator(STREAM, shardId, shardIteratorType)).andReturn(shardIteratorResult).once();
-    EasyMock.expect(shardIteratorResult.getShardIterator()).andReturn(shardIterator).once();
     GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1);
-    GetRecordsResult result = EasyMock.mock(GetRecordsResult.class);
-    EasyMock.expect(kinesis.getRecords(request)).andReturn(result).once();
-    EasyMock.expect(result.getNextShardIterator()).andReturn(expectedNextIterator).once();
-    EasyMock.expect(result.getRecords()).andReturn(expectedRecords).once();
-    EasyMock.replay(shardIteratorResult, result);
+    GetRecordsResult result = new GetRecordsResult().withRecords(expectedRecords)
+                                                    .withNextShardIterator(expectedNextIterator);
+    EasyMock.expect(kinesis.getRecords(request)).andReturn(result);
   }
 }
