@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.BiFunction;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -67,13 +68,12 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             return false;
           }
           final T row = intermediateRowIteratorWithMetadata.next();
-          final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
-
           try {
             rows = parseInputRows(row).iterator();
             ++currentRecordNumber;
           }
           catch (IOException e) {
+            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
             rows = new ExceptionThrowingIterator(
                 new ParseException.Builder()
                     .setInput(String.valueOf(row))
@@ -89,6 +89,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             );
           }
           catch (ParseException e) {
+            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
             ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
             enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
                 e.getMessage(),
@@ -124,34 +125,66 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return intermediateRowIteratorWithMetadata().mapWithMetadata((row, metadata) -> {
 
-      final List<Map<String, Object>> rawColumnsList;
-      try {
-        rawColumnsList = toMap(row);
-      }
-      catch (Exception e) {
-        return InputRowListPlusRawValues.of(
-            null,
-            new ParseException.Builder()
+    final CloseableIteratorWithMetadata<T> delegate = intermediateRowIteratorWithMetadata();
+    final BiFunction<T, Map<String, Object>, InputRowListPlusRawValues> samplingFunction =
+        (row, metadata) -> {
+
+          final List<Map<String, Object>> rawColumnsList;
+          try {
+            rawColumnsList = toMap(row);
+          }
+          catch (Exception e) {
+            return InputRowListPlusRawValues.of(
+                null,
+                new ParseException.Builder()
+                    .setInput(String.valueOf(row))
+                    .setCause(e)
+                    .setMessage(buildParseExceptionMessage(
+                        "Unable to parse row [%s] into JSON",
+                        source(),
+                        null,
+                        metadata,
+                        row
+                    ))
+                    .build()
+            );
+          }
+
+          if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
+            return InputRowListPlusRawValues.of(
+                null,
+                new ParseException.Builder()
+                    .setInput(String.valueOf(row))
+                    .setMessage(buildParseExceptionMessage(
+                        "No map object parsed for row [%s]",
+                        source(),
+                        null,
+                        metadata,
+                        row
+                    ))
+                    .build()
+            );
+          }
+
+          List<InputRow> rows;
+          try {
+            rows = parseInputRows(row);
+          }
+          catch (ParseException e) {
+            ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
+            enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
+                e.getMessage(),
+                source(),
+                null,
+                metadata
+            ));
+            return InputRowListPlusRawValues.ofList(rawColumnsList, enrichedParseExceptionBuilder.build());
+          }
+          catch (IOException e) {
+            ParseException exception = new ParseException.Builder()
                 .setInput(String.valueOf(row))
                 .setCause(e)
-                .setMessage(buildParseExceptionMessage(
-                    "Unable to parse row [%s] into JSON",
-                    source(),
-                    null,
-                    metadata,
-                    row
-                ))
-                .build()
-        );
-      }
-
-      if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
-        return InputRowListPlusRawValues.of(
-            null,
-            new ParseException.Builder()
-                .setInput(String.valueOf(row))
                 .setMessage(buildParseExceptionMessage(
                     "No map object parsed for row [%s]",
                     source(),
@@ -159,41 +192,37 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
                     metadata,
                     row
                 ))
-                .build()
-        );
+                .build();
+            return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
+          }
+
+          return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
+        };
+
+    return new CloseableIterator<InputRowListPlusRawValues>()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        delegate.close();
       }
 
-      List<InputRow> rows;
-      try {
-        rows = parseInputRows(row);
-      }
-      catch (ParseException e) {
-        ParseException.Builder enrichedParseExceptionBuilder = new ParseException.Builder(e);
-        enrichedParseExceptionBuilder.setMessage(buildParseExceptionMessage(
-            e.getMessage(),
-            source(),
-            null,
-            metadata
-        ));
-        return InputRowListPlusRawValues.ofList(rawColumnsList, enrichedParseExceptionBuilder.build());
-      }
-      catch (IOException e) {
-        ParseException exception = new ParseException.Builder()
-            .setInput(String.valueOf(row))
-            .setCause(e)
-            .setMessage(buildParseExceptionMessage(
-                "No map object parsed for row [%s]",
-                source(),
-                null,
-                metadata,
-                row
-            ))
-            .build();
-        return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
+      @Override
+      public boolean hasNext()
+      {
+        return delegate.hasNext();
       }
 
-      return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
-    });
+      @Override
+      public InputRowListPlusRawValues next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+
+        return samplingFunction.apply(delegate.next(), delegate.metadata());
+      }
+    };
   }
 
   /**
@@ -215,7 +244,10 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   }
 
   /**
-   * @return InputEntity which the subclass is reading from. Useful in generating informative {@link ParseException}s
+   * @return InputEntity which the implementation is reading from. Useful in generating informative {@link ParseException}s.
+   * For example, in case of {@link org.apache.druid.data.input.impl.FileEntity}, file name containing erroneous records
+   * or in case of {@link org.apache.druid.data.input.impl.HttpEntity}, the endpoint containing the erroneous data can
+   * be attached to the error message
    */
   @Nullable
   protected InputEntity source()
@@ -243,12 +275,17 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       String formatString,
       @Nullable InputEntity source,
       @Nullable Long recordNumber,
-      Map<String, Object> metadata,
+      @Nullable Map<String, Object> metadata,
       Object... baseArgs
   )
   {
-    Map<String, Object> temp = Maps.newHashMap(metadata);
-    if (source != null) {
+    Map<String, Object> temp;
+    if (metadata == null) {
+      temp = Maps.newHashMap();
+    } else {
+      temp = Maps.newHashMap(metadata);
+    }
+    if (source != null && source.getUri() != null) {
       temp.put("source", source.getUri());
     }
     if (recordNumber != null) {

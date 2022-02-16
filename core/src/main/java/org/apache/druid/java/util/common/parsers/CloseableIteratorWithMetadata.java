@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * Like {@link CloseableIterator}, but has a metadata() method, which returns "metadata", which is effectively a Map<String, Object>
@@ -42,44 +40,6 @@ import java.util.function.Function;
 public interface CloseableIteratorWithMetadata<T> extends CloseableIterator<T>
 {
   Map<String, Object> metadata();
-
-  /**
-   * Like {@link CloseableIterator#map(Function)} but also supplies the metadata to the mapping function
-   */
-  default <R> CloseableIteratorWithMetadata<R> mapWithMetadata(BiFunction<T, Map<String, Object>, R> mapBiFunction)
-  {
-    final CloseableIteratorWithMetadata<T> delegate = this;
-
-    return new CloseableIteratorWithMetadata<R>()
-    {
-      @Override
-      public Map<String, Object> metadata()
-      {
-        return delegate.metadata();
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return delegate.hasNext();
-      }
-
-      @Override
-      public R next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        return mapBiFunction.apply(delegate.next(), delegate.metadata());
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        delegate.close();
-      }
-    };
-  }
 
   static <T> CloseableIteratorWithMetadata<T> fromCloseableIterator(CloseableIterator<T> delegate)
   {
