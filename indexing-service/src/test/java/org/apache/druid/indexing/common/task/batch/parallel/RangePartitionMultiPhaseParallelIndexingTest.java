@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -319,6 +320,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       return;
     }
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim")
+    );
     ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
         null,
         null,
@@ -327,9 +331,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             new DataSchema(
                 DATASOURCE,
                 TIMESTAMP_SPEC,
-                DIMENSIONS_SPEC.withDimensions(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "unknownDim"))
-                ),
+                DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
                 DEFAULT_METRICS_SPEC,
                 new UniformGranularitySpec(
                     Granularities.DAY,
@@ -363,7 +365,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
     Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
     for (DataSegment segment : segments) {
-      Assert.assertTrue(segment.getDimensions().contains("unknownDim"));
+      for (int i = 0; i < dimensionSchemas.size(); i++) {
+        Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
+      }
     }
   }
 

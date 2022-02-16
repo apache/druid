@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -330,6 +331,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       return;
     }
     // Ingest all data.
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim", "dim")
+    );
     ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
         null,
         null,
@@ -338,9 +342,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             new DataSchema(
                 "dataSource",
                 DEFAULT_TIMESTAMP_SPEC,
-                DEFAULT_DIMENSIONS_SPEC.withDimensions(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim", "unknownDim"))
-                ),
+                DEFAULT_DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
                 },
@@ -368,7 +370,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
     for (DataSegment segment : segments) {
-      Assert.assertTrue(segment.getDimensions().contains("unknownDim"));
+      for (int i = 0; i < dimensionSchemas.size(); i++) {
+        Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
+      }
     }
   }
 
@@ -379,6 +383,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       return;
     }
     // Ingest all data.
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim", "dim")
+    );
     ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
         null,
         null,
@@ -387,9 +394,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             new DataSchema(
                 "dataSource",
                 DEFAULT_TIMESTAMP_SPEC,
-                DEFAULT_DIMENSIONS_SPEC.withDimensions(
-                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim", "unknownDim"))
-                ),
+                DEFAULT_DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("val", "val")
                 },

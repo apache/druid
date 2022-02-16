@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -532,7 +533,8 @@ public class IndexIO
     }
 
     @Override
-    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+        throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();
@@ -758,7 +760,14 @@ public class IndexIO
         columns.put(columnName, Suppliers.memoize(
             () -> {
               try {
-                return deserializeColumn(mapper, colBuffer, smooshedFiles, rowCountSupplier, segmentBitmapSerdeFactory);
+                return deserializeColumn(
+                    columnName,
+                    mapper,
+                    colBuffer,
+                    smooshedFiles,
+                    rowCountSupplier,
+                    segmentBitmapSerdeFactory
+                );
               }
               catch (IOException | RuntimeException e) {
                 log.warn(e, "Throw exceptions when deserialize column [%s].", columnName);
@@ -769,6 +778,7 @@ public class IndexIO
         ));
       } else {
         ColumnHolder columnHolder = deserializeColumn(
+            columnName,
             mapper,
             colBuffer,
             smooshedFiles,
@@ -779,7 +789,13 @@ public class IndexIO
       }
     }
 
-    private ColumnHolder deserializeColumn(
+    /**
+     * Deserialize a column from the given ByteBuffer.
+     * Visible for failure testing. See {@link V9IndexLoaderTest#testLoadSegmentDamagedFileWithLazy()}.
+     */
+    @VisibleForTesting
+    ColumnHolder deserializeColumn(
+        String columnName, // columnName is not used in this method, but used in tests.
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles,

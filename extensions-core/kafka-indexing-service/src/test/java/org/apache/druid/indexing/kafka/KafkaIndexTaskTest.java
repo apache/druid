@@ -442,20 +442,19 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Insert data
     insertData();
 
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(
+            new StringDimensionSchema("dim1"),
+            new StringDimensionSchema("dim1t"),
+            new StringDimensionSchema("unknownDim"),
+            new StringDimensionSchema("dim2"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat")
+        )
+    );
     final KafkaIndexTask task = createTask(
         null,
-        NEW_DATA_SCHEMA.withDimensionsSpec(
-            new DimensionsSpec(
-                ImmutableList.of(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("unknownDim")
-                )
-            )
-        ),
+        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -476,7 +475,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final Collection<DataSegment> segments = publishedSegments();
     for (DataSegment segment : segments) {
-      Assert.assertTrue(segment.getDimensions().contains("unknownDim"));
+      for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
+        Assert.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
+      }
     }
   }
 
