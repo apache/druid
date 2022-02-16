@@ -305,7 +305,7 @@ public class CalciteTests
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5")))
+                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5", "dim6")))
                   .add(new DoubleDimensionSchema("d1"))
                   .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
@@ -537,6 +537,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("a", "b"))
           .put("dim4", "a")
           .put("dim5", "aa")
+          .put("dim6", "1")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-02")
@@ -553,6 +554,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("b", "c"))
           .put("dim4", "a")
           .put("dim5", "ab")
+          .put("dim6", "2")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2000-01-03")
@@ -569,6 +571,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of("d"))
           .put("dim4", "a")
           .put("dim5", "ba")
+          .put("dim6", "3")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-01")
@@ -579,6 +582,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of(""))
           .put("dim4", "b")
           .put("dim5", "ad")
+          .put("dim6", "4")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-02")
@@ -589,6 +593,7 @@ public class CalciteTests
           .put("dim3", ImmutableList.of())
           .put("dim4", "b")
           .put("dim5", "aa")
+          .put("dim6", "5")
           .build(),
       ImmutableMap.<String, Object>builder()
           .put("t", "2001-01-03")
@@ -597,6 +602,7 @@ public class CalciteTests
           .put("dim1", "abc")
           .put("dim4", "b")
           .put("dim5", "ab")
+          .put("dim6", "6")
           .build()
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
