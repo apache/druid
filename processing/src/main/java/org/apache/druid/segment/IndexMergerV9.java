@@ -88,8 +88,6 @@ import java.util.stream.IntStream;
 
 public class IndexMergerV9 implements IndexMerger
 {
-  public static final String NON_NULL_COLUMN_NAME_HOLDER = "%%";
-
   private static final Logger log = new Logger(IndexMergerV9.class);
 
   // merge logic for the state capabilities will be in after incremental index is persisted
@@ -357,27 +355,38 @@ public class IndexMergerV9 implements IndexMerger
       final List<DimensionMergerV9> mergers
   ) throws IOException
   {
+    final Set<String> columnSet = new HashSet<>(mergedDimensions);
+    columnSet.addAll(mergedMetrics);
+    Preconditions.checkState(
+        columnSet.size() == mergedDimensions.size() + mergedMetrics.size(),
+        "column names are not unique in dims%s and mets%s",
+        mergedDimensions,
+        mergedMetrics
+    );
+
     final String section = "make index.drd";
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> nonNullOnlyDimensions = new LinkedHashSet<>();
-    final Set<String> nonNullOnlyColumns = new LinkedHashSet<>(mergedMetrics);
+
     // The original column order is encoded in the below arrayLists.
-    // At the positions where there is a non-null column in mergedDimensions/mergedMetrics,
-    // NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name. At other positions,
-    // the name of null columns are stored. When the segment is loaded, original column order is restored
+    // At the positions where there is a non-null column in uniqueDims/uniqueMets,
+    // null is stored instead of actual column name. At other positions, the name of null columns are stored.
+    // When the segment is loaded, original column order is restored
     // by merging nonNullOnlyColumns/nonNullOnlyDimensions and allColumns/allDimensions.
     // See V9IndexLoader.restoreColumns() for more details of how the original order is restored.
+    final List<String> nonNullOnlyDimensions = new ArrayList<>(mergedDimensions.size());
+    final List<String> nonNullOnlyColumns = new ArrayList<>(mergedDimensions.size() + mergedMetrics.size());
+    nonNullOnlyColumns.addAll(mergedMetrics);
     final List<String> allDimensions = new ArrayList<>(mergedDimensions.size());
     final List<String> allColumns = new ArrayList<>(mergedDimensions.size() + mergedMetrics.size());
-    IntStream.range(0, mergedMetrics.size()).forEach(i -> allColumns.add(NON_NULL_COLUMN_NAME_HOLDER));
+    IntStream.range(0, mergedMetrics.size()).forEach(i -> allColumns.add(null));
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       if (!mergers.get(i).hasOnlyNulls()) {
         nonNullOnlyDimensions.add(mergedDimensions.get(i));
         nonNullOnlyColumns.add(mergedDimensions.get(i));
-        allDimensions.add(NON_NULL_COLUMN_NAME_HOLDER);
-        allColumns.add(NON_NULL_COLUMN_NAME_HOLDER);
+        allDimensions.add(null);
+        allColumns.add(null);
       } else if (mergers.get(i).shouldStore()) {
         // shouldStore AND hasOnlyNulls
         allDimensions.add(mergedDimensions.get(i));

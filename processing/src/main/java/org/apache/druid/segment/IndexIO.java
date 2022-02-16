@@ -638,14 +638,7 @@ public class IndexIO
       final GenericIndexed<String> finalCols, finalDims;
 
       if (allCols != null) {
-        // The original column order is encoded in the below arrayLists.
-        // nonNullCols/nonNullDims have only non-null columns,
-        // while allCols/allDims have null-only columns and NON_NULL_COLUMN_NAME_HOLDERs.
-        // In allCols/allDims, at the positions corresponding to non-null columns in the original column order,
-        // NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name. For other positions,
-        // null column names are stored. See IndexMergerV9.makeIndexBinary() for more details of how column order
-        // is encoded.
-        // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims.
+        // To restore original column order, we merge allCols/allDims and nonNullCols/nonNullDims, respectively.
         final List<String> mergedCols = restoreColumns(nonNullCols, allCols);
         final List<String> mergedDims = restoreColumns(nonNullDims, allDims);
         finalCols = GenericIndexed.fromIterable(mergedCols, GenericIndexed.STRING_STRATEGY);
@@ -687,8 +680,8 @@ public class IndexIO
      * the original order that is used when this segment is created.
      *
      * The original column order is encoded in two input GenericIndexeds. nonNullCols have only non-null columns,
-     * while allCols have null-only columns and {@link IndexMergerV9#NON_NULL_COLUMN_NAME_HOLDER}s.
-     * In allCols, NON_NULL_COLUMN_NAME_HOLDER is stored instead of actual column name
+     * while allCols have null-only columns and nulls.
+     * In allCols, null is stored instead of actual column name
      * at the positions corresponding to non-null columns in the original column order. At other positions,
      * the name of null columns are stored. See IndexMergerV9.makeIndexBinary() for more details of how column order
      * is encoded.
@@ -700,13 +693,12 @@ public class IndexIO
       Iterator<String> nonNullColsIterator = nonNullCols.iterator();
       while (allColsIterator.hasNext()) {
         final String next = allColsIterator.next();
-        if (IndexMergerV9.NON_NULL_COLUMN_NAME_HOLDER.equals(next)) {
+        if (next == null) {
           Preconditions.checkState(
               nonNullColsIterator.hasNext(),
               "There is no more column name to iterate in nonNullColsIterator "
-              + "while the next column name in allColsIterator is %s. This is likely a potential bug in ingestion. "
-              + "Try reingesting your data with storeNullColumns setting to false in task context",
-              next
+              + "while allColsIterator expects one. This is likely a potential bug in creating this segment. "
+              + "Try reingesting your data with storeNullColumns setting to false in task context."
           );
           mergedCols.add(nonNullColsIterator.next());
         } else {
