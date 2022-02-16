@@ -376,7 +376,7 @@ Note that, for groupBy queries, you could get similar result with a [having spec
 `dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
 
-## Disable GroupBy on multivalue columns
+## Disable GroupBy on multi-value columns
 
 You can disable the implicit unnesting behavior for groupBy by setting groupByEnableMultiValueUnnesting: false in your 
 query context. In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 

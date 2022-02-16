@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -1315,7 +1316,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   {
 
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(UnsupportedOperationException.class);
+      expectedException.expect(UOE.class);
       expectedException.expectMessage(StringUtils.format(
           "GroupBy v1 does not support %s as false",
           GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
