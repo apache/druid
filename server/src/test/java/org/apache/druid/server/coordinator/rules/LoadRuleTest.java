@@ -52,6 +52,7 @@ import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -393,12 +394,14 @@ public class LoadRuleTest
 
     LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 1));
 
-    DataSegment segment0 = createDataSegmentWithInterval(createDataSegment("foo"),
-                                                        JodaUtils.MIN_INSTANT,
-                                                        JodaUtils.MAX_INSTANT);
-    DataSegment segment1 = createDataSegmentWithInterval(createDataSegment("foo"),
+    DataSegment segment0 = createDataSegmentWithIntervalAndPartition(createDataSegment("foo"),
                                                          JodaUtils.MIN_INSTANT,
-                                                         JodaUtils.MAX_INSTANT);
+                                                         JodaUtils.MAX_INSTANT,
+                                                         0);
+    DataSegment segment1 = createDataSegmentWithIntervalAndPartition(createDataSegment("foo"),
+                                                         JodaUtils.MIN_INSTANT,
+                                                         JodaUtils.MAX_INSTANT,
+                                                         1);
 
     final LoadQueuePeon loadingPeon = createLoadingPeon(ImmutableList.of(segment0), true);
 
@@ -857,10 +860,12 @@ public class LoadRuleTest
     );
   }
 
-  private DataSegment createDataSegmentWithInterval(DataSegment dataSegment, long startMillis, long endMillis)
+  private DataSegment createDataSegmentWithIntervalAndPartition(DataSegment dataSegment, long startMillis, long endMillis, int partitionNum)
   {
-    DataSegment.Builder builder = new DataSegment.Builder(dataSegment);
-    return builder.interval(new Interval(startMillis, endMillis, dataSegment.getInterval().getChronology())).build();
+    return new DataSegment.Builder(dataSegment)
+        .interval(new Interval(startMillis, endMillis, dataSegment.getInterval().getChronology()))
+        .shardSpec(new LinearShardSpec(partitionNum))
+        .build();
   }
 
   private static LoadRule createLoadRule(final Map<String, Integer> tieredReplicants)
