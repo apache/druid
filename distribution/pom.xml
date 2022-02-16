@@ -850,6 +850,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-knox-password-provider</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-hash-name-numbered-shard-spec</argument>
+					  <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-serverset-password-provider</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -908,6 +910,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-hash-name-numbered-shard-spec</argument>
                                         <!--<argument>-c</argument>-->
                                         <!--<argument>org.apache.druid.extensions.contrib:druid-collectset</argument>-->
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-serverset-password-provider</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
