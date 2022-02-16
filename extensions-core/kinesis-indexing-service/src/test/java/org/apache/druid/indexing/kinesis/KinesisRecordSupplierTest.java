@@ -1043,25 +1043,25 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     );
     Record record = new Record();
 
-    //Empty if and only if returned records are empty and the iterator is null
-    final String recordsAbsentAndNullNext = "0";
-    setupMockKinesisForShardId(mockKinesis, recordsAbsentAndNullNext, new ArrayList<>(), null);
+    final String shardWithoutRecordsAndNullNextIterator = "0";
+    setupMockKinesisForShardId(mockKinesis, shardWithoutRecordsAndNullNextIterator, new ArrayList<>(), null);
 
-    final String recordsPresentAndNullNext = "1";
-    setupMockKinesisForShardId(mockKinesis, recordsPresentAndNullNext, Collections.singletonList(record), null);
+    final String shardWithRecordsAndNullNextIterator = "1";
+    setupMockKinesisForShardId(mockKinesis, shardWithRecordsAndNullNextIterator, Collections.singletonList(record), null);
 
-    final String recordsAbsentAndNonNullNext = "2";
-    setupMockKinesisForShardId(mockKinesis, recordsAbsentAndNonNullNext, new ArrayList<>(), "nextIterator");
+    final String shardWithoutRecordsAndNonNullNextIterator = "2";
+    setupMockKinesisForShardId(mockKinesis, shardWithoutRecordsAndNonNullNextIterator, new ArrayList<>(), "nextIterator");
 
-    final String recordsPresentAndNonNullNext = "3";
-    setupMockKinesisForShardId(mockKinesis, recordsPresentAndNonNullNext, Collections.singletonList(record), "nextIterator");
+    final String shardWithRecordsAndNonNullNextIterator = "3";
+    setupMockKinesisForShardId(mockKinesis, shardWithRecordsAndNonNullNextIterator, Collections.singletonList(record), "nextIterator");
 
     EasyMock.replay(mockKinesis);
 
-    Assert.assertTrue(target.isClosedShardEmpty(STREAM, recordsAbsentAndNullNext));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsPresentAndNullNext));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsAbsentAndNonNullNext));
-    Assert.assertFalse(target.isClosedShardEmpty(STREAM, recordsPresentAndNonNullNext));
+    // A closed shard is empty only when the records are empty and the next iterator is null
+    Assert.assertTrue(target.isClosedShardEmpty(STREAM, shardWithoutRecordsAndNullNextIterator));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithRecordsAndNullNextIterator));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithoutRecordsAndNonNullNextIterator));
+    Assert.assertFalse(target.isClosedShardEmpty(STREAM, shardWithRecordsAndNonNullNextIterator));
   }
 
   private void setupMockKinesisForShardId(AmazonKinesis kinesis, String shardId,

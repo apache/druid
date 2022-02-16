@@ -4902,34 +4902,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     SequenceNumberRange openShardRange = new SequenceNumberRange().withEndingSequenceNumber(null);
     SequenceNumberRange closedShardRange = new SequenceNumberRange().withEndingSequenceNumber("non-null");
 
-    // Open shard
-    Shard openShard = EasyMock.mock(Shard.class);
-    EasyMock.expect(openShard.getShardId()).andReturn("openShard").anyTimes();
-    EasyMock.expect(openShard.getSequenceNumberRange()).andReturn(openShardRange).anyTimes();
+    Shard openShard = new Shard().withShardId("openShard")
+                                 .withSequenceNumberRange(openShardRange);
+    Shard emptyClosedShard = new Shard().withShardId("emptyClosedShard")
+                                        .withSequenceNumberRange(closedShardRange);
+    Shard nonEmptyClosedShard = new Shard().withShardId("nonEmptyClosedShard")
+                                           .withSequenceNumberRange(closedShardRange);
 
-    // Empty, closed shard
-    Shard emptyClosedShard = EasyMock.mock(Shard.class);
-    EasyMock.expect(emptyClosedShard.getShardId()).andReturn("emptyClosedShard").anyTimes();
-    EasyMock.expect(emptyClosedShard.getSequenceNumberRange()).andReturn(closedShardRange).anyTimes();
-
-    // Non-empty, closed shard
-    Shard nonEmptyClosedShard = EasyMock.mock(Shard.class);
-    EasyMock.expect(nonEmptyClosedShard.getShardId()).andReturn("nonEmptyClosedShard").anyTimes();
-    EasyMock.expect(nonEmptyClosedShard.getSequenceNumberRange()).andReturn(closedShardRange).anyTimes();
-
-    EasyMock.replay(openShard, emptyClosedShard, nonEmptyClosedShard);
-
-    Set<Shard> activeShards0 = Stream.of(openShard, emptyClosedShard, nonEmptyClosedShard).collect(Collectors.toSet());
-    Set<Shard> activeShards1 = Stream.of(openShard, emptyClosedShard, nonEmptyClosedShard).collect(Collectors.toSet());
-    Set<Shard> activeShards2 = Stream.of(openShard, emptyClosedShard).collect(Collectors.toSet());
-    Set<Shard> activeShards3 = Stream.of(openShard).collect(Collectors.toSet());
-    Set<Shard> activeShards4 = Stream.of(openShard, emptyClosedShard, nonEmptyClosedShard).collect(Collectors.toSet());
     EasyMock.expect(supervisorRecordSupplier.getShards(stream))
-            .andReturn(activeShards0).once()
-            .andReturn(activeShards1).once()
-            .andReturn(activeShards2).once()
-            .andReturn(activeShards3).once()
-            .andReturn(activeShards4).once();
+            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once()
+            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once()
+            .andReturn(ImmutableSet.of(openShard, emptyClosedShard)).once()
+            .andReturn(ImmutableSet.of(openShard)).once()
+            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once();
 
     // The following calls happen twice, once during the first call since there was no cache,
     // and once during the last since the cache was cleared prior to it
@@ -4940,13 +4925,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.replay(supervisorRecordSupplier);
 
-    // There is a closed and empty shard, which can be ignored
+    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
+    // {empty-closed, nonEmpty-closed} added to cache
     Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
     Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    // ActiveShards = {open, empty-closed}, IgnorableShards = {empty-closed}
+    // {nonEmpty-closed} removed from cache
     Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
-    // The closed and empty shard expired and no longer needs to be considered
+    // ActiveShards = {open}, IgnorableShards = {}
+    // {empty-closed} removed from cache
     Assert.assertEquals(new HashSet<>(), supervisor.getIgnorablePartitionIds());
-    // A closed and empty shard has been added again, which can be ignored
+    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
+    // {empty-closed, nonEmpty-closed} re-added to cache
     Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
   }
 
