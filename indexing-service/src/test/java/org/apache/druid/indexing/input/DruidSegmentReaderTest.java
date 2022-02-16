@@ -58,6 +58,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -582,6 +583,13 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     }
     Assert.assertTrue("File is not closed", isFileClosed.booleanValue());
     Assert.assertTrue("Sequence is not closed", isSequenceClosed.booleanValue());
+  }
+
+  @Test
+  public void testFetchSource()
+  {
+    DruidSegmentReader reader = Mockito.mock(DruidSegmentReader.class);
+    reader.source();
   }
 
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
