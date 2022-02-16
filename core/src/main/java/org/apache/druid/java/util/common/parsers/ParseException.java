@@ -19,10 +19,8 @@
 
 package org.apache.druid.java.util.common.parsers;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -76,5 +74,21 @@ public class ParseException extends RuntimeException
   public ParseException(@Nullable String input, Throwable cause, String formatText, Object... arguments)
   {
     this(input, false, StringUtils.nonStrictFormat(formatText, arguments), cause);
+  }
+
+  public boolean isFromPartiallyValidRow()
+  {
+    return fromPartiallyValidRow;
+  }
+
+  public long getTimeOfExceptionMillis()
+  {
+    return timeOfExceptionMillis;
+  }
+
+  @Nullable
+  public String getInput()
+  {
+    return input;
   }
 }

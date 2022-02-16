@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
@@ -29,7 +28,6 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -264,7 +262,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
     if (recordNumber != null) {
       sb.append(StringUtils.format(" Record number: [%d].", recordNumber));
     }
-    if(metadata != null && !metadata.isEmpty()) {
+    if (metadata != null && !metadata.isEmpty()) {
       sb.append(StringUtils.format(" Additional info: [%s].", metadata));
     }
     sb.append(" )");
