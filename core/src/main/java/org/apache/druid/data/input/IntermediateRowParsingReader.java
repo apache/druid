@@ -28,6 +28,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -255,17 +256,21 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   )
   {
     StringBuilder sb = new StringBuilder(baseExceptionMessage);
-    sb.append(" (");
+    List<String> temp = new ArrayList<>();
     if (source != null && source.getUri() != null) {
-      sb.append(StringUtils.format(" Source info: [%s].", source.getUri()));
+      temp.add(StringUtils.format("Source info:[%s]", source.getUri()));
     }
     if (recordNumber != null) {
-      sb.append(StringUtils.format(" Record number: [%d].", recordNumber));
+      temp.add(StringUtils.format("Record number:[%d]", recordNumber));
     }
     if (metadata != null && !metadata.isEmpty()) {
-      sb.append(StringUtils.format(" Additional info: [%s].", metadata));
+      temp.add(StringUtils.format("Additional info:%s", metadata));
     }
-    sb.append(" )");
+    if (!temp.isEmpty()) {
+      sb.append(" (");
+      sb.append(String.join(", ", temp));
+      sb.append(")");
+    }
     return sb.toString();
   }
 
