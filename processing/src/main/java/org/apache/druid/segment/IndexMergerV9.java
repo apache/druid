@@ -61,6 +61,7 @@ import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
 import org.apache.druid.segment.serde.FloatNumericColumnPartSerdeV2;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerde;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerdeV2;
+import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.DateTime;
@@ -252,7 +253,6 @@ public class IndexMergerV9 implements IndexMerger
                 indexSpec,
                 segmentWriteOutMedium,
                 dimCapabilities.get(i),
-                storeEmptyColumns && explicitDimensions.contains(handler.getDimensionName()),
                 progress,
                 closer
             )
@@ -306,8 +306,15 @@ public class IndexMergerV9 implements IndexMerger
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (merger.shouldStore() || !merger.hasOnlyNulls()) {
+        if (!merger.hasOnlyNulls()) {
           ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
+          makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
+        } else if (shouldStore(storeEmptyColumns, explicitDimensions, mergedDimensions.get(i))) {
+          // shouldStore AND hasOnlyNulls
+          ColumnDescriptor columnDesc = ColumnDescriptor.builder()
+                                                        .setValueType(dimCapabilities.get(i).getType())
+                                                        .addSerde(NullColumnPartSerde.getInstance())
+                                                        .build();
           makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
         }
       }
@@ -316,7 +323,18 @@ public class IndexMergerV9 implements IndexMerger
 
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
-      makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers);
+      makeIndexBinary(
+          v9Smoosher,
+          adapters,
+          outDir,
+          mergedDimensions,
+          mergedMetrics,
+          progress,
+          indexSpec,
+          mergers,
+          storeEmptyColumns,
+          explicitDimensions
+      );
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
       v9Smoosher.close();
@@ -330,6 +348,15 @@ public class IndexMergerV9 implements IndexMerger
     finally {
       closer.close();
     }
+  }
+
+  private boolean shouldStore(
+      boolean storeEmptyColumns,
+      Set<String> explicitDimensions,
+      String dimension
+  )
+  {
+    return storeEmptyColumns && explicitDimensions.contains(dimension);
   }
 
   private void makeMetadataBinary(
@@ -353,7 +380,9 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
-      final List<DimensionMergerV9> mergers
+      final List<DimensionMergerV9> mergers,
+      final boolean storeEmptyColumns,
+      final Set<String> explicitDimensions
   ) throws IOException
   {
     final Set<String> columnSet = new HashSet<>(mergedDimensions);
@@ -388,7 +417,7 @@ public class IndexMergerV9 implements IndexMerger
         nonNullOnlyColumns.add(mergedDimensions.get(i));
         allDimensions.add(null);
         allColumns.add(null);
-      } else if (mergers.get(i).shouldStore()) {
+      } else if (shouldStore(storeEmptyColumns, explicitDimensions, mergedDimensions.get(i))) {
         // shouldStore AND hasOnlyNulls
         allDimensions.add(mergedDimensions.get(i));
         allColumns.add(mergedDimensions.get(i));

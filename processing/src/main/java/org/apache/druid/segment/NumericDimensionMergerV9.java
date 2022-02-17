@@ -86,12 +86,6 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
   }
 
   @Override
-  public boolean shouldStore()
-  {
-    return true;
-  }
-
-  @Override
   public boolean hasOnlyNulls()
   {
     // We have not implemented handling null-only numeric dimensions yet.

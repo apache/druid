@@ -80,7 +80,6 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   )

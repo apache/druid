@@ -125,13 +125,6 @@ public interface DimensionMerger
   void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions) throws IOException;
 
   /**
-   * Returns true if this dimension should be stored in the segment.
-   * Every explicit dimension in {@link org.apache.druid.data.input.impl.DimensionsSpec} should be stored
-   * even when {@link #hasOnlyNulls()} returns true.
-   */
-  boolean shouldStore();
-
-  /**
    * Returns true if this dimension has no data besides nulls.
    * See {@link org.apache.druid.segment.serde.NullColumnPartSerde} for how null-only columns are stored in the segment.
    */

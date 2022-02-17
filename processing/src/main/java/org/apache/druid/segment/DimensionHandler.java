@@ -116,7 +116,6 @@ public interface DimensionHandler
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   );

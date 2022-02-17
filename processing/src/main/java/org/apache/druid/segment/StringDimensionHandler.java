@@ -162,7 +162,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
-      boolean shouldStore,
       ProgressIndicator progress,
       Closer closer
   )
@@ -181,7 +180,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
         indexSpec,
         segmentWriteOutMedium,
         capabilities,
-        shouldStore,
         progress,
         closer
     );
