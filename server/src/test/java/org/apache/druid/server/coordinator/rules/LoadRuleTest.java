@@ -30,12 +30,14 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BalancerStrategy;
+import org.apache.druid.server.coordinator.CachingCostBalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
@@ -48,7 +50,9 @@ import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -89,6 +93,8 @@ public class LoadRuleTest
   private ListeningExecutorService exec;
   private BalancerStrategy balancerStrategy;
 
+  private CachingCostBalancerStrategy cachingCostBalancerStrategy;
+
   private BalancerStrategy mockBalancerStrategy;
 
   @Before
@@ -100,6 +106,8 @@ public class LoadRuleTest
 
     exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
   }
@@ -377,6 +385,48 @@ public class LoadRuleTest
     Assert.assertEquals(0L, statsAfterLoadPrimary.getTieredStat(LoadRule.ASSIGNED_COUNT, "hot"));
 
     EasyMock.verify(throttler, emptyPeon, mockBalancerStrategy);
+  }
+
+  @Test
+  public void testLoadUsedSegmentsForAllSegmentGranularityAndCachingCostBalancerStrategy()
+  {
+    EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(false).anyTimes();
+
+    LoadRule rule = createLoadRule(ImmutableMap.of("tier1", 1));
+
+    DataSegment segment0 = createDataSegmentWithIntervalAndPartition(createDataSegment("foo"),
+                                                         JodaUtils.MIN_INSTANT,
+                                                         JodaUtils.MAX_INSTANT,
+                                                         0);
+    DataSegment segment1 = createDataSegmentWithIntervalAndPartition(createDataSegment("foo"),
+                                                         JodaUtils.MIN_INSTANT,
+                                                         JodaUtils.MAX_INSTANT,
+                                                         1);
+
+    final LoadQueuePeon loadingPeon = createLoadingPeon(ImmutableList.of(segment0), true);
+
+    loadingPeon.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
+    EasyMock.expectLastCall().once();
+
+    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(cachingCostBalancerStrategy)
+            .anyTimes();
+
+    EasyMock.replay(throttler, loadingPeon, mockBalancerStrategy);
+
+    ImmutableDruidServer server =
+        new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "tier1", 1).toImmutableDruidServer();
+
+    DruidCluster druidCluster = DruidClusterBuilder
+        .newBuilder()
+        .addTier("tier1", new ServerHolder(server, loadingPeon))
+        .build();
+
+    final CoordinatorStats stats = rule.run(null, makeCoordinatorRuntimeParamsWithLoadReplicationOnTimeout(druidCluster, segment0, segment1), segment1);
+
+    Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, "tier1"));
+
+    EasyMock.verify(throttler, loadingPeon, mockBalancerStrategy);
   }
 
   @Test
@@ -808,6 +858,14 @@ public class LoadRuleTest
         0,
         0
     );
+  }
+
+  private DataSegment createDataSegmentWithIntervalAndPartition(DataSegment dataSegment, long startMillis, long endMillis, int partitionNum)
+  {
+    return new DataSegment.Builder(dataSegment)
+        .interval(new Interval(startMillis, endMillis, dataSegment.getInterval().getChronology()))
+        .shardSpec(new LinearShardSpec(partitionNum))
+        .build();
   }
 
   private static LoadRule createLoadRule(final Map<String, Integer> tieredReplicants)
