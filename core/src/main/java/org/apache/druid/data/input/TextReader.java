@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -55,7 +56,8 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       throws IOException
   {
     final LineIterator delegate = new LineIterator(
-        new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
+        // create a small buffer, otherwise LineIterator creates a default 8KB buffer
+        new BufferedReader(new InputStreamReader(source.open(), StringUtils.UTF8_STRING), 256)
     );
     final int numHeaderLines = getNumHeaderLinesToSkip();
     for (int i = 0; i < numHeaderLines && delegate.hasNext(); i++) {
