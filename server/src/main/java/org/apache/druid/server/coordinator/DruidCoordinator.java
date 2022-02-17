@@ -770,7 +770,8 @@ public class DruidCoordinator
     );
   }
 
-  private List<CoordinatorDuty> makeIndexingServiceDuties()
+  @VisibleForTesting
+  List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());

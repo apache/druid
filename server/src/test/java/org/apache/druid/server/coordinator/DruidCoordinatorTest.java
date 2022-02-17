@@ -791,7 +791,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
-  public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupEmpty()
+  public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
   {
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -840,9 +840,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         ZkEnablementConfig.ENABLED
     );
+    // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
+    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
+    Assert.assertTrue(indexingDuties.stream().anyMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+
+    // CompactSegments should not exist in Custom Duty Group
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
     Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
 
+    // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty();
     Assert.assertNotNull(duty);
     Assert.assertEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
@@ -899,9 +905,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         ZkEnablementConfig.ENABLED
     );
+    // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
+    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
+    Assert.assertTrue(indexingDuties.stream().anyMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+
+    // CompactSegments should not exist in Custom Duty Group
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
     Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
 
+    // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty();
     Assert.assertNotNull(duty);
     Assert.assertEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
@@ -979,12 +991,18 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         ZkEnablementConfig.ENABLED
     );
+    // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
+    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
+    Assert.assertTrue(indexingDuties.stream().noneMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+
+    // CompactSegments should exist in Custom Duty Group
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
     Assert.assertFalse(compactSegmentsDutyFromCustomGroups.isEmpty());
     Assert.assertEquals(1, compactSegmentsDutyFromCustomGroups.size());
     Assert.assertNotNull(compactSegmentsDutyFromCustomGroups.get(0));
     Assert.assertTrue(compactSegmentsDutyFromCustomGroups.get(0) instanceof CompactSegments);
 
+    // CompactSegments returned by this method should be from the Custom Duty Group
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty();
     Assert.assertNotNull(duty);
     Assert.assertNotEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
