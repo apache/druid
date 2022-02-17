@@ -91,7 +91,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   private final AWSCredentialsConfig awsCredentialsConfig;
   private volatile Map<String, Long> currentPartitionTimeLag;
 
-  // Maintain sets of currently closed shards to find "bad" (closed and empty) shards
+  // Maintain sets of currently closed shards to find ignorable (closed and empty) shards
   // Poll closed shards once and store the result to avoid redundant costly calls to kinesis
   private final Set<String> emptyClosedShardIds = new TreeSet<>();
   private final Set<String> nonEmptyClosedShardIds = new TreeSet<>();
@@ -441,14 +441,15 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return ImmutableSet.copyOf(emptyClosedShardIds);
   }
 
-  private void updateClosedShardCache()
+  private synchronized void updateClosedShardCache()
   {
-    String stream = spec.getSource();
-    Set<Shard> allActiveShards = ((KinesisRecordSupplier) recordSupplier).getShards(stream);
-    Set<String> activeClosedShards = allActiveShards.stream()
-                                                    .filter(shard -> isShardClosed(shard))
-                                                    .map(Shard::getShardId)
-                                                    .collect(Collectors.toSet());
+    final KinesisRecordSupplier kinesisRecordSupplier = (KinesisRecordSupplier) recordSupplier;
+    final String stream = spec.getSource();
+    final Set<Shard> allActiveShards = kinesisRecordSupplier.getShards(stream);
+    final Set<String> activeClosedShards = allActiveShards.stream()
+                                                          .filter(shard -> isShardClosed(shard))
+                                                          .map(Shard::getShardId)
+                                                          .collect(Collectors.toSet());
 
     // clear stale shards
     emptyClosedShardIds.retainAll(activeClosedShards);
@@ -460,8 +461,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         continue;
       }
 
-      // Check using kinesis and add to cache
-      if (isClosedShardEmpty(stream, closedShardId)) {
+      // Check if it is closed using kinesis and add to cache
+      if (kinesisRecordSupplier.isClosedShardEmpty(stream, closedShardId)) {
         emptyClosedShardIds.add(closedShardId);
       } else {
         nonEmptyClosedShardIds.add(closedShardId);
@@ -544,19 +545,5 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   private boolean isShardClosed(Shard shard)
   {
     return shard.getSequenceNumberRange().getEndingSequenceNumber() != null;
-  }
-
-  /**
-   * Checking if a shard is empty requires fetching records which is quite expensive
-   * Fortunately, the results can be cached for closed shards as no more records can be written to them
-   * Please use this method only if the info is absent from the cache
-   *
-   * @param stream to which the shard belongs
-   * @param shardId of the shard
-   * @return if the shard is empty
-   */
-  private boolean isClosedShardEmpty(String stream, String shardId)
-  {
-    return ((KinesisRecordSupplier) recordSupplier).isClosedShardEmpty(stream, shardId);
   }
 }
