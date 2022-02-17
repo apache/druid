@@ -24,11 +24,9 @@
 {{- $imageValue := $.Values.image }}
 {{- $gCloudValue := $.Values.gCloudStorage }}
 
-
 {{- range $key, $value := .Values.historical.tiers }}
 
-
-{{- if $historicalValue.enabled -}}
+{{ if $historicalValue.enabled -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
