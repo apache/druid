@@ -59,7 +59,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -588,7 +587,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
   // Getter test for satisfying code coverage
   @Test
-  public void testFetchSource()
+  public void testFetchSource() throws IOException
   {
     InputEntity inputEntity = makeInputEntity(Intervals.of("2000/P1D"));
     DruidSegmentReader reader = new DruidSegmentReader(
@@ -605,8 +604,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         null,
         temporaryFolder.newFolder()
     );
-    ;
-    InputEntity source = reader.source();
     Assert.assertEquals(inputEntity, reader.source());
   }
 
