@@ -122,4 +122,25 @@ public class ProtobufReaderTest
 
     ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
   }
+
+  @Test
+  public void testParseFlatDataWithComplexTimestampWithDefaultFlattenSpec() throws Exception
+  {
+    ProtobufReader reader = new ProtobufReader(
+        inputRowSchemaWithComplexTimestamp,
+        null,
+        decoder,
+        JSONPathSpec.DEFAULT
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
+
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
+  }
 }
