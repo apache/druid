@@ -360,7 +360,10 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
       );
 
-      waitForAllTasksToCompleteForDataSource(datasourceName);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(datasourceName),
+          "Segment Load"
+      );
     }
   }
 
