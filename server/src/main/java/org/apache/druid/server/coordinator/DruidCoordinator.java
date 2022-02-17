@@ -800,7 +800,8 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
-  private CompactSegments initializeCompactSegmentsDuty()
+  @VisibleForTesting
+  CompactSegments initializeCompactSegmentsDuty()
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
@@ -813,7 +814,8 @@ public class DruidCoordinator
     }
   }
 
-  private List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
+  @VisibleForTesting
+  List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
   {
     return customDutyGroups.getCoordinatorCustomDutyGroups()
                            .stream()

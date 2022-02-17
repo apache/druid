@@ -108,7 +108,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   @VisibleForTesting
-  boolean isSkipLockedIntervals()
+  public boolean isSkipLockedIntervals()
   {
     return skipLockedIntervals;
   }
