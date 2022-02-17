@@ -107,6 +107,18 @@ public class CompactSegments implements CoordinatorCustomDuty
     LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
   }
 
+  @VisibleForTesting
+  boolean isSkipLockedIntervals()
+  {
+    return skipLockedIntervals;
+  }
+
+  @VisibleForTesting
+  IndexingServiceClient getIndexingServiceClient()
+  {
+    return indexingServiceClient;
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {

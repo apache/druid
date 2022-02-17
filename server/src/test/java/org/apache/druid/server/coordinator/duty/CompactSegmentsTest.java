@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +39,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
+import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
@@ -235,6 +237,28 @@ public class CompactSegmentsTest
         0,
         10L
     );
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+
+    JSON_MAPPER.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
+            .addValue(ObjectMapper.class, JSON_MAPPER)
+            .addValue(IndexingServiceClient.class, indexingServiceClient)
+    );
+
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    String compactSegmentString = JSON_MAPPER.writeValueAsString(compactSegments);
+    CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
+
+    Assert.assertNotNull(serdeCompactSegments);
+    Assert.assertEquals(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals(), serdeCompactSegments.isSkipLockedIntervals());
+    Assert.assertEquals(indexingServiceClient, serdeCompactSegments.getIndexingServiceClient());
   }
 
   @Test

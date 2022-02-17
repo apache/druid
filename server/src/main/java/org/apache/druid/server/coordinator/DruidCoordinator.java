@@ -807,7 +807,7 @@ public class DruidCoordinator
       return new CompactSegments(config, objectMapper, indexingServiceClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
-        log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group");
+        log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group. The first duty will be picked up.");
       }
       return compactSegmentsDutyFromCustomGroups.get(0);
     }
