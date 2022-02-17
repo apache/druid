@@ -2303,7 +2303,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @return set of ids of ignorable partitions
    */
-  protected Set<PartitionIdType> getIgnorablePartitionIds()
+  protected Set<PartitionIdType> computeIgnorablePartitionIds()
   {
     return ImmutableSet.of();
   }
@@ -2312,7 +2312,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     int partitionCount = recordSupplier.getPartitionIds(ioConfig.getStream()).size();
     if (shouldSkipIgnorablePartitions()) {
-      partitionCount -= getIgnorablePartitionIds().size();
+      partitionCount -= computeIgnorablePartitionIds().size();
     }
     return partitionCount;
   }
@@ -2325,7 +2325,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
       if (shouldSkipIgnorablePartitions()) {
-        partitionIdsFromSupplier.removeAll(getIgnorablePartitionIds());
+        partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
       }
     }
     catch (Exception e) {

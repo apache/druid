@@ -435,7 +435,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
    * @return set of shards ignorable by kinesis ingestion
    */
   @Override
-  protected Set<String> getIgnorablePartitionIds()
+  protected Set<String> computeIgnorablePartitionIds()
   {
     updateClosedShardCache();
     return ImmutableSet.copyOf(emptyClosedShardIds);

@@ -4925,18 +4925,18 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
     // {empty-closed, nonEmpty-closed} added to cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
     // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
     // ActiveShards = {open, empty-closed}, IgnorableShards = {empty-closed}
     // {nonEmpty-closed} removed from cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
     // ActiveShards = {open}, IgnorableShards = {}
     // {empty-closed} removed from cache
-    Assert.assertEquals(new HashSet<>(), supervisor.getIgnorablePartitionIds());
+    Assert.assertEquals(new HashSet<>(), supervisor.computeIgnorablePartitionIds());
     // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
     // {empty-closed, nonEmpty-closed} re-added to cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.getIgnorablePartitionIds());
+    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(
