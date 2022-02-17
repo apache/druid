@@ -75,7 +75,10 @@ object PartitionMapProvider {
       val granularity = Granularity.fromString(granularityStr)
       df.schema(tsCol).dataType
       i.map{row =>
-        val ts = parser.apply(row.get(tsColIndex).asInstanceOf[tsClass.type])
+        val ts = tsClass match {
+          case Timestamp => parser.apply(row.get(tsColIndex).asInstanceOf[Timestamp].getTime)
+          case _ => parser.apply(row.get(tsColIndex).asInstanceOf[tsClass.type])
+        }
         val bucketMs = granularity.bucketStart(ts).getMillis
         bucketMs -> row.getValuesMap[Any](fields)
       }

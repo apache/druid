@@ -56,7 +56,7 @@ object SegmentRationalizer extends Logging {
             // committer, just warn the user that some segments will be overshadowed and ignored.
             logWarn(
               s"More than one version detected for interval ${interval.toString} on dataSource $datasource! " +
-                s"Some segments will be overshadowed!")
+                s"Some segments will be overshadowed! Versions detected: ${versions.mkString(", ")}")
             intervalSegments.groupBy(_.getVersion).flatMap(segments => rationalizeGroupedSegments(segments._2))
           } else {
             rationalizeGroupedSegments(intervalSegments)

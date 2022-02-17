@@ -48,6 +48,7 @@ class DruidDataWriterFactory(
                               schema: StructType,
                               conf: Configuration
                             ) extends DataWriterFactory[InternalRow] {
+  private val writeTime = DateTimes.nowUtc().toString
 
   override def createDataWriter(partitionId: Int, taskId: Long, epochId: Long):
   DataWriter[InternalRow] = {
@@ -57,7 +58,7 @@ class DruidDataWriterFactory(
       .merge(
         Configuration.fromKeyValue(DruidConfigurationKeys.tableKey, conf.getString(DruidConfigurationKeys.tableKey))
       )
-    val version = writerConf.get(DruidConfigurationKeys.versionKey, DateTimes.nowUtc().toString)
+    val version = writerConf.get(DruidConfigurationKeys.versionKey, writeTime)
 
     val partitionIdToDruidPartitionsMap = writerConf
       .get(DruidConfigurationKeys.partitionMapKey)
