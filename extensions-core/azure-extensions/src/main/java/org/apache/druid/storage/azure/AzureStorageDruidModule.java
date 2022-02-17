@@ -157,7 +157,7 @@ public class AzureStorageDruidModule implements DruidModule
           ));
           return account.createCloudBlobClient();
         } else {
-          throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+          throw new ISE("None of 'key' or 'sharedAccessStorageToken' is set in the azure config.  Please refer to azure extension documentation.");
         }
       }
       catch (URISyntaxException | InvalidKeyException e) {
