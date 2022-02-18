@@ -47,8 +47,6 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
   )
   {
     this.dataSource = dataSource;
-  }
-
     this.supportTimelinesByDataSource =
             new LinkedMap<>(supportDataSourceQueryOrder.size() + 1);
     this.supportTimelinesByDataSource.put(dataSource, this);
