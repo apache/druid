@@ -116,19 +116,19 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
               if (!dataSource.equals(supportTimelinesByDataSource.lastKey())) {
                 supportEntry = supportEntry.stream().filter(t -> !t.getTrueInterval().getEnd().isAfter(i.getEnd()))
                         .collect(Collectors.toList());
-            }
+              }
               if (!supportEntry.isEmpty()) {
                 List<TimelineObjectHolder<VersionType, ObjectType>> enteries =
                         entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(rootNamespace).getOrDefault(i, new ArrayList<>());
                 enteries.addAll(supportEntry);
                 entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(rootNamespace).put(i, enteries);
+              }
           }
-        }
           }
         } else {
           // If there are no remaining segments to find then we're done
           break;
-      }
+        }
         //Recompute remaining intervals by filtering out those that we just added
         Map<String, List<Interval>> tempNamespaceToRemainingInterval = new HashMap<>();
         for (String namespace : namespaceToRemainingInterval.keySet()) {
@@ -139,7 +139,7 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
               return filterIntervals(remainingInterval,
                       entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(namespace).get(remainingInterval).stream()
                               .map(TimelineObjectHolder::getInterval).collect(Collectors.toList()));
-      }
+          }
             return Collections.singletonList(remainingInterval);
           }).flatMap(List::stream).collect(Collectors.toList());
           tempNamespaceToRemainingInterval.put(namespace, remainingIntervals);
@@ -181,7 +181,7 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
         remainingEnd = skipInterval.getStart();
       } else if (!remainingStart.isAfter(skipInterval.getStart()) && !remainingEnd.isBefore(skipInterval.getEnd())) {
         if (!remainingStart.equals(skipInterval.getStart())) {
-        filteredIntervals.add(new Interval(remainingStart, skipInterval.getStart()));
+          filteredIntervals.add(new Interval(remainingStart, skipInterval.getStart()));
         }
         remainingStart = skipInterval.getEnd();
       }
