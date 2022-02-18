@@ -21,46 +21,45 @@ package org.apache.druid.timeline;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.collections4.map.LinkedMap;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, ObjectType extends Overshadowable<ObjectType>>
     extends NamespacedVersionedIntervalTimeline<VersionType, ObjectType>
 {
 
-  private final NamespacedVersionedIntervalTimeline<VersionType, ObjectType> supportTimeline;
-
-  private final String supportDatasource;
+  private final LinkedMap<String, NamespacedVersionedIntervalTimeline<VersionType, ObjectType>> supportTimelinesByDataSource;
 
   private final String dataSource;
 
   public ComplementaryNamespacedVersionedIntervalTimeline(
-      String dataSource,
-      NamespacedVersionedIntervalTimeline<VersionType, ObjectType> supportTimeline,
-      String supportDatasource
+          String dataSource,
+          Map<String, NamespacedVersionedIntervalTimeline<VersionType, ObjectType>> supportTimelinesByDataSource,
+          List<String> supportDataSourceQueryOrder
   )
   {
     this.dataSource = dataSource;
-    this.supportTimeline = supportTimeline;
-    this.supportDatasource = supportDatasource;
   }
 
-  public String getSupportDatasource()
-  {
-    return supportDatasource;
+    this.supportTimelinesByDataSource =
+            new LinkedMap<>(supportDataSourceQueryOrder.size() + 1);
+    this.supportTimelinesByDataSource.put(dataSource, this);
+    supportDataSourceQueryOrder.forEach(ds -> this.supportTimelinesByDataSource.put(ds, supportTimelinesByDataSource.get(ds)));
   }
 
   @Override
   public List<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval)
   {
     return lookup(ImmutableList.of(interval), (timeline, in) ->
-        timeline.lookup(in)).values().stream().flatMap(List::stream).collect(Collectors.toList());
+            timeline.lookup(in)).values().stream().flatMap(List::stream).collect(Collectors.toList());
   }
 
   @Override
@@ -88,47 +87,87 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
   )
   {
     try {
-      lock.readLock().lock();
-      supportTimeline.lock.readLock().lock();
-      ImmutableMap.Builder<String, List<TimelineObjectHolder<VersionType, ObjectType>>> ret = ImmutableMap.builder();
-      List<TimelineObjectHolder<VersionType, ObjectType>> entries = new ArrayList<>();
-      List<TimelineObjectHolder<VersionType, ObjectType>> supportEntries = new ArrayList<>();
+      supportTimelinesByDataSource.values().forEach(supportTimeline -> supportTimeline.lock.readLock().lock());
 
-      intervals.forEach(interval -> {
-        Set<String> uncoveredNamespaces = new HashSet<>(supportTimeline.getNamespaces());
-        for (String namespace : timelines.keySet()) {
-          VersionedIntervalTimeline<VersionType, ObjectType> timeline = timelines.get(namespace);
-          List<TimelineObjectHolder<VersionType, ObjectType>> entry = converter
-              .apply(timeline, interval);
-          entries.addAll(entry);
-          List<Interval> remainingIntervals = filterIntervals(
-              interval,
-              entry.stream().map(e -> e.getInterval()).collect(
-                  Collectors.toList())
-          );
-          String rootNamespace = getRootNamespace(namespace);
-          for (String ns : supportTimeline.getNamespaces()) {
-            if (getRootNamespace(ns).equals(rootNamespace)) {
-              remainingIntervals.forEach(i -> supportEntries.addAll(supportTimeline.lookup(ns, i)));
-              uncoveredNamespaces.remove(ns);
+      ImmutableMap.Builder<String, List<TimelineObjectHolder<VersionType, ObjectType>>> ret = ImmutableMap.builder();
+      
+      Map<String, Map<String, Map<Interval, List<TimelineObjectHolder<VersionType, ObjectType>>>>> entriesForIntervalByDataSourceAndNamespace =
+              new HashMap<>();
+
+      // We assume here that the last timeline will be a superset of all other timelines. Every namespace and interval
+      // should be covered by this base timeline
+      NamespacedVersionedIntervalTimeline<VersionType, ObjectType> baseTimeline =
+              supportTimelinesByDataSource.get(supportTimelinesByDataSource.lastKey());
+
+      Map<String, List<Interval>> namespaceToRemainingInterval = baseTimeline.getNamespaces().stream()
+              .map(ComplementaryNamespacedVersionedIntervalTimeline::getRootNamespace)
+              .collect(Collectors.toMap(namespace -> namespace, namespace -> intervals));
+
+      for (String dataSource : supportTimelinesByDataSource.keySet()) {
+        if (namespaceToRemainingInterval.values().stream().anyMatch(remainingInterval -> !remainingInterval.isEmpty())) {
+          // We have remaining segments to find
+          entriesForIntervalByDataSourceAndNamespace.putIfAbsent(dataSource, new HashMap<>());
+          NamespacedVersionedIntervalTimeline<VersionType, ObjectType> timeline = supportTimelinesByDataSource.get(dataSource);
+          for (String ns : timeline.getNamespaces()) {
+            String rootNamespace = getRootNamespace(ns);
+            entriesForIntervalByDataSourceAndNamespace.get(dataSource).putIfAbsent(rootNamespace, new HashMap<>());
+            for (Interval i : namespaceToRemainingInterval.getOrDefault(rootNamespace, new ArrayList<>())) {
+              List<TimelineObjectHolder<VersionType, ObjectType>> supportEntry = timeline.lookup(ns, i);
+              // For all but the base dataSource we want to filter intervals with end times past the requested interval
+              // end time to prevent returning segments convering time intervals not requested
+              if (!dataSource.equals(supportTimelinesByDataSource.lastKey())) {
+                supportEntry = supportEntry.stream().filter(t -> !t.getTrueInterval().getEnd().isAfter(i.getEnd()))
+                        .collect(Collectors.toList());
             }
+              if (!supportEntry.isEmpty()) {
+                List<TimelineObjectHolder<VersionType, ObjectType>> enteries =
+                        entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(rootNamespace).getOrDefault(i, new ArrayList<>());
+                enteries.addAll(supportEntry);
+                entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(rootNamespace).put(i, enteries);
           }
         }
-        for (String ns : uncoveredNamespaces) {
-          supportEntries.addAll(supportTimeline.lookup(ns, interval));
+          }
+        } else {
+          // If there are no remaining segments to find then we're done
+          break;
+      }
+        //Recompute remaining intervals by filtering out those that we just added
+        Map<String, List<Interval>> tempNamespaceToRemainingInterval = new HashMap<>();
+        for (String namespace : namespaceToRemainingInterval.keySet()) {
+          List<Interval> remainingIntervals = namespaceToRemainingInterval.get(namespace).stream().map(remainingInterval -> {
+            if (entriesForIntervalByDataSourceAndNamespace.containsKey(dataSource) &&
+                    entriesForIntervalByDataSourceAndNamespace.get(dataSource).containsKey(namespace) &&
+                    entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(namespace).containsKey(remainingInterval)) {
+              return filterIntervals(remainingInterval,
+                      entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(namespace).get(remainingInterval).stream()
+                              .map(TimelineObjectHolder::getInterval).collect(Collectors.toList()));
+      }
+            return Collections.singletonList(remainingInterval);
+          }).flatMap(List::stream).collect(Collectors.toList());
+          tempNamespaceToRemainingInterval.put(namespace, remainingIntervals);
         }
-      });
-      if (!entries.isEmpty()) {
-        ret.put(dataSource, entries);
+        namespaceToRemainingInterval = tempNamespaceToRemainingInterval;
       }
-      if (!supportEntries.isEmpty()) {
-        ret.put(supportDatasource, supportEntries);
+
+      for (String dataSource : entriesForIntervalByDataSourceAndNamespace.keySet()) {
+        List<TimelineObjectHolder<VersionType, ObjectType>> timelines = new ArrayList<>();
+        Map<String, Map<Interval, List<TimelineObjectHolder<VersionType, ObjectType>>>> entriesForIntervalByNamespace =
+                entriesForIntervalByDataSourceAndNamespace.get(dataSource);
+        for (Map<Interval, List<TimelineObjectHolder<VersionType, ObjectType>>> entriesForInterval : entriesForIntervalByNamespace.values()) {
+          for (List<TimelineObjectHolder<VersionType, ObjectType>> timelineObjectHolders : entriesForInterval.values()) {
+            timelines.addAll(timelineObjectHolders);
+          }
+        }
+        if (!timelines.isEmpty()) {
+          ret.put(dataSource, timelines);
+        }
       }
+
       return ret.build();
     }
     finally {
-      supportTimeline.lock.readLock().unlock();
-      lock.readLock().unlock();
+      supportTimelinesByDataSource.values().forEach(supportTimeline -> supportTimeline.lock.readLock().unlock());
+
     }
   }
 
@@ -143,7 +182,9 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
       } else if (skipInterval.getStart().isBefore(remainingEnd) && skipInterval.getEnd().isAfter(remainingEnd)) {
         remainingEnd = skipInterval.getStart();
       } else if (!remainingStart.isAfter(skipInterval.getStart()) && !remainingEnd.isBefore(skipInterval.getEnd())) {
+        if (!remainingStart.equals(skipInterval.getStart())) {
         filteredIntervals.add(new Interval(remainingStart, skipInterval.getStart()));
+        }
         remainingStart = skipInterval.getEnd();
       }
       if (!remainingStart.isBefore(remainingEnd)) {

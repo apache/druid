@@ -28,6 +28,7 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.BrokerDataSourceComplementConfig;
+import org.apache.druid.client.BrokerDataSourceMultiComplementConfig;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CachingClusteredClient;
@@ -125,6 +126,8 @@ public class CliBroker extends ServerRunnable
           binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
 
           JsonConfigProvider.bind(binder, "druid.broker.dataSourceComplement", BrokerDataSourceComplementConfig.class);
+
+            JsonConfigProvider.bind(binder, "druid.broker.dataSourceMultiComplement", BrokerDataSourceMultiComplementConfig.class);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);
