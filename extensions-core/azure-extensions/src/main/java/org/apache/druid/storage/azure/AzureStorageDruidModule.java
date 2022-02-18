@@ -132,7 +132,8 @@ public class AzureStorageDruidModule implements DruidModule
     if ((config.getKey() != null && config.getSharedAccessStorageToken() != null)
         ||
         (config.getKey() == null && config.getSharedAccessStorageToken() == null)) {
-      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both."
+                    + " Please refer to azure documentation.");
     }
     return Suppliers.memoize(() -> {
       try {
@@ -157,7 +158,9 @@ public class AzureStorageDruidModule implements DruidModule
           ));
           return account.createCloudBlobClient();
         } else {
-          throw new ISE("None of 'key' or 'sharedAccessStorageToken' is set in the azure config.  Please refer to azure extension documentation.");
+          throw new ISE(
+              "None of 'key' or 'sharedAccessStorageToken' is set in the azure config."
+              + " Please refer to azure extension documentation.");
         }
       }
       catch (URISyntaxException | InvalidKeyException e) {

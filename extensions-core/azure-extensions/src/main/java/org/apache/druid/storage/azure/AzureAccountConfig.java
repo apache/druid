@@ -94,6 +94,7 @@ public class AzureAccountConfig
     return sharedAccessStorageToken;
   }
 
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setSharedAccessStorageToken(String sharedAccessStorageToken)
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
