@@ -73,9 +73,9 @@ public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.
    * Rule that tries to push filter expressions into a join
    * condition. Exlucde pushing into the inputs (child) of the join.
    */
-  public static class FilterIntoJoinExcludePushToChildRule extends FilterIntoJoinRule
+  public static class FilterIntoJoinExcludePushToChildRule extends FilterJoinExcludePushToChildRule<FilterIntoJoinRule.FilterIntoJoinRuleConfig>
   {
-    public FilterIntoJoinExcludePushToChildRule(FilterIntoJoinRuleConfig config)
+    public FilterIntoJoinExcludePushToChildRule(FilterIntoJoinRule.FilterIntoJoinRuleConfig config)
     {
       super(config);
     }

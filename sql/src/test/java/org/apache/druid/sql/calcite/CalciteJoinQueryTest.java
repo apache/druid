@@ -468,9 +468,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT), m1) IN\n"
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1, m1) IN\n"
             + "   (\n"
-            + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 0 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
+            + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
             + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
             + "    )\n"
             + "GROUP BY 1, 2\n",
@@ -487,7 +487,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .setVirtualColumns(
                                     expressionVirtualColumn(
                                         "v0",
-                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 0)",
+                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
                                         ColumnType.LONG
                                     )
                                 )
@@ -504,7 +504,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .setContext(QUERY_CONTEXT_DEFAULT)
                                 .build()),
                         "j0.",
-                        "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                        "(((timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1) == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
                         JoinType.INNER
                     )
                 )
@@ -591,7 +591,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 )
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
-                .setDimFilter(or(not(selector("j0.v", "xa", null)), selector("j0.v", null, null)))
+                .setDimFilter(or(selector("j0.v", null, null), not(selector("j0.v", "xa", null))))
                 .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
                 .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                 .setContext(queryContext)
@@ -2226,7 +2226,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(or(not(selector("j0.v", "xxx", null)), selector("j0.v", null, null)))
+                .filters(or(selector("j0.v", null, null), not(selector("j0.v", "xxx", null))))
                 .columns("dim1", "j0.k", "j0.v")
                 .context(queryContext)
                 .build()
@@ -2794,8 +2794,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             makeExpression("'10.1'"),
                             makeColumnExpression("j0.dim1")
                         ),
-                        JoinType.LEFT,
-                        selector("dim1", "10.1", null)
+                        JoinType.LEFT
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -3137,7 +3136,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     if (useDefault) {
       rightTable = InlineDataSource.fromIterable(
           ImmutableList.of(),
-          RowSignature.builder().add("dim2", ColumnType.STRING).add("m2", ColumnType.DOUBLE).build()
+          RowSignature.builder().add("dim2", ColumnType.STRING).build()
       );
     } else {
       rightTable = new QueryDataSource(

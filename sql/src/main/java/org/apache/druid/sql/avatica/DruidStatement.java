@@ -421,10 +421,10 @@ public class DruidStatement implements Closeable
     } else if (sqlType == SqlTypeName.DATE) {
       return ColumnMetaData.Rep.of(Integer.class);
     } else if (sqlType == SqlTypeName.INTEGER) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      // use BigDecimal.class for exact numeric types since JSON transport might switch longs to integers
       return ColumnMetaData.Rep.of(BigDecimal.class);
     } else if (sqlType == SqlTypeName.BIGINT) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
+      // use BigDecimal.class for exact numeric types since JSON transport might switch longs to integers
       return ColumnMetaData.Rep.of(BigDecimal.class);
     } else if (sqlType == SqlTypeName.FLOAT) {
       return ColumnMetaData.Rep.of(Float.class);
