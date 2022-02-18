@@ -262,11 +262,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )
@@ -279,11 +275,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
               .withMetrics(new CountAggregatorFactory("count"))
               .withDimensionsSpec(
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
-                      null,
-                      null
-                  )
+                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
               )
               .build()
       )

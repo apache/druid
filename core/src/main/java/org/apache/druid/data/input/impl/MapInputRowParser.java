@@ -33,14 +33,13 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
   private final ParseSpec parseSpec;
-  private final List<String> dimensions;
 
   @JsonCreator
   public MapInputRowParser(
@@ -48,7 +47,6 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   )
   {
     this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
   @Override
@@ -57,8 +55,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return ImmutableList.of(
         parse(
             parseSpec.getTimestampSpec(),
-            dimensions,
-            parseSpec.getDimensionsSpec().getDimensionExclusions(),
+            parseSpec.getDimensionsSpec(),
             theMap
         )
     );
@@ -69,29 +66,32 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
   }
 
-  private static InputRow parse(
-      TimestampSpec timestampSpec,
+  private static List<String> findDimensions(
       DimensionsSpec dimensionsSpec,
       Map<String, Object> theMap
-  ) throws ParseException
+  )
   {
-    return parse(timestampSpec, dimensionsSpec.getDimensionNames(), dimensionsSpec.getDimensionExclusions(), theMap);
+    if (dimensionsSpec.isIncludeAllDimensions()) {
+      LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
+      dimensions.addAll(Sets.difference(theMap.keySet(), dimensionsSpec.getDimensionExclusions()));
+      return new ArrayList<>(dimensions);
+    } else {
+      if (!dimensionsSpec.getDimensionNames().isEmpty()) {
+        return dimensionsSpec.getDimensionNames();
+      } else {
+        return new ArrayList<>(Sets.difference(theMap.keySet(), dimensionsSpec.getDimensionExclusions()));
+      }
+    }
   }
 
   @VisibleForTesting
   static InputRow parse(
       TimestampSpec timestampSpec,
-      List<String> dimensions,
-      Set<String> dimensionExclusions,
+      DimensionsSpec dimensionsSpec,
       Map<String, Object> theMap
   ) throws ParseException
   {
-    final List<String> dimensionsToUse;
-    if (!dimensions.isEmpty()) {
-      dimensionsToUse = dimensions;
-    } else {
-      dimensionsToUse = new ArrayList<>(Sets.difference(theMap.keySet(), dimensionExclusions));
-    }
+    final List<String> dimensionsToUse = findDimensions(dimensionsSpec, theMap);
 
     final DateTime timestamp;
     try {

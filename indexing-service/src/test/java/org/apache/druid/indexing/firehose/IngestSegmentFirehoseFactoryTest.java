@@ -232,11 +232,9 @@ public class IngestSegmentFirehoseFactoryTest
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of()),
-                    ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-                    ImmutableList.of()
-                ),
+                DimensionsSpec.builder()
+                              .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                              .build(),
                 null,
                 null,
                 null
@@ -360,11 +358,10 @@ public class IngestSegmentFirehoseFactoryTest
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
-              ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-              ImmutableList.of()
-          )
+          DimensionsSpec.builder()
+                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME))
+                        .build()
       )
   );
 

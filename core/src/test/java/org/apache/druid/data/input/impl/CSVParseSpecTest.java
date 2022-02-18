@@ -37,11 +37,7 @@ public class CSVParseSpecTest
             "auto",
             null
         ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b"))),
         ",",
         Collections.singletonList("a,"),
         false,

@@ -2186,9 +2186,7 @@ public class CompactSegmentsTest
             new CompactionState(
                 compactionPartitionsSpec,
                 clientCompactionTaskQuery.getDimensionsSpec() == null ? null : new DimensionsSpec(
-                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions(),
-                    null,
-                    null
+                    clientCompactionTaskQuery.getDimensionsSpec().getDimensions()
                 ),
                 metricsSpec,
                 transformSpec,
