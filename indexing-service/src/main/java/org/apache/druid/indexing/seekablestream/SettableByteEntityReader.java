@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.segment.transform.Transformer;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 
 import java.io.File;
@@ -41,12 +40,8 @@ import java.io.IOException;
  */
 class SettableByteEntityReader implements InputEntityReader
 {
-  private final InputFormat inputFormat;
-  private final InputRowSchema inputRowSchema;
-  private final Transformer transformer;
-  private final File indexingTmpDir;
-
-  private InputEntityReader delegate;
+  private final SettableByteEntity entity;
+  private final InputEntityReader delegate;
 
   SettableByteEntityReader(
       InputFormat inputFormat,
@@ -55,21 +50,18 @@ class SettableByteEntityReader implements InputEntityReader
       File indexingTmpDir
   )
   {
-    this.inputFormat = Preconditions.checkNotNull(inputFormat, "inputFormat");
-    this.inputRowSchema = inputRowSchema;
-    this.transformer = transformSpec.toTransformer();
-    this.indexingTmpDir = indexingTmpDir;
+    Preconditions.checkNotNull(inputFormat, "inputFormat");
+    final InputFormat format = (inputFormat instanceof JsonInputFormat) ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
+    this.entity = new SettableByteEntity();
+    this.delegate = new TransformingInputEntityReader(
+        format.createReader(inputRowSchema, entity, indexingTmpDir),
+        transformSpec.toTransformer()
+    );
   }
 
   void setEntity(ByteEntity entity)
   {
-    InputFormat format = (inputFormat instanceof JsonInputFormat) ? ((JsonInputFormat) inputFormat).withLineSplittable(false) : inputFormat;
-    this.delegate = new TransformingInputEntityReader(
-        // Yes, we are creating a new reader for every stream chunk.
-        // This should be fine as long as initializing a reader is cheap which it is for now.
-        format.createReader(inputRowSchema, entity, indexingTmpDir),
-        transformer
-    );
+    this.entity.setBuffer(entity.getBuffer());
   }
 
   @Override
