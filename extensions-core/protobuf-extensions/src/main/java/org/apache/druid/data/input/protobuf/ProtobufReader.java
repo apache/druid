@@ -49,7 +49,7 @@ import java.util.Map;
 
 public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
 {
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final InputRowSchema inputRowSchema;
   private final InputEntity source;
   private final JSONPathSpec flattenSpec;
@@ -99,7 +99,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
     } else {
       try {
         String json = JsonFormat.printer().print(intermediateRow);
-        record = recordFlattener.flatten(objectMapper.readValue(json, JsonNode.class));
+        record = recordFlattener.flatten(OBJECT_MAPPER.readValue(json, JsonNode.class));
       }
       catch (InvalidProtocolBufferException e) {
         throw new ParseException(null, e, "Protobuf message could not be parsed");
