@@ -57,7 +57,7 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
     return this.partitionName;
   }
 
-  @Override
+  /*@Override*/
   public boolean isCompatible(Class<? extends ShardSpec> other)
   {
     return other == NamedNumberedShardSpec.class;
@@ -66,11 +66,11 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return NamedNumberedPartitionChunk.make(getPartitionNum(), getPartitions(), partitionName, obj);
+    return NamedNumberedPartitionChunk.make(getPartitionNum(), getNumCorePartitions(), partitionName, obj);
   }
 
   @Override
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
     return new ShardSpecLookup()
     {
@@ -93,7 +93,7 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
   {
     return "NamedNumberedShardSpec{" +
         "partitionNum=" + getPartitionNum() +
-        ", partitions=" + getPartitions() +
+        ", partitions=" + getNumCorePartitions() +
         ", partitionName=" + getPartitionName() +
         '}';
   }
