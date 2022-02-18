@@ -29,6 +29,7 @@ import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
@@ -53,6 +54,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
       String fullDatasourceName,
       String parserType,
       String parserOrInputFormat,
+      List<String> dimensions,
       IntegrationTestingConfig config
   )
   {
@@ -117,13 +119,16 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             "%%STREAM_PROPERTIES_KEY%%",
             "consumerProperties"
         );
-
         spec = StringUtils.replace(
             spec,
             "%%SCHEMA_REGISTRY_HOST%%",
             StringUtils.format("http://%s", config.getSchemaRegistryInternalHost())
         );
-
+        spec = StringUtils.replace(
+            spec,
+            "%%DIMENSIONS%%",
+            jsonMapper.writeValueAsString(dimensions)
+        );
         return StringUtils.replace(
             spec,
             "%%STREAM_PROPERTIES_VALUE%%",

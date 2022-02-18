@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -73,7 +74,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   // The value to this tag is a timestamp that can be used by a lambda function to remove unused stream.
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
   private static final int STREAM_SHARD_COUNT = 2;
-  private static final long CYCLE_PADDING_MS = 100;
+  protected static final long CYCLE_PADDING_MS = 100;
 
   private static final String QUERIES_FILE = "/stream/queries/stream_index_queries.json";
   private static final String SUPERVISOR_SPEC_TEMPLATE_FILE = "supervisor_spec_template.json";
@@ -93,8 +94,23 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   protected static final String INPUT_FORMAT = "inputFormat";
   protected static final String INPUT_ROW_PARSER = "parser";
 
-  private static final String JSON_INPUT_FORMAT_PATH =
+  protected static final String JSON_INPUT_FORMAT_PATH =
       String.join("/", DATA_RESOURCE_ROOT, "json", INPUT_FORMAT_SPEC_DIR, "input_format.json");
+
+  protected static final List<String> DEFAULT_DIMENSIONS = ImmutableList.of(
+      "page",
+      "language",
+      "user",
+      "unpatrolled",
+      "newPage",
+      "robot",
+      "anonymous",
+      "namespace",
+      "continent",
+      "country",
+      "region",
+      "city"
+  );
 
   @Inject
   private DruidClusterAdminClient druidClusterAdminClient;
@@ -117,6 +133,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       String fullDatasourceName,
       String parserType,
       String parserOrInputFormat,
+      List<String> dimensions,
       IntegrationTestingConfig config
   );
 
@@ -625,7 +642,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  private void verifyIngestedData(GeneratedTestConfig generatedTestConfig, long numWritten) throws Exception
+  protected void verifyIngestedData(GeneratedTestConfig generatedTestConfig, long numWritten) throws Exception
   {
     // Wait for supervisor to consume events
     LOG.info("Waiting for stream indexing tasks to consume events");
@@ -721,6 +738,11 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
     public GeneratedTestConfig(String parserType, String parserOrInputFormat) throws Exception
     {
+      this(parserType, parserOrInputFormat, DEFAULT_DIMENSIONS);
+    }
+
+    public GeneratedTestConfig(String parserType, String parserOrInputFormat, List<String> dimensions) throws Exception
+    {
       streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
       String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
       Map<String, String> tags = ImmutableMap.of(
@@ -741,6 +763,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           fullDatasourceName,
           parserType,
           parserOrInputFormat,
+          dimensions,
           config
       );
       streamQueryPropsTransform = generateStreamQueryPropsTransform(streamName, fullDatasourceName);
