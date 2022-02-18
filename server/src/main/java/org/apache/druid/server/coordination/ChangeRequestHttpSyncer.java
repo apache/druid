@@ -22,6 +22,7 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -120,14 +121,20 @@ public class ChangeRequestHttpSyncer<T>
 
   public void start()
   {
+
     synchronized (startStopLock) {
+
       if (!startStopLock.canStart()) {
         throw new ISE("Can't start ChangeRequestHttpSyncer[%s].", logIdentity);
       }
+      try {
 
-      log.info("Starting ChangeRequestHttpSyncer[%s].", logIdentity);
-      startStopLock.started();
-      startStopLock.exitStart();
+        log.info("Starting ChangeRequestHttpSyncer[%s].", logIdentity);
+        startStopLock.started();
+      }
+      finally {
+        startStopLock.exitStart();
+      }
 
       addNextSyncToWorkQueue();
     }
@@ -138,6 +145,12 @@ public class ChangeRequestHttpSyncer<T>
     synchronized (startStopLock) {
       if (!startStopLock.canStop()) {
         throw new ISE("Can't stop ChangeRequestHttpSyncer[%s].", logIdentity);
+      }
+      try {
+        log.info("Stopping ChangeRequestHttpSyncer[%s].", logIdentity);
+      }
+      finally {
+        startStopLock.exitStop();
       }
 
       log.info("Stopped ChangeRequestHttpSyncer[%s].", logIdentity);
@@ -412,6 +425,12 @@ public class ChangeRequestHttpSyncer<T>
     }
 
     return false;
+  }
+
+  @VisibleForTesting
+  public boolean isExecutorShutdown()
+  {
+    return executor.isShutdown();
   }
 
   /**

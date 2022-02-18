@@ -163,7 +163,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
 
-    VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(prefixSignaturePair.rhs);
+    VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(prefixSignaturePair.rhs, getPlannerContext().getExprMacroTable());
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
     // Generate the condition for this join as a Druid expression.

@@ -220,7 +220,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             popoverProps={Object {}}
             shouldDismissPopover={true}
             target="_blank"
-            text="ASF Slack channel"
+            text="Slack channel"
           />
           <Blueprint3.MenuItem
             disabled={false}

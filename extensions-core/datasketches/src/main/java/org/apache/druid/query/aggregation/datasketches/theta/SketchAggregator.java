@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import org.apache.datasketches.Family;
 import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Sketch;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
@@ -28,15 +29,42 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.List;
 
 public class SketchAggregator implements Aggregator
 {
+
   private final BaseObjectColumnValueSelector selector;
   private final int size;
 
   @Nullable
   private Union union;
+
+  @Nullable
+  private Sketch sketch;
+
+  @Nullable
+  private static Field SKETCH_FIELD;
+
+  /**
+   * Initializes static fields of the SketchAggregator needed for memory
+   * estimation.
+   */
+  public static synchronized void initialize()
+  {
+    if (SKETCH_FIELD != null) {
+      return;
+    }
+    try {
+      SKETCH_FIELD = Class.forName("org.apache.datasketches.theta.UnionImpl")
+                          .getDeclaredField("gadget_");
+      SKETCH_FIELD.setAccessible(true);
+    }
+    catch (NoSuchFieldException | ClassNotFoundException e) {
+      throw new ISE(e, "Could not initialize SketchAggregator");
+    }
+  }
 
   public SketchAggregator(BaseObjectColumnValueSelector selector, int size)
   {
@@ -47,6 +75,16 @@ public class SketchAggregator implements Aggregator
   private void initUnion()
   {
     union = (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION);
+  }
+
+  private void initSketch()
+  {
+    try {
+      sketch = (Sketch) SKETCH_FIELD.get(union);
+    }
+    catch (IllegalAccessException e) {
+      throw new ISE(e, "Could not initialize sketch field in SketchAggregator");
+    }
   }
 
   @Override
@@ -61,6 +99,37 @@ public class SketchAggregator implements Aggregator
         initUnion();
       }
       updateUnion(union, update);
+    }
+  }
+
+  @Override
+  public long aggregateWithSize()
+  {
+    Object update = selector.getObject();
+    if (update == null) {
+      return 0;
+    }
+    synchronized (this) {
+      long unionSizeDelta = 0;
+      if (union == null) {
+        initUnion();
+
+        // Size of UnionImpl = 16B (object header) + 8B (sketch ref) + 2B (short)
+        // + 8B (long) + 1B (boolean) + 5B (padding) = 40B
+        unionSizeDelta = 40L;
+      }
+
+      long initialSketchSize = 0;
+      if (sketch == null) {
+        initSketch();
+      } else {
+        initialSketchSize = sketch.getCurrentBytes();
+      }
+
+      updateUnion(union, update);
+
+      long sketchSizeDelta = sketch.getCurrentBytes() - initialSketchSize;
+      return sketchSizeDelta + unionSizeDelta;
     }
   }
 
@@ -133,4 +202,16 @@ public class SketchAggregator implements Aggregator
       throw new ISE("Illegal type received while theta sketch merging [%s]", update.getClass());
     }
   }
+
+  /**
+   * Gets the initial size of this aggregator in bytes.
+   */
+  public long getInitialSizeBytes()
+  {
+    // Size = 16B (object header) + 24B (3 refs) + 4B (int size) = 44B
+    // Due to 8-byte alignment, size = 48B
+    // (see https://www.baeldung.com/java-memory-layout)
+    return 48L;
+  }
+
 }

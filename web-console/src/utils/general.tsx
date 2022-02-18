@@ -466,3 +466,13 @@ export function stringifyValue(value: unknown): string {
 export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
 }
+
+export function twoLines(line1: string, line2: string) {
+  return (
+    <>
+      {line1}
+      <br />
+      {line2}
+    </>
+  );
+}

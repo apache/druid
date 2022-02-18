@@ -35,6 +35,7 @@ public abstract class AppendableIndexBuilder
   protected int maxRowCount = 0;
   protected long maxBytesInMemory = 0;
   protected boolean preserveExistingMetrics = false;
+  protected boolean useMaxMemoryEstimates = true;
 
   protected final Logger log = new Logger(this.getClass());
 
@@ -115,6 +116,12 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setPreserveExistingMetrics(final boolean preserveExistingMetrics)
   {
     this.preserveExistingMetrics = preserveExistingMetrics;
+    return this;
+  }
+
+  public AppendableIndexBuilder setUseMaxMemoryEstimates(final boolean useMaxMemoryEstimates)
+  {
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     return this;
   }
 

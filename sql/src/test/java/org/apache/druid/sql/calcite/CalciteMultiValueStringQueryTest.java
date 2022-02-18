@@ -21,9 +21,10 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import junitparams.JUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -32,20 +33,22 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-@RunWith(JUnitParamsRunner.class)
 public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 {
   // various queries on multi-valued string dimensions using them like strings
@@ -54,7 +57,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
-
+    Map<String, Object> groupByOnMultiValueColumnEnabled = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    groupByOnMultiValueColumnEnabled.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -77,6 +81,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     }
     testQuery(
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        groupByOnMultiValueColumnEnabled,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE3)
@@ -101,6 +106,30 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         expected
+    );
+  }
+
+  @Test
+  public void testMultiValueStringGroupByDoesNotWork() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    Map<String, Object> groupByOnMultiValueColumnDisabled = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    groupByOnMultiValueColumnDisabled.put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
+    testQueryThrows(
+        "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        groupByOnMultiValueColumnDisabled,
+        ImmutableList.of(),
+        exception -> {
+          exception.expect(RuntimeException.class);
+          expectedException.expectMessage(StringUtils.format(
+              "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+              + " Consider setting %s to true.",
+              "v0",
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+              GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+          ));
+        }
     );
   }
 
@@ -264,10 +293,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{useDefault ? "" : null}
-        )
+        ImmutableList.of(new Object[]{"[\"a\",\"b\"]"})
     );
   }
 
@@ -337,8 +363,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{useDefault ? "" : null}
+            new Object[]{"[\"a\",\"b\"]"}
         )
     );
   }
@@ -363,9 +388,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"b\"]"},
             new Object[]{"[\"c\"]"},
             new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"}
+            new Object[]{useDefault ? NULL_STRING : "[]"},
+            new Object[]{NULL_STRING},
+            new Object[]{NULL_STRING}
         )
     );
   }
@@ -405,10 +430,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"", 2, 1L},
             new Object[]{"10.1", 2, 1L},
-            new Object[]{"1", 1, 1L},
-            new Object[]{"2", 1, 1L},
-            new Object[]{"abc", 1, 1L},
-            new Object[]{"def", 1, 1L}
+            useDefault ? new Object[]{"2", 1, 1L} : new Object[]{"1", 1, 1L},
+            useDefault ? new Object[]{"1", 0, 1L} : new Object[]{"2", 1, 1L},
+            new Object[]{"abc", useDefault ? 0 : null, 1L},
+            new Object[]{"def", useDefault ? 0 : null, 1L}
         )
     );
   }
@@ -422,8 +447,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
           new Object[]{"", 3L},
+          new Object[]{"foo", 3L},
           new Object[]{"b", 2L},
           new Object[]{"a", 1L},
           new Object[]{"c", 1L},
@@ -431,7 +456,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
+          new Object[]{"foo", 4L},
           new Object[]{null, 2L},
           new Object[]{"b", 2L},
           new Object[]{"", 1L},
@@ -482,8 +507,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
           new Object[]{"", 3L},
+          new Object[]{"foo", 3L},
           new Object[]{"b", 2L},
           new Object[]{"a", 1L},
           new Object[]{"c", 1L},
@@ -491,7 +516,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo", 6L},
+          new Object[]{"foo", 4L},
           new Object[]{null, 2L},
           new Object[]{"b", 2L},
           new Object[]{"", 1L},
@@ -542,14 +567,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"foo,null", "null,foo", 3L},
+          new Object[]{"", "", 3L},
           new Object[]{"foo,a,b", "a,b,foo", 1L},
           new Object[]{"foo,b,c", "b,c,foo", 1L},
           new Object[]{"foo,d", "d,foo", 1L}
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{"foo,null", "null,foo", 2L},
+          new Object[]{null, null, 2L},
           new Object[]{"foo,", ",foo", 1L},
           new Object[]{"foo,a,b", "a,b,foo", 1L},
           new Object[]{"foo,b,c", "b,c,foo", 1L},
@@ -606,16 +631,16 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"", 6L},
           new Object[]{"b", 4L},
+          new Object[]{"", 3L},
           new Object[]{"a", 2L},
           new Object[]{"c", 2L},
           new Object[]{"d", 2L}
       );
     } else {
       results = ImmutableList.of(
-          new Object[]{null, 4L},
           new Object[]{"b", 4L},
+          new Object[]{null, 2L},
           new Object[]{"", 2L},
           new Object[]{"a", 2L},
           new Object[]{"c", 2L},
@@ -653,6 +678,70 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ),
         results
     );
+  }
+
+  @Test
+  public void testMultiValueStringConcatBackwardsCompat0dot22andOlder() throws Exception
+  {
+    try {
+      ExpressionProcessing.initializeForHomogenizeNullMultiValueStrings();
+      // Cannot vectorize due to usage of expressions.
+      cannotVectorize();
+
+      ImmutableList<Object[]> results;
+      if (useDefault) {
+        results = ImmutableList.of(
+            new Object[]{"", 6L},
+            new Object[]{"b", 4L},
+            new Object[]{"a", 2L},
+            new Object[]{"c", 2L},
+            new Object[]{"d", 2L}
+        );
+      } else {
+        results = ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 4L},
+            new Object[]{"", 2L},
+            new Object[]{"a", 2L},
+            new Object[]{"c", 2L},
+            new Object[]{"d", 2L}
+        );
+      }
+      testQuery(
+          "SELECT MV_CONCAT(dim3, dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+          ImmutableList.of(
+              GroupByQuery.builder()
+                          .setDataSource(CalciteTests.DATASOURCE3)
+                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                          .setGranularity(Granularities.ALL)
+                          .setVirtualColumns(expressionVirtualColumn(
+                              "v0",
+                              "array_concat(\"dim3\",\"dim3\")",
+                              ColumnType.STRING
+                          ))
+                          .setDimensions(
+                              dimensions(
+                                  new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                              )
+                          )
+                          .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                          .setLimitSpec(new DefaultLimitSpec(
+                              ImmutableList.of(new OrderByColumnSpec(
+                                  "a0",
+                                  OrderByColumnSpec.Direction.DESCENDING,
+                                  StringComparators.NUMERIC
+                              )),
+                              Integer.MAX_VALUE
+                          ))
+                          .setContext(QUERY_CONTEXT_DEFAULT)
+                          .build()
+          ),
+          results
+      );
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
@@ -768,8 +857,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{useDefault ? -1 : null, 4L},
+        useDefault
+        ? ImmutableList.of(
+            new Object[]{0, 4L},
+            new Object[]{-1, 1L},
+            new Object[]{1, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{null, 4L},
             new Object[]{0, 1L},
             new Object[]{1, 1L}
         )
@@ -811,8 +906,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{useDefault ? -1 : null, 4L},
+        useDefault
+        ? ImmutableList.of(
+            new Object[]{0, 3L},
+            new Object[]{-1, 1L},
+            new Object[]{1, 1L},
+            new Object[]{2, 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{null, 4L},
             new Object[]{1, 1L},
             new Object[]{2, 1L}
         )
@@ -884,8 +986,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
-          new Object[]{"d", 7L},
-          new Object[]{"", 3L},
+          new Object[]{"d", 4L},
           new Object[]{"b", 2L},
           new Object[]{"a", 1L},
           new Object[]{"c", 1L}
@@ -893,7 +994,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     } else {
       results = ImmutableList.of(
           new Object[]{"d", 5L},
-          new Object[]{null, 2L},
           new Object[]{"b", 2L},
           new Object[]{"", 1L},
           new Object[]{"a", 1L},
@@ -1054,8 +1154,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "array_length(filter((x) -> array_contains(array('b'), x), \"dim3\"))",
+                                "array_length(\"v1\")",
                                 ColumnType.LONG
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                ImmutableSet.of("b"),
+                                true
                             )
                         )
                         .setDimensions(
@@ -1075,8 +1181,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        useDefault ? ImmutableList.of(
             new Object[]{0, 4L},
+            new Object[]{1, 2L}
+        ) : ImmutableList.of(
+            // the fallback expression would actually produce 3 rows, 2 nulls, 2 0's, and 2 1s
+            // instead of 4 nulls and two 1's we get when using the 'native' list filtered virtual column
+            // this is because of slight differences between filter and the native
+            // selector, which treats a 0 length array as null instead of an empty array like is produced by filter
+            new Object[]{null, 4L},
             new Object[]{1, 2L}
         )
     );
@@ -1098,8 +1211,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "array_length(filter((x) -> !array_contains(array('b'), x), \"dim3\"))",
+                                "array_length(\"v1\")",
                                 ColumnType.LONG
+                            ),
+                            new ListFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                ImmutableSet.of("b"),
+                                false
                             )
                         )
                         .setDimensions(
@@ -1119,7 +1238,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        useDefault ? ImmutableList.of(new Object[]{1, 6L}) : ImmutableList.of(new Object[]{1, 4L}, new Object[]{0, 2L})
+        useDefault
+        ? ImmutableList.of(new Object[]{0, 3L}, new Object[]{1, 3L})
+        : ImmutableList.of(new Object[]{1, 4L}, new Object[]{null, 2L})
     );
   }
 
@@ -1257,6 +1378,228 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", 1L},
             new Object[]{"c", 1L}
         )
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayGroupAsArrayWithMultiValueDimension() throws Exception
+  {
+    // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim3\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{null, 3L},
+            new Object[]{ImmutableList.of("a", "b"), 1L},
+            new Object[]{ImmutableList.of("b", "c"), 1L},
+            new Object[]{ImmutableList.of("d"), 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{null, 2L},
+            new Object[]{ImmutableList.of(""), 1L},
+            new Object[]{ImmutableList.of("a", "b"), 1L},
+            new Object[]{ImmutableList.of("b", "c"), 1L},
+            new Object[]{ImmutableList.of("d"), 1L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testMultiValueToArrayGroupAsArrayWithSingleValueDim() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim1\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(""), 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayGroupAsArrayWithSingleValueDimIsNotConvertedToTopN() throws Exception
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+    // Test for method {@link org.apache.druid.sql.calcite.rel.DruidQuery.toTopNQuery()} so that it does not convert
+    // group by on array to topn
+    testQuery(
+        "SELECT MV_TO_ARRAY(dim1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC limit 10",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "mv_to_array(\"dim1\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            10
+                        ))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{null, 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(""), 1L},
+            new Object[]{ImmutableList.of("1"), 1L},
+            new Object[]{ImmutableList.of("10.1"), 1L},
+            new Object[]{ImmutableList.of("2"), 1L},
+            new Object[]{ImmutableList.of("abc"), 1L},
+            new Object[]{ImmutableList.of("def"), 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayMoreArgs() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("Invalid number of arguments to function");
+        }
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayNoArgs() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY() FROM druid.numfoo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("Invalid number of arguments to function");
+        }
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayArgsWithMultiValueDimFunc() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim3,'c')) FROM druid.numfoo",
+        exception -> exception.expect(RuntimeException.class)
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayArgsWithSingleDimFunc() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
+        exception -> exception.expect(RuntimeException.class)
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayArgsWithConstant() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
+        exception -> exception.expect(RuntimeException.class)
+    );
+  }
+
+  @Test
+  public void testMultiValueToArrayArgsWithArray() throws Exception
+  {
+    testQueryThrows(
+        "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
+        exception -> exception.expect(RuntimeException.class)
     );
   }
 }

@@ -34,7 +34,7 @@ import {
   oneOf,
   typeIs,
 } from '../utils';
-import { HeaderAndRows } from '../utils/sampler';
+import { SampleHeaderAndRows } from '../utils/sampler';
 
 import {
   DimensionsSpec,
@@ -291,6 +291,23 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
+// ---------------------------------
+// Spec cleanup and normalization
+
+/**
+ * Make sure that the ioConfig, dataSchema, e.t.c. are nested inside of spec and not just hanging out at the top level
+ * @param spec
+ */
+function nestSpecIfNeeded(spec: any): Partial<IngestionSpec> {
+  if (spec?.type && typeof spec.spec !== 'object' && (spec.ioConfig || spec.dataSchema)) {
+    return {
+      type: spec.type,
+      spec: deepDelete(spec, 'type'),
+    };
+  }
+  return spec;
+}
+
 /**
  * Make sure that the types are set in the root, ioConfig, and tuningConfig
  * @param spec
@@ -301,10 +318,7 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
     spec = {};
   }
 
-  // Make sure that if we actually get a task payload we extract the spec
-  if (typeof spec.spec !== 'object' && typeof (spec as any).ioConfig === 'object') {
-    spec = { spec: spec as any };
-  }
+  spec = nestSpecIfNeeded(spec);
 
   const specType =
     deepGet(spec, 'type') ||
@@ -332,6 +346,47 @@ export function cleanSpec(
     ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
   ) as IngestionSpec;
 }
+
+export function upgradeSpec(spec: any): Partial<IngestionSpec> {
+  spec = nestSpecIfNeeded(spec);
+
+  // Upgrade firehose if exists
+  if (deepGet(spec, 'spec.ioConfig.firehose')) {
+    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
+      case 'static-s3':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
+        break;
+
+      case 'static-google-blobstore':
+        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
+        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
+        break;
+    }
+
+    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
+  }
+
+  // Decompose parser if exists
+  if (deepGet(spec, 'spec.dataSchema.parser')) {
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.timestampSpec',
+      'spec.dataSchema.timestampSpec',
+    );
+    spec = deepMove(
+      spec,
+      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
+      'spec.dataSchema.dimensionsSpec',
+    );
+    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
+    spec = deepDelete(spec, 'spec.dataSchema.parser');
+    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
+  }
+
+  return spec;
+}
+
+// ------------------------------------
 
 export interface GranularitySpec {
   type?: string;
@@ -1821,7 +1876,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defaultValue: 1073741824,
     min: 1000000,
     defined: s =>
-      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputFormat.type') !== 'http',
+      s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputSource.type') !== 'http',
     hideInMore: true,
     adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
     info: (
@@ -2179,29 +2234,45 @@ function inputFormatFromType(
 
 // ------------------------
 
-export function guessTypeFromSample(sample: any[]): string {
-  const definedValues = sample.filter(v => v != null);
+export function guessColumnTypeFromInput(
+  sampleValues: any[],
+  guessNumericStringsAsNumbers: boolean,
+): string {
+  const definedValues = sampleValues.filter(v => v != null);
+
+  // If we have no usable sample, assume string
+  if (!definedValues.length) return 'string';
+
+  // If we see any arrays in the input this is a multi-value dimension that must be a string
+  if (definedValues.some(v => Array.isArray(v))) return 'string';
+
   if (
-    definedValues.length &&
-    definedValues.every(v => !isNaN(v) && oneOf(typeof v, 'number', 'string'))
+    definedValues.every(v => {
+      return (
+        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
+        !isNaN(Number(v))
+      );
+    })
   ) {
-    if (definedValues.every(v => v % 1 === 0)) {
-      return 'long';
-    } else {
-      return 'double';
-    }
+    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
   } else {
     return 'string';
   }
 }
 
-export function getColumnTypeFromHeaderAndRows(
-  headerAndRows: HeaderAndRows,
+export function guessColumnTypeFromHeaderAndRows(
+  headerAndRows: SampleHeaderAndRows,
   column: string,
+  guessNumericStringsAsNumbers: boolean,
 ): string {
-  return guessTypeFromSample(
-    filterMap(headerAndRows.rows, (r: any) => (r.parsed ? r.parsed[column] : undefined)),
+  return guessColumnTypeFromInput(
+    filterMap(headerAndRows.rows, r => r.input?.[column]),
+    guessNumericStringsAsNumbers,
   );
+}
+
+export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | undefined): boolean {
+  return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
 function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
@@ -2225,12 +2296,15 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
-  headerAndRows: HeaderAndRows,
+  headerAndRows: SampleHeaderAndRows,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
   const typeHints = getTypeHintsFromSpec(spec);
+  const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
+    deepGet(spec, 'spec.ioConfig.inputFormat'),
+  );
 
   let newSpec = spec;
 
@@ -2240,7 +2314,12 @@ export function updateSchemaWithSample(
   } else {
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 
-    const dimensions = getDimensionSpecs(headerAndRows, typeHints, rollup);
+    const dimensions = getDimensionSpecs(
+      headerAndRows,
+      typeHints,
+      guessNumericStringsAsNumbers,
+      rollup,
+    );
     if (dimensions) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
     }
@@ -2249,7 +2328,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(headerAndRows, typeHints);
+    const metrics = getMetricSpecs(headerAndRows, typeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
@@ -2273,52 +2352,6 @@ export function updateSchemaWithSample(
 
   newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
   return newSpec;
-}
-
-// ------------------------
-
-export function upgradeSpec(spec: any): Partial<IngestionSpec> {
-  if (deepGet(spec, 'type') && deepGet(spec, 'dataSchema')) {
-    spec = {
-      type: spec.type,
-      spec: deepDelete(spec, 'type'),
-    };
-  }
-
-  // Upgrade firehose if exists
-  if (deepGet(spec, 'spec.ioConfig.firehose')) {
-    switch (deepGet(spec, 'spec.ioConfig.firehose.type')) {
-      case 'static-s3':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 's3');
-        break;
-
-      case 'static-google-blobstore':
-        deepSet(spec, 'spec.ioConfig.firehose.type', 'google');
-        deepMove(spec, 'spec.ioConfig.firehose.blobs', 'spec.ioConfig.firehose.objects');
-        break;
-    }
-
-    spec = deepMove(spec, 'spec.ioConfig.firehose', 'spec.ioConfig.inputSource');
-  }
-
-  // Decompose parser if exists
-  if (deepGet(spec, 'spec.dataSchema.parser')) {
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.timestampSpec',
-      'spec.dataSchema.timestampSpec',
-    );
-    spec = deepMove(
-      spec,
-      'spec.dataSchema.parser.parseSpec.dimensionsSpec',
-      'spec.dataSchema.dimensionsSpec',
-    );
-    spec = deepMove(spec, 'spec.dataSchema.parser.parseSpec', 'spec.ioConfig.inputFormat');
-    spec = deepDelete(spec, 'spec.dataSchema.parser');
-    spec = deepMove(spec, 'spec.ioConfig.inputFormat.format', 'spec.ioConfig.inputFormat.type');
-  }
-
-  return spec;
 }
 
 export function adjustId(id: string): string {

@@ -28,6 +28,7 @@ import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.druid.annotations.UsedInGeneratedCode;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
@@ -110,6 +111,18 @@ public class ZkWorker implements Closeable
     return currCapacity;
   }
 
+  @JsonProperty("currParallelIndexCapacityUsed")
+  public int getCurrParallelIndexCapacityUsed()
+  {
+    int currParallelIndexCapacityUsed = 0;
+    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+      if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
+        currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
+      }
+    }
+    return currParallelIndexCapacityUsed;
+  }
+
   @JsonProperty("availabilityGroups")
   public Set<String> getAvailabilityGroups()
   {
@@ -168,6 +181,7 @@ public class ZkWorker implements Closeable
     return new ImmutableWorkerInfo(
         worker.get(),
         getCurrCapacityUsed(),
+        getCurrParallelIndexCapacityUsed(),
         getAvailabilityGroups(),
         getRunningTaskIds(),
         lastCompletedTaskTime.get(),

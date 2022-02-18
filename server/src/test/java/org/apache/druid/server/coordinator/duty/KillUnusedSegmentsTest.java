@@ -20,112 +20,187 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.mockito.Answers;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 /**
  */
+@RunWith(Enclosed.class)
 public class KillUnusedSegmentsTest
 {
-  @Test
-  public void testFindIntervalForKill()
+  /**
+   * Standing up new tests with mocks was easier than trying to move the existing tests to use mocks for consistency.
+   * In the future, if all tests are moved to use the same structure, this inner static class can be gotten rid of.
+   */
+  @RunWith(MockitoJUnitRunner.class)
+  public static class MockedTest
   {
-    testFindIntervalForKill(null, null);
-    testFindIntervalForKill(ImmutableList.of(), null);
+    private static final Set<String> ALL_DATASOURCES = ImmutableSet.of("DS1", "DS2", "DS3");
+    private static final int MAX_SEGMENTS_TO_KILL = 10;
+    private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
+    private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
+    private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
 
-    testFindIntervalForKill(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
+    @Mock
+    private SegmentsMetadataManager segmentsMetadataManager;
+    @Mock
+    private IndexingServiceClient indexingServiceClient;
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private DruidCoordinatorConfig config;
 
-    testFindIntervalForKill(
-        ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
-        Intervals.of("2014/2017")
-    );
+    @Mock
+    private DruidCoordinatorRuntimeParams params;
+    @Mock
+    private CoordinatorDynamicConfig coordinatorDynamicConfig;
+    private KillUnusedSegments target;
 
-    testFindIntervalForKill(
-        ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
-        Intervals.of("2014/2016")
-    );
+    @Before
+    public void setup()
+    {
+      Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
+      Mockito.doReturn(ALL_DATASOURCES).when(segmentsMetadataManager).retrieveAllDataSourceNames();
+      Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
+      Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
+      Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
+      Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
+      target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+    }
+    @Test
+    public void testRunWihNoIntervalShouldNotKillAnySegments()
+    {
+      target.run(params);
+      Mockito.verify(indexingServiceClient, Mockito.never())
+             .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+    }
 
-    testFindIntervalForKill(
-        ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
-        Intervals.of("2014/2016")
-    );
-
-    testFindIntervalForKill(
-        ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
-        Intervals.of("2014/2017")
-    );
-
-    testFindIntervalForKill(
-        ImmutableList.of(
-            Intervals.of("2015/2019"),
-            Intervals.of("2014/2016"),
-            Intervals.of("2018/2020")
-        ),
-        Intervals.of("2014/2020")
-    );
-
-    testFindIntervalForKill(
-        ImmutableList.of(
-            Intervals.of("2015/2019"),
-            Intervals.of("2014/2016"),
-            Intervals.of("2018/2020"),
-            Intervals.of("2021/2022")
-        ),
-        Intervals.of("2014/2022")
-    );
+    @Test
+    public void testRunWihSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
+    {
+      Mockito.when(coordinatorDynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn()).thenReturn(Collections.singleton("DS1"));
+      target.run(params);
+      Mockito.verify(indexingServiceClient, Mockito.never())
+             .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+    }
   }
 
-  private void testFindIntervalForKill(List<Interval> segmentIntervals, Interval expected)
+  public static class FindIntervalsTest
   {
-    SegmentsMetadataManager segmentsMetadataManager = EasyMock.createMock(SegmentsMetadataManager.class);
-    EasyMock.expect(
-        segmentsMetadataManager.getUnusedSegmentIntervals(
-            EasyMock.anyString(),
-            EasyMock.anyObject(DateTime.class),
-            EasyMock.anyInt()
-        )
-    ).andReturn(segmentIntervals);
-    EasyMock.replay(segmentsMetadataManager);
-    IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
+    @Test
+    public void testFindIntervalForKill()
+    {
+      testFindIntervalForKill(null, null);
+      testFindIntervalForKill(ImmutableList.of(), null);
 
-    KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
-        segmentsMetadataManager,
-        indexingServiceClient,
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            Duration.parse("PT76400S"),
-            null,
-            new Duration(1),
-            Duration.parse("PT86400S"),
-            Duration.parse("PT86400S"),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1000,
-            Duration.ZERO
-        )
-    );
+      testFindIntervalForKill(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
 
-    Assert.assertEquals(
-        expected,
-        unusedSegmentsKiller.findIntervalForKill("test", 10000)
-    );
+      testFindIntervalForKill(
+          ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
+          Intervals.of("2014/2017")
+      );
+
+      testFindIntervalForKill(
+          ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
+          Intervals.of("2014/2016")
+      );
+
+      testFindIntervalForKill(
+          ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
+          Intervals.of("2014/2016")
+      );
+
+      testFindIntervalForKill(
+          ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
+          Intervals.of("2014/2017")
+      );
+
+      testFindIntervalForKill(
+          ImmutableList.of(
+              Intervals.of("2015/2019"),
+              Intervals.of("2014/2016"),
+              Intervals.of("2018/2020")
+          ),
+          Intervals.of("2014/2020")
+      );
+
+      testFindIntervalForKill(
+          ImmutableList.of(
+              Intervals.of("2015/2019"),
+              Intervals.of("2014/2016"),
+              Intervals.of("2018/2020"),
+              Intervals.of("2021/2022")
+          ),
+          Intervals.of("2014/2022")
+      );
+    }
+
+    private void testFindIntervalForKill(List<Interval> segmentIntervals, Interval expected)
+    {
+      SegmentsMetadataManager segmentsMetadataManager = EasyMock.createMock(SegmentsMetadataManager.class);
+      EasyMock.expect(
+          segmentsMetadataManager.getUnusedSegmentIntervals(
+              EasyMock.anyString(),
+              EasyMock.anyObject(DateTime.class),
+              EasyMock.anyInt()
+          )
+      ).andReturn(segmentIntervals);
+      EasyMock.replay(segmentsMetadataManager);
+      IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
+
+      KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
+          segmentsMetadataManager,
+          indexingServiceClient,
+          new TestDruidCoordinatorConfig(
+              null,
+              null,
+              Duration.parse("PT76400S"),
+              null,
+              new Duration(1),
+              Duration.parse("PT86400S"),
+              Duration.parse("PT86400S"),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              1000,
+              Duration.ZERO
+          )
+      );
+
+      Assert.assertEquals(
+          expected,
+          unusedSegmentsKiller.findIntervalForKill("test", 10000)
+      );
+    }
   }
 }

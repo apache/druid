@@ -405,11 +405,26 @@ public abstract class ExprEval<T>
         if (value instanceof List) {
           return bestEffortOf(value);
         }
-        return of((String) value);
+        if (value == null) {
+          return of(null);
+        }
+        return of(String.valueOf(value));
       case LONG:
-        return ofLong((Number) value);
+        if (value instanceof Number) {
+          return ofLong((Number) value);
+        }
+        if (value instanceof String) {
+          return ofLong(ExprEval.computeNumber((String) value));
+        }
+        return ofLong(null);
       case DOUBLE:
-        return ofDouble((Number) value);
+        if (value instanceof Number) {
+          return ofDouble((Number) value);
+        }
+        if (value instanceof String) {
+          return ofDouble(ExprEval.computeNumber((String) value));
+        }
+        return ofDouble(null);
       case COMPLEX:
         byte[] bytes = null;
         if (value instanceof String) {

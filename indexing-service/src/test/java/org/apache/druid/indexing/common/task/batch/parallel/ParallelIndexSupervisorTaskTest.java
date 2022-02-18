@@ -31,7 +31,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -39,6 +38,7 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
@@ -54,8 +54,11 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -131,14 +134,14 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<PartitionLocation>> createPartitionToLocations(
+    private static Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> createPartitionToLocations(
         int count,
         String partitionLocationType
     )
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
-              i -> Pair.of(createInterval(i), i),
+              i -> new ParallelIndexSupervisorTask.Partition(createInterval(i), i),
               i -> Collections.singletonList(createPartitionLocation(i, partitionLocationType))
           )
       );
@@ -334,6 +337,88 @@ public class ParallelIndexSupervisorTaskTest
       EasyMock.replay(inputSource, tuningConfig);
 
       Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void test_getPartitionToLocations_ordersPartitionsCorrectly()
+    {
+      final Interval day1 = Intervals.of("2022-01-01/2022-01-02");
+      final Interval day2 = Intervals.of("2022-01-02/2022-01-03");
+
+      final String task1 = "task1";
+      final String task2 = "task2";
+
+      // Create task reports
+      Map<String, GeneratedPartitionsReport> taskIdToReport = new HashMap<>();
+      taskIdToReport.put(task1, new GeneratedPartitionsReport(task1, Arrays.asList(
+          createRangePartitionStat(day1, 1),
+          createRangePartitionStat(day2, 7),
+          createRangePartitionStat(day1, 0),
+          createRangePartitionStat(day2, 1)
+      )));
+      taskIdToReport.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
+          createRangePartitionStat(day1, 4),
+          createRangePartitionStat(day1, 6),
+          createRangePartitionStat(day2, 1),
+          createRangePartitionStat(day1, 1)
+      )));
+
+      Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations
+          = ParallelIndexSupervisorTask.getPartitionToLocations(taskIdToReport);
+      Assert.assertEquals(6, partitionToLocations.size());
+
+      // Verify that partitionIds are packed and in the same order as bucketIds
+      verifyPartitionIdAndLocations(day1, 0, partitionToLocations,
+                                    0, task1);
+      verifyPartitionIdAndLocations(day1, 1, partitionToLocations,
+                                    1, task1, task2);
+      verifyPartitionIdAndLocations(day1, 4, partitionToLocations,
+                                    2, task2);
+      verifyPartitionIdAndLocations(day1, 6, partitionToLocations,
+                                    3, task2);
+
+      verifyPartitionIdAndLocations(day2, 1, partitionToLocations,
+                                    0, task1, task2);
+      verifyPartitionIdAndLocations(day2, 7, partitionToLocations,
+                                    1, task1);
+    }
+
+    private PartitionStat createRangePartitionStat(Interval interval, int bucketId)
+    {
+      return new DeepStoragePartitionStat(
+          interval,
+          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1", "dim2"), null, null),
+          new HashMap<>()
+      );
+    }
+
+    private void verifyPartitionIdAndLocations(
+        Interval interval,
+        int bucketId,
+        Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations,
+        int expectedPartitionId,
+        String... expectedTaskIds
+    )
+    {
+      final ParallelIndexSupervisorTask.Partition partition
+          = new ParallelIndexSupervisorTask.Partition(interval, bucketId);
+      List<PartitionLocation> locations = partitionToLocations.get(partition);
+      Assert.assertEquals(expectedTaskIds.length, locations.size());
+
+      final Set<String> observedTaskIds = new HashSet<>();
+      for (PartitionLocation location : locations) {
+        Assert.assertEquals(bucketId, location.getBucketId());
+        Assert.assertEquals(interval, location.getInterval());
+        Assert.assertEquals(expectedPartitionId, location.getShardSpec().getPartitionNum());
+
+        observedTaskIds.add(location.getSubTaskId());
+      }
+
+      // Verify the taskIds of the locations
+      Assert.assertEquals(
+          new HashSet<>(Arrays.asList(expectedTaskIds)),
+          observedTaskIds
+      );
     }
   }
 

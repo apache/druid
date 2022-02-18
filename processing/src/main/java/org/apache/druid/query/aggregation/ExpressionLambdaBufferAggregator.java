@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class ExpressionLambdaBufferAggregator implements BufferAggregator
 {
@@ -35,21 +36,22 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
   private final boolean isNullUnlessAggregated;
+  private final boolean aggregateNullInputs;
+  private final List<String> inputColumns;
   private final ExpressionType outputType;
 
   public ExpressionLambdaBufferAggregator(
-      Expr lambda,
-      ExprEval<?> initialValue,
-      ExpressionLambdaAggregatorInputBindings bindings,
-      boolean isNullUnlessAggregated,
+      final ExpressionLambdaAggregatorFactory.FactorizePlan thePlan,
       int maxSizeBytes
   )
   {
-    this.lambda = lambda;
-    this.initialValue = initialValue;
+    this.lambda = thePlan.getExpression();
+    this.initialValue = thePlan.getInitialValue();
     this.outputType = initialValue.type();
-    this.bindings = bindings;
-    this.isNullUnlessAggregated = isNullUnlessAggregated;
+    this.bindings = thePlan.getBindings();
+    this.isNullUnlessAggregated = thePlan.isNullUnlessAggregated();
+    this.aggregateNullInputs = thePlan.shouldAggregateNullInputs();
+    this.inputColumns = thePlan.getInputs();
     this.maxSizeBytes = maxSizeBytes;
   }
 
@@ -66,6 +68,13 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    if (!aggregateNullInputs) {
+      for (String column : inputColumns) {
+        if (bindings.get(column) == null) {
+          return;
+        }
+      }
+    }
     ExprEval<?> acc = ExprEval.deserialize(buf, position, outputType);
     bindings.setAccumulator(acc);
     ExprEval<?> newAcc = lambda.eval(bindings);

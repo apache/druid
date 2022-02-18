@@ -555,6 +555,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             },
             this::resolveWaitingFutures
         );
+      } else if (status.get().getState() == Status.STATE.SUCCESS) {
+        // SUCCESS case, we'll clear up the cached success while serving it to this client
+        // Not doing this can lead to an incorrect response to upcoming clients for a reload
+        requestStatuses.invalidate(changeRequest);
+        return status;
       }
       return requestStatuses.getIfPresent(changeRequest);
     }

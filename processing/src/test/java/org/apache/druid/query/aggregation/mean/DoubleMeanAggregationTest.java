@@ -34,15 +34,20 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -172,5 +177,35 @@ public class DoubleMeanAggregationTest
     Assert.assertEquals(6.2d, result.getDoubleMetric("meanOnDouble").doubleValue(), 0.0001d);
     Assert.assertEquals(6.2d, result.getDoubleMetric("meanOnString").doubleValue(), 0.0001d);
     Assert.assertEquals(4.1333d, result.getDoubleMetric("meanOnMultiValue").doubleValue(), 0.0001d);
+  }
+
+  @Test
+  public void testAggregateWithSize()
+  {
+    Double[] values = new Double[]{3.0, 1.0, 2.0};
+    TestObjectColumnSelector<Double> columnValueSelector = new TestObjectColumnSelector<>(values);
+
+    ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
+            .andReturn(columnValueSelector).anyTimes();
+    EasyMock.replay(colSelectorFactory);
+
+    DoubleMeanAggregatorFactory aggregatorFactory = new DoubleMeanAggregatorFactory("name", "fieldName");
+    AggregatorAndSize aggregatorAndSize = aggregatorFactory.factorizeWithSize(colSelectorFactory);
+
+    Assert.assertEquals(
+        aggregatorFactory.getMaxIntermediateSize(),
+        aggregatorAndSize.getInitialSizeBytes()
+    );
+    Assert.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
+    Aggregator aggregator = aggregatorAndSize.getAggregator();
+    for (int i = 0; i < values.length; ++i) {
+      long sizeDelta = aggregator.aggregateWithSize();
+      Assert.assertEquals(0L, sizeDelta);
+      columnValueSelector.increment();
+    }
+
+    DoubleMeanHolder meanHolder = (DoubleMeanHolder) aggregator.get();
+    Assert.assertEquals(2.0, meanHolder.mean(), 0.0);
   }
 }

@@ -21,7 +21,6 @@
 const fs = require('fs-extra');
 const snarkdown = require('snarkdown');
 
-const readfile = '../docs/querying/sql.md';
 const writefile = 'lib/sql-docs.js';
 
 const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
@@ -59,7 +58,14 @@ function convertMarkdownToHtml(markdown) {
 }
 
 const readDoc = async () => {
-  const data = await fs.readFile(readfile, 'utf-8');
+  const data = [
+    await fs.readFile('../docs/querying/sql-data-types.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
+  ].join('\n');
+
   const lines = data.split('\n');
 
   const functionDocs = {};

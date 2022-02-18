@@ -105,6 +105,11 @@ public class VectorGroupByEngine
                 return false;
               }
 
+              if (dimension.getOutputType().isArray()) {
+                // group by on arrays is not currently supported in the vector processing engine
+                return false;
+              }
+
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
               // null here currently means the column does not exist, nil columns can be vectorized

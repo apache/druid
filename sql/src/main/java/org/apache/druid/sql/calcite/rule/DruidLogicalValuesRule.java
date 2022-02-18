@@ -128,6 +128,11 @@ public class DruidLogicalValuesRule extends RelOptRule
       case TIMESTAMP:
       case DATE:
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
+      case NULL:
+        if (!literal.isNull()) {
+          throw new UnsupportedSQLQueryException("Query has a non-null constant but is of NULL type.");
+        }
+        return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:

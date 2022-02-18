@@ -154,7 +154,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
-   * @param valueType
    */
   public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(TypeSignature<ValueType> valueType)
   {
@@ -187,14 +186,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
-   * and {@link #hasNulls} is not set
-   * @param valueType
+   * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasNulls} is not set
    */
   public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(TypeSignature<ValueType> valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
-                                                                 .setHasMultipleValues(true)
+                                                                 .setHasMultipleValues(false)
                                                                  .setHasBitmapIndexes(false)
                                                                  .setDictionaryEncoded(false)
                                                                  .setDictionaryValuesSorted(false)

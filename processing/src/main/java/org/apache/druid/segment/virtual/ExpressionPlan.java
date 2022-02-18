@@ -46,6 +46,10 @@ public class ExpressionPlan
       */
     CONSTANT,
     /**
+     * expression is a simple identifier expression, do not transform
+     */
+    IDENTIFIER,
+    /**
      * expression has a single, single valued input, and is dictionary encoded if the value is a string, and does
      * not produce non-scalar output
      */
@@ -275,8 +279,8 @@ public class ExpressionPlan
       // the complete set of input types
       if (any(Trait.NON_SCALAR_OUTPUT, Trait.NEEDS_APPLIED)) {
         // if the hint requested a string, use a string
-        if (Types.is(outputTypeHint, ValueType.STRING)) {
-          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ColumnType.STRING);
+        if (Types.is(outputTypeHint, ValueType.STRING) || inferredValueType.is(ValueType.STRING)) {
+          return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities().setHasMultipleValues(true);
         }
         // maybe something is looking for a little fun and wants arrays? let whatever it is through
         return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ExpressionType.toColumnType(outputType));

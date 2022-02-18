@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -115,27 +117,36 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(ListBlobItemHolderFactory.class));
   }
 
+  /**
+   * Creates a supplier that lazily initialize {@link CloudBlobClient}.
+   * This is to avoid immediate config validation but defer it until you actually use the client.
+   */
   @Provides
   @LazySingleton
-  public CloudBlobClient getCloudBlobClient(final AzureAccountConfig config)
-      throws URISyntaxException, InvalidKeyException
+  public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
   {
-    CloudStorageAccount account = CloudStorageAccount.parse(
-        StringUtils.format(
-            STORAGE_CONNECTION_STRING,
-            config.getProtocol(),
-            config.getAccount(),
-            config.getKey()
-        )
-    );
-
-    return account.createCloudBlobClient();
+    return Suppliers.memoize(() -> {
+      try {
+        CloudStorageAccount account = CloudStorageAccount.parse(
+            StringUtils.format(
+                STORAGE_CONNECTION_STRING,
+                config.getProtocol(),
+                config.getAccount(),
+                config.getKey()
+            )
+        );
+        return account.createCloudBlobClient();
+      }
+      catch (URISyntaxException | InvalidKeyException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final CloudBlobClient cloudBlobClient
+      final Supplier<CloudBlobClient> cloudBlobClient
   )
   {
     return new AzureStorage(cloudBlobClient);

@@ -55,7 +55,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertCallBuilder(
         plannerContext,
         rowSignature,
         rexNode,
@@ -77,13 +77,11 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
             factorString = StringUtils.format("pow(10,%s)", inputExpressions.get(1));
           }
 
-          return DruidExpression.fromExpression(
-              StringUtils.format(
-                  "(cast(cast(%s * %s,'long'),'double') / %s)",
-                  arg.getExpression(),
-                  factorString,
-                  factorString
-              )
+          return StringUtils.format(
+              "(cast(cast(%s * %s,'long'),'double') / %s)",
+              arg.getExpression(),
+              factorString,
+              factorString
           );
         }
     );
