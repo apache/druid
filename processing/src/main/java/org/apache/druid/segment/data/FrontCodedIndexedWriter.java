@@ -1,12 +1,12 @@
 package org.apache.druid.segment.data;
 
+import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
-import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -16,7 +16,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class FrontCodedIndexedWriter implements Serializer
+public class FrontCodedIndexedWriter implements DictionaryWriter<String>
 {
   private static final NullableTypeStrategy<String> NULLABLE_STRING_STRATEGY = ColumnType.STRING.getNullableStrategy();
   // todo (clint): sir, just how big are your strings?
@@ -64,13 +64,14 @@ public class FrontCodedIndexedWriter implements Serializer
     }
   }
 
+  @Override
   public void open() throws IOException
   {
     headerOut = segmentWriteOutMedium.makeWriteOutBytes();
     valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
-
+  @Override
   public void write(@Nullable String objectToWrite) throws IOException
   {
     if (prevObject != null && NULLABLE_STRING_STRATEGY.compare(prevObject, objectToWrite) >= 0) {
@@ -128,7 +129,8 @@ public class FrontCodedIndexedWriter implements Serializer
     if (!isClosed) {
       flush();
     }
-    return Byte.BYTES + Byte.BYTES + FrontCodedIndexed.estimateSizeVByteInt(numWritten) + headerOut.size() + valuesOut.size();
+    int headerAndValues = Ints.checkedCast(headerOut.size() + valuesOut.size());
+    return Byte.BYTES + Byte.BYTES + FrontCodedIndexed.estimateSizeVByteInt(numWritten) + FrontCodedIndexed.estimateSizeVByteInt(headerAndValues) + headerAndValues;
   }
 
   @Override
@@ -144,6 +146,7 @@ public class FrontCodedIndexedWriter implements Serializer
     scratch.put((byte) bucketSize);
     scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
     FrontCodedIndexed.writeVbyteInt(scratch, numWritten);
+    FrontCodedIndexed.writeVbyteInt(scratch, Ints.checkedCast(headerOut.size() + valuesOut.size()));
     scratch.flip();
     Channels.writeFully(channel, scratch);
     headerOut.writeTo(channel);

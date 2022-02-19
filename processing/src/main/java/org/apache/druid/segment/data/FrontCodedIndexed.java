@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnType;
@@ -33,6 +34,19 @@ import java.util.NoSuchElementException;
 
 public final class FrontCodedIndexed implements Indexed<String>
 {
+  public static FrontCodedIndexed read(ByteBuffer buffer, ByteOrder ordering)
+  {
+    final ByteBuffer copy = buffer.asReadOnlyBuffer().order(ordering);
+    final int bucketSize = copy.get();
+    final boolean hasNulls = NullHandling.IS_NULL_BYTE == copy.get();
+    final int numValues = readVbyteInt(copy);
+    // size of offsets + values
+    final int size = readVbyteInt(copy);
+    // move position to end of buffer
+    buffer.position(copy.position() + size);
+    return new FrontCodedIndexed(copy, bucketSize, hasNulls, numValues);
+  }
+
   private final ByteBuffer buffer;
   private final int numValues;
   private final int adjustedNumValues;
@@ -47,16 +61,16 @@ public final class FrontCodedIndexed implements Indexed<String>
   private final int lastBucketNumValues;
   private final Comparator<String> comparator;
 
-  public FrontCodedIndexed(ByteBuffer baseBuffer, ByteOrder ordering)
+  public FrontCodedIndexed(ByteBuffer baseBuffer, int bucketSize, boolean hasNulls, int numValues)
   {
-    buffer = baseBuffer.asReadOnlyBuffer().order(ordering);
-    bucketSize = buffer.get();
-    hasNulls = NullHandling.IS_NULL_BYTE == buffer.get();
+    buffer = baseBuffer;
+    this.bucketSize = bucketSize;
+    this.hasNulls = hasNulls;
     div = Integer.numberOfTrailingZeros(bucketSize);
     rem = bucketSize - 1;
-    numValues = readVbyteInt(buffer);
+    this.numValues = numValues;
     adjustIndex = hasNulls ? 1 : 0;
-    comparator = hasNulls ? ColumnType.STRING.getNullableStrategy() : ColumnType.STRING.getStrategy();
+    comparator = ColumnType.STRING.getNullableStrategy();
     adjustedNumValues = numValues + adjustIndex;
     numBuckets = (int) Math.ceil((double) numValues / (double) bucketSize);
     offsetsPosition = buffer.position();
@@ -103,8 +117,8 @@ public final class FrontCodedIndexed implements Indexed<String>
       int currBucketIndex = (minBucketIndex + maxBucketIndex) >>> 1;
       int currBucketFirstValueIndex = currBucketIndex * bucketSize;
 
-      final String currBucketFirstValue = get(currBucketFirstValueIndex);
-      final String nextBucketFirstValue = get(currBucketFirstValueIndex + bucketSize);
+      final String currBucketFirstValue = get(currBucketFirstValueIndex + adjustIndex);
+      final String nextBucketFirstValue = get(currBucketFirstValueIndex + bucketSize + adjustIndex);
       int comparison = comparator.compare(currBucketFirstValue, value);
       if (comparison == 0) {
         return currBucketFirstValueIndex + adjustIndex;
@@ -125,15 +139,26 @@ public final class FrontCodedIndexed implements Indexed<String>
         maxBucketIndex = currBucketIndex - 1;
       }
     }
-    // check last bucket
-    final int offset = buffer.getInt(offsetsPosition + ((numBuckets - 2) * Integer.BYTES));
-    int lastBucketBaseIndex = (numBuckets - 1) * bucketSize;
+
+    final int bucketIndexBase = minBucketIndex * bucketSize;
+    final int numValuesInBucket;
+    if (minBucketIndex == numBuckets - 1) {
+      numValuesInBucket = lastBucketNumValues;
+    } else {
+      numValuesInBucket = bucketSize;
+    }
+    final int offset;
+    if (minBucketIndex > 0) {
+      offset = buffer.getInt(offsetsPosition + ((minBucketIndex - 1) * Integer.BYTES));
+    } else {
+      offset = 0;
+    }
     buffer.position(bucketsPosition + offset);
-    final int pos = findInBucket(buffer, lastBucketNumValues, value, comparator);
+    final int pos = findInBucket(buffer, numValuesInBucket, value, comparator);
     if (pos < 0) {
       return pos;
     }
-    return lastBucketBaseIndex + pos + adjustIndex;
+    return bucketIndexBase + pos + adjustIndex;
   }
 
   @Override
@@ -263,8 +288,15 @@ public final class FrontCodedIndexed implements Indexed<String>
             break;
           }
         }
+        int rem = buffer.remaining() - estimateSizeVByteInt(i);
+        if (rem <= 0) {
+          return rem;
+        }
         writeVbyteInt(buffer, i);
-        writeString(buffer, next.substring(i));
+        rem = writeString(buffer, next.substring(i));
+        if (rem <= 0) {
+          return rem;
+        }
       }
       written++;
     }
@@ -347,7 +379,7 @@ public final class FrontCodedIndexed implements Indexed<String>
   public static int writeString(ByteBuffer buffer, String value)
   {
     final byte[] bytes = StringUtils.toUtf8(value);
-    final int remaining = buffer.remaining() - estimateSizeVByteInt(bytes.length);
+    final int remaining = buffer.remaining() - estimateSizeVByteInt(bytes.length) - bytes.length;
     if (remaining >= 0) {
       final int pos = buffer.position();
       writeVbyteInt(buffer, bytes.length);

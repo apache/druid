@@ -30,7 +30,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -77,8 +79,8 @@ import java.util.concurrent.TimeUnit;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 5)
-@Measurement(iterations = 15)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class SqlBenchmark
 {
   static {
@@ -378,7 +380,11 @@ public class SqlBenchmark
       // 20: GroupBy, doubles sketches
       "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
       + "FROM foo "
-      + "GROUP BY 1"
+      + "GROUP BY 1",
+
+      // 21, 22: stringy stuff
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimUniform NOT LIKE '%3' GROUP BY 1, 2",
+      "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1"
   );
 
   @Param({"5000000"})
@@ -387,7 +393,12 @@ public class SqlBenchmark
   @Param({"false", "force"})
   private String vectorize;
 
-  @Param({"20"})
+  @Param({"none", "front_coded"})
+  private String stringEncoding;
+
+//  @Param({  "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"})
+//  @Param({  "4", "5"})
+  @Param({  "21", "22"})
   private String query;
 
   @Nullable
@@ -411,7 +422,20 @@ public class SqlBenchmark
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    final QueryableIndex index = segmentGenerator.generate(
+        dataSegment,
+        schemaInfo,
+        new IndexSpec(
+            null,
+            null,
+            CompressionFactory.StringDictionaryEncodingStrategy.fromString(stringEncoding),
+            null,
+            null,
+            null
+        ),
+        Granularities.NONE,
+        rowsPerSegment
+    );
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
 
@@ -473,20 +497,20 @@ public class SqlBenchmark
       blackhole.consume(lastRow);
     }
   }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void planSql(Blackhole blackhole) throws Exception
-  {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-    );
-    final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan();
-      blackhole.consume(plannerResult);
-    }
-  }
+//
+//  @Benchmark
+//  @BenchmarkMode(Mode.AverageTime)
+//  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+//  public void planSql(Blackhole blackhole) throws Exception
+//  {
+//    final Map<String, Object> context = ImmutableMap.of(
+//        QueryContexts.VECTORIZE_KEY, vectorize,
+//        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+//    );
+//    final String sql = QUERIES.get(Integer.parseInt(query));
+//    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+//      final PlannerResult plannerResult = planner.plan();
+//      blackhole.consume(plannerResult);
+//    }
+//  }
 }

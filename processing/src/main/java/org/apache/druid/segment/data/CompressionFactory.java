@@ -115,6 +115,25 @@ public class CompressionFactory
     return hasEncodingFlag(strategyId) ? (byte) (strategyId + FLAG_VALUE) : strategyId;
   }
 
+  public enum StringDictionaryEncodingStrategy
+  {
+    NONE,
+    FRONT_CODED;
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(this.name());
+    }
+
+    @JsonCreator
+    public static StringDictionaryEncodingStrategy fromString(String name)
+    {
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+
   /**
    * The compression of decompression of encodings are separated into different enums. EncodingStrategy refers to the
    * strategy used to encode the data, and EncodingFormat refers to the format the data is encoded in. Note there is not

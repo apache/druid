@@ -167,7 +167,7 @@ public class FrontCodedIndexedBenchmark
         GenericIndexed.STRING_STRATEGY,
         SmooshedFileMapper.load(smooshDirFrontCoded)
     );
-    frontCodedIndexed = new FrontCodedIndexed(byteBufferFrontCoded.order(ByteOrder.nativeOrder()), ByteOrder.nativeOrder());
+    frontCodedIndexed = FrontCodedIndexed.read(byteBufferFrontCoded.order(ByteOrder.nativeOrder()), ByteOrder.nativeOrder());
 
     // sanity test
     for (int i = 0; i < numElements; i++) {

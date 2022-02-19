@@ -42,6 +42,7 @@ import org.apache.druid.segment.data.ColumnarIntsSerializer;
 import org.apache.druid.segment.data.ColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -91,8 +92,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected DictionaryMergingIterator<T> dictionaryMergeIterator;
   @Nullable
   protected ColumnarIntsSerializer encodedValueSerializer;
+
   @Nullable
-  protected GenericIndexedWriter<T> dictionaryWriter;
+  protected DictionaryWriter<T> dictionaryWriter;
+
   @Nullable
   protected T firstDictionaryValue;
 
@@ -121,6 +124,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected abstract ObjectStrategy<T> getObjectStrategy();
   @Nullable
   protected abstract T coerceValue(T value);
+  protected abstract DictionaryWriter<T> getWriter(String fileName);
 
   @Override
   public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
@@ -169,7 +173,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
-    dictionaryWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, dictFilename, getObjectStrategy());
+    dictionaryWriter = getWriter(dictFilename);
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();

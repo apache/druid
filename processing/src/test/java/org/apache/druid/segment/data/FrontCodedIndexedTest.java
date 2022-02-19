@@ -26,38 +26,38 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
+@RunWith(Parameterized.class)
 public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 {
-  @Test
-  public void testVbyte()
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> constructorFeeder()
   {
-    ByteBuffer buffer = ByteBuffer.allocate(24).order(ByteOrder.BIG_ENDIAN);
-    roundTrip(buffer, 0, 0, 1);
-    roundTrip(buffer, 0, 4, 1);
-    roundTrip(buffer, 0, 224, 2);
-    roundTrip(buffer, 0, 1024, 2);
-    roundTrip(buffer, 0, 1 << 14 - 1, 2);
-    roundTrip(buffer, 0, 1 << 14, 3);
-    roundTrip(buffer, 0, 1 << 16, 3);
-    roundTrip(buffer, 0, 1 << 25, 4);
-    roundTrip(buffer, 0, 1 << 28 - 1, 4);
-    roundTrip(buffer, 0, 1 << 28, 5);
-    roundTrip(buffer, 0, Integer.MAX_VALUE, 5);
+    return ImmutableList.of(new Object[]{ByteOrder.LITTLE_ENDIAN}, new Object[]{ByteOrder.BIG_ENDIAN});
+  }
+
+  private final ByteOrder order;
+
+  public FrontCodedIndexedTest(ByteOrder byteOrder)
+  {
+    this.order = byteOrder;
   }
 
   @Test
-  public void testVbyteNative()
+  public void testVbyte()
   {
-    ByteBuffer buffer = ByteBuffer.allocate(24).order(ByteOrder.nativeOrder());
+    ByteBuffer buffer = ByteBuffer.allocate(24).order(order);
     roundTrip(buffer, 0, 0, 1);
     roundTrip(buffer, 0, 4, 1);
     roundTrip(buffer, 0, 224, 2);
@@ -74,18 +74,48 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   @Test
   public void testFrontCodedIndexed() throws IOException
   {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 12);
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
     fillBuffer(buffer, theList.iterator(), 4);
 
-    FrontCodedIndexed codedIndexed = new FrontCodedIndexed(buffer, buffer.order());
+    FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
     Assert.assertEquals("helloo", codedIndexed.get(1));
     Assert.assertEquals("helloozy", codedIndexed.get(4));
 
     Iterator<String> codedIterator = codedIndexed.iterator();
     Iterator<String> newListIterator = theList.iterator();
+    int ctr = 0;
     while (codedIterator.hasNext() && newListIterator.hasNext()) {
-      Assert.assertEquals(newListIterator.next(), codedIterator.next());
+      final String next = codedIterator.next();
+      Assert.assertEquals(newListIterator.next(), next);
+      Assert.assertEquals(next, codedIndexed.get(ctr));
+      Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+      ctr++;
+    }
+    Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
+  }
+
+
+  @Test
+  public void testFrontCodedIndexedSingleBucket() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
+    List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
+    fillBuffer(buffer, theList.iterator(), 16);
+
+    FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
+    Assert.assertEquals("helloo", codedIndexed.get(1));
+    Assert.assertEquals("helloozy", codedIndexed.get(4));
+
+    Iterator<String> codedIterator = codedIndexed.iterator();
+    Iterator<String> newListIterator = theList.iterator();
+    int ctr = 0;
+    while (codedIterator.hasNext() && newListIterator.hasNext()) {
+      final String next = codedIterator.next();
+      Assert.assertEquals(newListIterator.next(), next);
+      Assert.assertEquals(next, codedIndexed.get(ctr));
+      Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+      ctr++;
     }
     Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
   }
@@ -93,55 +123,73 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   @Test
   public void testFrontCodedIndexedBigger() throws IOException
   {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 24);
-    TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
-    for (int i = 0; i < 10000; i++) {
-      values.add(IdUtils.getRandomId());
-    }
-    fillBuffer(buffer, values.iterator(), 4);
+    final int sizeBase = 10000;
+    final int bucketSize = 16;
+    final ByteBuffer buffer = ByteBuffer.allocate(1 << 24).order(order);
+    for (int sizeAdjust = 0; sizeAdjust < bucketSize; sizeAdjust++) {
+      final TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
+      for (int i = 0; i < sizeBase + sizeAdjust; i++) {
+        values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
+      }
+      fillBuffer(buffer, values.iterator(), bucketSize);
 
-    FrontCodedIndexed codedIndexed = new FrontCodedIndexed(buffer, buffer.order());
+      FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
 
-    Iterator<String> codedIterator = codedIndexed.iterator();
-    Iterator<String> newListIterator = values.iterator();
-    int ctr = 0;
-    while (codedIterator.hasNext() && newListIterator.hasNext()) {
-      Assert.assertEquals(newListIterator.next(), codedIterator.next());
+      Iterator<String> codedIterator = codedIndexed.iterator();
+      Iterator<String> newListIterator = values.iterator();
+      int ctr = 0;
+      while (codedIterator.hasNext() && newListIterator.hasNext()) {
+        final String next = codedIterator.next();
+        Assert.assertEquals(newListIterator.next(), next);
+        Assert.assertEquals(next, codedIndexed.get(ctr));
+        Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+        ctr++;
+      }
+      Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
+      Assert.assertEquals(ctr, sizeBase + sizeAdjust);
     }
-    Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
   }
 
   @Test
   public void testFrontCodedIndexedBiggerWithNulls() throws IOException
   {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 24);
-    TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
-    values.add(null);
-    for (int i = 0; i < 10000; i++) {
-      values.add(IdUtils.getRandomId());
-    }
-    fillBuffer(buffer, values.iterator(), 4);
+    final int sizeBase = 10000;
+    final int bucketSize = 16;
+    final ByteBuffer buffer = ByteBuffer.allocate(1 << 24).order(order);
+    for (int sizeAdjust = 0; sizeAdjust < bucketSize; sizeAdjust++) {
+      TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
+      values.add(null);
+      for (int i = 0; i < sizeBase + sizeAdjust; i++) {
+        values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
+      }
+      fillBuffer(buffer, values.iterator(), 4);
 
-    FrontCodedIndexed codedIndexed = new FrontCodedIndexed(buffer, buffer.order());
+      FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
 
-    Iterator<String> codedIterator = codedIndexed.iterator();
-    Iterator<String> newListIterator = values.iterator();
-    int ctr = 0;
-    while (codedIterator.hasNext() && newListIterator.hasNext()) {
-      Assert.assertEquals(newListIterator.next(), codedIterator.next());
+      Iterator<String> codedIterator = codedIndexed.iterator();
+      Iterator<String> newListIterator = values.iterator();
+      int ctr = 0;
+      while (codedIterator.hasNext() && newListIterator.hasNext()) {
+        final String next = codedIterator.next();
+        Assert.assertEquals(newListIterator.next(), next);
+        Assert.assertEquals(next, codedIndexed.get(ctr));
+        Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+        ctr++;
+      }
+      Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
+      Assert.assertEquals(ctr, sizeBase + sizeAdjust + 1);
     }
-    Assert.assertEquals(newListIterator.hasNext(), codedIterator.hasNext());
   }
 
   @Test
   public void testFrontCodedIndexedIndexOf() throws IOException
   {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 12);
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
 
     fillBuffer(buffer, theList.iterator(), 4);
 
-    FrontCodedIndexed codedIndexed = new FrontCodedIndexed(buffer, buffer.order());
+    FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
     Assert.assertEquals(-1, codedIndexed.indexOf("a"));
     Assert.assertEquals(0, codedIndexed.indexOf("hello"));
     Assert.assertEquals(1, codedIndexed.indexOf("helloo"));
@@ -155,14 +203,14 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   @Test
   public void testFrontCodedIndexedIndexOfWithNull() throws IOException
   {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 12);
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
     List<String> theList = ImmutableList.of("hello", "helloo", "hellooo", "hellooz", "helloozy");
     TreeSet<String> values = new TreeSet<>(ColumnType.STRING.getNullableStrategy());
     values.add(null);
     values.addAll(theList);
     fillBuffer(buffer, values.iterator(), 4);
 
-    FrontCodedIndexed codedIndexed = new FrontCodedIndexed(buffer, buffer.order());
+    FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
     Assert.assertEquals(0, codedIndexed.indexOf(null));
     Assert.assertEquals(-1, codedIndexed.indexOf("a"));
     Assert.assertEquals(1, codedIndexed.indexOf("hello"));
@@ -207,6 +255,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     long size = writer.getSerializedSize();
     buffer.position(0);
     writer.writeTo(channel, null);
+    Assert.assertEquals(size, buffer.position());
     buffer.position(0);
     return size;
   }

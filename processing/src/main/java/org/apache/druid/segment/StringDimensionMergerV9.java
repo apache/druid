@@ -35,8 +35,12 @@ import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
+import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -46,6 +50,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -57,6 +62,13 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   public static final Comparator<Pair<Integer, PeekingIterator<String>>> DICTIONARY_MERGING_COMPARATOR =
       DictionaryMergingIterator.makePeekingComparator();
+
+
+  @Nullable
+  private GenericIndexedWriter<String> genericIndexedWriter;
+
+  @Nullable
+  private FrontCodedIndexedWriter frontCodedIndexedWriter;
 
   @Nullable
   private ByteBufferWriter<ImmutableRTree> spatialWriter;
@@ -97,6 +109,19 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     return NullHandling.emptyToNullIfNeeded(value);
   }
 
+  @Override
+  protected DictionaryWriter<String> getWriter(String fileName)
+  {
+    // todo (clint): spatial index + front coded = sad
+    if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FRONT_CODED) {
+      frontCodedIndexedWriter = new FrontCodedIndexedWriter(segmentWriteOutMedium, ByteOrder.nativeOrder(), 16);
+      return frontCodedIndexedWriter;
+    } else {
+      genericIndexedWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());
+      return genericIndexedWriter;
+    }
+  }
+
   @Nullable
   @Override
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
@@ -117,7 +142,8 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     builder.setHasMultipleValues(hasMultiValue);
     final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
         .serializerBuilder()
-        .withDictionary(dictionaryWriter)
+        .withDictionary(genericIndexedWriter)
+        .withFrontCodedDictionary(frontCodedIndexedWriter)
         .withValue(
             encodedValueSerializer,
             hasMultiValue,
