@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Command;
+import com.github.rvesse.airline.annotations.Command;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;

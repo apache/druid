@@ -21,6 +21,9 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -32,8 +35,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
@@ -120,48 +121,42 @@ public class DumpSegment extends GuiceRunnable
   @Option(
       name = {"-d", "--directory"},
       title = "directory",
-      description = "Directory containing segment data.",
-      required = true)
+      description = "Directory containing segment data.")
+  @Required
   public String directory;
 
   @Option(
       name = {"-o", "--out"},
       title = "file",
-      description = "File to write to, or omit to write to stdout.",
-      required = false)
+      description = "File to write to, or omit to write to stdout.")
   public String outputFileName;
 
   @Option(
       name = {"--filter"},
       title = "json",
-      description = "Filter, JSON encoded, or omit to include all rows. Only used if dumping rows.",
-      required = false)
+      description = "Filter, JSON encoded, or omit to include all rows. Only used if dumping rows.")
   public String filterJson = null;
 
   @Option(
       name = {"-c", "--column"},
       title = "column",
-      description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.",
-      required = false)
+      description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.")
   public List<String> columnNamesFromCli = new ArrayList<>();
 
   @Option(
       name = "--time-iso8601",
-      title = "Format __time column in ISO8601 format rather than long. Only used if dumping rows.",
-      required = false)
+      title = "Format __time column in ISO8601 format rather than long. Only used if dumping rows.")
   public boolean timeISO8601 = false;
 
   @Option(
       name = "--dump",
       title = "type",
-      description = "Dump either 'rows' (default), 'metadata', or 'bitmaps'",
-      required = false)
+      description = "Dump either 'rows' (default), 'metadata', or 'bitmaps'")
   public String dumpTypeString = DumpType.ROWS.toString();
 
   @Option(
       name = "--decompress-bitmaps",
-      title = "Dump bitmaps as arrays rather than base64-encoded compressed bitmaps. Only used if dumping bitmaps.",
-      required = false)
+      title = "Dump bitmaps as arrays rather than base64-encoded compressed bitmaps. Only used if dumping bitmaps.")
   public boolean decompressBitmaps = false;
 
   @Override

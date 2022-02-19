@@ -732,14 +732,17 @@ name: Airline
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7
+version: 2.8.4
 libraries:
-  - io.airlift: airline
+  - com.github.rvesse: airline
 notices:
   - airline: |
       Copyright Notices
       =================
 
+      Copyright 2013-18 Rob Vesse <rvesse@dotnetrdf.org>
+      Copyright 2013 Fernando Hernandez <fernando@clarkparsia.com>
+      Copyright 2013 Michael Grove <mike@clarkparsia.com>
       Copyright 2011 Dain Sundstrom <dain@iq80.com>
       Copyright 2010 Cedric Beust <cedric@beust.com>
 

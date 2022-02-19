@@ -278,16 +278,9 @@
                 <version>1.0.4</version>
             </dependency>
             <dependency>
-                <groupId>io.airlift</groupId>
+                <groupId>com.github.rvesse</groupId>
                 <artifactId>airline</artifactId>
-                <version>0.7</version>
-                <exclusions>
-                    <exclusion>
-                        <!--LGPL licenced library-->
-                        <groupId>com.google.code.findbugs</groupId>
-                        <artifactId>annotations</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>2.8.4</version>
             </dependency>
             <dependency>
                 <groupId>org.skife.config</groupId>

@@ -19,11 +19,12 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.initialization.Initialization;
@@ -50,7 +51,8 @@ public class CliHadoopIndexer implements Runnable
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Required
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
@@ -58,8 +60,7 @@ public class CliHadoopIndexer implements Runnable
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version",
-          required = false)
+          description = "don't pull down the default hadoop version")
   public boolean noDefaultHadoop;
 
   @Inject
