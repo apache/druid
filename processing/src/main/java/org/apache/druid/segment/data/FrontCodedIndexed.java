@@ -130,7 +130,7 @@ public final class FrontCodedIndexed implements Indexed<String>
         buffer.position(bucketsPosition + offset);
         final int pos = findInBucket(buffer, bucketSize, value, comparator);
         if (pos < 0) {
-          return pos;
+          return -(currBucketFirstValueIndex + adjustIndex) + pos;
         }
         return currBucketFirstValueIndex + pos + adjustIndex;
       } else if (comparison < 0) {
@@ -156,7 +156,7 @@ public final class FrontCodedIndexed implements Indexed<String>
     buffer.position(bucketsPosition + offset);
     final int pos = findInBucket(buffer, numValuesInBucket, value, comparator);
     if (pos < 0) {
-      return pos;
+      return -((minBucketIndex * bucketSize) + adjustIndex) + pos;
     }
     return bucketIndexBase + pos + adjustIndex;
   }
@@ -245,15 +245,19 @@ public final class FrontCodedIndexed implements Indexed<String>
     int prefixLength;
     String fragment;
     // scan through bucket values until we reach offset
+    int insertionPoint = 0;
     while (++offset < numValues) {
       prefixLength = readVbyteInt(bucket);
       fragment = readString(bucket);
       final String next = first.substring(0, prefixLength) + fragment;
-      if (comparator.compare(next, value) == 0) {
+      final int cmp = comparator.compare(next, value);
+      if (cmp == 0) {
         return offset;
+      } else if (cmp < 0) {
+        insertionPoint++;
       }
     }
-    return -1;
+    return -(insertionPoint + 1);
   }
 
   public static String[] readBucket(ByteBuffer bucket, int numValues)

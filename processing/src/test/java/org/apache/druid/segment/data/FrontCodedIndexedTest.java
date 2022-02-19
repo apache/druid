@@ -193,10 +193,10 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(-1, codedIndexed.indexOf("a"));
     Assert.assertEquals(0, codedIndexed.indexOf("hello"));
     Assert.assertEquals(1, codedIndexed.indexOf("helloo"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("helloob"));
+    Assert.assertEquals(-2, codedIndexed.indexOf("helloob"));
     Assert.assertEquals(4, codedIndexed.indexOf("helloozy"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("helloozz"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("wat"));
+    Assert.assertEquals(-5, codedIndexed.indexOf("helloozz"));
+    Assert.assertEquals(-5, codedIndexed.indexOf("wat"));
   }
 
 
@@ -212,13 +212,13 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 
     FrontCodedIndexed codedIndexed = FrontCodedIndexed.read(buffer, buffer.order());
     Assert.assertEquals(0, codedIndexed.indexOf(null));
-    Assert.assertEquals(-1, codedIndexed.indexOf("a"));
+    Assert.assertEquals(-2, codedIndexed.indexOf("a"));
     Assert.assertEquals(1, codedIndexed.indexOf("hello"));
     Assert.assertEquals(2, codedIndexed.indexOf("helloo"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("helloob"));
+    Assert.assertEquals(-3, codedIndexed.indexOf("helloob"));
     Assert.assertEquals(5, codedIndexed.indexOf("helloozy"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("helloozz"));
-    Assert.assertEquals(-1, codedIndexed.indexOf("wat"));
+    Assert.assertEquals(-6, codedIndexed.indexOf("helloozz"));
+    Assert.assertEquals(-6, codedIndexed.indexOf("wat"));
   }
 
   private static long fillBuffer(ByteBuffer buffer, Iterator<String> sortedStrings, int bucketSize) throws IOException
