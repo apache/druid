@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -37,8 +36,9 @@ import java.nio.ByteBuffer;
  * processing where binary records are arriving as a list but {@link org.apache.druid.data.input.InputEntityReader}, that
  * parses the data, expects an {@link InputStream}. This class mimics a continuous InputStream while behind the scenes,
  * binary records are being put one after the other that the InputStream consumes bytes from. One record is fully
- * consumed and only then the next record is set.
+ * consumed and only then the next record is set. This class doesn't allow reading the same data twice.
  * This class solely exists to overcome the limitations imposed by interfaces for reading and parsing data.
+ *
  */
 @NotThreadSafe
 class SettableByteEntity implements InputEntity
@@ -54,6 +54,7 @@ class SettableByteEntity implements InputEntity
   public void setBuffer(ByteBuffer buffer)
   {
     inputStream.setBuffer(buffer);
+    opened = false;
   }
 
   @Nullable
@@ -63,8 +64,12 @@ class SettableByteEntity implements InputEntity
     return null;
   }
 
+  /**
+   * This method can be called multiple times only for different data. So you can open a new input stream
+   * only after a new buffer is in use.
+   */
   @Override
-  public InputStream open() throws IOException
+  public InputStream open()
   {
     if (opened) {
       throw new IllegalArgumentException("Can't open the input stream on SettableByteEntity more than once");
