@@ -34,6 +34,8 @@ public class MockNamespaceExtractionCacheManager
             .andReturn(cacheHandler)
             .once();
 
+    // disposeCache is package private, requiring us to have this methoe
+    // in the same package as NamespaceExtractionCacheManager
     cacheManager.disposeCache(cacheHandler);
     EasyMock.expectLastCall().once();
     return cacheManager;
