@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -788,8 +789,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             Assert.assertEquals(1 + rowCount, row.getMetric("sum_of_x").intValue());
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
-            // The rows does not have the dim "x", hence metric is null
-            Assert.assertNull(row.getMetric("sum_of_x"));
+            // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
+            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
           }
         }
       }
@@ -838,8 +839,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             Assert.assertEquals(4, row.getMetric("sum_of_x").intValue());
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
-            // The rows does not have the dim "x", hence metric is null
-            Assert.assertNull(row.getMetric("sum_of_x"));
+            // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
+            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
           }
         } else {
           Assert.assertEquals(index.isPreserveExistingMetrics() ? 3 : 1, row.getMetric("count").intValue());
