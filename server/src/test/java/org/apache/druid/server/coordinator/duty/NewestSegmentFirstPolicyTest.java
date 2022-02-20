@@ -1493,7 +1493,7 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec() throws Exception
+  public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
     NullHandling.initializeForTests();
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null));

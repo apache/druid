@@ -46,17 +46,14 @@ public class InputRowSchema
       final ColumnsFilter columnsFilter
   )
   {
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
-    this.columnsFilter = columnsFilter;
-    this.metricNames = null;
+    this(timestampSpec, dimensionsSpec, columnsFilter, null);
   }
 
   public InputRowSchema(
       final TimestampSpec timestampSpec,
       final DimensionsSpec dimensionsSpec,
       final ColumnsFilter columnsFilter,
-      final List<String> metricNames
+      @Nullable final List<String> metricNames
   )
   {
     this.timestampSpec = timestampSpec;
@@ -65,6 +62,7 @@ public class InputRowSchema
     this.metricNames = metricNames;
   }
 
+  @Nullable
   public List<String> getMetricNames()
   {
     return metricNames;

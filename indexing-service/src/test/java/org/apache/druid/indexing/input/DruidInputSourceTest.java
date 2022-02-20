@@ -232,7 +232,7 @@ public class DruidInputSourceTest
   }
 
   @Test
-  public void testReaderColumnsFilterWithMetricGiven() throws Exception
+  public void testReaderColumnsFilterWithMetricGiven()
   {
     String datasource = "foo";
     Interval interval = Intervals.of("2000/2001");
@@ -269,7 +269,7 @@ public class DruidInputSourceTest
   }
 
   @Test
-  public void testReaderColumnsFilterWithNoMetricGiven() throws Exception
+  public void testReaderColumnsFilterWithNoMetricGiven()
   {
     String datasource = "foo";
     Interval interval = Intervals.of("2000/2001");
