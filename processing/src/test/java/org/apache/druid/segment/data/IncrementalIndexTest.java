@@ -96,10 +96,10 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IncrementalIndexTest(String indexType, String mode, boolean preserveExistingMetrics) throws JsonProcessingException
+  public IncrementalIndexTest(String indexType, String mode, String preserveExistingMetricsMode) throws JsonProcessingException
   {
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
-        .setSimpleTestingIndexSchema("rollup".equals(mode), preserveExistingMetrics, (AggregatorFactory[]) args[0])
+        .setSimpleTestingIndexSchema("rollup".equals(mode), "preserveExistingMetricsEnabled".equals(preserveExistingMetricsMode), (AggregatorFactory[]) args[0])
         .setMaxRowCount(1_000_000)
         .build()
     ));
@@ -110,7 +110,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   {
     return IncrementalIndexCreator.indexTypeCartesianProduct(
         ImmutableList.of("rollup", "plain"),
-        ImmutableList.of(true, false)
+        ImmutableList.of("preserveExistingMetricsEnabled", "preserveExistingMetricsDisabled")
     );
   }
 

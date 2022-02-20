@@ -300,9 +300,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     long totalInitialSizeBytes = 0L;
     rowContainer.set(row);
-    int aggLength = isPreserveExistingMetrics() ? metrics.length / 2 : metrics.length;
     final long aggReferenceSize = Long.BYTES;
-    for (int i = 0; i < aggLength; i++) {
+    for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
       // Creates aggregators to aggregate from input into output fields
       if (useMaxMemoryEstimates) {
