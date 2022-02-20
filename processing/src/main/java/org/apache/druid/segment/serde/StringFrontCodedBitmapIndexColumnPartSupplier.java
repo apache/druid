@@ -28,6 +28,10 @@ import org.apache.druid.segment.data.GenericIndexed;
 
 import javax.annotation.Nullable;
 
+/**
+ * Specialized {@link BitmapIndex} supplier for columns which use {@link FrontCodedIndexed} to store the value
+ * dictionary, such as {@link org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn}
+ */
 public class StringFrontCodedBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
 {
   private final BitmapFactory bitmapFactory;

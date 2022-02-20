@@ -28,6 +28,10 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 
 import javax.annotation.Nullable;
 
+/**
+ * {@link DictionaryEncodedColumnSupplier} but for columns using a {@link StringFrontCodedDictionaryEncodedColumn}
+ * instead of the traditional {@link org.apache.druid.segment.column.StringDictionaryEncodedColumn}
+ */
 public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
 {
   private final FrontCodedIndexed dictionary;

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
@@ -16,11 +35,17 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * {@link DictionaryWriter} for a {@link FrontCodedIndexed}, written to a {@link SegmentWriteOutMedium}.
+ *
+ * Front coding is a type of delta encoding for strings, where values are grouped into buckets. The first value of
+ * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
+ * of the first string of the bucket to use as a prefix, followed by the remaining string value after the prefix.
+ */
 public class FrontCodedIndexedWriter implements DictionaryWriter<String>
 {
   private static final NullableTypeStrategy<String> NULLABLE_STRING_STRATEGY = ColumnType.STRING.getNullableStrategy();
-  // todo (clint): sir, just how big are your strings?
-  private static final int MAX_LOG_BUFFER_SIZE = 16;
+  private static final int MAX_LOG_BUFFER_SIZE = 26;
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int bucketSize;
@@ -40,7 +65,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
-
   public FrontCodedIndexedWriter(SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder byteOrder, int bucketSize)
   {
     this.segmentWriteOutMedium = segmentWriteOutMedium;
@@ -48,20 +72,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
     this.bucketSize = bucketSize;
     this.bucketBuffer = new String[bucketSize];
     this.byteOrder = byteOrder;
-  }
-
-  private void resetScratch()
-  {
-    scratch.position(0);
-    scratch.limit(scratch.capacity());
-  }
-  private void grow()
-  {
-    if (logScratchSize < MAX_LOG_BUFFER_SIZE) {
-      this.scratch = ByteBuffer.allocate(1 << ++logScratchSize).order(byteOrder);
-    } else {
-      throw new IllegalStateException("scratch buffer to big to write buckets");
-    }
   }
 
   @Override
@@ -72,10 +82,16 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
   }
 
   @Override
-  public void write(@Nullable String objectToWrite) throws IOException
+  public void write(@Nullable String value) throws IOException
   {
+    final String objectToWrite = NullHandling.emptyToNullIfNeeded(value);
     if (prevObject != null && NULLABLE_STRING_STRATEGY.compare(prevObject, objectToWrite) >= 0) {
-      throw new ISE("Values must be sorted element [%s] with value [%s] is before [%s]", numWritten, objectToWrite, prevObject);
+      throw new ISE(
+          "Values must be sorted and unique. Element [%s] with value [%s] is before or equivalent to [%s]",
+          numWritten,
+          objectToWrite,
+          prevObject
+      );
     }
 
     if (objectToWrite == null) {
@@ -83,13 +99,13 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
       return;
     }
 
-    if (numWritten > 0 && (numWritten) % bucketSize == 0) {
+    if (numWritten > 0 && (numWritten % bucketSize) == 0) {
       resetScratch();
       int written;
       do {
         written = FrontCodedIndexed.writeBucket(scratch, bucketBuffer, bucketSize);
         if (written < 0) {
-          grow();
+          growScratch();
         }
       } while (written < 0);
       scratch.flip();
@@ -106,22 +122,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
     ++numWritten;
   }
 
-  private void flush() throws IOException
-  {
-    int remainder = numWritten % bucketSize;
-    resetScratch();
-    int written;
-    do {
-      written = FrontCodedIndexed.writeBucket(scratch, bucketBuffer, remainder == 0 ? bucketSize : remainder);
-      if (written < 0) {
-        grow();
-      }
-    } while (written < 0);
-    scratch.flip();
-    Channels.writeFully(valuesOut, scratch);
-
-    isClosed = true;
-  }
 
   @Override
   public long getSerializedSize() throws IOException
@@ -130,26 +130,62 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
       flush();
     }
     int headerAndValues = Ints.checkedCast(headerOut.size() + valuesOut.size());
-    return Byte.BYTES + Byte.BYTES + FrontCodedIndexed.estimateSizeVByteInt(numWritten) + FrontCodedIndexed.estimateSizeVByteInt(headerAndValues) + headerAndValues;
+    return Byte.BYTES +
+           Byte.BYTES +
+           Byte.BYTES +
+           VByte.estimateIntSize(numWritten) +
+           VByte.estimateIntSize(headerAndValues) +
+           headerAndValues;
   }
 
   @Override
-  public void writeTo(
-      WritableByteChannel channel,
-      FileSmoosher smoosher
-  ) throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     if (!isClosed) {
       flush();
     }
     resetScratch();
+    // version 0
+    scratch.put((byte) 0);
     scratch.put((byte) bucketSize);
     scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
-    FrontCodedIndexed.writeVbyteInt(scratch, numWritten);
-    FrontCodedIndexed.writeVbyteInt(scratch, Ints.checkedCast(headerOut.size() + valuesOut.size()));
+    VByte.writeInt(scratch, numWritten);
+    VByte.writeInt(scratch, Ints.checkedCast(headerOut.size() + valuesOut.size()));
     scratch.flip();
     Channels.writeFully(channel, scratch);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
+  }
+
+  private void flush() throws IOException
+  {
+    int remainder = numWritten % bucketSize;
+    resetScratch();
+    int written;
+    do {
+      written = FrontCodedIndexed.writeBucket(scratch, bucketBuffer, remainder == 0 ? bucketSize : remainder);
+      if (written < 0) {
+        growScratch();
+      }
+    } while (written < 0);
+    scratch.flip();
+    Channels.writeFully(valuesOut, scratch);
+    resetScratch();
+    isClosed = true;
+  }
+
+  private void resetScratch()
+  {
+    scratch.position(0);
+    scratch.limit(scratch.capacity());
+  }
+
+  private void growScratch()
+  {
+    if (logScratchSize < MAX_LOG_BUFFER_SIZE) {
+      this.scratch = ByteBuffer.allocate(1 << ++logScratchSize).order(byteOrder);
+    } else {
+      throw new IllegalStateException("scratch buffer to big to write buckets");
+    }
   }
 }

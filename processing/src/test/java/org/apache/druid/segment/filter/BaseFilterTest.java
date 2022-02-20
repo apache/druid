@@ -78,6 +78,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -300,37 +301,41 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
         ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
-            .put(
-                "incremental",
-                input -> {
-                  final IncrementalIndex index = input.buildIncrementalIndex();
-                  return Pair.of(new IncrementalIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmapped",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmappedMerged",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedMergedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "rowBasedWithoutTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .put(
-                "rowBasedWithTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .build();
+                    .put(
+                        "incremental",
+                        input -> {
+                          final IncrementalIndex index = input.buildIncrementalIndex();
+                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmapped",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedMerged",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedMergedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "rowBasedWithoutTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {
+                        })
+                    )
+                    .put(
+                        "rowBasedWithTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {
+                        })
+                    )
+                    .build();
 
+    CompressionFactory.StringDictionaryEncodingStrategy[] stringEncoding =
+        CompressionFactory.StringDictionaryEncodingStrategy.values();
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
@@ -338,20 +343,32 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = StringUtils.format(
-                  "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s]",
-                  bitmapSerdeFactoryEntry.getKey(),
-                  segmentWriteOutMediumFactoryEntry.getKey(),
-                  finisherEntry.getKey(),
-                  cnf,
-                  optimize
-              );
-              final IndexBuilder indexBuilder = IndexBuilder
-                  .create()
-                  .schema(DEFAULT_INDEX_SCHEMA)
-                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
-                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-              constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (CompressionFactory.StringDictionaryEncodingStrategy encodingStrategy : stringEncoding) {
+                final String testName = StringUtils.format(
+                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], encoding[%s]",
+                    bitmapSerdeFactoryEntry.getKey(),
+                    segmentWriteOutMediumFactoryEntry.getKey(),
+                    finisherEntry.getKey(),
+                    cnf,
+                    optimize,
+                    encodingStrategy
+                );
+                final IndexBuilder indexBuilder = IndexBuilder
+                    .create()
+                    .schema(DEFAULT_INDEX_SCHEMA)
+                    .indexSpec(
+                        new IndexSpec(
+                            bitmapSerdeFactoryEntry.getValue(),
+                            null,
+                            encodingStrategy,
+                            null,
+                            null,
+                            null
+                        )
+                    )
+                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              }
             }
           }
         }

@@ -48,6 +48,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -218,6 +219,19 @@ public class TestIndex
       throw new RuntimeException(e);
     }
   });
+  private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(
+          realtimeIndex.get(),
+          new IndexSpec(
+              null,
+              null,
+              CompressionFactory.StringDictionaryEncodingStrategy.FRONT_CODED,
+              null,
+              null,
+              null
+          )
+      )
+  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -252,6 +266,11 @@ public class TestIndex
   public static QueryableIndex mergedRealtimeIndex()
   {
     return mergedRealtime.get();
+  }
+
+  public static QueryableIndex getFrontCodedMMappedTestIndex()
+  {
+    return frontCodedMmappedIndex.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
@@ -375,13 +394,18 @@ public class TestIndex
 
   public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index)
   {
+    return persistRealtimeAndLoadMMapped(index, INDEX_SPEC);
+  }
+
+  public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index, IndexSpec indexSpec)
+  {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
       someTmpFile.delete();
       FileUtils.mkdirp(someTmpFile);
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

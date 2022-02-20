@@ -345,15 +345,15 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
           final String firstDictionaryEntry = rDictionary.get(0);
 
-          StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new StringFrontCodedDictionaryEncodedColumnSupplier(
-              rDictionary,
-              rSingleValuedColumn,
-              rMultiValuedColumn
-          );
-          builder
-              .setHasMultipleValues(hasMultipleValues)
-              .setHasNulls(firstDictionaryEntry == null)
-              .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
+          StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier =
+              new StringFrontCodedDictionaryEncodedColumnSupplier(
+                  rDictionary,
+                  rSingleValuedColumn,
+                  rMultiValuedColumn
+              );
+          builder.setHasMultipleValues(hasMultipleValues)
+                 .setHasNulls(firstDictionaryEntry == null)
+                 .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
           if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
             GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
@@ -406,10 +406,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               rMultiValuedColumn,
               columnConfig.columnCacheSizeBytes()
           );
-          builder
-              .setHasMultipleValues(hasMultipleValues)
-              .setHasNulls(firstDictionaryEntry == null)
-              .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
+          builder.setHasMultipleValues(hasMultipleValues)
+                 .setHasNulls(firstDictionaryEntry == null)
+                 .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
           if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
             GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(

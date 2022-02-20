@@ -396,9 +396,7 @@ public class SqlBenchmark
   @Param({"none", "front_coded"})
   private String stringEncoding;
 
-//  @Param({  "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"})
-//  @Param({  "4", "5"})
-  @Param({  "21", "22"})
+  @Param({"4", "5", "6", "7", "8", "21", "22"})
   private String query;
 
   @Nullable
@@ -497,20 +495,20 @@ public class SqlBenchmark
       blackhole.consume(lastRow);
     }
   }
-//
-//  @Benchmark
-//  @BenchmarkMode(Mode.AverageTime)
-//  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-//  public void planSql(Blackhole blackhole) throws Exception
-//  {
-//    final Map<String, Object> context = ImmutableMap.of(
-//        QueryContexts.VECTORIZE_KEY, vectorize,
-//        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-//    );
-//    final String sql = QUERIES.get(Integer.parseInt(query));
-//    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-//      final PlannerResult plannerResult = planner.plan();
-//      blackhole.consume(plannerResult);
-//    }
-//  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void planSql(Blackhole blackhole) throws Exception
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        QueryContexts.VECTORIZE_KEY, vectorize,
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+    );
+    final String sql = QUERIES.get(Integer.parseInt(query));
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
+      final PlannerResult plannerResult = planner.plan();
+      blackhole.consume(plannerResult);
+    }
+  }
 }

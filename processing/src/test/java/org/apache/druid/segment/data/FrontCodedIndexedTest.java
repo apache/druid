@@ -55,23 +55,6 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testVbyte()
-  {
-    ByteBuffer buffer = ByteBuffer.allocate(24).order(order);
-    roundTrip(buffer, 0, 0, 1);
-    roundTrip(buffer, 0, 4, 1);
-    roundTrip(buffer, 0, 224, 2);
-    roundTrip(buffer, 0, 1024, 2);
-    roundTrip(buffer, 0, 1 << 14 - 1, 2);
-    roundTrip(buffer, 0, 1 << 14, 3);
-    roundTrip(buffer, 0, 1 << 16, 3);
-    roundTrip(buffer, 0, 1 << 25, 4);
-    roundTrip(buffer, 0, 1 << 28 - 1, 4);
-    roundTrip(buffer, 0, 1 << 28, 5);
-    roundTrip(buffer, 0, Integer.MAX_VALUE, 5);
-  }
-
-  @Test
   public void testFrontCodedIndexed() throws IOException
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
@@ -193,10 +176,10 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(-1, codedIndexed.indexOf("a"));
     Assert.assertEquals(0, codedIndexed.indexOf("hello"));
     Assert.assertEquals(1, codedIndexed.indexOf("helloo"));
-    Assert.assertEquals(-2, codedIndexed.indexOf("helloob"));
+    Assert.assertEquals(-3, codedIndexed.indexOf("helloob"));
     Assert.assertEquals(4, codedIndexed.indexOf("helloozy"));
-    Assert.assertEquals(-5, codedIndexed.indexOf("helloozz"));
-    Assert.assertEquals(-5, codedIndexed.indexOf("wat"));
+    Assert.assertEquals(-6, codedIndexed.indexOf("helloozz"));
+    Assert.assertEquals(-6, codedIndexed.indexOf("wat"));
   }
 
 
@@ -215,10 +198,10 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(-2, codedIndexed.indexOf("a"));
     Assert.assertEquals(1, codedIndexed.indexOf("hello"));
     Assert.assertEquals(2, codedIndexed.indexOf("helloo"));
-    Assert.assertEquals(-3, codedIndexed.indexOf("helloob"));
+    Assert.assertEquals(-4, codedIndexed.indexOf("helloob"));
     Assert.assertEquals(5, codedIndexed.indexOf("helloozy"));
-    Assert.assertEquals(-6, codedIndexed.indexOf("helloozz"));
-    Assert.assertEquals(-6, codedIndexed.indexOf("wat"));
+    Assert.assertEquals(-7, codedIndexed.indexOf("helloozz"));
+    Assert.assertEquals(-7, codedIndexed.indexOf("wat"));
   }
 
   private static long fillBuffer(ByteBuffer buffer, Iterator<String> sortedStrings, int bucketSize) throws IOException
@@ -258,15 +241,5 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     Assert.assertEquals(size, buffer.position());
     buffer.position(0);
     return size;
-  }
-
-  private static void roundTrip(ByteBuffer buffer, int position, int value, int expectedSize)
-  {
-    buffer.position(position);
-    FrontCodedIndexed.writeVbyteInt(buffer, value);
-    Assert.assertEquals(expectedSize, buffer.position() - position);
-    buffer.position(position);
-    Assert.assertEquals(value, FrontCodedIndexed.readVbyteInt(buffer));
-    Assert.assertEquals(expectedSize, buffer.position() - position);
   }
 }

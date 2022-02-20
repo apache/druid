@@ -47,7 +47,16 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.BitSet;
 
-// todo (clint): sharing is caring, surely there is some overlap..
+/**
+ * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
+ * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
+ * {@link StringDictionaryEncodedColumn}.
+ *
+ * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn}, however the dimension selectors
+ * provided by this column do not implement {@link org.apache.druid.segment.DimensionSelector#lookupNameUtf8(int)}
+ * since the raw bytes are not easily accessible due to many of the value strings being stored as partial fragments
+ * which require decoding complete buckets.
+ */
 public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
   @Nullable
