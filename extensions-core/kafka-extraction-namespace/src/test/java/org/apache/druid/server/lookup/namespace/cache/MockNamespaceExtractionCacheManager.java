@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MockNamespaceExtractionCacheManager
 {
-  public static NamespaceExtractionCacheManager createMockNamespaceExtractionCacheManager() {
+  public static NamespaceExtractionCacheManager createMockNamespaceExtractionCacheManager()
+  {
     final NamespaceExtractionCacheManager cacheManager = EasyMock.createStrictMock(NamespaceExtractionCacheManager.class);
     final CacheHandler cacheHandler = new CacheHandler(cacheManager, new ConcurrentHashMap<>(), "cache1");
 
