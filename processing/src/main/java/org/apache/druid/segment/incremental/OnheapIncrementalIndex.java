@@ -43,6 +43,7 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.utils.JvmUtils;
+import org.checkerframework.checker.units.qual.K;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -51,9 +52,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  *
@@ -299,7 +302,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     long totalInitialSizeBytes = 0L;
     rowContainer.set(row);
-    int aggLength = isPreserveExistingMetrics() ? aggs.length / 2 : aggs.length;
+    int aggLength = isPreserveExistingMetrics() ? metrics.length / 2 : metrics.length;
     final long aggReferenceSize = Long.BYTES;
     for (int i = 0; i < aggLength; i++) {
       final AggregatorFactory agg = metrics[i];
@@ -445,41 +448,25 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public float getMetricFloatValue(int rowOffset, int aggOffset)
   {
-    if (isPreserveExistingMetrics()) {
-      return (float) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
-    } else {
-      return concurrentGet(rowOffset)[aggOffset].getFloat();
-    }
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getFloat);
   }
 
   @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
-    if (isPreserveExistingMetrics()) {
-      return (long) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
-    } else {
-      return concurrentGet(rowOffset)[aggOffset].getLong();
-    }
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getLong);
   }
 
   @Override
   public Object getMetricObjectValue(int rowOffset, int aggOffset)
   {
-    if (isPreserveExistingMetrics()) {
-      return getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
-    } else {
-      return concurrentGet(rowOffset)[aggOffset].get();
-    }
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::get);
   }
 
   @Override
   protected double getMetricDoubleValue(int rowOffset, int aggOffset)
   {
-    if (isPreserveExistingMetrics()) {
-      return (double) getCombinedMetric(getMetricAggs(), concurrentGet(rowOffset), aggOffset);
-    } else {
-      return concurrentGet(rowOffset)[aggOffset].getDouble();
-    }
+    return getMetricHelper(getMetricAggs(), concurrentGet(rowOffset), aggOffset, Aggregator::getDouble);
   }
 
   @Override
@@ -532,11 +519,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               Aggregator[] aggs = getAggsForRow(rowOffset);
               int aggLength = isPreserveExistingMetrics() ? aggs.length / 2 : aggs.length;
               for (int i = 0; i < aggLength; ++i) {
-                if (isPreserveExistingMetrics()) {
-                  theVals.put(metrics[i].getName(), getCombinedMetric(metrics, aggs, i));
-                } else {
-                  theVals.put(metrics[i].getName(), aggs[i].get());
-                }
+                theVals.put(metrics[i].getName(), getMetricHelper(metrics, aggs, i, Aggregator::get));
               }
 
               if (postAggs != null) {
@@ -552,15 +535,37 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
   }
 
-  private Object getCombinedMetric(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset)
+  /**
+   * Apply the getMetricTypeFunction function to the retrieve aggregated value given the list of aggregators and offset.
+   * If preserveExistingMetrics flag is set, then this method will combine values from two aggregators, the aggregator
+   * for aggregating from input into output field and the aggregator for combining already aggregated field, as needed
+   */
+  private <T> T getMetricHelper(AggregatorFactory[] metrics, Aggregator[] aggs, int aggOffset, Function<Aggregator, T> getMetricTypeFunction)
   {
-    if (aggs[aggOffset].isNull()) {
-      return aggs[aggOffset + metrics.length].get();
-    } else if (aggs[aggOffset + metrics.length].isNull()) {
-      return aggs[aggOffset].get();
+    if (isPreserveExistingMetrics()) {
+      // Since the preserveExistingMetrics flag is set, we will have to check and possibly retrieve the aggregated values
+      // from two aggregators, the aggregator for aggregating from input into output field and the aggregator
+      // for combining already aggregated field
+      if (aggs[aggOffset].isNull()) {
+        // If the aggregator for aggregating from input into output field is null, then we get the value from the
+        // aggregator that we use for combining already aggregated field
+        return getMetricTypeFunction.apply(aggs[aggOffset + metrics.length]);
+      } else if (aggs[aggOffset + metrics.length].isNull()) {
+        // If the aggregator for combining already aggregated field is null, then we get the value from the
+        // aggregator for aggregating from input into output field
+        return getMetricTypeFunction.apply(aggs[aggOffset]);
+      } else {
+        // Since both aggregators is not null and contain values, we will have to retrieve the values from both
+        // aggregators and combine them
+        AggregatorFactory aggregatorFactory = metrics[aggOffset];
+        T aggregatedFromSource = getMetricTypeFunction.apply(aggs[aggOffset]);
+        T aggregatedFromCombined = getMetricTypeFunction.apply(aggs[aggOffset + metrics.length]);
+        return (T) aggregatorFactory.combine(aggregatedFromSource, aggregatedFromCombined);
+      }
     } else {
-      AggregatorFactory aggregatorFactory = metrics[aggOffset];
-      return aggregatorFactory.combine(aggs[aggOffset].get(), aggs[aggOffset + metrics.length].get());
+      // If preserveExistingMetrics flag is not set then we simply get metrics from the list of Aggregator, aggs, using the
+      // given aggOffset
+      return getMetricTypeFunction.apply(aggs[aggOffset]);
     }
   }
 
