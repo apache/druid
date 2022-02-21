@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,7 +46,8 @@ public class SegmentLocalCacheLoaderTest
     Interval interval = Intervals.of("2014-01-01/2014-01-02");
     DataSegment tombstone = new DataSegment("foo", interval, "version",
                                             ImmutableMap.of("type", "tombstone"),
-                                            null, null, null, null, 0
+                                            null, null, new TombstoneShardSpec(),
+                                            null, 0
     );
 
 

@@ -69,7 +69,6 @@ public class TombstonePartitionedChunk<T> implements PartitionChunk<T>
   public int compareTo(PartitionChunk<T> other)
   {
     if (other instanceof TombstonePartitionedChunk) {
-      final TombstonePartitionedChunk castedOther = (TombstonePartitionedChunk) other;
       return 0;
     } else {
       throw new IllegalArgumentException("Cannot compare against something that is not a TombstonePartitionedChunk.");
