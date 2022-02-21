@@ -421,11 +421,6 @@
             <artifactId>testng</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.github.os72</groupId>
             <artifactId>protobuf-dynamic</artifactId>
             <version>0.9.3</version>
