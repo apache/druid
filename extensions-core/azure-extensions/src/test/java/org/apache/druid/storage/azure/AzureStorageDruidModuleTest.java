@@ -62,6 +62,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
 
   private static final String AZURE_ACCOUNT_NAME;
   private static final String AZURE_ACCOUNT_KEY;
+  private static final String AZURE_SHARED_ACCESS_TOKEN;
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
   private static final int AZURE_MAX_LISTING_LENGTH;
@@ -80,6 +81,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
       AZURE_ACCOUNT_NAME = "azureAccount1";
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
+      AZURE_SHARED_ACCESS_TOKEN = "dummyToken";
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
       AZURE_MAX_LISTING_LENGTH = 10;
@@ -107,6 +109,20 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
 
     Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
     Assert.assertEquals(AZURE_ACCOUNT_KEY, azureAccountConfig.getKey());
+  }
+
+  @Test
+  public void testGetAzureAccountConfigExpectedConfigWithSAS()
+  {
+    Properties properties = initializePropertes();
+    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
+    properties.remove("druid.azure.key");
+
+    injector = makeInjectorWithProperties(properties);
+    AzureAccountConfig azureAccountConfig = injector.getInstance(AzureAccountConfig.class);
+
+    Assert.assertEquals(AZURE_ACCOUNT_NAME, azureAccountConfig.getAccount());
+    Assert.assertEquals(AZURE_SHARED_ACCESS_TOKEN, azureAccountConfig.getSharedAccessStorageToken());
   }
 
   @Test
@@ -161,17 +177,17 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   public void testGetAzureStorageContainerWithSASExpectedClient()
   {
     Properties properties = initializePropertes();
-    properties.setProperty("druid.azure.sharedAccessStorageToken", "123");
+    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
     properties.remove("druid.azure.key");
 
-    injector = makeInjectorWithProperties(PROPERTIES);
+    injector = makeInjectorWithProperties(properties);
 
     Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
         Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
     );
-    StorageCredentials storageCredentials = cloudBlobClient.get().getCredentials();
 
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, storageCredentials.getAccountName());
+    AzureAccountConfig azureAccountConfig = injector.getInstance(AzureAccountConfig.class);
+    Assert.assertEquals(AZURE_SHARED_ACCESS_TOKEN, azureAccountConfig.getSharedAccessStorageToken());
 
     AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
     Assert.assertSame(cloudBlobClient.get(), azureStorage.getCloudBlobClient());
@@ -274,7 +290,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   public void testBothAccountKeyAndSAStokenSet()
   {
     Properties properties = initializePropertes();
-    properties.setProperty("druid.azure.sharedAccessStorageToken", "123");
+    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
     expectedException.expect(ProvisionException.class);
     expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
     makeInjectorWithProperties(properties).getInstance(
