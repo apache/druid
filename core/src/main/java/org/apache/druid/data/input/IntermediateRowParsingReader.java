@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -27,13 +28,12 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -73,7 +73,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             ++currentRecordNumber;
           }
           catch (IOException e) {
-            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
+            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.currentMetadata();
             rows = new ExceptionThrowingIterator(new ParseException(
                 String.valueOf(row),
                 e,
@@ -86,7 +86,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
             ));
           }
           catch (ParseException e) {
-            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.metadata();
+            final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.currentMetadata();
             rows = new ExceptionThrowingIterator(new ParseException(
                 String.valueOf(row),
                 e,
@@ -121,60 +121,6 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   {
 
     final CloseableIteratorWithMetadata<T> delegate = intermediateRowIteratorWithMetadata();
-    final BiFunction<T, Map<String, Object>, InputRowListPlusRawValues> samplingFunction =
-        (row, metadata) -> {
-
-          final List<Map<String, Object>> rawColumnsList;
-          try {
-            rawColumnsList = toMap(row);
-          }
-          catch (Exception e) {
-            return InputRowListPlusRawValues.of(
-                null,
-                new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
-                    StringUtils.nonStrictFormat("Unable to parse row [%s] into JSON", row),
-                    source(),
-                    null,
-                    metadata
-                ))
-            );
-          }
-
-          if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
-            return InputRowListPlusRawValues.of(
-                null,
-                new ParseException(String.valueOf(row), buildParseExceptionMessage(
-                    StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
-                    source(),
-                    null,
-                    metadata
-                ))
-            );
-          }
-
-          List<InputRow> rows;
-          try {
-            rows = parseInputRows(row);
-          }
-          catch (ParseException e) {
-            return InputRowListPlusRawValues.ofList(rawColumnsList, new ParseException(
-                String.valueOf(row),
-                e,
-                buildParseExceptionMessage(e.getMessage(), source(), null, metadata)
-            ));
-          }
-          catch (IOException e) {
-            ParseException exception = new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
-                StringUtils.nonStrictFormat("Unable to parse row [%s] into inputRow", row),
-                source(),
-                null,
-                metadata
-            ));
-            return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
-          }
-
-          return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
-        };
 
     return new CloseableIterator<InputRowListPlusRawValues>()
     {
@@ -197,9 +143,64 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           throw new NoSuchElementException();
         }
 
-        return samplingFunction.apply(delegate.next(), delegate.metadata());
+        return samplingFunction(delegate.next(), delegate.currentMetadata());
       }
     };
+  }
+
+  private InputRowListPlusRawValues samplingFunction(T row, Map<String, Object> metadata)
+  {
+
+    final List<Map<String, Object>> rawColumnsList;
+    try {
+      rawColumnsList = toMap(row);
+    }
+    catch (Exception e) {
+      return InputRowListPlusRawValues.of(
+          null,
+          new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
+              StringUtils.nonStrictFormat("Unable to parse row [%s] into JSON", row),
+              source(),
+              null,
+              metadata
+          ))
+      );
+    }
+
+    if (CollectionUtils.isNullOrEmpty(rawColumnsList)) {
+      return InputRowListPlusRawValues.of(
+          null,
+          new ParseException(String.valueOf(row), buildParseExceptionMessage(
+              StringUtils.nonStrictFormat("No map object parsed for row [%s]", row),
+              source(),
+              null,
+              metadata
+          ))
+      );
+    }
+
+    List<InputRow> rows;
+    try {
+      rows = parseInputRows(row);
+    }
+    catch (ParseException e) {
+      return InputRowListPlusRawValues.ofList(rawColumnsList, new ParseException(
+          String.valueOf(row),
+          e,
+          buildParseExceptionMessage(e.getMessage(), source(), null, metadata)
+      ));
+    }
+    catch (IOException e) {
+      ParseException exception = new ParseException(String.valueOf(row), e, buildParseExceptionMessage(
+          StringUtils.nonStrictFormat("Unable to parse row [%s] into inputRow", row),
+          source(),
+          null,
+          metadata
+      ));
+      return InputRowListPlusRawValues.ofList(rawColumnsList, exception);
+    }
+
+    return InputRowListPlusRawValues.ofList(rawColumnsList, rows);
   }
 
   /**
@@ -208,7 +209,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    */
   protected CloseableIterator<T> intermediateRowIterator() throws IOException
   {
-    throw new UnsupportedEncodingException("intermediateRowIterator not implemented");
+    throw new UOE("intermediateRowIterator not implemented");
   }
 
   /**
@@ -217,7 +218,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    */
   protected CloseableIteratorWithMetadata<T> intermediateRowIteratorWithMetadata() throws IOException
   {
-    return CloseableIteratorWithMetadata.fromCloseableIterator(intermediateRowIterator());
+    return CloseableIteratorWithMetadata.withEmptyMetadata(intermediateRowIterator());
   }
 
   /**
@@ -256,18 +257,21 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   )
   {
     StringBuilder sb = new StringBuilder(baseExceptionMessage);
-    List<String> temp = new ArrayList<>();
+    Map<String, Object> consolidatedMap = new HashMap<>();
     if (source != null && source.getUri() != null) {
-      temp.add(StringUtils.format("Source info:[%s]", source.getUri()));
+      consolidatedMap.put("Path", source.getUri());
     }
     if (recordNumber != null) {
-      temp.add(StringUtils.format("Record number:[%d]", recordNumber));
+      consolidatedMap.put("Record", recordNumber);
     }
-    if (metadata != null && !metadata.isEmpty()) {
-      temp.add(StringUtils.format("Additional info:%s", metadata));
+    if (metadata != null) {
+      consolidatedMap.putAll(metadata);
     }
-    if (!temp.isEmpty()) {
+    if (!consolidatedMap.isEmpty()) {
       sb.append(" (");
+      List<String> temp = consolidatedMap.entrySet().stream()
+                                         .map(entry -> entry.getKey() + ": " + entry.getValue().toString())
+                                         .collect(Collectors.toList());
       sb.append(String.join(", ", temp));
       sb.append(")");
     }

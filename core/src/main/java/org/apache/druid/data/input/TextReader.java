@@ -30,8 +30,6 @@ import org.apache.druid.java.util.common.parsers.ParserUtils;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,13 +68,13 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
 
     return new CloseableIteratorWithMetadata<String>()
     {
-      private final long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
-      final Map<String, Object> metadata = new HashMap<>(ImmutableMap.of("lineNumber", currentLineNumber));
+      private static final String LINE_KEY = "Line";
+      private long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
 
       @Override
-      public Map<String, Object> metadata()
+      public Map<String, Object> currentMetadata()
       {
-        return Collections.unmodifiableMap(metadata);
+        return ImmutableMap.of(LINE_KEY, currentLineNumber);
       }
 
       @Override
@@ -88,7 +86,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       @Override
       public String next()
       {
-        metadata.compute("lineNumber", (k, v) -> (Long) v + 1);
+        currentLineNumber++;
         return delegate.nextLine();
       }
 

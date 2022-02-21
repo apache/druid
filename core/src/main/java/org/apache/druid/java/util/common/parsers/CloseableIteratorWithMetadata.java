@@ -24,11 +24,10 @@ import org.apache.druid.data.input.IntermediateRowParsingReader;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
- * Like {@link CloseableIterator}, but has a metadata() method, which returns "metadata", which is effectively a Map<String, Object>
- * about the last value returned by next()
+ * Like {@link CloseableIterator}, but has a currentMetadata() method, which returns "metadata", which is effectively a Map<String, Object>
+ * about the source of last value returned by next()
  *
  * The returned metadata is read-only and cannot be modified.
  *
@@ -39,15 +38,23 @@ import java.util.NoSuchElementException;
  */
 public interface CloseableIteratorWithMetadata<T> extends CloseableIterator<T>
 {
-  Map<String, Object> metadata();
 
-  static <T> CloseableIteratorWithMetadata<T> fromCloseableIterator(CloseableIterator<T> delegate)
+  /**
+   * @return A map containing the information about the source of the last value returned by {@link #next()}
+   */
+  Map<String, Object> currentMetadata();
+
+  /**
+   * Creates an instance of CloseableIteratorWithMetadata from a {@link CloseableIterator}. {@link #currentMetadata()}
+   * for the instance is guaranteed to return an empty map
+   */
+  static <T> CloseableIteratorWithMetadata<T> withEmptyMetadata(CloseableIterator<T> delegate)
   {
     return new CloseableIteratorWithMetadata<T>()
     {
 
       @Override
-      public Map<String, Object> metadata()
+      public Map<String, Object> currentMetadata()
       {
         return Collections.emptyMap();
       }
@@ -67,9 +74,6 @@ public interface CloseableIteratorWithMetadata<T> extends CloseableIterator<T>
       @Override
       public T next()
       {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
         return delegate.next();
       }
     };
