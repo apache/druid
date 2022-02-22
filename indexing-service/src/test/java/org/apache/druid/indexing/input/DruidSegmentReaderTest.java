@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.ColumnsFilter;
-import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -583,28 +582,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     }
     Assert.assertTrue("File is not closed", isFileClosed.booleanValue());
     Assert.assertTrue("Sequence is not closed", isSequenceClosed.booleanValue());
-  }
-
-  // Getter test for satisfying code coverage
-  @Test
-  public void testFetchSource() throws IOException
-  {
-    InputEntity inputEntity = makeInputEntity(Intervals.of("2000/P1D"));
-    DruidSegmentReader reader = new DruidSegmentReader(
-        inputEntity,
-        indexIO,
-        new TimestampSpec("__time", "auto", DateTimes.of("1971")),
-        new DimensionsSpec(
-            ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
-            )
-        ),
-        ColumnsFilter.all(),
-        null,
-        temporaryFolder.newFolder()
-    );
-    Assert.assertEquals(inputEntity, reader.source());
   }
 
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
