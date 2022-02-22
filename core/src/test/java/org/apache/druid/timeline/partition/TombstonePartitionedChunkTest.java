@@ -79,4 +79,21 @@ public class TombstonePartitionedChunkTest
                         exception.getMessage());
   }
 
+  @Test
+  public void equalsTest()
+  {
+    TombstonePartitionedChunk aCopy = tombstonePartitionedChunk;
+    Assert.assertTrue(tombstonePartitionedChunk.equals(aCopy));
+    Assert.assertFalse(tombstonePartitionedChunk.equals(null));
+    Assert.assertTrue(tombstonePartitionedChunk.equals(TombstonePartitionedChunk.make(new Object())));
+  }
+
+  // make jacoco happy:
+  @Test
+  public void minutia()
+  {
+    Assert.assertTrue(tombstonePartitionedChunk.hashCode() > 0);
+    Assert.assertNotNull(tombstonePartitionedChunk.toString());
+  }
+
 }
