@@ -95,12 +95,9 @@ public class HashExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public String stringify()
       {
-        for (Expr arg : args) {
-          arg.visit(visitor);
-        }
-        visitor.visit(this);
+        return null;
       }
 
       @Override
@@ -110,9 +107,9 @@ public class HashExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public BindingDetails analyzeInputs()
+      public BindingAnalysis analyzeInputs()
       {
-        return new BindingDetails();
+        return new BindingAnalysis();
       }
     }
 
