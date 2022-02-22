@@ -96,8 +96,8 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
       NamespacedVersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
       if (timeline == null) {
-         timeline = new NamespacedVersionedIntervalTimeline<>(Comparator.naturalOrder());
-         timelines.put(dataSource.getName(), timeline);
+        timeline = new NamespacedVersionedIntervalTimeline<>(Comparator.naturalOrder());
+        timelines.put(dataSource.getName(), timeline);
       }
       NamespacedVersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
     }
