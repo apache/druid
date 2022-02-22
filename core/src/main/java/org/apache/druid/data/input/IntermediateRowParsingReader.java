@@ -26,14 +26,13 @@ import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 /**
  * {@link InputEntityReader} that parses bytes into some intermediate rows first, and then into {@link InputRow}s.
@@ -87,11 +86,13 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           }
           catch (ParseException e) {
             final Map<String, Object> metadata = intermediateRowIteratorWithMetadata.currentMetadata();
-            rows = new ExceptionThrowingIterator(new ParseException(
-                String.valueOf(row),
-                e,
-                buildParseExceptionMessage(e.getMessage(), source(), currentRecordNumber, metadata)
-            ));
+            // Replace the message of the ParseException e
+            rows = new ExceptionThrowingIterator(
+                new ParseException(
+                    e.getInput(),
+                    e.isFromPartiallyValidRow(),
+                    buildParseExceptionMessage(e.getMessage(), source(), currentRecordNumber, metadata)
+                ));
           }
         }
 
@@ -249,33 +250,37 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
    */
   protected abstract List<Map<String, Object>> toMap(T intermediateRow) throws IOException;
 
-  private String buildParseExceptionMessage(
-      String baseExceptionMessage,
+  /**
+   * A helper method which enriches the base parse exception message with additional information. The returned message
+   * has a format: "baseExceptionMessage (key1: value1, key2: value2)" if additional properties are present. Else it
+   * returns the baseException message without any modification
+   */
+  private static String buildParseExceptionMessage(
+      @Nonnull String baseExceptionMessage,
       @Nullable InputEntity source,
       @Nullable Long recordNumber,
       @Nullable Map<String, Object> metadata
   )
   {
-    StringBuilder sb = new StringBuilder(baseExceptionMessage);
-    Map<String, Object> consolidatedMap = new HashMap<>();
+    StringBuilder sb = new StringBuilder();
     if (source != null && source.getUri() != null) {
-      consolidatedMap.put("Path", source.getUri());
+      sb.append(StringUtils.format("Path: %s, ", source.getUri()));
     }
     if (recordNumber != null) {
-      consolidatedMap.put("Record", recordNumber);
+      sb.append(StringUtils.format("Record: %d, ", recordNumber));
     }
     if (metadata != null) {
-      consolidatedMap.putAll(metadata);
+      metadata.entrySet().stream()
+              .map(entry -> StringUtils.format("%s: %s, ", entry.getKey(), entry.getValue().toString()))
+              .forEach(sb::append);
     }
-    if (!consolidatedMap.isEmpty()) {
-      sb.append(" (");
-      List<String> temp = consolidatedMap.entrySet().stream()
-                                         .map(entry -> entry.getKey() + ": " + entry.getValue().toString())
-                                         .collect(Collectors.toList());
-      sb.append(String.join(", ", temp));
-      sb.append(")");
+    if (sb.length() == 0) {
+      return baseExceptionMessage;
     }
-    return sb.toString();
+    sb.setLength(sb.length() - 2); // Erase the last stray ", "
+    sb.insert(0, " ("); // Wrap the additional information in brackets
+    sb.append(")");
+    return baseExceptionMessage + sb;
   }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
