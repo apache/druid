@@ -20,7 +20,6 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.parsers.ParserUtils;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -74,7 +74,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       @Override
       public Map<String, Object> currentMetadata()
       {
-        return ImmutableMap.of(LINE_KEY, currentLineNumber);
+        return Collections.singletonMap(LINE_KEY, currentLineNumber);
       }
 
       @Override

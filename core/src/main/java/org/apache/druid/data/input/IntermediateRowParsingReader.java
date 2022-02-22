@@ -144,12 +144,21 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
           throw new NoSuchElementException();
         }
 
-        return samplingFunction(delegate.next(), delegate.currentMetadata());
+        return sampleIntermediateRow(delegate.next(), delegate.currentMetadata());
       }
     };
   }
 
-  private InputRowListPlusRawValues samplingFunction(T row, Map<String, Object> metadata)
+  /**
+   * Parses and samples the intermediate row and returns input row and the raw values in it. Metadata supplied can
+   * contain information about the source which will get surfaced in case an exception occurs while parsing the
+   * intermediate row
+   *
+   * @param row intermediate row
+   * @param metadata additional information about the source and the record getting parsed
+   * @return sampled data from the intermediate row
+   */
+  private InputRowListPlusRawValues sampleIntermediateRow(T row, Map<String, Object> metadata)
   {
 
     final List<Map<String, Object>> rawColumnsList;
