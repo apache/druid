@@ -9,7 +9,9 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.segment.transform.RowFunction;
 import org.apache.druid.segment.transform.Transform;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class ExtractTenantTopicTransform implements Transform
 {
@@ -51,6 +53,15 @@ public class ExtractTenantTopicTransform implements Transform
       Object value = row.getRaw(fieldName);
       return value == null ? null : TenantUtils.extractTenantTopic(value.toString());
     };
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    Set<String> columns = new HashSet<String>();
+    columns.add(this.name);
+    columns.add(this.fieldName);
+    return columns;
   }
 
   @Override
