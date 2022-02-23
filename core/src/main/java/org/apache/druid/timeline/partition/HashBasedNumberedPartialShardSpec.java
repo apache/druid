@@ -84,11 +84,8 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
     return new HashBasedNumberedShardSpec(
         partitionId,
         numCorePartitions,
-        bucketId,
-        numBuckets,
-        partitionDimensions,
-        partitionFunction,
-        objectMapper
+            partitionDimensions,
+            objectMapper
     );
   }
 

@@ -141,7 +141,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         ),
@@ -152,7 +152,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         ),
@@ -163,7 +163,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         )
@@ -176,7 +176,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         ),
@@ -187,7 +187,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         )
@@ -210,7 +210,7 @@ public class MaterializedViewSupervisorTest
                 ImmutableMap.of(),
                 ImmutableList.of("dim1", "dim2"),
                 ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+                new HashBasedNumberedShardSpec(0, 1, null, null),
                 9,
                 1024
             )
@@ -226,7 +226,7 @@ public class MaterializedViewSupervisorTest
                 ImmutableMap.of(),
                 ImmutableList.of("dim1", "dim2"),
                 ImmutableList.of("m1"),
-                new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+                new HashBasedNumberedShardSpec(0, 1, null, null),
                 9,
                 1024
             )
@@ -247,7 +247,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         )
@@ -332,7 +332,7 @@ public class MaterializedViewSupervisorTest
             ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, 0, 1, null, null, null),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
             9,
             1024
         )

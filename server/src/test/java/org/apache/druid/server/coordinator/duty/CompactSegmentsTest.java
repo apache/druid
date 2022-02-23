@@ -146,11 +146,8 @@ public class CompactSegmentsTest
             (BiFunction<Integer, Integer, ShardSpec>) (bucketId, numBuckets) -> new HashBasedNumberedShardSpec(
                 bucketId,
                 numBuckets,
-                bucketId,
-                numBuckets,
-                ImmutableList.of("dim"),
-                null,
-                JSON_MAPPER
+                    ImmutableList.of("dim"),
+                    JSON_MAPPER
             )
         },
         new Object[]{

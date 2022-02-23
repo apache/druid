@@ -258,6 +258,13 @@ public class NamespacedVersionedIntervalTimeline<VersionType, ObjectType extends
       lock.readLock().unlock();
     }
   }
+//ssagare - added to pass build not exactly sure if we need this in this class
+  @Nullable
+  @Override
+  public PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum)
+  {
+    return null;
+  }
 
   /**
    * This method should be deduplicated with DataSourcesSnapshot.determineOvershadowedSegments(): see

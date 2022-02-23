@@ -22,10 +22,10 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputRow;
+
 
 import javax.annotation.Nullable;
-import java.util.List;
+
 
 /**
  * A .......
@@ -66,11 +66,11 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return NamedNumberedPartitionChunk.make(getPartitionNum(), getNumCorePartitions(), partitionName, obj);
+    return NamedNumberedPartitionChunk.make(getPartitionNum(), getPartitions(), partitionName, obj);
   }
 
-  @Override
-  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
+  /*@Override
+  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
   {
     return new ShardSpecLookup()
     {
@@ -81,7 +81,7 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
       }
     };
   }
-
+*/
   @Override
   public Object getIdentifier()
   {
@@ -93,7 +93,7 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
   {
     return "NamedNumberedShardSpec{" +
         "partitionNum=" + getPartitionNum() +
-        ", partitions=" + getNumCorePartitions() +
+        ", partitions=" + getPartitions() +
         ", partitionName=" + getPartitionName() +
         '}';
   }
