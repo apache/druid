@@ -64,8 +64,26 @@ public class TombstoneShardSpecTest
   }
 
   @Test
+  public void getType()
+  {
+    Assert.assertEquals(ShardSpec.Type.TOMBSTONE, tombstoneShardSpec.getType());
+  }
+
+  @Test
   public void createChunk()
   {
     Assert.assertTrue(tombstoneShardSpec.createChunk(new Object()) != null);
+  }
+
+  // just to increase branch coverage
+  @Test
+  public void equalsTest()
+  {
+    TombstoneShardSpec tombstoneShardSpecOther = tombstoneShardSpec;
+    Assert.assertTrue(tombstoneShardSpec.equals(tombstoneShardSpecOther));
+    tombstoneShardSpecOther = null;
+    Assert.assertFalse(tombstoneShardSpec.equals(tombstoneShardSpecOther));
+    TombstoneShardSpec newTombostoneShardSepc = new TombstoneShardSpec();
+    Assert.assertTrue(tombstoneShardSpec.equals(newTombostoneShardSepc));
   }
 }

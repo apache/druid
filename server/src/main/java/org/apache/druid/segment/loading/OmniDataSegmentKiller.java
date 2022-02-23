@@ -46,7 +46,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   {
     DataSegmentKiller dataSegmentKiller = getKiller(segment);
     if (dataSegmentKiller != null) {
-      kill(segment);
+      dataSegmentKiller.kill(segment);
     }
   }
 

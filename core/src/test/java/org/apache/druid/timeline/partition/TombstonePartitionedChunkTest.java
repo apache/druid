@@ -85,6 +85,7 @@ public class TombstonePartitionedChunkTest
     TombstonePartitionedChunk aCopy = tombstonePartitionedChunk;
     Assert.assertTrue(tombstonePartitionedChunk.equals(aCopy));
     Assert.assertFalse(tombstonePartitionedChunk.equals(null));
+    Assert.assertFalse(tombstonePartitionedChunk.equals(new Object()));
     Assert.assertTrue(tombstonePartitionedChunk.equals(TombstonePartitionedChunk.make(new Object())));
   }
 

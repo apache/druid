@@ -41,6 +41,7 @@ public class OmniDataSegmentKillerTest
   {
     final DataSegmentKiller killer = Mockito.mock(DataSegmentKiller.class);
     final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.isTombstone()).thenReturn(false);
     Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
 
     final Injector injector = createInjector(killer);
