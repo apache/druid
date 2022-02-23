@@ -39,6 +39,6 @@ public interface DruidCoordinatorHelper
      * values will prevent future DruidCoordinatorHelpers from running until the next
      * cycle.
      */
-    @Nullable
+  @Nullable
     DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
 }

@@ -226,12 +226,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
                       }
 
                       @Override
-                      public PartitionChunk<ServerSelector> findChunk(Interval interval, String version, int partitionNum) {
+                      public PartitionChunk<ServerSelector> findChunk(Interval interval, String version, int partitionNum)
+                      {
                         throw new UnsupportedOperationException(
                                 "Unexpected method call");
                       }
-                    }
-                ,false)).collect(Collectors.toList());
+                    }, false)).collect(Collectors.toList());
             return Sequences
                 .simple(sequences)
                 .flatMerge(seq -> seq, query.getResultOrdering());

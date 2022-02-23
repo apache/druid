@@ -298,4 +298,11 @@ public class NamespacedVersionedIntervalTimeline<VersionType, ObjectType extends
       lock.readLock().unlock();
     }
   }
+
+  @Override
+  @Nullable
+  public PartitionChunk<ObjectType> findChunk(Interval interval, VersionType version, int partitionNum)
+  {
+    throw new UnsupportedOperationException("Non-namespaced findEntry not supported in a namespaced timeline");
+  }
 }
