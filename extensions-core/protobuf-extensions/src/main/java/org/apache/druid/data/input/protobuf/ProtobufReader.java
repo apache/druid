@@ -63,7 +63,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
       JSONPathSpec flattenSpec
   )
   {
-    if (flattenSpec == null || JSONPathSpec.DEFAULT.equals(flattenSpec)) {
+    if (flattenSpec == null) {
       this.inputRowSchema = new ProtobufInputRowSchema(inputRowSchema);
       this.recordFlattener = null;
     } else {

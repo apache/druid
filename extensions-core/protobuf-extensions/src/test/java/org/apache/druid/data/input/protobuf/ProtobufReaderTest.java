@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
@@ -126,6 +127,8 @@ public class ProtobufReaderTest
   @Test
   public void testParseFlatDataWithComplexTimestampWithDefaultFlattenSpec() throws Exception
   {
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("is unparseable!");
     ProtobufReader reader = new ProtobufReader(
         inputRowSchemaWithComplexTimestamp,
         null,
