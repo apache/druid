@@ -143,22 +143,14 @@ public class DimensionDictionary<T extends Comparable<T>>
    */
   protected AddResult addNull()
   {
-    long stamp;
-    AddResult result;
-
-    // try until we can complete an optimistic read
-    do {
-      stamp = lock.tryOptimisticRead();
-      result = (idForNull == ABSENT_VALUE_ID) ? null : AddResult.existingAt(idForNull);
-    } while (!lock.validate(stamp));
-
-    // optimistic read found an ID
-    if (result != null) {
-      return result;
+    // attempt once for a read; this is volatile so let's read it once
+    final int localIdForNull = idForNull;
+    if (localIdForNull != ABSENT_VALUE_ID) {
+      return AddResult.existingAt(localIdForNull);
     }
 
-    // optimistic read found no ID, set it up
-    stamp = lock.writeLock();
+    // read found no ID, set it up
+    final long stamp = lock.writeLock();
     try {
       if (idForNull == ABSENT_VALUE_ID) {
         idForNull = idToValue.size();
