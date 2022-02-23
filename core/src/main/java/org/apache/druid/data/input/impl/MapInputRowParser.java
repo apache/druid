@@ -66,20 +66,33 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return parse(inputRowSchema.getTimestampSpec(), inputRowSchema.getDimensionsSpec(), theMap);
   }
 
+  /**
+   * Finds the final set of dimension names to use for {@link InputRow}.
+   * There are 3 cases here.
+   *
+   * 1) If {@link DimensionsSpec#isIncludeAllDimensions()} is set, the returned list includes _both_
+   *    {@link DimensionsSpec#getDimensionNames()} and the dimensions in the given map ({@code rawInputRow#keySet()}).
+   * 2) If isIncludeAllDimensions is not set and {@link DimensionsSpec#getDimensionNames()} is not empty,
+   *    the dimensions in dimensionsSpec is returned.
+   * 3) If isIncludeAllDimensions is not set and {@link DimensionsSpec#getDimensionNames()} is empty,
+   *    the dimensions in the given map is returned.
+   *
+   * In any case, the returned list does not include any dimensions in {@link DimensionsSpec#getDimensionExclusions()}.
+   */
   private static List<String> findDimensions(
       DimensionsSpec dimensionsSpec,
-      Map<String, Object> theMap
+      Map<String, Object> rawInputRow
   )
   {
     if (dimensionsSpec.isIncludeAllDimensions()) {
       LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
-      dimensions.addAll(Sets.difference(theMap.keySet(), dimensionsSpec.getDimensionExclusions()));
+      dimensions.addAll(Sets.difference(rawInputRow.keySet(), dimensionsSpec.getDimensionExclusions()));
       return new ArrayList<>(dimensions);
     } else {
       if (!dimensionsSpec.getDimensionNames().isEmpty()) {
         return dimensionsSpec.getDimensionNames();
       } else {
-        return new ArrayList<>(Sets.difference(theMap.keySet(), dimensionsSpec.getDimensionExclusions()));
+        return new ArrayList<>(Sets.difference(rawInputRow.keySet(), dimensionsSpec.getDimensionExclusions()));
       }
     }
   }
