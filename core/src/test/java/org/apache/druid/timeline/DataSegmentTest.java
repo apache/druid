@@ -37,6 +37,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -370,7 +371,7 @@ public class DataSegmentTest
                                             .dataSource("foo")
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
                                             .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                            .shardSpec(getShardSpec(7))
+                                            .shardSpec(new TombstoneShardSpec())
                                             .loadSpec(Collections.singletonMap(
                                                 "type",
                                                 DataSegment.TOMBSTONE_LOADSPEC_TYPE
