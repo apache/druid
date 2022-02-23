@@ -87,7 +87,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
     if (capabilities.hasSpatialIndexes()) {
       Preconditions.checkArgument(
-          indexSpec.getStringDictionaryEncoding() != CompressionFactory.StringDictionaryEncodingStrategy.NONE,
+          indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.NONE,
           StringUtils.format(
               "Spatial indexes are incompatible with [%s] encoded dictionaries",
               indexSpec.getStringDictionaryEncoding()

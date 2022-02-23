@@ -127,7 +127,7 @@ public class FrontCodedIndexedBenchmark
     frontCodedIndexedWriter.open();
 
     int count = 0;
-    while(iterator.hasNext()) {
+    while (iterator.hasNext()) {
       final String next = iterator.next();
       values[count++] = next;
       frontCodedIndexedWriter.write(next);
@@ -160,14 +160,21 @@ public class FrontCodedIndexedBenchmark
     FileChannel fileChannelGeneric = FileChannel.open(fileGeneric.toPath());
     MappedByteBuffer byteBufferGeneric = fileChannelGeneric.map(FileChannel.MapMode.READ_ONLY, 0, fileGeneric.length());
     FileChannel fileChannelFrontCoded = FileChannel.open(fileFrontCoded.toPath());
-    MappedByteBuffer byteBufferFrontCoded = fileChannelFrontCoded.map(FileChannel.MapMode.READ_ONLY, 0, fileFrontCoded.length());
+    MappedByteBuffer byteBufferFrontCoded = fileChannelFrontCoded.map(
+        FileChannel.MapMode.READ_ONLY,
+        0,
+        fileFrontCoded.length()
+    );
 
     genericIndexed = GenericIndexed.read(
         byteBufferGeneric,
         GenericIndexed.STRING_STRATEGY,
         SmooshedFileMapper.load(smooshDirFrontCoded)
     );
-    frontCodedIndexed = FrontCodedIndexed.read(byteBufferFrontCoded.order(ByteOrder.nativeOrder()), ByteOrder.nativeOrder());
+    frontCodedIndexed = FrontCodedIndexed.read(
+        byteBufferFrontCoded.order(ByteOrder.nativeOrder()),
+        ByteOrder.nativeOrder()
+    );
 
     // sanity test
     for (int i = 0; i < numElements; i++) {

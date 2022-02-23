@@ -121,6 +121,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   protected abstract Comparator<Pair<Integer, PeekingIterator<T>>> getDictionaryMergingComparator();
   protected abstract Indexed<T> getNullDimValue();
+  //noinspection unused
   protected abstract ObjectStrategy<T> getObjectStrategy();
   @Nullable
   protected abstract T coerceValue(T value);
