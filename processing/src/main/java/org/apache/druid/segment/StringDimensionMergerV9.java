@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
@@ -29,6 +30,7 @@ import org.apache.druid.collections.spatial.RTree;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -83,6 +85,15 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   )
   {
     super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+    if (capabilities.hasSpatialIndexes()) {
+      Preconditions.checkArgument(
+          indexSpec.getStringDictionaryEncoding() != CompressionFactory.StringDictionaryEncodingStrategy.NONE,
+          StringUtils.format(
+              "Spatial indexes are incompatible with [%s] encoded dictionaries",
+              indexSpec.getStringDictionaryEncoding()
+          )
+      );
+    }
   }
 
   @Override
@@ -112,9 +123,19 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected DictionaryWriter<String> getWriter(String fileName)
   {
-    // todo (clint): spatial index + front coded = sad
-    if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FRONT_CODED) {
-      frontCodedIndexedWriter = new FrontCodedIndexedWriter(segmentWriteOutMedium, ByteOrder.nativeOrder(), 16);
+    if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FC4) {
+      frontCodedIndexedWriter = new FrontCodedIndexedWriter(
+          segmentWriteOutMedium,
+          ByteOrder.nativeOrder(),
+          4
+      );
+      return frontCodedIndexedWriter;
+    } else if (indexSpec.getStringDictionaryEncoding() == CompressionFactory.StringDictionaryEncodingStrategy.FC16) {
+      frontCodedIndexedWriter = new FrontCodedIndexedWriter(
+          segmentWriteOutMedium,
+          ByteOrder.nativeOrder(),
+          16
+      );
       return frontCodedIndexedWriter;
     } else {
       genericIndexedWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, fileName, getObjectStrategy());

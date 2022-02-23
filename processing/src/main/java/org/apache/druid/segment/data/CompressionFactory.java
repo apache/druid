@@ -118,7 +118,8 @@ public class CompressionFactory
   public enum StringDictionaryEncodingStrategy
   {
     NONE,
-    FRONT_CODED;
+    FC4,
+    FC16;
 
     @JsonValue
     @Override

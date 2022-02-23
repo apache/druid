@@ -384,7 +384,10 @@ public class SqlBenchmark
 
       // 21, 22: stringy stuff
       "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimUniform NOT LIKE '%3' GROUP BY 1, 2",
-      "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1"
+      "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1",
+      "SELECT * from foo"
+
+
   );
 
   @Param({"5000000"})
@@ -393,10 +396,10 @@ public class SqlBenchmark
   @Param({"false", "force"})
   private String vectorize;
 
-  @Param({"none", "front_coded"})
+  @Param({"none", "fc4", "fc16"})
   private String stringEncoding;
 
-  @Param({"4", "5", "6", "7", "8", "21", "22"})
+  @Param({"4","5","6","7","10","11","12","19","21","22","23"})
   private String query;
 
   @Nullable

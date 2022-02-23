@@ -225,7 +225,7 @@ public class TestIndex
           new IndexSpec(
               null,
               null,
-              CompressionFactory.StringDictionaryEncodingStrategy.FRONT_CODED,
+              CompressionFactory.StringDictionaryEncodingStrategy.FC4,
               null,
               null,
               null

@@ -357,7 +357,6 @@ public final class FrontCodedIndexed implements Indexed<String>
     return written;
   }
 
-  // todo (clint): use for ColumnType.STRING type strategy?
   public static String readString(ByteBuffer buffer)
   {
     int length = VByte.readInt(buffer);

@@ -82,7 +82,7 @@ public class FrontCodedIndexedBenchmark
   @Param({"16"})
   public int width;
 
-  @Param({"generic", "front-coded"})
+  @Param({"generic", "front-coded-4", "front-coded-16"})
   public String indexType;
 
   @Param({"10000"})
@@ -122,7 +122,7 @@ public class FrontCodedIndexedBenchmark
     FrontCodedIndexedWriter frontCodedIndexedWriter = new FrontCodedIndexedWriter(
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
-        4
+        "front-coded-4".equals(indexType) ? 4 : 16
     );
     frontCodedIndexedWriter.open();
 
