@@ -88,7 +88,7 @@ public class GroupByQueryConfig
   @JsonProperty
   private boolean ignoreForcePushDownLimitValidation = false;
   
-@JsonProperty
+  @JsonProperty
   private boolean applyLimitPushDownToSegment = false;
 
   @JsonProperty

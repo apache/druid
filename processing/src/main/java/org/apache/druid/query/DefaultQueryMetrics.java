@@ -19,7 +19,7 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableMap;
+
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
