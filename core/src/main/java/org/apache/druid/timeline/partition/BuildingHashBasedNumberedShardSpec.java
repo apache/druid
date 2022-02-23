@@ -110,11 +110,8 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
     return new HashBasedNumberedShardSpec(
         partitionId,
         numCorePartitions,
-        bucketId,
-        numBuckets,
-        partitionDimensions,
-        partitionFunction,
-        jsonMapper
+            partitionDimensions,
+            jsonMapper
     );
   }
 

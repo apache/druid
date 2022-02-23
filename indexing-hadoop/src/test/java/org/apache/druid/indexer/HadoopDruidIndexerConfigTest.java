@@ -36,7 +36,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -68,11 +67,8 @@ public class HadoopDruidIndexerConfigTest
               new HashBasedNumberedShardSpec(
                   i,
                   partitionCount,
-                  i,
-                  partitionCount,
-                  null,
-                  HashPartitionFunction.MURMUR3_32_ABS,
-                  new DefaultObjectMapper()
+                      null,
+                      new DefaultObjectMapper()
               ),
               i
           )

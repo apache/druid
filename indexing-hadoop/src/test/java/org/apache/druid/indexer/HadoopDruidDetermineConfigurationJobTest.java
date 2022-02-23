@@ -74,11 +74,8 @@ public class HadoopDruidDetermineConfigurationJobTest
             new HashBasedNumberedShardSpec(
                 i,
                 shardSpecsPerInterval.size(),
-                i,
-                shardSpecsPerInterval.size(),
-                null,
-                HashPartitionFunction.MURMUR3_32_ABS,
-                new ObjectMapper()
+                    null,
+                    new ObjectMapper()
             ),
             shardSpecsPerInterval.get(i).getActualSpec()
         );
@@ -113,11 +110,8 @@ public class HadoopDruidDetermineConfigurationJobTest
           new HashBasedNumberedShardSpec(
               0,
               shardSpecsPerInterval.size(),
-              0,
-              shardSpecsPerInterval.size(),
-              ImmutableList.of("dim"),
-              null,
-              new ObjectMapper()
+                  ImmutableList.of("dim"),
+                  new ObjectMapper()
           ),
           shardSpecsPerInterval.get(0).getActualSpec()
       );

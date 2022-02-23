@@ -123,7 +123,7 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
                 enteries.addAll(supportEntry);
                 entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(rootNamespace).put(i, enteries);
               }
-          }
+            }
           }
         } else {
           // If there are no remaining segments to find then we're done
@@ -139,7 +139,7 @@ public class ComplementaryNamespacedVersionedIntervalTimeline<VersionType, Objec
               return filterIntervals(remainingInterval,
                       entriesForIntervalByDataSourceAndNamespace.get(dataSource).get(namespace).get(remainingInterval).stream()
                               .map(TimelineObjectHolder::getInterval).collect(Collectors.toList()));
-          }
+            }
             return Collections.singletonList(remainingInterval);
           }).flatMap(List::stream).collect(Collectors.toList());
           tempNamespaceToRemainingInterval.put(namespace, remainingIntervals);

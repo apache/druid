@@ -70,17 +70,14 @@ public class NumberedShardSpec implements ShardSpec
   {
     return createNumberedLookup(shardSpecs);
   }
-
   static ShardSpecLookup createNumberedLookup(List<? extends ShardSpec> shardSpecs)
   {
     return createLookup(shardSpecs);
   }
-
   static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
-
   @Override
   public List<String> getDomainDimensions()
   {
@@ -100,16 +97,16 @@ public class NumberedShardSpec implements ShardSpec
     return partitions;
   }
 
+  @JsonProperty("partitions")
+  public int getPartitions()
+  {
+    return partitions;
+  }
+
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return NumberedPartitionChunk.make(partitionNum, partitions, obj);
-  }
-
-  @Override
-  public String getType()
-  {
-    return Type.NUMBERED;
   }
 
   @Override
@@ -127,12 +124,16 @@ public class NumberedShardSpec implements ShardSpec
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+
+    if (!(o instanceof NumberedShardSpec)) {
       return false;
     }
-    NumberedShardSpec that = (NumberedShardSpec) o;
-    return partitionNum == that.partitionNum &&
-           partitions == that.partitions;
+
+    final NumberedShardSpec that = (NumberedShardSpec) o;
+    if (partitionNum != that.partitionNum) {
+      return false;
+    }
+    return partitions == that.partitions;
   }
 
   @Override

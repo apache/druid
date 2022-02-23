@@ -22,10 +22,10 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputRow;
+
 
 import javax.annotation.Nullable;
-import java.util.List;
+
 
 /**
  * A .......
@@ -57,19 +57,19 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
     return this.partitionName;
   }
 
-  @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
+  //@Override
+  /*public boolean isCompatible(Class<? extends ShardSpec> other)
   {
     return other == NamedNumberedShardSpec.class;
   }
-
+*/
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return NamedNumberedPartitionChunk.make(getPartitionNum(), getPartitions(), partitionName, obj);
   }
 
-  @Override
+  /*@Override
   public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
   {
     return new ShardSpecLookup()
@@ -81,7 +81,7 @@ public class NamedNumberedShardSpec extends NumberedShardSpec
       }
     };
   }
-
+*/
   @Override
   public Object getIdentifier()
   {

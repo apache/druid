@@ -90,7 +90,7 @@ public class HashBasedNumberedPartialShardSpecTest
     );
     final ShardSpec shardSpec = partialShardSpec.complete(MAPPER, 1, 3);
     Assert.assertEquals(
-        new HashBasedNumberedShardSpec(1, 3, 2, 4, ImmutableList.of("dim"), null, MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, ImmutableList.of("dim"), MAPPER),
         shardSpec
     );
   }

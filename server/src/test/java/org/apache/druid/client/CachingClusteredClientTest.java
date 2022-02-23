@@ -1867,11 +1867,8 @@ public class CachingClusteredClientTest
         new HashBasedNumberedShardSpec(
             partitionNum,
             partitions,
-            partitionNum,
-            partitions,
-            partitionDimensions,
-            partitionFunction,
-            ServerTestHelper.MAPPER
+                partitionDimensions,
+                ServerTestHelper.MAPPER
         ),
         null,
         9,

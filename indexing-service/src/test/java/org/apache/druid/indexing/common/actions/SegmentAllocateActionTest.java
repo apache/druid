@@ -848,7 +848,7 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(
-                           new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), null, objectMapper)
+                           new HashBasedNumberedShardSpec(0, 2, ImmutableList.of("dim1"), objectMapper)
                        )
                        .size(0)
                        .build(),
@@ -857,7 +857,7 @@ public class SegmentAllocateActionTest
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
                        .shardSpec(
-                           new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), null, objectMapper)
+                           new HashBasedNumberedShardSpec(1, 2, ImmutableList.of("dim1"), objectMapper)
                        )
                        .size(0)
                        .build()

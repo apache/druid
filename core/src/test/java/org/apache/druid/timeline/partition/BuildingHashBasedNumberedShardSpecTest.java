@@ -36,7 +36,7 @@ public class BuildingHashBasedNumberedShardSpecTest
   public void testConvert()
   {
     Assert.assertEquals(
-        new HashBasedNumberedShardSpec(5, 10, 5, 12, ImmutableList.of("dim"), HashPartitionFunction.MURMUR3_32_ABS, mapper),
+        new HashBasedNumberedShardSpec(5, 10, ImmutableList.of("dim"), mapper),
         new BuildingHashBasedNumberedShardSpec(
             5,
             5,
