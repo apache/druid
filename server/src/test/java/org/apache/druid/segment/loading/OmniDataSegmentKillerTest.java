@@ -25,7 +25,9 @@ import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -75,4 +77,26 @@ public class OmniDataSegmentKillerTest
         )
     );
   }
+
+  @Test
+  public void testKillTombstone() throws Exception
+  {
+    // tombstone
+    DataSegment tombstone =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(Intervals.of("2021-01-01/P1D"))
+                   .version("version")
+                   .size(1)
+                   .loadSpec(ImmutableMap.of("type", "tombstone", "path", "null"))
+                   .shardSpec(new TombstoneShardSpec())
+                   .build();
+
+    final Injector injector = createInjector(null);
+    final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
+    segmentKiller.kill(tombstone);
+  }
+
+
+
 }
