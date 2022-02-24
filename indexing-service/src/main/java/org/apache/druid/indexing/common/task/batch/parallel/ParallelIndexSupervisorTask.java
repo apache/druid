@@ -1546,12 +1546,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(boolean includeUnparseable)
   {
-    ParallelIndexTaskRunner currentRunner = currentSubTaskHolder.getTask();
     if (indexGenerateRowStats != null) {
       return Pair.of(indexGenerateRowStats.lhs, includeUnparseable ? indexGenerateRowStats.rhs : ImmutableMap.of());
-    } else if (!currentRunner.getName().equals("partial segment generation")) {
+    } else if (currentSubTaskHolder == null || !((ParallelIndexTaskRunner) currentSubTaskHolder.getTask()).getName().equals("partial segment generation")) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());
     } else {
+      ParallelIndexTaskRunner currentRunner = currentSubTaskHolder.getTask();
       Set<String> runningTaskIds = currentRunner.getRunningTaskIds();
       Map<String, GeneratedPartitionsReport> completedSubtaskReports = (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
