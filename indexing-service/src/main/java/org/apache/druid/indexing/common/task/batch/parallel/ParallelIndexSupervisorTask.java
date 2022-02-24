@@ -1578,7 +1578,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       for (String runningTaskId : runningTaskIds) {
         try {
           Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
-          LOG.info(StringUtils.format("Report for %s is: %s", runningTaskId, report));
+
           if (report == null || report.isEmpty()) {
             // task does not have a running report yet
             continue;
