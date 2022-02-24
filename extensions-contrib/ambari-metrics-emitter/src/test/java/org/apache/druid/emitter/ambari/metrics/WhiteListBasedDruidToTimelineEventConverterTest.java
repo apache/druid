@@ -48,6 +48,7 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
   private final String hostname = "testHost:8080";
   private final String serviceName = "historical";
   private final String defaultNamespace = prefix + "." + serviceName;
+
   @Test
   @Parameters(
       {
