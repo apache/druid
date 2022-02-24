@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl;
 
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
