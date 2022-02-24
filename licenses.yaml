@@ -735,6 +735,7 @@ license_name: Apache License version 2.0
 version: 2.8.4
 libraries:
   - com.github.rvesse: airline
+  - com.github.rvesse: airline-io
 notices:
   - airline: |
       Copyright Notices
@@ -3515,6 +3516,16 @@ license_name: Eclipse Public License 2.0
 libraries:
   - org.glassfish.hk2: osgi-resource-locator
   
+---
+
+name: jakarta.inject
+version: 1.0.3
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+libraries:
+  - org.jakarta: jakarta.inject-api
+
 ---
 
 name: jakarta.inject
