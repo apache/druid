@@ -1515,6 +1515,16 @@ libraries:
 
 ---
 
+name: Javax Inject
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1
+libraries:
+  - javax.inject: javax.inject
+
+---
+
 name: Bean Validation API
 license_category: binary
 module: java-core
