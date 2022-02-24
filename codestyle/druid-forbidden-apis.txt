@@ -58,3 +58,5 @@ com.google.common.io.BaseEncoding#base64()
 @defaultMessage Use com.google.errorprone.annotations.concurrent.GuardedBy
 javax.annotation.concurrent.GuardedBy
 com.amazonaws.annotation.GuardedBy
+
+org.powermock.** @ Use Mockito instead of Powermock for compatibility with newer Java versions
