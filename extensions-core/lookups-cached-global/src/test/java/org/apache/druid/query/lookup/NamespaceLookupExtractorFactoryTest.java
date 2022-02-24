@@ -133,8 +133,10 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testMissingSpec()
   {
-    Assert.assertThrows("extractionNamespace should be specified", NullPointerException.class,
-                        () -> new NamespaceLookupExtractorFactory(null, null));
+    Assert.assertThrows(
+        "extractionNamespace should be specified", NullPointerException.class,
+        () -> new NamespaceLookupExtractorFactory(null, null)
+    );
   }
 
   @Test
