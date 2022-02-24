@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -31,11 +33,15 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -87,6 +93,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       0
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+  private static final String INPUT_FILTER = "test_*";
 
   @Parameterized.Parameters(
       name = "lockGranularity={0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, intervalToIndex={3}, numShards={4}"
@@ -327,6 +334,118 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     }
   }
 
+  @Test
+  public void testIngestNullColumn()
+  {
+    // storeEmptyColumns flag should do nothing with using inputFormat or explicit numShards
+    if (!isUseInputFormatApi() || numShards == null) {
+      return;
+    }
+    final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
+        Arrays.asList("ts", "unknownDim")
+    );
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                DATASOURCE,
+                TIMESTAMP_SPEC,
+                DIMENSIONS_SPEC.withDimensions(dimensionSchemas),
+                DEFAULT_METRICS_SPEC,
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    inputIntervals
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new LocalInputSource(inputDir, INPUT_FILTER),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            newTuningConfig(
+                new HashedPartitionsSpec(
+                    10,
+                    null,
+                    ImmutableList.of("ts", "unknownDim")
+                ),
+                maxNumConcurrentSubTasks,
+                true
+            )
+        ),
+        null
+    );
+
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      for (int i = 0; i < dimensionSchemas.size(); i++) {
+        Assert.assertEquals(dimensionSchemas.get(i).getName(), segment.getDimensions().get(i));
+      }
+    }
+  }
+
+  @Test
+  public void testIngestNullColumn_storeEmptyColumnsOff_shouldNotStoreEmptyColumns()
+  {
+    // storeEmptyColumns flag should do nothing with using inputFormat or explicit numShards
+    if (!isUseInputFormatApi() || numShards == null) {
+      return;
+    }
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            new DataSchema(
+                DATASOURCE,
+                TIMESTAMP_SPEC,
+                DIMENSIONS_SPEC.withDimensions(
+                    DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "unknownDim"))
+                ),
+                DEFAULT_METRICS_SPEC,
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    inputIntervals
+                ),
+                null
+            ),
+            new ParallelIndexIOConfig(
+                null,
+                new LocalInputSource(inputDir, INPUT_FILTER),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                null
+            ),
+            newTuningConfig(
+                new HashedPartitionsSpec(
+                    10,
+                    null,
+                    ImmutableList.of("ts", "unknownDim")
+                ),
+                maxNumConcurrentSubTasks,
+                true
+            )
+        ),
+        null
+    );
+
+    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+
+    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    for (DataSegment segment : segments) {
+      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+    }
+  }
+
   private ParallelIndexSupervisorTask createTask(
       PartitionsSpec partitionsSpec,
       File inputDirectory,
@@ -342,7 +461,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           null,
           intervalToIndex,
           inputDirectory,
-          "test_*",
+          INPUT_FILTER,
           partitionsSpec,
           maxNumConcurrentSubTasks,
           appendToExisting,
@@ -356,7 +475,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           PARSE_SPEC,
           intervalToIndex,
           inputDirectory,
-          "test_*",
+          INPUT_FILTER,
           partitionsSpec,
           maxNumConcurrentSubTasks,
           appendToExisting,

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
@@ -28,6 +27,7 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapIndexes;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -35,14 +35,10 @@ import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
-import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.Set;
-import java.util.function.Predicate;
 
 /**
  */
@@ -217,116 +213,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       // Create a BitmapIndex so that filters applied to null columns can use
       // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
       // whether the filter is applied in the pre or post filtering stage.
-      return new BitmapIndex()
-      {
-        @Override
-        public int getCardinality()
-        {
-          return 1;
-        }
-
-        @Override
-        @Nullable
-        public String getValue(int index)
-        {
-          return null;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return true;
-        }
-
-        @Override
-        public BitmapFactory getBitmapFactory()
-        {
-          return bitmapFactory;
-        }
-
-        /**
-         * Return -2 for non-null values to match what the {@link BitmapIndex} implementation in
-         * {@link StringBitmapIndexColumnPartSupplier}
-         * would return for {@link BitmapIndex#getIndex(String)} when there is only a single index, for the null value.
-         * i.e., return an 'insertion point' of 1 for non-null values (see {@link BitmapIndex} interface)
-         */
-        @Override
-        public int getIndex(@Nullable String value)
-        {
-          return NullHandling.isNullOrEquivalent(value) ? 0 : -2;
-        }
-
-        @Override
-        public ImmutableBitmap getBitmap(int idx)
-        {
-          if (idx == 0) {
-            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
-          } else {
-            return bitmapFactory.makeEmptyImmutableBitmap();
-          }
-        }
-
-        @Override
-        public ImmutableBitmap getBitmapForValue(@Nullable String value)
-        {
-          if (NullHandling.isNullOrEquivalent(value)) {
-            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
-          } else {
-            return bitmapFactory.makeEmptyImmutableBitmap();
-          }
-        }
-
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapsInRange(
-            @Nullable String startValue,
-            boolean startStrict,
-            @Nullable String endValue,
-            boolean endStrict,
-            Predicate<String> matcher
-        )
-        {
-          final int startIndex; // inclusive
-          int endIndex; // exclusive
-
-          if (startValue == null) {
-            startIndex = 0;
-          } else {
-            if (NullHandling.isNullOrEquivalent(startValue)) {
-              startIndex = startStrict ? 1 : 0;
-            } else {
-              startIndex = 1;
-            }
-          }
-
-          if (endValue == null) {
-            endIndex = 1;
-          } else {
-            if (NullHandling.isNullOrEquivalent(endValue)) {
-              endIndex = endStrict ? 0 : 1;
-            } else {
-              endIndex = 1;
-            }
-          }
-
-          endIndex = Math.max(startIndex, endIndex);
-          if (startIndex == endIndex) {
-            return Collections.emptyList();
-          }
-          if (matcher.test(null)) {
-            return ImmutableList.of(getBitmap(0));
-          }
-          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
-        }
-
-        @Override
-        public Iterable<ImmutableBitmap> getBitmapsForValues(Set<String> values)
-        {
-          if (values.contains(null) || (NullHandling.replaceWithDefault() && values.contains(""))) {
-            return ImmutableList.of(getBitmap(0));
-          }
-          return ImmutableList.of(bitmapFactory.makeEmptyImmutableBitmap());
-        }
-      };
+      return BitmapIndexes.forNilColumn(this::getNumRows, bitmapFactory);
     } else if (columnHolder.getCapabilities().hasBitmapIndexes() && columnHolder.getCapabilities().is(ValueType.STRING)) {
       // currently BitmapIndex are reliant on STRING dictionaries to operate correctly, and will fail when used with
       // other types of dictionary encoded columns

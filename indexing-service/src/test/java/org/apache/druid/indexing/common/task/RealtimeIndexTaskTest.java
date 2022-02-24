@@ -898,7 +898,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
@@ -994,7 +995,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         MapCache.create(1024),
         new CacheConfig(),
         new CachePopulatorStats(),
-        testUtils.getTestIndexMergerV9(),
+        testUtils.getIndexMergerV9Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

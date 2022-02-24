@@ -74,6 +74,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
@@ -148,6 +149,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
@@ -169,6 +171,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -432,6 +435,96 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L))),
         newDataSchemaMetadata()
     );
+  }
+
+  @Test(timeout = 60_000L)
+  public void testIngestNullColumnAfterDataInserted() throws Exception
+  {
+    // Insert data
+    insertData();
+
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        ImmutableList.of(
+            new StringDimensionSchema("dim1"),
+            new StringDimensionSchema("dim1t"),
+            new StringDimensionSchema("unknownDim"),
+            new StringDimensionSchema("dim2"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat")
+        )
+    );
+    final KafkaIndexTask task = createTask(
+        null,
+        NEW_DATA_SCHEMA.withDimensionsSpec(dimensionsSpec),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    final Collection<DataSegment> segments = publishedSegments();
+    for (DataSegment segment : segments) {
+      for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
+        Assert.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
+      }
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testIngestNullColumnAfterDataInserted_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
+  {
+    // Insert data
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        NEW_DATA_SCHEMA.withDimensionsSpec(
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("dim1"),
+                    new StringDimensionSchema("dim1t"),
+                    new StringDimensionSchema("dim2"),
+                    new LongDimensionSchema("dimLong"),
+                    new FloatDimensionSchema("dimFloat"),
+                    new StringDimensionSchema("unknownDim")
+                )
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+    task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    final Collection<DataSegment> segments = publishedSegments();
+    for (DataSegment segment : segments) {
+      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+    }
   }
 
   @Test(timeout = 60_000L)
@@ -2899,7 +2992,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         false,
         false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name()
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -3009,7 +3103,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         MapCache.create(1024),
         new CacheConfig(),
         new CachePopulatorStats(),
-        testUtils.getTestIndexMergerV9(),
+        testUtils.getIndexMergerV9Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

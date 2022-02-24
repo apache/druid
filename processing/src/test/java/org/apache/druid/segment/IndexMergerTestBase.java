@@ -758,6 +758,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                   Arrays.asList(indexA, indexB),
                   true,
                   new AggregatorFactory[]{new CountAggregatorFactory("count")},
+
                   tmpDirMerged,
                   indexSpec,
                   null,
@@ -1340,6 +1341,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C"),
             },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1390,6 +1392,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         true,
         new AggregatorFactory[]{new LongSumAggregatorFactory("A", "A"), new LongSumAggregatorFactory("C", "C")},
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1461,6 +1464,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("C", "C")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1525,6 +1529,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );
@@ -1570,6 +1575,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("D", "D")
         },
         tmpDirMerged,
+        null,
         indexSpec,
         -1
     );

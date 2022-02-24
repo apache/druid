@@ -214,6 +214,117 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
+  public void testIngestNullOnlyColumns() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,,\n");
+      writer.write("2014-01-01T01:00:20Z,,\n");
+      writer.write("2014-01-01T02:00:30Z,,\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+    Assert.assertEquals(1, segments.size());
+    Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
+    Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+  }
+
+  @Test
+  public void testIngestNullOnlyColumns_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,,\n");
+      writer.write("2014-01-01T01:00:20Z,,\n");
+      writer.write("2014-01-01T02:00:30Z,,\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        ImmutableMap.of(Tasks.STORE_EMPTY_COLUMNS_KEY, false)
+    );
+
+    Assert.assertFalse(indexTask.supportsQueries());
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+    Assert.assertEquals(1, segments.size());
+    // only empty string dimensions are ignored currently
+    Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
+    Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+  }
+
+  @Test
   public void testDeterminePartitions() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
