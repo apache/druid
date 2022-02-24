@@ -74,7 +74,8 @@ public class GeneratedPartitionsReport implements SubTaskReport
     }
     GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
     return Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats);
+           Objects.equals(partitionStats, that.partitionStats) &&
+           Objects.equals(taskReport, that.taskReport);
   }
 
   @Override
