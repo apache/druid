@@ -37,14 +37,14 @@ import java.util.List;
 
 public class V9IndexLoaderTest extends InitializedNullHandlingTest
 {
-  private static final String SRC_IP = "srcIP";
+  private static final String COUNT_COLUMN = "count";
 
   @Test
   public void testLoadSegmentDamagedFileWithLazy() throws IOException
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(new Std().addValue(ExprMacroTable.class, ExprMacroTable.nil()));
-    final CannotDeserializeSrcIPColumnV9IndexLoader loader = new CannotDeserializeSrcIPColumnV9IndexLoader();
+    final CannotDeserializeCountColumnV9IndexLoader loader = new CannotDeserializeCountColumnV9IndexLoader();
     String path = this.getClass().getClassLoader().getResource("v9SegmentPersistDir/segmentWithDamagedFile/").getPath();
 
     ForkSegmentLoadDropHandler segmentLoadDropHandler = new ForkSegmentLoadDropHandler();
@@ -62,7 +62,7 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
     assertFailToDeserializeColumn(queryableIndex::getDimensionHandlers);
     List<String> columnNames = queryableIndex.getColumnNames();
     for (String columnName : columnNames) {
-      if (SRC_IP.equals(columnName)) {
+      if (COUNT_COLUMN.equals(columnName)) {
         assertFailToDeserializeColumn(() -> queryableIndex.getColumnHolder(columnName));
       } else {
         Assert.assertNotNull(queryableIndex.getColumnHolder(columnName));
@@ -115,9 +115,9 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
     }
   }
 
-  private static class CannotDeserializeSrcIPColumnV9IndexLoader extends V9IndexLoader
+  private static class CannotDeserializeCountColumnV9IndexLoader extends V9IndexLoader
   {
-    private CannotDeserializeSrcIPColumnV9IndexLoader()
+    private CannotDeserializeCountColumnV9IndexLoader()
     {
       super(() -> 0);
     }
@@ -130,7 +130,7 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
         SmooshedFileMapper smooshedFiles
     ) throws IOException
     {
-      if (SRC_IP.equals(columnName)) {
+      if (COUNT_COLUMN.equals(columnName)) {
         throw new IOException("Exception test while deserializing a column");
       }
       return super.deserializeColumn(
