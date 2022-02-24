@@ -404,14 +404,16 @@ public class HttpIndexingServiceClientTest
     int maximumCapacityWithAutoScale = 10;
     // Mock response for /druid/indexer/v1/totalWorkerCapacity
     HttpResponse totalWorkerCapacityResponse = EasyMock.createMock(HttpResponse.class);
-    EasyMock.expect(totalWorkerCapacityResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
-    EasyMock.expect(totalWorkerCapacityResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(totalWorkerCapacityResponse.status()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.replay(totalWorkerCapacityResponse);
-    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maximumCapacityWithAutoScale);
+    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(
+        currentClusterCapacity,
+        maximumCapacityWithAutoScale
+    );
     StringFullResponseHolder autoScaleResponseHolder = new StringFullResponseHolder(
         totalWorkerCapacityResponse,
-        StandardCharsets.UTF_8
-    ).addChunk(jsonMapper.writeValueAsString(indexingTotalWorkerCapacityInfo));
+        jsonMapper.writeValueAsString(indexingTotalWorkerCapacityInfo)
+    );
     EasyMock.expect(druidLeaderClient.go(EasyMock.anyObject(Request.class)))
             .andReturn(autoScaleResponseHolder)
             .once();
