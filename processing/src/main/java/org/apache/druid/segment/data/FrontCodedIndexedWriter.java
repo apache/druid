@@ -120,6 +120,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<String>
     bucketBuffer[numWritten % bucketSize] = objectToWrite;
 
     ++numWritten;
+    prevObject = objectToWrite;
   }
 
 

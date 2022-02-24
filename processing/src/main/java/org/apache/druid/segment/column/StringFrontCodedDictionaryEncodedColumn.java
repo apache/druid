@@ -256,7 +256,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         public ValueMatcher makeValueMatcher(final @Nullable String value)
         {
           if (extractionFn == null) {
-            final int valueId = lookupId(value);
+            final int valueId = super.lookupId(value);
             if (valueId >= 0) {
               return new ValueMatcher()
               {
@@ -318,7 +318,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         @Override
         public Object getObject()
         {
-          return lookupName(getRowValue());
+          return super.lookupName(getRowValue());
         }
 
         @Override

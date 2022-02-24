@@ -119,9 +119,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     this.closer = closer;
   }
 
+  @SuppressWarnings("SameReturnValue")
   protected abstract Comparator<Pair<Integer, PeekingIterator<T>>> getDictionaryMergingComparator();
   protected abstract Indexed<T> getNullDimValue();
-  //noinspection unused
+  @SuppressWarnings({"unused", "SameReturnValue"})
   protected abstract ObjectStrategy<T> getObjectStrategy();
   @Nullable
   protected abstract T coerceValue(T value);
