@@ -789,30 +789,6 @@
                       <dockerfile>docker/Dockerfile</dockerfile>
                     </configuration>
                   </execution>
-                  <execution>
-                    <id>tag-latest-jdk11</id>
-                    <goals>
-                      <goal>build</goal>
-                      <goal>tag</goal>
-                    </goals>
-                    <configuration>
-                      <repository>docker.io/apache/druid</repository>
-                      <tag>latest-jdk11</tag>
-                      <dockerfile>docker/Dockerfile.java11</dockerfile>
-                    </configuration>
-                  </execution>
-                  <execution>
-                    <id>tag-version-jdk11</id>
-                    <goals>
-                      <goal>build</goal>
-                      <goal>tag</goal>
-                    </goals>
-                    <configuration>
-                      <repository>docker.io/apache/druid</repository>
-                      <tag>${project.version}-jdk11</tag>
-                      <dockerfile>docker/Dockerfile.java11</dockerfile>
-                    </configuration>
-                  </execution>
                 </executions>
                 <configuration>
                   <buildArgs>
