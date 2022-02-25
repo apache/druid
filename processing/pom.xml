@@ -290,6 +290,10 @@
                     <!-- set default options -->
                     <argLine>
                         @{jacocoArgLine}
+                        <!-- for datasketches-memory access to DirectByteBuffer until Java 17 is supported -->
+                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                        <!-- for EqualsVerifier in org.apache.druid.segment.filter tests -->
+                        --add-opens java.base/java.util=ALL-UNNAMED
                         -Xmx512m
                         -XX:MaxDirectMemorySize=2500m
                         -Duser.language=en
