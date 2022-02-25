@@ -57,6 +57,7 @@ public class CliHadoopIndexer implements Runnable
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
           description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
