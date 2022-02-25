@@ -1510,38 +1510,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     // Get stats from running tasks
     Set<String> runningTaskIds = parallelSinglePhaseRunner.getRunningTaskIds();
-    for (String runningTaskId : runningTaskIds) {
-      try {
-        Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
-        if (report == null || report.isEmpty()) {
-          // task does not have a running report yet
-          continue;
-        }
-        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
-        Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
-        Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
 
-        if (includeUnparseable) {
-          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
-              RowIngestionMeters.BUILD_SEGMENTS
-          );
-          unparseableEvents.addAll(buildSegmentsUnparseableEvents);
-        }
-
-        processed += ((Number) buildSegments.get("processed")).longValue();
-        processedWithError += ((Number) buildSegments.get("processedWithError")).longValue();
-        thrownAway += ((Number) buildSegments.get("thrownAway")).longValue();
-        unparseable += ((Number) buildSegments.get("unparseable")).longValue();
-      }
-      catch (Exception e) {
-        LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);
-      }
-    }
-
-    return createRowStatsAndUnparseableEvents(unparseableEvents, processed, processedWithError, thrownAway, unparseable);
+    return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
+                                                                      unparseableEvents,
+                                                                      processed,
+                                                                      processedWithError,
+                                                                      thrownAway,
+                                                                      unparseable,
+                                                                      includeUnparseable);
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(boolean includeUnparseable)
@@ -1575,48 +1551,56 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         thrownAway += rowStatsAndUnparseableEvents.lhs.getThrownAway();
         unparseable += rowStatsAndUnparseableEvents.lhs.getUnparseable();
       }
-      for (String runningTaskId : runningTaskIds) {
-        try {
-          Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
-
-          if (report == null || report.isEmpty()) {
-            // task does not have a running report yet
-            continue;
-          }
-          Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
-          Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
-          Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
-          Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
-          Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
-
-          if (includeUnparseable) {
-            Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-            List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
-                RowIngestionMeters.BUILD_SEGMENTS
-            );
-            unparseableEvents.addAll(buildSegmentsUnparseableEvents);
-          }
-
-          processed += ((Number) buildSegments.get("processed")).longValue();
-          processedWithError += ((Number) buildSegments.get("processedWithError")).longValue();
-          thrownAway += ((Number) buildSegments.get("thrownAway")).longValue();
-          unparseable += ((Number) buildSegments.get("unparseable")).longValue();
-        }
-        catch (Exception e) {
-          LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);
-        }
-      }
-      return createRowStatsAndUnparseableEvents(unparseableEvents, processed, processedWithError, thrownAway, unparseable);
+      return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
+                                                                        unparseableEvents,
+                                                                        processed,
+                                                                        processedWithError,
+                                                                        thrownAway,
+                                                                        unparseable,
+                                                                        includeUnparseable);
     }
   }
 
-  private static Pair<Map<String, Object>, Map<String, Object>> createRowStatsAndUnparseableEvents(
+  private Pair<Map<String, Object>, Map<String, Object>> getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(
+      Set<String> runningTaskIds,
       List<ParseExceptionReport> unparseableEvents,
       long processed,
       long processedWithError,
       long thrownAway,
-      long unparseable)
+      long unparseable,
+      boolean includeUnparseable)
   {
+    for (String runningTaskId : runningTaskIds) {
+      try {
+        Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
+
+        if (report == null || report.isEmpty()) {
+          // task does not have a running report yet
+          continue;
+        }
+        Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
+        Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
+        Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
+        Map<String, Object> totals = (Map<String, Object>) rowStats.get("totals");
+        Map<String, Object> buildSegments = (Map<String, Object>) totals.get(RowIngestionMeters.BUILD_SEGMENTS);
+
+        if (includeUnparseable) {
+          Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
+          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
+              RowIngestionMeters.BUILD_SEGMENTS
+          );
+          unparseableEvents.addAll(buildSegmentsUnparseableEvents);
+        }
+
+        processed += ((Number) buildSegments.get("processed")).longValue();
+        processedWithError += ((Number) buildSegments.get("processedWithError")).longValue();
+        thrownAway += ((Number) buildSegments.get("thrownAway")).longValue();
+        unparseable += ((Number) buildSegments.get("unparseable")).longValue();
+      }
+      catch (Exception e) {
+        LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);
+      }
+    }
     Map<String, Object> rowStatsMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
     totalsMap.put(
