@@ -33,6 +33,8 @@ import java.util.Objects;
  */
 public class TombstoneShardSpec implements ShardSpec
 {
+  public static TombstoneShardSpec INSTANCE = new TombstoneShardSpec();
+
   @JsonProperty("partitionNum")
   @Override
   public int getPartitionNum()

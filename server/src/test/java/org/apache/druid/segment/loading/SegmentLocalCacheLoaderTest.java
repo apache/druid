@@ -19,29 +19,55 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordination.TestStorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+import java.io.IOException;
+import java.util.Collections;
 
 public class SegmentLocalCacheLoaderTest
 {
+  private static final long MAX_SIZE = 1000L;
 
-  SegmentLocalCacheLoader segmentLocalCacheLoader;
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private TestStorageLocation storageLoc;
+  private ObjectMapper objectMapper;
+  private SegmentLocalCacheLoader segmentLocalCacheLoader;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
-    segmentLocalCacheLoader = new SegmentLocalCacheLoader(null, null, null);
+    storageLoc = new TestStorageLocation(temporaryFolder);
+
+    SegmentLoaderConfig config = new SegmentLoaderConfig()
+        .withLocations(Collections.singletonList(storageLoc.toStorageLocationConfig(MAX_SIZE, null)))
+        .withInfoDir(storageLoc.getInfoDir());
+
+    objectMapper = TestHelper.makeJsonMapper();
+    objectMapper.registerSubtypes(TombstoneLoadSpec.class);
+    objectMapper.registerSubtypes(TombstoneSegmentizerFactory.class);
+    SegmentCacheManager cacheManager = new SegmentLocalCacheManager(config, objectMapper);
+
+    segmentLocalCacheLoader = new SegmentLocalCacheLoader(cacheManager, null, objectMapper);
+
+    TombstoneLoadSpec.witeFactoryFile(storageLoc.getCacheDir());
   }
 
   @Test
-  public void testGetSegmentWithTombstones() throws SegmentLoadingException
+  public void testGetSegmentWithTombstones() throws SegmentLoadingException, IOException
   {
     Interval interval = Intervals.of("2014-01-01/2014-01-02");
     DataSegment tombstone = new DataSegment("foo", interval, "version",

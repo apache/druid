@@ -87,7 +87,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -154,7 +154,7 @@ public class ServerManagerTest
           {
             if (segment.isTombstone()) {
               return ReferenceCountingSegment
-                  .wrapSegment(SegmentLocalCacheLoader.segmentForTombstone(segment), segment.getShardSpec());
+                  .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
             } else {
               return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
                   MapUtils.getString(segment.getLoadSpec(), "version"),
