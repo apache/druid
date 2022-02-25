@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -94,7 +95,7 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
               .getAttributesList()
               .stream()
               .collect(Collectors.toMap(kv -> resourceAttributePrefix + kv.getKey(),
-                  kv -> getStringValue(kv.getValue())));
+                  kv -> parseAnyValue(kv.getValue())));
           return resourceMetrics.getInstrumentationLibraryMetricsList()
               .stream()
               .flatMap(libraryMetrics -> libraryMetrics.getMetricsList()
@@ -124,6 +125,11 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
         break;
       }
       // TODO Support HISTOGRAM and SUMMARY metrics
+      case HISTOGRAM:
+      case SUMMARY: {
+        inputRows = Collections.emptyList();
+        break;
+      }
       default:
         throw new IllegalStateException("Unexpected value: " + metric.getDataCase());
     }
@@ -143,25 +149,38 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 
     if (dataPoint.hasAsInt()) {
       event.put(valueDimension, dataPoint.getAsInt());
-    } else if (dataPoint.hasAsDouble()) {
-      event.put(valueDimension, dataPoint.getAsDouble());
     } else {
-      throw new IllegalStateException("Unexpected dataPoint value type. Expected Int or Double");
+      event.put(valueDimension, dataPoint.getAsDouble());
     }
 
     event.putAll(resourceAttributes);
     dataPoint.getAttributesList().forEach(att -> event.put(metricAttributePrefix + att.getKey(),
-        getStringValue(att.getValue())));
+        parseAnyValue(att.getValue())));
 
     return createRow(TimeUnit.NANOSECONDS.toMillis(dataPoint.getTimeUnixNano()), event);
   }
 
-  private static String getStringValue(AnyValue value)
+  private static Object parseAnyValue(AnyValue value)
   {
-    if (value.getValueCase() == AnyValue.ValueCase.STRING_VALUE) {
-      return value.getStringValue();
+    switch (value.getValueCase()) {
+      case INT_VALUE:
+        return value.getIntValue();
+      case BOOL_VALUE:
+        return value.getBoolValue();
+      case ARRAY_VALUE:
+        return value.getArrayValue();
+      case BYTES_VALUE:
+        return value.getBytesValue();
+      case DOUBLE_VALUE:
+        return value.getDoubleValue();
+      case KVLIST_VALUE:
+        return value.getKvlistValue();
+      case STRING_VALUE:
+        return value.getStringValue();
+      default:
+        // VALUE_NOT_SET:
+        return "";
     }
-    throw new IllegalStateException("Unexpected value: " + value.getValueCase());
   }
 
   InputRow createRow(long timeUnixMilli, Map<String, Object> event)
