@@ -122,7 +122,9 @@ public class DataSegmentTest
         new NumberedShardSpec(3, 0),
         new CompactionState(
             new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo")), null, null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
+            ),
             ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
             ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
             ImmutableMap.of(),
@@ -338,7 +340,7 @@ public class DataSegmentTest
   {
     final CompactionState compactionState = new CompactionState(
         new DynamicPartitionsSpec(null, null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
         ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
         Collections.singletonMap("test", "map"),

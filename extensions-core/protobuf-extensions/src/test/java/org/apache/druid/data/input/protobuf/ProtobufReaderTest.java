@@ -52,12 +52,14 @@ public class ProtobufReaderTest
   public void setUp()
   {
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
-        new StringDimensionSchema("event"),
-        new StringDimensionSchema("id"),
-        new StringDimensionSchema("someOtherId"),
-        new StringDimensionSchema("isValid")
-    ), null, null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Lists.newArrayList(
+            new StringDimensionSchema("event"),
+            new StringDimensionSchema("id"),
+            new StringDimensionSchema("someOtherId"),
+            new StringDimensionSchema("isValid")
+        )
+    );
     flattenSpec = new JSONPathSpec(
         true,
         Lists.newArrayList(
