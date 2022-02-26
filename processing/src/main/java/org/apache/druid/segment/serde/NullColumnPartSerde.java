@@ -24,14 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.BitmapIndexes;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -39,8 +35,6 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.channels.WritableByteChannel;
@@ -69,7 +63,6 @@ public class NullColumnPartSerde implements ColumnPartSerde
 
   private final int numRows;
   private final BitmapSerdeFactory bitmapSerdeFactory;
-  private final NullNumericColumn nullNumericColumn;
   private final NullDictionaryEncodedColumn nullDictionaryEncodedColumn;
   private final BitmapIndex bitmapIndex;
 
@@ -81,7 +74,6 @@ public class NullColumnPartSerde implements ColumnPartSerde
   {
     this.numRows = numRows;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
-    this.nullNumericColumn = new NullNumericColumn();
     this.nullDictionaryEncodedColumn = new NullDictionaryEncodedColumn();
     this.bitmapIndex = BitmapIndexes.forNilColumn(() -> numRows, bitmapSerdeFactory.getBitmapFactory());
   }
@@ -108,13 +100,14 @@ public class NullColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (buffer, builder, columnConfig) -> builder
-        .setHasMultipleValues(false)
-        .setHasNulls(true)
-        .setFilterable(true)
-        .setBitmapIndex(Suppliers.ofInstance(bitmapIndex))
-        .setNumericColumnSupplier(Suppliers.ofInstance(nullNumericColumn))
-        .setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
+    return (buffer, builder, columnConfig) -> {
+      builder
+          .setHasMultipleValues(false)
+          .setHasNulls(true)
+          .setFilterable(true)
+          .setBitmapIndex(Suppliers.ofInstance(bitmapIndex));
+      builder.setDictionaryEncodedColumnSupplier(Suppliers.ofInstance(nullDictionaryEncodedColumn));
+    };
   }
 
   @Override
@@ -135,49 +128,6 @@ public class NullColumnPartSerde implements ColumnPartSerde
   public int hashCode()
   {
     return Objects.hash(numRows, bitmapSerdeFactory);
-  }
-
-  private final class NullNumericColumn implements NumericColumn
-  {
-    @Override
-    public int length()
-    {
-      return numRows;
-    }
-
-    @Override
-    public long getLongSingleValueRow(int rowNum)
-    {
-      throw new RuntimeException("This method should not be called for null-only columns");
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-    }
-
-    @Override
-    public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
-    {
-      return NilColumnValueSelector.instance();
-    }
-
-    @Override
-    public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
-    {
-      return NilVectorSelector.create(offset);
-    }
-
-    @Override
-    public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
-    {
-      return NilVectorSelector.create(offset);
-    }
-
-    @Override
-    public void close()
-    {
-    }
   }
 
   private final class NullDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
