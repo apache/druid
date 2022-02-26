@@ -50,6 +50,7 @@
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
+        <docker.jdk.version>11</docker.jdk.version>
     </properties>
 
     <build>
@@ -609,6 +610,7 @@
                 <configuration>
                   <buildArgs>
                     <VERSION>${project.version}</VERSION>
+                    <JDK_VERSION>${docker.jdk.version}</JDK_VERSION>
                   </buildArgs>
                 </configuration>
               </plugin>
