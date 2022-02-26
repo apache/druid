@@ -186,9 +186,9 @@ jobs:
       jdk: openjdk11
     
     - <<: *package
-      name: "(openjdk15) packaging check"
+      name: "(openjdk17) packaging check"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_processing_module
       name: "(openjdk8) processing module test"
@@ -257,9 +257,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_processing_module
-      name: "(openjdk15) processing module test"
+      name: "(openjdk17) processing module test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_processing_module_sqlcompat
       <<: *test_processing_module
@@ -274,9 +274,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_processing_module_sqlcompat
-      name: "(openjdk15) processing module test (SQL Compatibility)"
+      name: "(openjdk17) processing module test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_indexing_module
       <<: *test_processing_module
@@ -337,9 +337,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_server_module_sqlcompat
-      name: "(openjdk15) server module test (SQL Compatibility)"
+      name: "(openjdk17) server module test (SQL Compatibility)"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_other_modules
       <<: *test_processing_module
