@@ -22,7 +22,7 @@ import React from 'react';
 
 import { NumberMenuItems } from './number-menu-items';
 
-describe('number menu', () => {
+describe('NumberMenuItems', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const numberMenu = (
       <NumberMenuItems

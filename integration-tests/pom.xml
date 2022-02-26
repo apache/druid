@@ -95,13 +95,13 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>${aws.sdk.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-orc-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
             <exclusions>
                 <exclusion>
                     <groupId>javax.servlet</groupId>
@@ -117,49 +117,49 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-parquet-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-avro-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-protobuf-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-kinesis-indexing-service</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-azure-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-google-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-hdfs-storage</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
             <exclusions>
                 <exclusion>
                     <groupId>com.amazonaws</groupId>
@@ -171,19 +171,19 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-histogram</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-aws-common</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -204,7 +204,7 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -226,13 +226,13 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-testing-tools</artifactId>
             <version>${project.parent.version}</version>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -301,7 +301,7 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>runtime</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -602,6 +602,7 @@
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
+                                        <DRUID_VERSION>${parent.version}</DRUID_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>
@@ -618,6 +619,7 @@
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
+                                        <DRUID_VERSION>${parent.version}</DRUID_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>

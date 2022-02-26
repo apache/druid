@@ -19,8 +19,14 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ExprTest
 {
@@ -196,6 +202,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(LambdaExpr.class).usingGetClass().verify();
   }
+
   @Test
   public void testEqualsContractForNullLongExpr()
   {
@@ -212,5 +219,32 @@ public class ExprTest
                   .withIgnoredFields("outputType", "value")
                   .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.STRING)
                   .verify();
+  }
+
+  @Test
+  public void testShuttleVisitAll()
+  {
+    final List<Expr> visitedExprs = new ArrayList<>();
+
+    final Expr.Shuttle shuttle = expr -> {
+      visitedExprs.add(expr);
+      return expr;
+    };
+
+    shuttle.visitAll(Collections.emptyList());
+    Assert.assertEquals("Visiting an empty list", Collections.emptyList(), visitedExprs);
+
+    final List<Expr> oneIdentifier = Collections.singletonList(new IdentifierExpr("ident"));
+    visitedExprs.clear();
+    shuttle.visitAll(oneIdentifier);
+    Assert.assertEquals("One identifier", oneIdentifier, visitedExprs);
+
+    final List<Expr> twoIdentifiers = ImmutableList.of(
+        new IdentifierExpr("ident1"),
+        new IdentifierExpr("ident2")
+    );
+    visitedExprs.clear();
+    shuttle.visitAll(twoIdentifiers);
+    Assert.assertEquals("Two identifiers", twoIdentifiers, visitedExprs);
   }
 }

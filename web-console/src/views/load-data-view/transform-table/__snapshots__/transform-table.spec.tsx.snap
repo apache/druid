@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`transform table matches snapshot 1`] = `
+exports[`TransformTable matches snapshot 1`] = `
 <div
   class="ReactTable transform-table -striped -highlight"
 >

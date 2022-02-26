@@ -67,6 +67,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -775,6 +777,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
+      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
+        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
+        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
+                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
+        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj);
+        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

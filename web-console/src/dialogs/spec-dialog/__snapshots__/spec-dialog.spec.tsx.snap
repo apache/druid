@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`spec dialog matches snapshot no initSpec 1`] = `
+exports[`SpecDialog matches snapshot no initSpec 1`] = `
 <div
   class="bp3-portal"
 >
@@ -52,16 +52,16 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace-tm spec-dialog-textarea"
-          id="brace-editor"
-          style="width: 100%; height: 500px;"
+          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          id="ace-editor"
+          style="width: 100%; height: 500px; font-size: 12px;"
         >
           <textarea
             autocapitalize="off"
             autocorrect="off"
             class="ace_text-input"
             spellcheck="false"
-            style="opacity: 0;"
+            style="opacity: 0; font-size: 1px;"
             wrap="off"
           />
           <div
@@ -70,13 +70,12 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
           >
             <div
               class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
+              style="height: 1000000px;"
             />
           </div>
           <div
             class="ace_scroller"
+            style="line-height: 0px;"
           >
             <div
               class="ace_content"
@@ -86,7 +85,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
               >
                 <div
                   class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
+                  style="left: 10px; visibility: hidden;"
                 />
               </div>
               <div
@@ -94,7 +93,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
               />
               <div
                 class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
+                style="height: 1000000px; margin: 0px 10px;"
               />
               <div
                 class="ace_layer ace_marker-layer"
@@ -121,7 +120,9 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="width: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             class="ace_scrollbar ace_scrollbar-h"
@@ -130,7 +131,9 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="height: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
@@ -141,7 +144,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
             >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             </div>
           </div>
         </div>
@@ -181,7 +184,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
 </div>
 `;
 
-exports[`spec dialog matches snapshot with initSpec 1`] = `
+exports[`SpecDialog matches snapshot with initSpec 1`] = `
 <div
   class="bp3-portal"
 >
@@ -233,16 +236,16 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace-tm spec-dialog-textarea"
-          id="brace-editor"
-          style="width: 100%; height: 500px;"
+          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          id="ace-editor"
+          style="width: 100%; height: 500px; font-size: 12px;"
         >
           <textarea
             autocapitalize="off"
             autocorrect="off"
             class="ace_text-input"
             spellcheck="false"
-            style="opacity: 0;"
+            style="opacity: 0; font-size: 1px;"
             wrap="off"
           />
           <div
@@ -251,13 +254,12 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
           >
             <div
               class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
+              style="height: 1000000px;"
             />
           </div>
           <div
             class="ace_scroller"
+            style="line-height: 0px;"
           >
             <div
               class="ace_content"
@@ -267,7 +269,7 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
               >
                 <div
                   class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
+                  style="left: 10px; visibility: hidden;"
                 />
               </div>
               <div
@@ -275,7 +277,7 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
               />
               <div
                 class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
+                style="height: 1000000px; margin: 0px 10px;"
               />
               <div
                 class="ace_layer ace_marker-layer"
@@ -296,7 +298,9 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="width: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             class="ace_scrollbar ace_scrollbar-h"
@@ -305,7 +309,9 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="height: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
@@ -316,7 +322,7 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
             >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             </div>
           </div>
         </div>

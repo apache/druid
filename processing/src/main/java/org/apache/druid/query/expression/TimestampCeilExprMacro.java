@@ -33,7 +33,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -90,8 +89,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampCeilExpr(newArgs));
+      return shuttle.visit(new TimestampCeilExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -158,8 +156,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampCeilDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

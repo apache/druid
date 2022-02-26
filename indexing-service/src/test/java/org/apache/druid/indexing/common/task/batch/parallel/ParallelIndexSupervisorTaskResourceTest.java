@@ -448,6 +448,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             null,
+            null,
             null
         )
     );

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`home view matches snapshot (coordinator) 1`] = `
+exports[`HomeView matches snapshot (coordinator) 1`] = `
 <div
   className="home-view app-view"
 >
@@ -44,7 +44,7 @@ exports[`home view matches snapshot (coordinator) 1`] = `
 </div>
 `;
 
-exports[`home view matches snapshot (full) 1`] = `
+exports[`HomeView matches snapshot (full) 1`] = `
 <div
   className="home-view app-view"
 >
@@ -106,7 +106,7 @@ exports[`home view matches snapshot (full) 1`] = `
 </div>
 `;
 
-exports[`home view matches snapshot (overlord) 1`] = `
+exports[`HomeView matches snapshot (overlord) 1`] = `
 <div
   className="home-view app-view"
 >

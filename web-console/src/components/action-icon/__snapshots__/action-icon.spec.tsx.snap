@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`action icon matches snapshot 1`] = `
+exports[`ActionIcon matches snapshot 1`] = `
 <span
   class="bp3-icon bp3-icon-clipboard action-icon"
   icon="clipboard"

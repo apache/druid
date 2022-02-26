@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`datasources card matches snapshot 1`] = `
+exports[`DatasourcesCard matches snapshot 1`] = `
 <a
   class="home-view-card datasources-card"
   href="#datasources"

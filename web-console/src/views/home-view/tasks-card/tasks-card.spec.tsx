@@ -23,7 +23,7 @@ import { Capabilities } from '../../../utils';
 
 import { TasksCard } from './tasks-card';
 
-describe('tasks card', () => {
+describe('TasksCard', () => {
   it('matches snapshot', () => {
     const tasksCard = <TasksCard capabilities={Capabilities.FULL} />;
 

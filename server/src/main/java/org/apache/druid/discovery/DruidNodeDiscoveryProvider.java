@@ -126,6 +126,16 @@ public abstract class DruidNodeDiscoveryProvider
       }
     }
 
+    @Override
+    public void removeListener(Listener listener)
+    {
+      synchronized (lock) {
+        if (listener != null) {
+          listeners.remove(listener);
+        }
+      }
+    }
+
     DruidNodeDiscovery.Listener filteringUpstreamListener()
     {
       return new FilteringUpstreamListener();

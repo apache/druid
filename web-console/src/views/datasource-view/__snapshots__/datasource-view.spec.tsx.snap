@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`data source view matches snapshot 1`] = `
+exports[`DatasourcesView matches snapshot 1`] = `
 <div
   className="datasource-view app-view"
 >

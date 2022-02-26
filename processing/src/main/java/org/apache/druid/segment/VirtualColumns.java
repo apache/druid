@@ -388,7 +388,7 @@ public class VirtualColumns implements Cacheable
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {
       return Preconditions.checkNotNull(
-          virtualColumn.capabilities(inspector, columnName),
+          virtualColumn.capabilities(column -> getColumnCapabilitiesWithFallback(inspector, column), columnName),
           "capabilities for column[%s]",
           columnName
       );

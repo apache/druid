@@ -194,7 +194,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         ingestionSchema.dataSchema.getDataSource(),
         null,
         ingestionSchema,
-        context
+        context,
+        -1
     );
   }
 
@@ -205,7 +206,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       String dataSource,
       @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      int maxAllowedLockCount
   )
   {
     super(
@@ -213,7 +215,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         groupId,
         resource,
         dataSource,
-        context
+        context,
+        maxAllowedLockCount
     );
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
@@ -902,7 +905,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         dataSchema,
         tuningConfig,
         buildSegmentsMeters,
-        buildSegmentsParseExceptionHandler
+        buildSegmentsParseExceptionHandler,
+        isUseMaxMemoryEstimates()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

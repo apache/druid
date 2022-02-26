@@ -55,7 +55,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       InputEntity source,
       File temporaryDirectory,
       @Nullable Schema readerSchema,
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       boolean binaryAsString,
       boolean extractUnionsByType
   )

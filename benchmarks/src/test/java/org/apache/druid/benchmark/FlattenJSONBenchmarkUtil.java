@@ -55,7 +55,7 @@ public class FlattenJSONBenchmarkUtil
   {
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
-        new DimensionsSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         null,
         null,
         null
@@ -70,7 +70,7 @@ public class FlattenJSONBenchmarkUtil
 
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
-        new DimensionsSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         flattenSpec,
         null,
         null
@@ -114,7 +114,7 @@ public class FlattenJSONBenchmarkUtil
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
-        new DimensionsSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         flattenSpec,
         null,
         null
@@ -158,7 +158,7 @@ public class FlattenJSONBenchmarkUtil
     JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
-        new DimensionsSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         flattenSpec,
         null,
         null
@@ -200,7 +200,7 @@ public class FlattenJSONBenchmarkUtil
     JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
-        new DimensionsSpec(null, null, null),
+        DimensionsSpec.EMPTY,
         flattenSpec,
         null,
         null

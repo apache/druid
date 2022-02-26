@@ -644,7 +644,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
-    Assert.assertTrue(inferred.hasMultipleValues().isTrue());
+    Assert.assertFalse(inferred.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 

@@ -234,6 +234,7 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
 
@@ -245,6 +246,7 @@ public class KillCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,
@@ -351,6 +353,7 @@ public class KillCompactionConfigTest
         new Period(3600),
         null,
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
+        null,
         null,
         null,
         null,

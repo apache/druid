@@ -20,19 +20,21 @@
 package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -41,29 +43,33 @@ import java.util.stream.Collectors;
  */
 public class VirtualColumnRegistry
 {
+  private final ExprMacroTable macroTable;
   private final RowSignature baseRowSignature;
-  private final Map<ExpressionWrapper, VirtualColumn> virtualColumnsByExpression;
-  private final Map<String, VirtualColumn> virtualColumnsByName;
+  private final Map<ExpressionAndTypeHint, String> virtualColumnsByExpression;
+  private final Map<String, ExpressionAndTypeHint> virtualColumnsByName;
   private final String virtualColumnPrefix;
   private int virtualColumnCounter;
 
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
+      ExprMacroTable macroTable,
       String virtualColumnPrefix,
-      Map<ExpressionWrapper, VirtualColumn> virtualColumnsByExpression,
-      Map<String, VirtualColumn> virtualColumnsByName
+      Map<ExpressionAndTypeHint, String> virtualColumnsByExpression,
+      Map<String, ExpressionAndTypeHint> virtualColumnsByName
   )
   {
+    this.macroTable = macroTable;
     this.baseRowSignature = baseRowSignature;
     this.virtualColumnPrefix = virtualColumnPrefix;
     this.virtualColumnsByExpression = virtualColumnsByExpression;
     this.virtualColumnsByName = virtualColumnsByName;
   }
 
-  public static VirtualColumnRegistry create(final RowSignature rowSignature)
+  public static VirtualColumnRegistry create(final RowSignature rowSignature, final ExprMacroTable macroTable)
   {
     return new VirtualColumnRegistry(
         rowSignature,
+        macroTable,
         Calcites.findUnusedPrefixForDigits("v", rowSignature.getColumnNames()),
         new HashMap<>(),
         new HashMap<>()
@@ -79,38 +85,151 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and {@link ValueType}.
+   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and hinted {@link ColumnType}.
    */
+  public String getOrCreateVirtualColumnForExpression(
+      DruidExpression expression,
+      ColumnType typeHint
+  )
+  {
+    final ExpressionAndTypeHint candidate = wrap(expression, typeHint);
+    if (!virtualColumnsByExpression.containsKey(candidate)) {
+      final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
+
+      virtualColumnsByExpression.put(
+          candidate,
+          virtualColumnName
+      );
+      virtualColumnsByName.put(
+          virtualColumnName,
+          candidate
+      );
+    }
+
+    return virtualColumnsByExpression.get(candidate);
+  }
+
+  /**
+   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and {@link RelDataType}
+   */
+  public String getOrCreateVirtualColumnForExpression(
+      DruidExpression expression,
+      RelDataType typeHint
+  )
+  {
+    return getOrCreateVirtualColumnForExpression(
+        expression,
+        Calcites.getColumnTypeForRelDataType(typeHint)
+    );
+  }
+
+  /**
+   * Get existing virtual column by column name
+   */
+  @Nullable
+  public VirtualColumn getVirtualColumn(String virtualColumnName)
+  {
+    return Optional.ofNullable(virtualColumnsByName.get(virtualColumnName))
+                   .map(v -> v.getExpression().toVirtualColumn(virtualColumnName, v.getTypeHint(), macroTable))
+                   .orElse(null);
+  }
+
+  @Nullable
+  public String getVirtualColumnByExpression(DruidExpression expression, RelDataType typeHint)
+  {
+    return virtualColumnsByExpression.get(wrap(expression, Calcites.getColumnTypeForRelDataType(typeHint)));
+  }
+
+  /**
+   * Get a signature representing the base signature plus all registered virtual columns.
+   */
+  public RowSignature getFullRowSignature()
+  {
+    final RowSignature.Builder builder =
+        RowSignature.builder().addAll(baseRowSignature);
+
+    final RowSignature baseSignature = builder.build();
+
+    for (Map.Entry<String, ExpressionAndTypeHint> virtualColumn : virtualColumnsByName.entrySet()) {
+      final String columnName = virtualColumn.getKey();
+
+      // this is expensive, maybe someday it could use the typeHint, or the inferred type, but for now use native
+      // expression type inference
+      builder.add(
+          columnName,
+          virtualColumn.getValue().getExpression().toVirtualColumn(
+              columnName,
+              virtualColumn.getValue().getTypeHint(),
+              macroTable
+          ).capabilities(baseSignature, columnName).toColumnType()
+      );
+    }
+
+    return builder.build();
+  }
+
+  /**
+   * Given a list of column names, find any corresponding {@link VirtualColumn} with the same name
+   */
+  public List<DruidExpression> findVirtualColumnExpressions(List<String> allColumns)
+  {
+    return allColumns.stream()
+                     .filter(this::isVirtualColumnDefined)
+                     .map(name -> virtualColumnsByName.get(name).getExpression())
+                     .collect(Collectors.toList());
+  }
+
+  public void visitAllSubExpressions(DruidExpression.DruidExpressionShuttle shuttle)
+  {
+    for (Map.Entry<String, ExpressionAndTypeHint> entry : virtualColumnsByName.entrySet()) {
+      final String key = entry.getKey();
+      final ExpressionAndTypeHint wrapped = entry.getValue();
+      virtualColumnsByExpression.remove(wrapped);
+      final List<DruidExpression> newArgs = shuttle.visitAll(wrapped.getExpression().getArguments());
+      final ExpressionAndTypeHint newWrapped = wrap(wrapped.getExpression().withArguments(newArgs), wrapped.getTypeHint());
+      virtualColumnsByName.put(key, newWrapped);
+      virtualColumnsByExpression.put(newWrapped, key);
+    }
+  }
+
+  public Collection<? extends VirtualColumn> getAllVirtualColumns(List<String> requiredColumns)
+  {
+    return requiredColumns.stream()
+                          .filter(this::isVirtualColumnDefined)
+                          .map(this::getVirtualColumn)
+                          .collect(Collectors.toList());
+  }
+
+  /**
+   * @deprecated use {@link #findVirtualColumnExpressions(List)} instead
+   */
+  @Deprecated
+  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
+  {
+    return allColumns.stream()
+                     .filter(this::isVirtualColumnDefined)
+                     .map(this::getVirtualColumn)
+                     .collect(Collectors.toList());
+  }
+
+  /**
+   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)} instead
+   */
+  @Deprecated
   public VirtualColumn getOrCreateVirtualColumnForExpression(
       PlannerContext plannerContext,
       DruidExpression expression,
       ColumnType valueType
   )
   {
-    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression.getExpression(), valueType);
-    if (!virtualColumnsByExpression.containsKey(expressionWrapper)) {
-      final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
-      final VirtualColumn virtualColumn = expression.toVirtualColumn(
-          virtualColumnName,
-          valueType,
-          plannerContext.getExprMacroTable()
-      );
-      virtualColumnsByExpression.put(
-          expressionWrapper,
-          virtualColumn
-      );
-      virtualColumnsByName.put(
-          virtualColumnName,
-          virtualColumn
-      );
-    }
-
-    return virtualColumnsByExpression.get(expressionWrapper);
+    final String name = getOrCreateVirtualColumnForExpression(expression, valueType);
+    return virtualColumnsByName.get(name).expression.toVirtualColumn(name, valueType, macroTable);
   }
 
   /**
-   * Get existing or create new {@link VirtualColumn} for a given {@link DruidExpression} and {@link RelDataType}
+   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} instead
    */
+  @Deprecated
   public VirtualColumn getOrCreateVirtualColumnForExpression(
       PlannerContext plannerContext,
       DruidExpression expression,
@@ -125,59 +244,43 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * Get existing virtual column by column name
+   * @deprecated use {@link #getVirtualColumnByExpression(DruidExpression, RelDataType)} instead
    */
-  @Nullable
-  public VirtualColumn getVirtualColumn(String virtualColumnName)
-  {
-    return virtualColumnsByName.get(virtualColumnName);
-  }
-
+  @Deprecated
   @Nullable
   public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
   {
-    ExpressionWrapper expressionWrapper = new ExpressionWrapper(expression, Calcites.getColumnTypeForRelDataType(type));
-    return virtualColumnsByExpression.get(expressionWrapper);
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(type);
+    ExpressionAndTypeHint wrapped = wrap(DruidExpression.fromExpression(expression), columnType);
+    return Optional.ofNullable(virtualColumnsByExpression.get(wrapped))
+                   .map(this::getVirtualColumn)
+                   .orElse(null);
   }
 
-  /**
-   * Get a signature representing the base signature plus all registered virtual columns.
-   */
-  public RowSignature getFullRowSignature()
+  private static ExpressionAndTypeHint wrap(DruidExpression expression, ColumnType typeHint)
   {
-    final RowSignature.Builder builder =
-        RowSignature.builder().addAll(baseRowSignature);
-
-    RowSignature baseSignature = builder.build();
-
-    for (VirtualColumn virtualColumn : virtualColumnsByName.values()) {
-      final String columnName = virtualColumn.getOutputName();
-      builder.add(columnName, virtualColumn.capabilities(baseSignature, columnName).toColumnType());
-    }
-
-    return builder.build();
+    return new ExpressionAndTypeHint(expression, typeHint);
   }
 
-  /**
-   * Given a list of column names, find any corresponding {@link VirtualColumn} with the same name
-   */
-  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
+  private static class ExpressionAndTypeHint
   {
-    return allColumns.stream()
-                     .filter(this::isVirtualColumnDefined)
-                     .map(this::getVirtualColumn)
-                     .collect(Collectors.toList());
-  }
+    private final DruidExpression expression;
+    private final ColumnType typeHint;
 
-  private static class ExpressionWrapper
-  {
-    private final String expression;
-    private final ColumnType valueType;
-
-    public ExpressionWrapper(String expression, ColumnType valueType)
+    public ExpressionAndTypeHint(DruidExpression expression, ColumnType valueType)
     {
       this.expression = expression;
-      this.valueType = valueType;
+      this.typeHint = valueType;
+    }
+
+    public DruidExpression getExpression()
+    {
+      return expression;
+    }
+
+    public ColumnType getTypeHint()
+    {
+      return typeHint;
     }
 
     @Override
@@ -189,14 +292,15 @@ public class VirtualColumnRegistry
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      ExpressionWrapper expressionWrapper = (ExpressionWrapper) o;
-      return Objects.equals(expression, expressionWrapper.expression) && Objects.equals(valueType, expressionWrapper.valueType);
+      ExpressionAndTypeHint expressionAndTypeHint = (ExpressionAndTypeHint) o;
+      return Objects.equals(typeHint, expressionAndTypeHint.typeHint) &&
+             Objects.equals(expression, expressionAndTypeHint.expression);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(expression, valueType);
+      return Objects.hash(expression, typeHint);
     }
   }
 }

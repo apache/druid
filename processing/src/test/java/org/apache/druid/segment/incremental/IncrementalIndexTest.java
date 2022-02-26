@@ -78,7 +78,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             new FloatDimensionSchema("float"),
             new LongDimensionSchema("long"),
             new DoubleDimensionSchema("double")
-        ), null, null
+        )
     );
     AggregatorFactory[] metrics = {
         new FilteredAggregatorFactory(

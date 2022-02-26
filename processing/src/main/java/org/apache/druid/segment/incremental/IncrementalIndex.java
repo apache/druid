@@ -57,6 +57,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
+import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
@@ -71,6 +72,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -112,17 +114,18 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @return column selector factory
    */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
-      final ColumnInspector columnInspector,
       final VirtualColumns virtualColumns,
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
       final boolean deserializeComplexMetrics
   )
   {
+    // we use RowSignature.empty() because ColumnInspector here should be the InputRow schema, not the
+    // IncrementalIndex schema, because we are reading values from the InputRow
     final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
         RowAdapters.standardRow(),
         in::get,
-        columnInspector,
+        RowSignature.empty(),
         true
     );
 
@@ -233,6 +236,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
+  private final boolean useMaxMemoryEstimates;
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -252,11 +256,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
    * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
+   * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean concurrentEventAdd
+      final boolean concurrentEventAdd,
+      final boolean useMaxMemoryEstimates
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -266,6 +272,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -486,12 +493,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
    * Calls to add() are thread safe.
    * <p>
    *
-   * @param row the row of data to add
-   * @param skipMaxRowsInMemoryCheck whether or not skip the check of rows exceeding the max rows limit
+   * @param row                      the row of data to add
+   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows limit
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
+      throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
@@ -557,12 +565,14 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          final EncodedKeyComponent<?> encodedKeyComponent
+              = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
+          dimsKey = encodedKeyComponent.getComponent();
+          dimsKeySize += encodedKeyComponent.getEffectiveSizeBytes();
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
         }
-        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         if (wasNewDim) {
           // unless this is the first row we are processing, all newly discovered columns will be sparse
           if (maxIngestedEventTime != null) {
@@ -863,10 +873,15 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, DimensionHandler handler)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, handler);
+    DimensionDesc desc = initDimension(dimensionDescs.size(), dim, handler);
     dimensionDescs.put(dim, desc);
     dimensionDescsList.add(desc);
     return desc;
+  }
+
+  private DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
+  {
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
   public List<String> getMetricNames()
@@ -925,12 +940,12 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     private final DimensionHandler handler;
     private final DimensionIndexer indexer;
 
-    public DimensionDesc(int index, String name, DimensionHandler handler)
+    public DimensionDesc(int index, String name, DimensionHandler handler, boolean useMaxMemoryEstimates)
     {
       this.index = index;
       this.name = name;
       this.handler = handler;
-      this.indexer = handler.makeIndexer();
+      this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
     }
 
     public int getIndex()
@@ -1019,7 +1034,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       final boolean deserializeComplexMetrics
   )
   {
-    return makeColumnSelectorFactory(this, virtualColumns, agg, in, deserializeComplexMetrics);
+    return makeColumnSelectorFactory(virtualColumns, agg, in, deserializeComplexMetrics);
   }
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()

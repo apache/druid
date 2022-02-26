@@ -45,7 +45,7 @@ IP.1 = 9.9.9.9
 EOT
 
 # Generate a bad intermediate certificate
-openssl genrsa -out invalid_ca_intermediate.key 1024
+openssl genrsa -out invalid_ca_intermediate.key 4096
 openssl req -new -out invalid_ca_intermediate.csr -key invalid_ca_intermediate.key -reqexts req_ext -config invalid_ca_intermediate.conf
 openssl x509 -req -days 3650 -in invalid_ca_intermediate.csr -CA root.pem -CAkey root.key -set_serial 0x33333331 -out invalid_ca_intermediate.pem -sha256 -extfile invalid_ca_intermediate.conf -extensions req_ext
 
@@ -81,7 +81,7 @@ DNS.2 = localhost
 EOT
 
 # Generate a client certificate for this machine
-openssl genrsa -out invalid_ca_client.key 1024
+openssl genrsa -out invalid_ca_client.key 4096
 openssl req -new -out invalid_ca_client.csr -key invalid_ca_client.key -reqexts req_ext -config invalid_ca_client.conf
 openssl x509 -req -days 3650 -in invalid_ca_client.csr -CA invalid_ca_intermediate.pem -CAkey invalid_ca_intermediate.key -set_serial 0x33333333 -out invalid_ca_client.pem -sha256 -extfile invalid_ca_client.conf -extensions req_ext
 
@@ -91,4 +91,4 @@ cat invalid_ca_intermediate.pem >> invalid_ca_client.pem
 
 # Create a Java keystore containing the generated certificate
 openssl pkcs12 -export -in invalid_ca_client.pem -inkey invalid_ca_client.key -out invalid_ca_client.p12 -name invalid_ca_client -CAfile invalid_ca_intermediate.pem -caname druid-it-root -password pass:druid123
-keytool -importkeystore -srckeystore invalid_ca_client.p12 -srcstoretype PKCS12 -destkeystore invalid_ca_client.jks -deststoretype JKS -srcstorepass druid123 -deststorepass druid123
+keytool -importkeystore -srckeystore invalid_ca_client.p12 -srcstoretype PKCS12 -destkeystore invalid_ca_client.jks -deststoretype pkcs12 -srcstorepass druid123 -deststorepass druid123

@@ -179,11 +179,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           5,
           null,
+          null,
           null
       );
 
-  protected static final double DEFAULT_TRANSIENT_TASK_FAILURE_RATE = 0.3;
-  protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.3;
+  protected static final double DEFAULT_TRANSIENT_TASK_FAILURE_RATE = 0.2;
+  protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.2;
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
@@ -288,6 +289,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         maxNumConcurrentSubTasks,
+        null,
         null,
         null,
         null,

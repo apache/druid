@@ -24,8 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -38,19 +39,25 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
+import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -83,17 +90,19 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class OverlordResourceTest
 {
   private OverlordResource overlordResource;
   private TaskMaster taskMaster;
+  private JacksonConfigManager configManager;
+  private ProvisioningStrategy provisioningStrategy;
   private TaskStorageQueryAdapter taskStorageQueryAdapter;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private HttpServletRequest req;
   private TaskRunner taskRunner;
   private WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
-  private AuditManager auditManager;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -102,12 +111,13 @@ public class OverlordResourceTest
   public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
+    configManager = EasyMock.createMock(JacksonConfigManager.class);
+    provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     taskStorageQueryAdapter = EasyMock.createStrictMock(TaskStorageQueryAdapter.class);
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     workerTaskRunnerQueryAdapter = EasyMock.createStrictMock(WorkerTaskRunnerQueryAdapter.class);
-    auditManager = EasyMock.createStrictMock(SQLAuditManager.class);
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
@@ -151,10 +161,11 @@ public class OverlordResourceTest
         taskStorageQueryAdapter,
         indexerMetadataStorageAdapter,
         null,
+        configManager,
         null,
-        auditManager,
         authMapper,
-        workerTaskRunnerQueryAdapter
+        workerTaskRunnerQueryAdapter,
+        provisioningStrategy
     );
   }
 
@@ -1474,12 +1485,12 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void getFetchAuditHistoryBadRequest()
+  public void testGetTotalWorkerCapacityNotLeader()
   {
-    int count = 1;
-    EasyMock.expect(auditManager.fetchAuditHistory(WorkerBehaviorConfig.CONFIG_KEY,
-                                                   WorkerBehaviorConfig.CONFIG_KEY,
-                                                   count)).andThrow(new IllegalArgumentException("Mocked Exception"));
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.absent()
+    ).anyTimes();
     EasyMock.replay(
         taskRunner,
         taskMaster,
@@ -1487,14 +1498,166 @@ public class OverlordResourceTest
         indexerMetadataStorageAdapter,
         req,
         workerTaskRunnerQueryAdapter,
-        auditManager
+        configManager
     );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.getCode(), response.getStatus());
+  }
 
-    ResponseTestUtils.assertErrorResponse(
-        this.overlordResource.getWorkerConfigHistory(null, count),
-        Status.BAD_REQUEST,
-        "Mocked Exception"
+  @Test
+  public void testGetTotalWorkerCapacityWithUnknown()
+  {
+    WorkerBehaviorConfig workerBehaviorConfig = EasyMock.createMock(WorkerBehaviorConfig.class);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
     );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithWorkerTaskRunnerButWorkerBehaviorConfigNotConfigured()
+  {
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(null);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithWorkerTaskRunnerButAutoScaleNotConfigured()
+  {
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, null);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleConfiguredAndProvisioningStrategySupportExpectedWorkerCapacity()
+  {
+    int expectedWorkerCapacity = 3;
+    int maxNumWorkers = 2;
+    WorkerTaskRunner workerTaskRunner = EasyMock.createMock(WorkerTaskRunner.class);
+    Collection<ImmutableWorkerInfo> workerInfos = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker(
+                "http", "testWorker", "192.0.0.1", expectedWorkerCapacity, "v1", WorkerConfig.DEFAULT_CATEGORY
+            ),
+            2,
+            ImmutableSet.of("grp1", "grp2"),
+            ImmutableSet.of("task1", "task2"),
+            DateTimes.of("2015-01-01T01:01:01Z")
+        )
+    );
+    EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(workerTaskRunner)
+    ).anyTimes();
+    EasyMock.expect(provisioningStrategy.getExpectedWorkerCapacity(workerInfos)).andReturn(expectedWorkerCapacity).anyTimes();
+    AutoScaler autoScaler = EasyMock.createMock(AutoScaler.class);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxNumWorkers);
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, autoScaler);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        workerTaskRunner,
+        autoScaler,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager,
+        provisioningStrategy
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(expectedWorkerCapacity * maxNumWorkers, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+  }
+
+  @Test
+  public void testGetTotalWorkerCapacityWithAutoScaleConfiguredAndProvisioningStrategyNotSupportExpectedWorkerCapacity()
+  {
+    int invalidExpectedCapacity = -1;
+    int maxNumWorkers = 2;
+    WorkerTaskRunner workerTaskRunner = EasyMock.createMock(WorkerTaskRunner.class);
+    Collection<ImmutableWorkerInfo> workerInfos = ImmutableList.of(
+        new ImmutableWorkerInfo(
+            new Worker(
+                "http", "testWorker", "192.0.0.1", 3, "v1", WorkerConfig.DEFAULT_CATEGORY
+            ),
+            2,
+            ImmutableSet.of("grp1", "grp2"),
+            ImmutableSet.of("task1", "task2"),
+            DateTimes.of("2015-01-01T01:01:01Z")
+        )
+    );
+    EasyMock.expect(workerTaskRunner.getWorkers()).andReturn(workerInfos);
+    EasyMock.reset(taskMaster);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
+        Optional.of(workerTaskRunner)
+    ).anyTimes();
+    EasyMock.expect(provisioningStrategy.getExpectedWorkerCapacity(workerInfos)).andReturn(invalidExpectedCapacity).anyTimes();
+    AutoScaler autoScaler = EasyMock.createMock(AutoScaler.class);
+    EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
+    EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(maxNumWorkers);
+    DefaultWorkerBehaviorConfig workerBehaviorConfig = new DefaultWorkerBehaviorConfig(null, autoScaler);
+    AtomicReference<WorkerBehaviorConfig> workerBehaviorConfigAtomicReference = new AtomicReference<>(workerBehaviorConfig);
+    EasyMock.expect(configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class)).andReturn(workerBehaviorConfigAtomicReference);
+    EasyMock.replay(
+        workerTaskRunner,
+        autoScaler,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        configManager,
+        provisioningStrategy
+    );
+    final Response response = overlordResource.getTotalWorkerCapacity();
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(workerInfos.stream().findFirst().get().getWorker().getCapacity(), ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assert.assertEquals(invalidExpectedCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
   private void expectAuthorizationTokenCheck()

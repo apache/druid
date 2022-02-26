@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`clearable-input matches snapshot 1`] = `
+exports[`ClearableInput matches snapshot 1`] = `
 <div
   class="bp3-input-group clearable-input testClassName"
 >

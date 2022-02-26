@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`tasks view matches snapshot 1`] = `
+exports[`IngestionView matches snapshot 1`] = `
 <Fragment>
   <t
     customClassName="ingestion-view app-view"

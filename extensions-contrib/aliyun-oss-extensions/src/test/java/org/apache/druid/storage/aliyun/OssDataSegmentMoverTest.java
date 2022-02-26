@@ -28,6 +28,7 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.PutObjectResult;
 import com.aliyun.oss.model.StorageClass;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
@@ -67,7 +68,7 @@ public class OssDataSegmentMoverTest
   public void testMove() throws Exception
   {
     MockClient mockClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockClient, new OssStorageConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockClient), new OssStorageConfig());
 
     mockClient.putObject(
         "main",
@@ -92,7 +93,7 @@ public class OssDataSegmentMoverTest
   public void testMoveNoop() throws Exception
   {
     MockClient mockOssClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockOssClient, new OssStorageConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockOssClient), new OssStorageConfig());
 
     mockOssClient.putObject(
         "archive",
@@ -118,7 +119,7 @@ public class OssDataSegmentMoverTest
   public void testMoveException() throws Exception
   {
     MockClient mockClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockClient, new OssStorageConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockClient), new OssStorageConfig());
 
     mover.move(
         SOURCE_SEGMENT,
@@ -130,7 +131,7 @@ public class OssDataSegmentMoverTest
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
     MockClient mockOssClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockOssClient, new OssStorageConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockOssClient), new OssStorageConfig());
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
@@ -153,7 +154,7 @@ public class OssDataSegmentMoverTest
   public void testFailsToMoveMissing() throws Exception
   {
     MockClient client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(client, new OssStorageConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(client), new OssStorageConfig());
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),

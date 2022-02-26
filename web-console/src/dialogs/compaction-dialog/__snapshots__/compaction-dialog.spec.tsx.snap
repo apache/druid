@@ -40,9 +40,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -53,7 +53,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -410,9 +410,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -423,7 +423,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -740,7 +740,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
 </Blueprint3.Dialog>
 `;
 
-exports[`CompactionDialog matches snapshot with compactionConfig (single_dim partitionsSpec) 1`] = `
+exports[`CompactionDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
 <Blueprint3.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
@@ -780,9 +780,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -793,7 +793,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -1076,7 +1076,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           "dataSource": "test1",
           "tuningConfig": Object {
             "partitionsSpec": Object {
-              "type": "single_dim",
+              "type": "range",
             },
           },
         }
@@ -1150,9 +1150,9 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -1163,7 +1163,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },

@@ -115,9 +115,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
               new StringDimensionSchema("dim2"),
               new LongDimensionSchema("dimLong"),
               new FloatDimensionSchema("dimFloat")
-          ),
-          null,
-          null
+          )
       ),
       new AggregatorFactory[]{
           new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -163,9 +161,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                             new StringDimensionSchema("dim2"),
                             new LongDimensionSchema("dimLong"),
                             new FloatDimensionSchema("dimFloat")
-                        ),
-                        null,
-                        null
+                        )
                     ),
                     new JSONPathSpec(true, ImmutableList.of()),
                     ImmutableMap.of(),

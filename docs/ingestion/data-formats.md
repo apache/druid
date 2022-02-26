@@ -488,6 +488,12 @@ Multiple Instances:
 ...
 ```
 
+###### Parse exceptions
+
+The following errors when reading records will be considered parse exceptions, which can be limited and logged with ingestion task configurations such as `maxParseExceptions` and `maxSavedParseExceptions`:
+- Failure to retrieve a schema due to misconfiguration or corrupt records (invalid schema IDs)
+- Failure to decode an Avro message
+
 ### Avro OCF
 
 To load the Avro OCF input format, load the Druid Avro extension ([`druid-avro-extensions`](../development/extensions-core/avro.md)).

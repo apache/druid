@@ -22,14 +22,17 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
@@ -40,7 +43,6 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -49,7 +51,9 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -130,8 +134,7 @@ public class StringSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
     final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
@@ -147,6 +150,8 @@ public class StringSqlAggregator implements SqlAggregator
                   initialvalue,
                   null,
                   true,
+                  false,
+                  false,
                   StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
                   StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
                   null,
@@ -168,6 +173,8 @@ public class StringSqlAggregator implements SqlAggregator
                   initialvalue,
                   null,
                   true,
+                  false,
+                  false,
                   StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
                   StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
                   null,
@@ -181,16 +188,34 @@ public class StringSqlAggregator implements SqlAggregator
     }
   }
 
+  static class StringAggReturnTypeInference implements SqlReturnTypeInference
+  {
+    @Override
+    public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
+    {
+      RelDataType type = sqlOperatorBinding.getOperandType(0);
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        throw new UnsupportedSQLQueryException("Cannot use STRING_AGG on complex inputs %s", type);
+      }
+      return Calcites.createSqlTypeWithNullability(
+          sqlOperatorBinding.getTypeFactory(),
+          SqlTypeName.VARCHAR,
+          true
+      );
+    }
+  }
+
   private static class StringAggFunction extends SqlAggFunction
   {
+    private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();
+
     StringAggFunction()
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          opBinding ->
-              Calcites.createSqlTypeWithNullability(opBinding.getTypeFactory(), SqlTypeName.VARCHAR, true),
+          RETURN_TYPE_INFERENCE,
           InferTypes.ANY_NULLABLE,
           OperandTypes.or(
               OperandTypes.and(
