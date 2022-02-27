@@ -813,9 +813,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
                 new TimeAndDimsParseSpec(
                     new TimestampSpec("t", "auto", null),
                     new DimensionsSpec(
-                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t")),
-                        null,
-                        null
+                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t"))
                     )
                 )
             ),

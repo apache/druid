@@ -375,3 +375,10 @@ This query returns the following result:
 Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
 `dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
+
+## Disable GroupBy on multi-value columns
+
+You can disable the implicit unnesting behavior for groupBy by setting groupByEnableMultiValueUnnesting: false in your 
+query context. In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 
+feature for situations where you believe that all dimensions are singly-valued and want the engine to reject any 
+multi-valued dimensions that were inadvertently included.

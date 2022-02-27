@@ -176,7 +176,7 @@ public class KinesisAdminClient implements StreamAdminClient
       if (nextToken == null) {
         return shards.build();
       }
-      listShardsRequest = new ListShardsRequest().withNextToken(listShardsResult.getNextToken());
+      listShardsRequest = new ListShardsRequest().withNextToken(nextToken);
     }
   }
 

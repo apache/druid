@@ -239,11 +239,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
-        new DimensionsSpec(
-            ImmutableList.of(),
-            ImmutableList.of("__time", "s", "cnt", "met_s"),
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "s", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
         temporaryFolder.newFolder()
