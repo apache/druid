@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.regex.Pattern;
 
 /**
@@ -62,13 +64,30 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress
   )
   {
-
     this.strategy = strategy != null ? strategy : Strategy.exporter;
     this.namespace = namespace != null ? namespace : "druid";
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
-    this.pushGatewayAddress = pushGatewayAddress;
+    this.pushGatewayAddress = pushGatewayAddress != null ? getValidAddress(pushGatewayAddress): null;
+  }
+
+  private String getValidAddress(String address) {
+    if (address.startsWith("https") || address.startsWith("http")) {
+      return createURLSneakily(address);
+    } else {
+      return address;
+    }
+  }
+
+  private static String createURLSneakily(final String urlString)
+  {
+    try {
+      return String.valueOf(new URL(urlString));
+    }
+    catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public String getNamespace()

@@ -33,8 +33,6 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -80,26 +78,10 @@ public class PrometheusEmitter implements Emitter
       } else {
         log.error("HTTPServer is already started");
       }
-    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway) && config.getPushGatewayAddress() != null) {
-      String address = config.getPushGatewayAddress();
-      if (address.startsWith("https") || address.startsWith("http")) {
-        URL myURL = createURLSneakily(address);
-        pushGateway = new PushGateway(myURL);
-      } else {
-        pushGateway = new PushGateway(address);
-      }
+    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
+      pushGateway = new PushGateway(config.getPushGatewayAddress());
     }
 
-  }
-
-  private static URL createURLSneakily(final String urlString)
-  {
-    try {
-      return new URL(urlString);
-    }
-    catch (MalformedURLException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @Override
