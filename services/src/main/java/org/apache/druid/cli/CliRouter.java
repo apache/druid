@@ -19,13 +19,13 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;

@@ -19,18 +19,13 @@
 
 package org.apache.druid.cli;
 
-import com.github.rvesse.airline.builder.CliBuilder;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.junit.Test;
 
-/**
- * An extension point to create a custom Druid service. Druid can understand and execute custom commands
- * to run services loaded via Druid's extension system (see {@code Initialization#getFromExtensions}). See
- * the {@code Main} class for details of groups and commands.
- *
- * Implementations should be registered in the {@code META-INF/services/org.apache.druid.cli.CliCommandCreator} file.
- */
-@ExtensionPoint
-public interface CliCommandCreator
+public class CliMainTest
 {
-  void addCommands(CliBuilder builder);
+  @Test
+  public void testHelp()
+  {
+    Main.main(new String[]{"help"});
+  }
 }

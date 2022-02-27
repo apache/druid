@@ -62,7 +62,7 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.airlift</groupId>
+            <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
         </dependency>
         <dependency>
@@ -597,7 +597,7 @@
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
-                                        <DRUID_VERSION>${parent.version}</DRUID_VERSION>
+                                        <DRUID_VERSION>${project.parent.version}</DRUID_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>
@@ -614,7 +614,7 @@
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
-                                        <DRUID_VERSION>${parent.version}</DRUID_VERSION>
+                                        <DRUID_VERSION>${project.parent.version}</DRUID_VERSION>
                                     </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>
