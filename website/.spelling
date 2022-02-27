@@ -629,6 +629,7 @@ maxFetchCapacityBytes
 maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
+sharedAccessStorageToken
  - ../docs/development/extensions-contrib/cloudfiles.md
 StaticCloudFilesFirehose
 cloudfiles

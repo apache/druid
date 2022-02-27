@@ -67,7 +67,7 @@ public class ProtobufInputRowParserTest
             new StringDimensionSchema("id"),
             new StringDimensionSchema("someOtherId"),
             new StringDimensionSchema("isValid")
-        ), null, null),
+        )),
         new JSONPathSpec(
             true,
             Lists.newArrayList(
@@ -87,7 +87,7 @@ public class ProtobufInputRowParserTest
                     new StringDimensionSchema("id"),
                     new StringDimensionSchema("someOtherId"),
                     new StringDimensionSchema("isValid")
-            ), null, null),
+            )),
 
             null,
             null,
@@ -101,7 +101,7 @@ public class ProtobufInputRowParserTest
             new StringDimensionSchema("id"),
             new StringDimensionSchema("someOtherId"),
             new StringDimensionSchema("isValid")
-        ), null, null),
+        )),
 
         null,
         null,
@@ -164,9 +164,7 @@ public class ProtobufInputRowParserTest
                     "dim1",
                     "dim2"
                 )
-            ),
-            null,
-            null
+            )
         ),
         "func",
         new JavaScriptConfig(false)

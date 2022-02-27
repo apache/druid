@@ -76,8 +76,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
             new StringDimensionSchema("string1", DimensionSchema.MultiValueHandling.ARRAY, true),
             new StringDimensionSchema("string2", DimensionSchema.MultiValueHandling.SORTED_ARRAY, true),
             new StringDimensionSchema("string3", DimensionSchema.MultiValueHandling.SORTED_SET, true)
-        ),
-        null, null
+        )
     );
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0,

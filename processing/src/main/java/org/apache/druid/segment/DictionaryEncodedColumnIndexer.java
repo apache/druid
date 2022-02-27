@@ -46,17 +46,6 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   protected SortedDimensionDictionary<ActualType> sortedLookup;
 
   /**
-   * Creates a new DictionaryEncodedColumnIndexer with the default implementation
-   * of {@link DimensionDictionary}.
-   * <p>
-   * Using this constructor disables memory estimations of the dictionary size.
-   */
-  public DictionaryEncodedColumnIndexer()
-  {
-    this(new DimensionDictionary<>());
-  }
-
-  /**
    * Creates a new DictionaryEncodedColumnIndexer.
    *
    * @param dimLookup Dimension Dictionary to lookup dimension values.

@@ -1195,9 +1195,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     new StringDimensionSchema("kafka.topic"),
                     new LongDimensionSchema("kafka.offset"),
                     new StringDimensionSchema("kafka.header.encoding")
-                    ),
-                null,
-                null
+                    )
             ),
             new AggregatorFactory[]{
                 new DoubleSumAggregatorFactory("met1sum", "met1"),
@@ -1274,9 +1272,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat"),
                     new StringDimensionSchema("kafka.testheader.encoding")
-                ),
-                null,
-                null
+                )
             ),
             new AggregatorFactory[]{
                 new DoubleSumAggregatorFactory("met1sum", "met1"),
