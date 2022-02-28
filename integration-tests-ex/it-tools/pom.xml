@@ -25,7 +25,11 @@
 
 	<artifactId>it-tools</artifactId>
 	<name>it-tools</name>
+<<<<<<< HEAD
 	<description>IT - Server-side tools</description>
+=======
+	<description>Testing tools - revised</description>
+>>>>>>> 9c7af91847 (Parallel, restructured integration tests)
 
 	<parent>
 		<groupId>org.apache.druid</groupId>

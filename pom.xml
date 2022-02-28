@@ -215,6 +215,10 @@
         <!-- Revised integration tests -->
         <module>integration-tests-ex/it-tools</module>
         <module>integration-tests-ex/it-image</module>
+        <module>integration-tests-ex/it-base</module>
+        <module>integration-tests-ex/it-high-availability</module>
+        <module>integration-tests-ex/it-batch-index</module>
+        <module>integration-tests-ex/it-input-format</module>
     </modules>
 
     <repositories>
@@ -1197,7 +1201,8 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
-                        <!-- The ITs has test code sprinkled through the module tree. Remove the following
+                        <!-- The "new" ITs put the test classes into the above testing package. However,
+                             the "old" version has them sprinked through the module tree. Remove the following
                              once the old version is retired. -->
                         <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
                         <exclude>org/apache/druid/guice/SleepModule.class</exclude>

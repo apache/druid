@@ -61,19 +61,24 @@ public class MySQLConnector extends SQLMetadataConnector
   )
   {
     super(config, dbTables);
-    log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
-    tryLoadDriverClass(driverConfig.getDriverClassName(), true);
+    this.dbi = createDBI(config.get(), driverConfig, connectorSslConfig, getValidationQuery());
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
       myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false);
     } else {
       myTransientExceptionClass = null;
     }
+  }
 
-    final BasicDataSource datasource = getDatasource();
+  public static DBI createDBI(MetadataStorageConnectorConfig config, MySQLConnectorDriverConfig driverConfig, MySQLConnectorSslConfig connectorSslConfig, String validationQuery)
+  {
+    log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
+    tryLoadDriverClass(driverConfig.getDriverClassName(), true);
+
+    final BasicDataSource datasource = makeDatasource(config, validationQuery);
     // MySQL driver is classloader isolated as part of the extension
     // so we need to help JDBC find the driver
-    datasource.setDriverClassLoader(getClass().getClassLoader());
+    datasource.setDriverClassLoader(MySQLConnector.class.getClassLoader());
     datasource.setDriverClassName(driverConfig.getDriverClassName());
     datasource.addConnectionProperty("useSSL", String.valueOf(connectorSslConfig.isUseSSL()));
     if (connectorSslConfig.isUseSSL()) {
@@ -141,9 +146,10 @@ public class MySQLConnector extends SQLMetadataConnector
     // use double-quotes for quoting columns, so we can write SQL that works with most databases
     datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
-    this.dbi = new DBI(datasource);
+    DBI dbi = new DBI(datasource);
 
     log.info("Configured MySQL as metadata storage");
+    return dbi;
   }
 
   @Override
@@ -252,10 +258,10 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Nullable
-  private Class<?> tryLoadDriverClass(String className, boolean failIfNotFound)
+  private static Class<?> tryLoadDriverClass(String className, boolean failIfNotFound)
   {
     try {
-      return Class.forName(className, false, getClass().getClassLoader());
+      return Class.forName(className, false, MySQLConnector.class.getClassLoader());
     }
     catch (ClassNotFoundException e) {
       if (failIfNotFound) {
