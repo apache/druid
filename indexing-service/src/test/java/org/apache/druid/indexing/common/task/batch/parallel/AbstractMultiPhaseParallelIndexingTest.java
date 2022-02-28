@@ -165,12 +165,23 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return runTask(task, expectedTaskStatus);
   }
 
-  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  void runTaskHelper(Task task, TaskState expectedTaskStatus)
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
     Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+  }
+
+  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
+  {
+    runTaskHelper(task, expectedTaskStatus);
     return getIndexingServiceClient().getPublishedSegments(task);
+  }
+
+  Map<String, Object> runTaskAndReturnTaskReports(Task task, TaskState expectedTaskStatus)
+  {
+    runTaskHelper(task, expectedTaskStatus);
+    return getIndexingServiceClient().getTaskReport(task.getId());
   }
 
   protected ParallelIndexSupervisorTask newTask(

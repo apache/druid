@@ -66,6 +66,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -1483,10 +1484,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    long processed = 0L;
-    long processedWithError = 0L;
-    long thrownAway = 0L;
-    long unparseable = 0L;
+    RowIngestionMetersTotals rowIngestionMetersTotals = new NoopRowIngestionMeters().getTotals();
 
     List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
@@ -1502,10 +1500,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           doGetRowStatsAndUnparseableEventsFromTaskReport(taskReport, includeUnparseable, unparseableEvents);
       unparseableEvents = rowStatsAndUnparseableEvents.rhs;
 
-      processed += rowStatsAndUnparseableEvents.lhs.getProcessed();
-      processedWithError += rowStatsAndUnparseableEvents.lhs.getProcessedWithError();
-      thrownAway += rowStatsAndUnparseableEvents.lhs.getThrownAway();
-      unparseable += rowStatsAndUnparseableEvents.lhs.getUnparseable();
+      rowIngestionMetersTotals = addRowIngestionMetersTotals(rowIngestionMetersTotals, rowStatsAndUnparseableEvents.lhs);
     }
 
     // Get stats from running tasks
@@ -1513,10 +1508,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
                                                                       unparseableEvents,
-                                                                      processed,
-                                                                      processedWithError,
-                                                                      thrownAway,
-                                                                      unparseable,
+                                                                      rowIngestionMetersTotals,
                                                                       includeUnparseable);
   }
 
@@ -1531,10 +1523,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Set<String> runningTaskIds = currentRunner.getRunningTaskIds();
       Map<String, GeneratedPartitionsReport> completedSubtaskReports = (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
-      long processed = 0L;
-      long processedWithError = 0L;
-      long thrownAway = 0L;
-      long unparseable = 0L;
+      RowIngestionMetersTotals rowIngestionMetersTotals = new NoopRowIngestionMeters().getTotals();
 
       List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
@@ -1543,20 +1532,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
           continue;
         }
-        Pair<RowIngestionMetersTotals, List<ParseExceptionReport>> rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEventsFromTaskReport(taskReport, true, unparseableEvents);
+        Pair<RowIngestionMetersTotals, List<ParseExceptionReport>> rowStatsAndUnparseableEvents =
+            doGetRowStatsAndUnparseableEventsFromTaskReport(taskReport, true, unparseableEvents);
         unparseableEvents = rowStatsAndUnparseableEvents.rhs;
 
-        processed += rowStatsAndUnparseableEvents.lhs.getProcessed();
-        processedWithError += rowStatsAndUnparseableEvents.lhs.getProcessedWithError();
-        thrownAway += rowStatsAndUnparseableEvents.lhs.getThrownAway();
-        unparseable += rowStatsAndUnparseableEvents.lhs.getUnparseable();
+        rowIngestionMetersTotals = addRowIngestionMetersTotals(rowIngestionMetersTotals, rowStatsAndUnparseableEvents.lhs);
       }
       return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
                                                                         unparseableEvents,
-                                                                        processed,
-                                                                        processedWithError,
-                                                                        thrownAway,
-                                                                        unparseable,
+                                                                        rowIngestionMetersTotals,
                                                                         includeUnparseable);
     }
   }
@@ -1564,10 +1548,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private Pair<Map<String, Object>, Map<String, Object>> getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(
       Set<String> runningTaskIds,
       List<ParseExceptionReport> unparseableEvents,
-      long processed,
-      long processedWithError,
-      long thrownAway,
-      long unparseable,
+      RowIngestionMetersTotals rowIngestionMetersTotals,
       boolean includeUnparseable)
   {
     for (String runningTaskId : runningTaskIds) {
@@ -1592,10 +1573,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
         }
 
-        processed += ((Number) buildSegments.get("processed")).longValue();
-        processedWithError += ((Number) buildSegments.get("processedWithError")).longValue();
-        thrownAway += ((Number) buildSegments.get("thrownAway")).longValue();
-        unparseable += ((Number) buildSegments.get("unparseable")).longValue();
+        RowIngestionMetersTotals buildSegmentsRowStats = new RowIngestionMetersTotals(((Number) buildSegments.get("processed")).longValue(),
+                                                                                  ((Number) buildSegments.get("processedWithError")).longValue(),
+                                                                                  ((Number) buildSegments.get("thrownAway")).longValue(),
+                                                                                  ((Number) buildSegments.get("unparseable")).longValue());
+        rowIngestionMetersTotals = addRowIngestionMetersTotals(rowIngestionMetersTotals, buildSegmentsRowStats);
       }
       catch (Exception e) {
         LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);
@@ -1605,7 +1587,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     Map<String, Object> totalsMap = new HashMap<>();
     totalsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,
-        new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable)
+        rowIngestionMetersTotals
     );
     rowStatsMap.put("totals", totalsMap);
 
@@ -1630,6 +1612,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       unparseableEvents.addAll(taskUnparsebleEvents);
     }
     return Pair.of(totals, unparseableEvents);
+  }
+
+  private RowIngestionMetersTotals addRowIngestionMetersTotals(RowIngestionMetersTotals r1, RowIngestionMetersTotals r2)
+  {
+    return new RowIngestionMetersTotals(r1.getProcessed() + r2.getProcessed(),
+                                        r1.getProcessedWithError() + r2.getProcessedWithError(),
+                                        r1.getThrownAway() + r2.getThrownAway(),
+                                        r1.getUnparseable() + r2.getUnparseable());
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
