@@ -35,7 +35,8 @@ public class TombstoneSegmentizerFactoryTest
 {
 
   @Test
-  public void testSegmentCreation() {
+  public void testSegmentCreation()
+  {
     Interval expectedInterval = Intervals.of("2021/2022");
     TombstoneSegmentizerFactory factory = new TombstoneSegmentizerFactory();
     DataSegment tombstone = DataSegment.builder()
@@ -64,5 +65,4 @@ public class TombstoneSegmentizerFactoryTest
     Assert.assertTrue(queryableIndex.isFromTombstone());
 
   }
-
 }
