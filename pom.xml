@@ -1670,9 +1670,8 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>${maven.compiler.source}</source>
-                            <target>${maven.compiler.target}</target>
-                            <showWarnings>false</showWarnings>
+                          <release>${java.version}</release>
+                          <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:DivZero -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JMockTestWithoutRunWithOrRuleAnnotation -Xep:JavaxInjectOnFinalField -Xep:LockMethodChecker -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:UnlockMethod</arg>
@@ -1716,31 +1715,6 @@
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
                     <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                     <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                  </compilerArgs>
-                </configuration>
-              </plugin>
-            </plugins>
-          </build>
-        </profile>
-        <!-- using github.com/google/error-prone-javac is required when running on JDK 8
-             see https://errorprone.info/docs/installation#jdk-8 -->
-        <profile>
-          <id>strict-java-8</id>
-          <activation>
-            <jdk>1.8</jdk>
-            <property>
-              <name>strictCompile</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                  <fork>true</fork>
-                  <compilerArgs combine.children="append">
-                    <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/9+181-r4173-1/javac-9+181-r4173-1.jar</arg>
                   </compilerArgs>
                 </configuration>
               </plugin>
