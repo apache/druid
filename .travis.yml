@@ -110,8 +110,10 @@ jobs:
       # who watches the watchers?
       script: ./check_test_suite_test.py
 
-    - name: "(openjdk8) strict compilation"
+    - name: "(openjdk11) strict compilation"
       install: skip
+      # errorprone requires JDK 11
+      jdk: openjdk11
       # Strict compilation requires more than 2 GB
       script: >
         ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
