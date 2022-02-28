@@ -287,9 +287,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
       return baseExceptionMessage;
     }
     sb.setLength(sb.length() - 2); // Erase the last stray ", "
-    sb.insert(0, " ("); // Wrap the additional information in brackets
-    sb.append(")");
-    return baseExceptionMessage + sb;
+    return baseExceptionMessage + " (" + sb + ")"; // Wrap extra information in a bracket before returning
   }
 
   private static class ExceptionThrowingIterator implements CloseableIterator<InputRow>
