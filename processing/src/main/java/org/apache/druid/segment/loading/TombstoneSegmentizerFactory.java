@@ -48,7 +48,7 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
       File parentDir,
       boolean lazy,
       SegmentLazyLoadFailCallback loadFailed
-  ) throws SegmentLoadingException
+  )
   {
     return segmentForTombstone(segment);
   }
