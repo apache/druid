@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.firehose;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.spatial.search.RadiusBound;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -66,7 +67,7 @@ import java.util.List;
 /**
  */
 @RunWith(Parameterized.class)
-public class IngestSegmentFirehoseTest
+public class IngestSegmentFirehoseTest extends NullHandlingTest
 {
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       ImmutableList.of(

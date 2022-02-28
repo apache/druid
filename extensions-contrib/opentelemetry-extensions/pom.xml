@@ -27,10 +27,6 @@
     <name>druid-opentelemetry-extensions</name>
     <description>druid-opentelemetry-extensions</description>
 
-    <properties>
-        <opentelemetry.proto.version>0.11.0-alpha</opentelemetry.proto.version>
-    </properties>
-
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
@@ -45,7 +41,6 @@
         <dependency>
             <groupId>io.opentelemetry.proto</groupId>
             <artifactId>opentelemetry-proto</artifactId>
-            <version>${opentelemetry.proto.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

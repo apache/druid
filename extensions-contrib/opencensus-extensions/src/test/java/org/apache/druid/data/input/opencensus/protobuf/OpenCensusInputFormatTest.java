@@ -29,7 +29,7 @@ public class OpenCensusInputFormatTest
   @Test
   public void testSerde() throws Exception
   {
-    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name", "descriptor.", "custom.");
+    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name", null, "descriptor.", "custom.");
 
     final ObjectMapper jsonMapper = new ObjectMapper();
     jsonMapper.registerModules(new OpenCensusProtobufExtensionsModule().getJacksonModules());
@@ -47,7 +47,7 @@ public class OpenCensusInputFormatTest
   @Test
   public void testDefaults()
   {
-    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat(null, null, null);
+    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat(null, null, null, null);
 
     Assert.assertEquals("name", inputFormat.getMetricDimension());
     Assert.assertEquals("", inputFormat.getMetricLabelPrefix());

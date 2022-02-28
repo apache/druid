@@ -133,6 +133,7 @@
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
+        <opentelemetry.proto.version>0.11.0-alpha</opentelemetry.proto.version>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -1305,6 +1306,11 @@
               </exclusion>
             </exclusions>
           </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.proto</groupId>
+                <artifactId>opentelemetry-proto</artifactId>
+                <version>${opentelemetry.proto.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
