@@ -21,11 +21,12 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.Files;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @JsonTypeName(TombstoneDataStorageModule.SCHEME)
 public class TombstoneLoadSpec implements LoadSpec
@@ -48,11 +49,10 @@ public class TombstoneLoadSpec implements LoadSpec
   @VisibleForTesting
   public static int witeFactoryFile(File destDir) throws IOException
   {
-    String factoryJSONString = "{\"type\":\"tombstoneSegmentFactory\"}";
-    File destFile = new File(destDir, "factory.json");
-    try (FileWriter writer = new FileWriter(destFile)) {
-      writer.write(factoryJSONString);
-    }
+    final String factoryJSONString = "{\"type\":\"tombstoneSegmentFactory\"}";
+    final File factoryJson = new File(destDir, "factory.json");
+    factoryJson.createNewFile();
+    Files.write(factoryJSONString.getBytes(StandardCharsets.UTF_8), factoryJson);
     return factoryJSONString.length();
   }
 }
