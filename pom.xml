@@ -1705,7 +1705,7 @@
                 <configuration>
                   <release>${java.version}</release>
                   <compilerArgs combine.children="append">
-                    <!-- Error Prone requires exemptions for Java 16, see https://errorprone.info/docs/installation#jdk-16 -->
+                    <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
