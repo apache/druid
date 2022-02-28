@@ -96,7 +96,7 @@ public class RetryUtilsTest
   }
 
   @Test
-  public void testExceptionPredicateNotMatching() throws Exception
+  public void testExceptionPredicateNotMatching()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows("uhh", IOException.class, () -> {
@@ -116,7 +116,7 @@ public class RetryUtilsTest
   }
 
   @Test(timeout = 5000L)
-  public void testInterruptWhileSleepingBetweenTries() throws ExecutionException, InterruptedException
+  public void testInterruptWhileSleepingBetweenTries()
   {
     ExecutorService exec = Execs.singleThreaded("test-interrupt");
     try {
@@ -141,7 +141,7 @@ public class RetryUtilsTest
   }
 
   @Test(timeout = 5000L)
-  public void testInterruptRetryLoop() throws ExecutionException, InterruptedException
+  public void testInterruptRetryLoop()
   {
     ExecutorService exec = Execs.singleThreaded("test-interrupt");
     try {
