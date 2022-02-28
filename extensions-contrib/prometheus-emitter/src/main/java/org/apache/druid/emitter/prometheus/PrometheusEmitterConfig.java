@@ -69,10 +69,11 @@ public class PrometheusEmitterConfig
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
-    this.pushGatewayAddress = pushGatewayAddress != null ? getValidAddress(pushGatewayAddress): null;
+    this.pushGatewayAddress = pushGatewayAddress != null ? getValidAddress(pushGatewayAddress) : null;
   }
 
-  private String getValidAddress(String address) {
+  private String getValidAddress(String address)
+  {
     if (address.startsWith("https") || address.startsWith("http")) {
       return createURLSneakily(address);
     } else {
