@@ -83,9 +83,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
                 .withMinTimestamp(INTERVAL.getStart().getMillis())
                 .withMetrics(new CountAggregatorFactory("count"))
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "unknownDim", "dim2"))
-                    )
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "unknownDim", "dim2")))
                 )
                 .build()
         )
