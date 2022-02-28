@@ -341,7 +341,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
             new ParseExceptionReport(
                 "{ts=2017unparseable}",
                 "unparseable",
-                ImmutableList.of("Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}"),
+                ImmutableList.of(getErrorMessageForUnparseableTimestamp()),
                 1L
             ),
             new ParseExceptionReport(
@@ -462,7 +462,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         new ParseExceptionReport(
             "{ts=2017unparseable}",
             "unparseable",
-            ImmutableList.of("Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}"),
+            ImmutableList.of(getErrorMessageForUnparseableTimestamp()),
             1L
         ),
         new ParseExceptionReport(
@@ -987,6 +987,14 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         ingestionSpec,
         Collections.emptyMap()
     );
+  }
+
+  private String getErrorMessageForUnparseableTimestamp()
+  {
+    return useInputFormatApi ? StringUtils.format(
+        "Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable} (Path: %s, Record: 5, Line: 5)",
+        new File(inputDir, "test_0").toURI()
+    ) : "Timestamp[2017unparseable] is unparseable! Event: {ts=2017unparseable}";
   }
 
   private static class SettableSplittableLocalInputSource extends LocalInputSource

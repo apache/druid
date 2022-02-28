@@ -144,6 +144,12 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
   }
 
   @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
+  @Override
   protected List<InputRow> parseInputRows(OrcStruct intermediateRow) throws ParseException
   {
     return Collections.singletonList(
