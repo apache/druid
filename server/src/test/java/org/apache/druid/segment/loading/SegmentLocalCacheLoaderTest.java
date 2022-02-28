@@ -67,7 +67,7 @@ public class SegmentLocalCacheLoaderTest
   }
 
   @Test
-  public void testGetSegmentWithTombstones() throws SegmentLoadingException, IOException
+  public void testGetSegmentWithTombstones() throws SegmentLoadingException
   {
     Interval interval = Intervals.of("2014-01-01/2014-01-02");
     DataSegment tombstone = new DataSegment("foo", interval, "version",
