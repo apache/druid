@@ -282,33 +282,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <!-- locale settings must be set on the command line before startup -->
-                    <!-- set default options -->
-                    <argLine>
-                        @{jacocoArgLine}
-                        <!-- for datasketches-memory access to DirectByteBuffer until Java 17 is supported -->
-                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-                        <!-- for EqualsVerifier in org.apache.druid.segment.filter tests -->
-                        --add-opens java.base/java.util=ALL-UNNAMED
-                        -Xmx512m
-                        -XX:MaxDirectMemorySize=2500m
-                        -Duser.language=en
-                        -Duser.GroupByQueryRunnerTest.javacountry=US
-                        -Dfile.encoding=UTF-8
-                        -Duser.timezone=UTC
-                        -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                        <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
-                        -Ddruid.indexing.doubleStorage=double
-                    </argLine>
-                    <!-- our tests are very verbose, let's keep the volume down -->
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <excludedGroups>org.apache.druid.collections.test.annotation.Benchmark</excludedGroups>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 

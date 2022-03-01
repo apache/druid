@@ -124,6 +124,19 @@
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
 
+        <common.test.jvm.args>
+          -Xmx1500m
+          -XX:MaxDirectMemorySize=2500m
+          <!-- locale settings must be set on the command line before startup -->
+          -Dfile.encoding=UTF-8
+          -Duser.language=en
+          -Duser.timezone=UTC
+          -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+          -Duser.GroupByQueryRunnerTest.javacountry=US
+          -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+          <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
+          -Ddruid.indexing.doubleStorage=double
+        </common.test.jvm.args>
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
     </properties>
@@ -1493,22 +1506,9 @@
                     causing issues in RetryUtilsTest -->
                     <version>3.0.0-M4</version>
                     <configuration>
-                        <!-- locale settings must be set on the command line before startup -->
-                        <!-- set default options -->
                         <argLine>
                             @{jacocoArgLine}
-                            <!-- for datasketches-memory access to DirectByteBuffer until Java 17 is supported -->
-                            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-                            -Xmx1500m
-                            -XX:MaxDirectMemorySize=512m
-                            -Duser.language=en
-                            -Duser.GroupByQueryRunnerTest.javacountry=US
-                            -Dfile.encoding=UTF-8
-                            -Duser.timezone=UTC
-                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                            -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
-                            <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
-                            -Ddruid.indexing.doubleStorage=double
+                            ${common.test.jvm.args}
                         </argLine>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
@@ -1651,6 +1651,20 @@
                             <release>${java.version}</release>
                         </configuration>
                     </plugin>
+                    <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-surefire-plugin</artifactId>
+                      <configuration>
+                          <argLine>
+                            @{jacocoArgLine}
+                            <!-- for datasketches-memory access to DirectByteBuffer until Java 17 is supported -->
+                            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                            <!-- for EqualsVerifier in org.apache.druid.segment.filter tests with Java 17 -->
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            ${common.test.jvm.args}
+                          </argLine>
+                      </configuration>
+                    </plugin>
                 </plugins>
             </build>
           </profile>
@@ -1702,7 +1716,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                  <release>${java.version}</release>
                   <compilerArgs combine.children="append">
                     <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
                     <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
