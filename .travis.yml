@@ -188,9 +188,13 @@ jobs:
       jdk: openjdk11
     
     - <<: *package
-      name: "(openjdk17) packaging check"
+      name: "(openjdk17) packaging check (no dist)"
       stage: Tests - phase 2
       jdk: openjdk17
+      # disable "dist" profile until we can upgrade guice
+      script: >
+        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pbundle-contrib-exts --fail-at-end
+        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
 
     - &test_processing_module
       name: "(openjdk8) processing module test"
