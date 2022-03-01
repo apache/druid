@@ -324,9 +324,9 @@ jobs:
       jdk: openjdk11
 
     - <<: *test_server_module
-      name: "(openjdk15) server module test"
+      name: "(openjdk17) server module test"
       stage: Tests - phase 2
-      jdk: openjdk15
+      jdk: openjdk17
 
     - &test_server_module_sqlcompat
       <<: *test_server_module
