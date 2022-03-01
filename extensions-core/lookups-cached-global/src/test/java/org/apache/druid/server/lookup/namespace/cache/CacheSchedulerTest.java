@@ -134,24 +134,12 @@ public class CacheSchedulerTest
     lifecycle.start();
     cacheManager = createCacheManager.apply(lifecycle);
     final Path tmpDir = temporaryFolder.newFolder().toPath();
-    final CacheGenerator<UriExtractionNamespace> cacheGenerator = new
-        CacheGenerator<UriExtractionNamespace>()
-    {
-      @Override
-      public CacheScheduler.VersionedCache generateCache(
-          final UriExtractionNamespace extractionNamespace,
-          final CacheScheduler.EntryImpl<UriExtractionNamespace> id,
-          final String lastVersion,
-          final CacheScheduler scheduler
-      ) throws InterruptedException
-      {
-        Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
-        String version = Long.toString(System.currentTimeMillis());
-        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
-        // Don't actually read off disk because TravisCI doesn't like that
-        versionedCache.getCache().put(KEY, VALUE);
-        return versionedCache;
-      }
+    final CacheGenerator<UriExtractionNamespace> cacheGenerator = (extractionNamespace, id, lastVersion, cache) -> {
+      Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
+      String version = Long.toString(System.currentTimeMillis());
+      // Don't actually read off disk because TravisCI doesn't like that
+      cache.getCache().put(KEY, VALUE);
+      return version;
     };
     scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
