@@ -22,6 +22,7 @@ package org.apache.druid.data.input.opentelemetry.protobuf;
 import com.google.common.collect.ImmutableList;
 import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.KeyValue;
+import io.opentelemetry.proto.common.v1.KeyValueList;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
 import org.apache.druid.data.input.InputRow;
@@ -280,6 +281,66 @@ public class OpenTelemetryMetricsProtobufReaderTest
     assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
     Assert.assertFalse(row.getDimensions().contains("custom.country"));
     Assert.assertFalse(row.getDimensions().contains("descriptor.color"));
+  }
+
+  @Test
+  public void testUnsupportedValueTypes()
+  {
+    KeyValueList kvList = KeyValueList.newBuilder()
+        .addValues(
+            KeyValue.newBuilder()
+                .setKey("foo")
+                .setValue(AnyValue.newBuilder().setStringValue("bar").build()))
+        .build();
+
+    metricsDataBuilder.getResourceMetricsBuilder(0)
+        .getResourceBuilder()
+        .addAttributesBuilder()
+        .setKey(RESOURCE_ATTRIBUTE_ENV)
+        .setValue(AnyValue.newBuilder().setKvlistValue(kvList).build());
+
+    metricBuilder
+        .setName("example_sum")
+        .getSumBuilder()
+        .addDataPointsBuilder()
+        .setAsInt(6)
+        .setTimeUnixNano(TIMESTAMP)
+        .addAllAttributes(ImmutableList.of(
+            KeyValue.newBuilder()
+                .setKey(METRIC_ATTRIBUTE_COLOR)
+                .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_VALUE_RED).build()).build(),
+            KeyValue.newBuilder()
+                .setKey(METRIC_ATTRIBUTE_FOO_KEY)
+                .setValue(AnyValue.newBuilder().setKvlistValue(kvList).build()).build()));
+
+    MetricsData metricsData = metricsDataBuilder.build();
+
+    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+        dimensionsSpec,
+        new ByteEntity(metricsData.toByteArray()),
+        "metric.name",
+        "raw.value",
+        "descriptor.",
+        "custom."
+    ).read();
+
+    List<InputRow> rowList = new ArrayList<>();
+    rows.forEachRemaining(rowList::add);
+    Assert.assertEquals(1, rowList.size());
+
+    InputRow row = rowList.get(0);
+    Assert.assertEquals(4, row.getDimensions().size());
+    assertDimensionEquals(row, "metric.name", "example_sum");
+    assertDimensionEquals(row, "custom.country", "usa");
+    assertDimensionEquals(row, "descriptor.color", "red");
+
+    // Unsupported resource attribute type is omitted
+    Assert.assertEquals(0, row.getDimension("custom.env").size());
+
+    // Unsupported metric attribute type is omitted
+    Assert.assertEquals(0, row.getDimension("descriptor.foo_key").size());
+
+    assertDimensionEquals(row, "raw.value", "6");
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
