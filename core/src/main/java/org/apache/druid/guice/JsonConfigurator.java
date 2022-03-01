@@ -235,6 +235,7 @@ public class JsonConfigurator
   }
 
   @VisibleForTesting
+  @SuppressWarnings("ReturnValueIgnored")
   public static <T> void verifyClazzIsConfigurable(
       ObjectMapper mapper,
       Class<T> clazz,
