@@ -59,6 +59,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -99,7 +100,11 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     super(transientTaskFailureRate, transientApiCallFailureRate);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
-    getObjectMapper().registerSubtypes(ParallelIndexTuningConfig.class, DruidInputSource.class);
+    getObjectMapper().registerSubtypes(
+        ParallelIndexTuningConfig.class,
+        DruidInputSource.class,
+        TombstoneLoadSpec.class
+    );
   }
 
   boolean isUseInputFormatApi()
