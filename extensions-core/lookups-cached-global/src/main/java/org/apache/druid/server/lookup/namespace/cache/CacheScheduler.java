@@ -221,9 +221,11 @@ public final class CacheScheduler
             newCache
         );
         if (newVersion != null) {
+          newCache = cacheManager.attachCache(newCache);
           final VersionedCache newVersionedCache = new VersionedCache(String.valueOf(this), newVersion, newCache);
-          CacheState previousCacheState = swapCacheState(newVersionedCache);
+          final CacheState previousCacheState = swapCacheState(newVersionedCache);
           if (previousCacheState != NoCache.ENTRY_CLOSED) {
+            updatedCacheSuccessfully = true;
             if (previousCacheState instanceof VersionedCache) {
               ((VersionedCache) previousCacheState).close();
             }
@@ -373,7 +375,7 @@ public final class CacheScheduler
     ENTRY_CLOSED
   }
 
-  public final class VersionedCache implements CacheState, AutoCloseable
+  public static final class VersionedCache implements CacheState, AutoCloseable
   {
     final String entryId;
     final CacheHandler cacheHandler;
@@ -383,7 +385,6 @@ public final class CacheScheduler
     {
       this.entryId = entryId;
       this.cacheHandler = cache;
-      cacheManager.attachCache(cache);
       this.version = version;
     }
 
