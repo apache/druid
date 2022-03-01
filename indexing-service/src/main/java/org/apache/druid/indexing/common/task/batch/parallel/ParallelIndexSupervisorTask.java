@@ -1484,7 +1484,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
 
     List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
@@ -1496,19 +1496,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         LOG.warn("Got an empty task report from subtask: " + pushedSegmentsReport.getTaskId());
         continue;
       }
-      RowIngestionMetersTotals rowStatsAndUnparseableEvents =
+      RowIngestionMetersTotals rowIngestionMetersTotals =
           getBuildSegmentsStatsFromTaskReport(taskReport, includeUnparseable, unparseableEvents);
 
-      buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsAndUnparseableEvents);
+      buildSegmentsRowStats.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     }
 
     // Get stats from running tasks
     Set<String> runningTaskIds = parallelSinglePhaseRunner.getRunningTaskIds();
 
-    return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
-                                                                      unparseableEvents,
-                                                                      buildSegmentsRowStats,
-                                                                      includeUnparseable);
+    return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds,
+                                                          unparseableEvents,
+                                                          buildSegmentsRowStats,
+                                                          includeUnparseable);
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(boolean includeUnparseable)
@@ -1522,7 +1522,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Set<String> runningTaskIds = currentRunner.getRunningTaskIds();
       Map<String, GeneratedPartitionsReport> completedSubtaskReports = (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
-      MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+      final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
 
       List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
@@ -1531,19 +1531,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
           continue;
         }
-        RowIngestionMetersTotals rowStatsAndUnparseableEvents =
+        RowIngestionMetersTotals rowStats =
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
-        buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsAndUnparseableEvents);
+        buildSegmentsRowStats.addRowIngestionMetersTotals(rowStats);
       }
-      return getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(runningTaskIds,
+      return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds,
                                                                         unparseableEvents,
                                                                         buildSegmentsRowStats,
                                                                         includeUnparseable);
     }
   }
 
-  private Pair<Map<String, Object>, Map<String, Object>> getRunningTaskReportsAndCreateRowStatsAndUnparseableEvents(
+  private Pair<Map<String, Object>, Map<String, Object>> getRowStatsAndUnparseableEventsForRunningTasks(
       Set<String> runningTaskIds,
       List<ParseExceptionReport> unparseableEvents,
       MutableRowIngestionMeters buildSegmentsRowStats,
@@ -1571,11 +1571,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
         }
 
-        RowIngestionMetersTotals runningTaskBuildSegmentsRowStats = new RowIngestionMetersTotals(((Number) buildSegments.get("processed")).longValue(),
-                                                                                  ((Number) buildSegments.get("processedWithError")).longValue(),
-                                                                                  ((Number) buildSegments.get("thrownAway")).longValue(),
-                                                                                  ((Number) buildSegments.get("unparseable")).longValue());
-        buildSegmentsRowStats.addRowIngestionMetersTotals(runningTaskBuildSegmentsRowStats);
+        buildSegmentsRowStats.addRowIngestionMetersTotals(getTotalsFromBuildSegmentsRowStats(buildSegments));
       }
       catch (Exception e) {
         LOG.warn(e, "Encountered exception when getting live subtask report for task: " + runningTaskId);

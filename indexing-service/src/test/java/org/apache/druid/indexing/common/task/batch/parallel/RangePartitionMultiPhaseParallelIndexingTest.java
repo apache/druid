@@ -254,10 +254,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     Map<String, Object> expectedReports = getExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(600,
-                                     0,
-                                     0,
-                                     0));
+        new RowIngestionMetersTotals(600, 0, 0, 0));
     Map<String, Object> actualReports = runTaskAndReturnTaskReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }
