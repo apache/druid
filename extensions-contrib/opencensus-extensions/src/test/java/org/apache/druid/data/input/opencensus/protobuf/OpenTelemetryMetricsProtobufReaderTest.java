@@ -24,6 +24,7 @@ import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.KeyValue;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -48,7 +49,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -144,7 +144,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
     CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
-        Collections.emptyList()
+        ColumnsFilter.all()
       ), kafkaRecordEntity, null).read();
 
     List<InputRow> rowList = new ArrayList<>();
@@ -182,7 +182,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
     CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
-        Collections.emptyList()
+        ColumnsFilter.all()
     ), kafkaRecordEntity, null).read();
 
     Assert.assertTrue(rows.hasNext());
@@ -246,7 +246,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
     CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
-        Collections.emptyList()
+        ColumnsFilter.all()
     ), kafkaRecordEntity, null).read();
 
 
@@ -309,7 +309,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
     CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpecWithExclusions,
-        Collections.emptyList()
+        ColumnsFilter.all()
     ), kafkaRecordEntity, null).read();
 
 
