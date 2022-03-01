@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.topn.types;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
 import org.apache.druid.query.topn.TopNParams;
@@ -194,21 +193,21 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       DimensionSelector selector
   )
   {
-    Int2ObjectOpenHashMap<Aggregator[]> aggsCache = new Int2ObjectOpenHashMap<>();
+    final Aggregator[][] aggsCache = new Aggregator[selector.getValueCardinality()][];
 
     long processedRows = 0;
     while (!cursor.isDone()) {
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
-        Aggregator[] aggs = aggsCache.get(dimIndex);
+        Aggregator[] aggs = aggsCache[dimIndex];
         if (aggs == null) {
           final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
           aggs = aggregatesStore.computeIfAbsent(
               key,
               k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
           );
-          aggsCache.put(dimIndex, aggs);
+          aggsCache[dimIndex] = aggs;
         }
         for (Aggregator aggregator : aggs) {
           aggregator.aggregate();
