@@ -69,7 +69,7 @@ public class PrometheusEmitterConfig
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
     if (this.strategy == Strategy.pushgateway) {
-      Preconditions.checkNotNull(pushGatewayAddress, "Invalid address");
+      Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
     }
     this.pushGatewayAddress = pushGatewayAddress;
   }
