@@ -111,6 +111,12 @@ public class PrometheusEmitterTest
   }
 
   @Test
+  public void testEmitterConfigCreationWithNullAsAddress()
+  {
+    Assert.assertThrows(NullPointerException.class, () -> new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, null));
+  }
+
+  @Test
   public void testEmitterStartWithHttpUrl()
   {
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway");

@@ -80,7 +80,7 @@ public class PrometheusEmitter implements Emitter
       } else {
         log.error("HTTPServer is already started");
       }
-    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway) && config.getPushGatewayAddress() != null) {
+    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       String address = config.getPushGatewayAddress();
       if (address.startsWith("https") || address.startsWith("http")) {
         URL myURL = createURLSneakily(address);
