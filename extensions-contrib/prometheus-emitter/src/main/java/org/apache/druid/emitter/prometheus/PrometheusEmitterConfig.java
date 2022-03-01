@@ -68,7 +68,8 @@ public class PrometheusEmitterConfig
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;
-    if (this.strategy == Strategy.pushgateway) {
+    if (this.strategy == Strategy.pushgateway)
+    {
       Preconditions.checkNotNull(pushGatewayAddress, "Invalid pushGateway address");
     }
     this.pushGatewayAddress = pushGatewayAddress;
