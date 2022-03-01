@@ -135,8 +135,9 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   }
 
   /**
-   * this method uses array aggregation since dictionaryIds are unique and value cardinality is known up front, so
-   * values are aggregated into an array position specified by the dictionaryid
+   * scan and aggregate when column is dictionary encoded and value cardinality is known up front, so values are
+   * aggregated into an array position specified by the dictionaryid, which if not already present, are translated
+   * into the key and fetched (or created if they key hasn't been encountered) from the {@link #aggregatesStore}
    */
   private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
