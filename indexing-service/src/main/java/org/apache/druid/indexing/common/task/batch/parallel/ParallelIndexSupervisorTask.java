@@ -730,7 +730,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
       return TaskStatus.failure(getId(), errMsg);
     }
-    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(true);
+    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // 2. Partial segment merge phase
     // partition (interval, partitionId) -> partition locations
@@ -819,7 +819,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       return TaskStatus.failure(getId(), errMsg);
     }
 
-    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(true);
+    indexGenerateRowStats = doGetRowStatsAndUnparseableEventsParallelMultiPhase(indexingRunner, true);
 
     // partition (interval, partitionId) -> partition locations
     Map<Partition, List<PartitionLocation>> partitionToLocations =
@@ -1502,23 +1502,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       buildSegmentsRowStats.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     }
 
-    return createReports(
-        getRowStatsAndUnparseableEventsForRunningTasks(parallelSinglePhaseRunner.getRunningTaskIds(),
-                                                       unparseableEvents,
-                                                       buildSegmentsRowStats,
-                                                       includeUnparseable),
-        unparseableEvents);
+    RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
+        parallelSinglePhaseRunner.getRunningTaskIds(),
+        unparseableEvents,
+        includeUnparseable
+    );
+    buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+
+    return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
   }
 
-  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(boolean includeUnparseable)
+  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(
+      ParallelIndexTaskRunner<?, ?> currentRunner,
+      boolean includeUnparseable
+  )
   {
     if (indexGenerateRowStats != null) {
       return Pair.of(indexGenerateRowStats.lhs, includeUnparseable ? indexGenerateRowStats.rhs : ImmutableMap.of());
-    } else if (currentSubTaskHolder == null || !((ParallelIndexTaskRunner) currentSubTaskHolder.getTask()).getName().equals("partial segment generation")) {
+    } else if (!currentRunner.getName().equals("partial segment generation")) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());
     } else {
-      ParallelIndexTaskRunner currentRunner = currentSubTaskHolder.getTask();
-      Map<String, GeneratedPartitionsReport> completedSubtaskReports = (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
+      Map<String, GeneratedPartitionsReport> completedSubtaskReports =
+          (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
       final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
@@ -1528,34 +1533,38 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           LOG.warn("Got an empty task report from subtask: " + generatedPartitionsReport.getTaskId());
           continue;
         }
-        RowIngestionMetersTotals rowStats =
+        RowIngestionMetersTotals rowStatsForCompletedTask =
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
-        buildSegmentsRowStats.addRowIngestionMetersTotals(rowStats);
+        buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
       }
-      return createReports(
-          getRowStatsAndUnparseableEventsForRunningTasks(currentRunner.getRunningTaskIds(),
-                                                         unparseableEvents,
-                                                         buildSegmentsRowStats,
-                                                         includeUnparseable),
-          unparseableEvents);
+
+      RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
+          currentRunner.getRunningTaskIds(),
+          unparseableEvents,
+          includeUnparseable
+      );
+      buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
+
+      return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
     }
   }
 
   private RowIngestionMetersTotals getRowStatsAndUnparseableEventsForRunningTasks(
       Set<String> runningTaskIds,
       List<ParseExceptionReport> unparseableEvents,
-      MutableRowIngestionMeters buildSegmentsRowStats,
-      boolean includeUnparseable)
+      boolean includeUnparseable
+  )
   {
+    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
         Map<String, Object> report = toolbox.getIndexingServiceClient().getTaskReport(runningTaskId);
-
         if (report == null || report.isEmpty()) {
           // task does not have a running report yet
           continue;
         }
+
         Map<String, Object> ingestionStatsAndErrors = (Map<String, Object>) report.get("ingestionStatsAndErrors");
         Map<String, Object> payload = (Map<String, Object>) ingestionStatsAndErrors.get("payload");
         Map<String, Object> rowStats = (Map<String, Object>) payload.get("rowStats");
@@ -1564,9 +1573,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         if (includeUnparseable) {
           Map<String, Object> taskUnparseableEvents = (Map<String, Object>) payload.get("unparseableEvents");
-          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>) taskUnparseableEvents.get(
-                  RowIngestionMeters.BUILD_SEGMENTS
-              );
+          List<ParseExceptionReport> buildSegmentsUnparseableEvents = (List<ParseExceptionReport>)
+              taskUnparseableEvents.get(RowIngestionMeters.BUILD_SEGMENTS);
           unparseableEvents.addAll(buildSegmentsUnparseableEvents);
         }
 
@@ -1579,15 +1587,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return buildSegmentsRowStats.getTotals();
   }
 
-  private Pair<Map<String, Object>, Map<String, Object>> createReports(RowIngestionMetersTotals buildSegmentsRowStats,
-                                                                       List<ParseExceptionReport> unparseableEvents)
+  private Pair<Map<String, Object>, Map<String, Object>> createStatsAndErrorsReport(
+      RowIngestionMetersTotals rowStats,
+      List<ParseExceptionReport> unparseableEvents
+  )
   {
     Map<String, Object> rowStatsMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
-    totalsMap.put(
-        RowIngestionMeters.BUILD_SEGMENTS,
-        buildSegmentsRowStats
-    );
+    totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, rowStats);
     rowStatsMap.put("totals", totalsMap);
 
     return Pair.of(rowStatsMap, ImmutableMap.of(RowIngestionMeters.BUILD_SEGMENTS, unparseableEvents));
@@ -1626,7 +1633,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     if (isParallelMode()) {
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
-        return doGetRowStatsAndUnparseableEventsParallelMultiPhase(includeUnparseable);
+        return doGetRowStatsAndUnparseableEventsParallelMultiPhase(
+            (ParallelIndexTaskRunner<?, ?>) currentRunner,
+            includeUnparseable
+        );
       } else {
         return doGetRowStatsAndUnparseableEventsParallelSinglePhase(
             (SinglePhaseParallelIndexTaskRunner) currentRunner,

@@ -149,7 +149,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       boolean appendToExisting
   )
   {
-    final ParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = createTask(
         timestampSpec,
         dimensionsSpec,
         inputFormat,
@@ -165,7 +165,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     return runTask(task, expectedTaskStatus);
   }
 
-  void runTaskHelper(Task task, TaskState expectedTaskStatus)
+  void runTaskAndVerifyStatus(Task task, TaskState expectedTaskStatus)
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
@@ -174,17 +174,17 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
   {
-    runTaskHelper(task, expectedTaskStatus);
+    runTaskAndVerifyStatus(task, expectedTaskStatus);
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  Map<String, Object> runTaskAndReturnTaskReports(Task task, TaskState expectedTaskStatus)
+  Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
-    runTaskHelper(task, expectedTaskStatus);
+    runTaskAndVerifyStatus(task, expectedTaskStatus);
     return getIndexingServiceClient().getTaskReport(task.getId());
   }
 
-  protected ParallelIndexSupervisorTask newTask(
+  protected ParallelIndexSupervisorTask createTask(
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,

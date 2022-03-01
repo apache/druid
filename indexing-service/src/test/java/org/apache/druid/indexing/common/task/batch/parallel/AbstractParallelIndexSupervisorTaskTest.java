@@ -807,24 +807,19 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  protected Map<String, Object> getExpectedTaskReportSequential(
+  protected Map<String, Object> buildExpectedTaskReportSequential(
       String taskId,
       List<ParseExceptionReport> expectedUnparseableEvents,
       RowIngestionMetersTotals expectedDeterminePartitions,
       RowIngestionMetersTotals expectedTotals
   )
   {
-    Map<String, Object> returnMap = new HashMap<>();
-    Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
-    Map<String, Object> payload = new HashMap<>();
+    final Map<String, Object> payload = new HashMap<>();
 
     payload.put("ingestionState", IngestionState.COMPLETED);
     payload.put(
         "unparseableEvents",
-        ImmutableMap.of(
-            "determinePartitions", ImmutableList.of(),
-            "buildSegments", expectedUnparseableEvents
-        )
+        ImmutableMap.of("determinePartitions", ImmutableList.of(), "buildSegments", expectedUnparseableEvents)
     );
     Map<String, Object> emptyAverageMinuteMap = ImmutableMap.of(
         "processed", 0.0,
@@ -843,31 +838,21 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         "rowStats",
         ImmutableMap.of(
             "movingAverages",
-            ImmutableMap.of(
-                "determinePartitions",
-                emptyAverages,
-                "buildSegments",
-                emptyAverages
-            ),
+            ImmutableMap.of("determinePartitions", emptyAverages, "buildSegments", emptyAverages),
             "totals",
-            ImmutableMap.of(
-                "determinePartitions",
-                expectedDeterminePartitions,
-                "buildSegments",
-                expectedTotals
-            )
+            ImmutableMap.of("determinePartitions", expectedDeterminePartitions, "buildSegments", expectedTotals)
         )
     );
 
+    final Map<String, Object> ingestionStatsAndErrors = new HashMap<>();
     ingestionStatsAndErrors.put("taskId", taskId);
     ingestionStatsAndErrors.put("payload", payload);
     ingestionStatsAndErrors.put("type", "ingestionStatsAndErrors");
 
-    returnMap.put("ingestionStatsAndErrors", ingestionStatsAndErrors);
-    return returnMap;
+    return Collections.singletonMap("ingestionStatsAndErrors", ingestionStatsAndErrors);
   }
 
-  protected Map<String, Object> getExpectedTaskReportParallel(
+  protected Map<String, Object> buildExpectedTaskReportParallel(
       String taskId,
       List<ParseExceptionReport> expectedUnparseableEvents,
       RowIngestionMetersTotals expectedTotals
@@ -906,26 +891,24 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     Assert.assertEquals(expectedPayload.get("rowStats"), actualPayload.get("rowStats"));
     Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
 
-    List<ParseExceptionReport> expectedParseExceptionReports = (List<ParseExceptionReport>) ((Map<String, Object>) expectedPayload.get("unparseableEvents"))
-        .get("buildSegments");
+    List<ParseExceptionReport> expectedParseExceptionReports =
+        (List<ParseExceptionReport>) ((Map<String, Object>)
+            expectedPayload.get("unparseableEvents")).get("buildSegments");
 
-    List<ParseExceptionReport> actualParseExceptionReports = (List<ParseExceptionReport>) ((Map<String, Object>) actualPayload.get("unparseableEvents"))
-        .get("buildSegments");
+    List<ParseExceptionReport> actualParseExceptionReports =
+        (List<ParseExceptionReport>) ((Map<String, Object>)
+            actualPayload.get("unparseableEvents")).get("buildSegments");
 
-    List<String> expectedMessages = expectedParseExceptionReports.stream().map((r) -> {
-      return r.getDetails().get(0);
-    }).collect(Collectors.toList());
-    List<String> actualMessages = actualParseExceptionReports.stream().map((r) -> {
-      return r.getDetails().get(0);
-    }).collect(Collectors.toList());
+    List<String> expectedMessages = expectedParseExceptionReports
+        .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
+    List<String> actualMessages = actualParseExceptionReports
+        .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
     Assert.assertEquals(expectedMessages, actualMessages);
 
-    List<String> expectedInputs = expectedParseExceptionReports.stream().map((r) -> {
-      return r.getInput();
-    }).collect(Collectors.toList());
-    List<String> actualInputs = actualParseExceptionReports.stream().map((r) -> {
-      return r.getInput();
-    }).collect(Collectors.toList());
+    List<String> expectedInputs = expectedParseExceptionReports
+        .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
+    List<String> actualInputs = actualParseExceptionReports
+        .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
     Assert.assertEquals(expectedInputs, actualInputs);
   }
 

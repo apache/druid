@@ -332,7 +332,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList()
     );
     Map<String, Object> actualReports = task.doGetLiveReports("full");
-    Map<String, Object> expectedReports = getExpectedTaskReportParallel(
+    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
             new ParseExceptionReport(
@@ -410,7 +410,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
     Map<String, Object> expectedReports;
     if (useInputFormatApi) {
-      expectedReports = getExpectedTaskReportSequential(
+      expectedReports = buildExpectedTaskReportSequential(
           task.getId(),
           expectedUnparseableEvents,
           new RowIngestionMetersTotals(0, 0, 0, 0),
@@ -419,7 +419,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     } else {
       // when useInputFormatApi is false, maxConcurrentSubTasks=2 and it uses the single phase runner
       // instead of sequential runner
-      expectedReports = getExpectedTaskReportParallel(
+      expectedReports = buildExpectedTaskReportParallel(
           task.getId(),
           expectedUnparseableEvents,
           expectedTotals

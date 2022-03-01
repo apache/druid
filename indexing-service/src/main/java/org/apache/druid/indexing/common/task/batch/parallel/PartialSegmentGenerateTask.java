@@ -239,8 +239,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
 
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
-   **
-   * @return
    */
   private Map<String, TaskReport> getTaskCompletionReports()
   {
