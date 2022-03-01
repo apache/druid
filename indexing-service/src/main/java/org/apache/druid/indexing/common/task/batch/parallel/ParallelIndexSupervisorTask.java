@@ -1505,10 +1505,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // Get stats from running tasks
     Set<String> runningTaskIds = parallelSinglePhaseRunner.getRunningTaskIds();
 
-    return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds,
-                                                          unparseableEvents,
-                                                          buildSegmentsRowStats,
-                                                          includeUnparseable);
+    return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds, unparseableEvents, buildSegmentsRowStats, includeUnparseable);
   }
 
   private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEventsParallelMultiPhase(boolean includeUnparseable)
@@ -1536,10 +1533,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStats);
       }
-      return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds,
-                                                                        unparseableEvents,
-                                                                        buildSegmentsRowStats,
-                                                                        includeUnparseable);
+      return getRowStatsAndUnparseableEventsForRunningTasks(runningTaskIds, unparseableEvents, buildSegmentsRowStats, includeUnparseable);
     }
   }
 
