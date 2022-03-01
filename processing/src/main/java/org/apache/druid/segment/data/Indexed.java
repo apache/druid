@@ -69,6 +69,17 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
   {
     int minIndex = 0;
     int maxIndex = size - 1;
+    return indexOf(indexed, comparator, value, minIndex, maxIndex);
+  }
+
+  static <T> int indexOf(
+      IndexedGetter<T> indexed,
+      Comparator<T> comparator,
+      @Nullable T value,
+      int minIndex,
+      int maxIndex
+  )
+  {
     while (minIndex <= maxIndex) {
       int currIndex = (minIndex + maxIndex) >>> 1;
 

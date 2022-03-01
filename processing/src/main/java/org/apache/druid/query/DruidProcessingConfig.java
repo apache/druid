@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.DictionaryWrapStrategy;
+import org.apache.druid.segment.data.DictionaryDummyWrapStrategy;
 import org.apache.druid.utils.JvmUtils;
 import org.skife.config.Config;
 
@@ -39,6 +41,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
   public static final int DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL = 0;
+  public static final DictionaryWrapStrategy<Object> DEFAULT_DICTIONARY_WRAP_STRATEGY = new DictionaryDummyWrapStrategy<>();
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -148,6 +151,13 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public int columnCacheSizeBytes()
   {
     return 0;
+  }
+
+  @Override
+  @Config(value = "${base_path}.dictionary.wrapper")
+  public DictionaryWrapStrategy dictionaryWrapStrategy()
+  {
+    return DEFAULT_DICTIONARY_WRAP_STRATEGY;
   }
 
   @Config(value = "${base_path}.fifo")

@@ -19,11 +19,16 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.druid.guice.JsonMapperCoercible;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.config.Config;
+import org.apache.druid.segment.column.DictionaryWrapStrategy;
+import org.apache.druid.segment.data.DictionaryDummyWrapStrategy;
+import org.apache.druid.segment.data.DictionarySparseIndexWrapStrategy;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.hamcrest.CoreMatchers;
@@ -66,6 +71,13 @@ public class DruidProcessingConfigTest
           binder.bind(RuntimeInfo.class).toInstance(new MockRuntimeInfo(numProcessors, directMemorySize, heapSize));
           binder.requestStaticInjection(JvmUtils.class);
           ConfigurationObjectFactory factory = Config.createFactory(props);
+          factory.addCoercible(
+              new JsonMapperCoercible(
+                  new ObjectMapper(),
+                  DictionaryWrapStrategy.class,
+                  new DictionaryDummyWrapStrategy<>()
+              )
+          );
           DruidProcessingConfig config;
           if (replacements != null) {
             config = factory.buildWithReplacements(
@@ -134,7 +146,8 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
     props.setProperty("druid.processing.fifo", "true");
     props.setProperty("druid.processing.tmpDir", "/test/path");
-
+    props.setProperty("druid.processing.dictionary.wrapper",
+                      "{\"type\":\"sparseIndex\",\"defaultGranularity\":8192}");
 
     Injector injector = makeInjector(
         NUM_PROCESSORS,
@@ -153,6 +166,8 @@ public class DruidProcessingConfigTest
     Assert.assertTrue(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
     Assert.assertEquals(0, config.getNumInitalBuffersForIntermediatePool());
+
+    Assert.assertEquals(new DictionarySparseIndexWrapStrategy(8192, 64 << 10, 512), config.dictionaryWrapStrategy());
   }
 
   @Test

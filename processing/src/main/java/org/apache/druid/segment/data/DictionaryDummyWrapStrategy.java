@@ -17,16 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.data;
 
-import org.apache.druid.segment.data.DictionaryDummyWrapStrategy;
+import org.apache.druid.segment.column.DictionaryWrapStrategy;
 
-public interface ColumnConfig
+public class DictionaryDummyWrapStrategy<T> implements DictionaryWrapStrategy<T>
 {
-  int columnCacheSizeBytes();
-
-  default <T> DictionaryWrapStrategy<T> dictionaryWrapStrategy()
+  @Override
+  public Indexed<T> wrap(GenericIndexed<T> indexed)
   {
-    return new DictionaryDummyWrapStrategy<>();
+    return indexed;
   }
 }

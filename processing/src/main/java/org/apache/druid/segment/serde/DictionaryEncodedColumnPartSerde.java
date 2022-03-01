@@ -353,7 +353,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               new StringBitmapIndexColumnPartSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
                   rBitmaps,
-                  rDictionary
+                  columnConfig.<String>dictionaryWrapStrategy().wrap(rDictionary)
               )
           );
         }

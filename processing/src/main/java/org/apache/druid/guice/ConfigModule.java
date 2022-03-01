@@ -19,10 +19,13 @@
 
 package org.apache.druid.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.java.util.common.config.Config;
+import org.apache.druid.segment.column.DictionaryWrapStrategy;
+import org.apache.druid.segment.data.DictionaryDummyWrapStrategy;
 import org.skife.config.ConfigurationObjectFactory;
 
 import javax.validation.Validation;
@@ -43,6 +46,13 @@ public class ConfigModule implements Module
   @Provides @LazySingleton
   public ConfigurationObjectFactory makeFactory(Properties props)
   {
-    return Config.createFactory(props);
+    ConfigurationObjectFactory factory = Config.createFactory(props);
+    JsonMapperCoercible jsonMapperCoercible = new JsonMapperCoercible(
+        new ObjectMapper(),
+        DictionaryWrapStrategy.class,
+        new DictionaryDummyWrapStrategy<>()
+    );
+    factory.addCoercible(jsonMapperCoercible);
+    return factory;
   }
 }

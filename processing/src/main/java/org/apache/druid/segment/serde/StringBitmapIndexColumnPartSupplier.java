@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 
@@ -35,12 +36,12 @@ public class StringBitmapIndexColumnPartSupplier implements Supplier<BitmapIndex
 {
   private final BitmapFactory bitmapFactory;
   private final GenericIndexed<ImmutableBitmap> bitmaps;
-  private final GenericIndexed<String> dictionary;
+  private final Indexed<String> dictionary;
 
   public StringBitmapIndexColumnPartSupplier(
       BitmapFactory bitmapFactory,
       GenericIndexed<ImmutableBitmap> bitmaps,
-      GenericIndexed<String> dictionary
+      Indexed<String> dictionary
   )
   {
     this.bitmapFactory = bitmapFactory;

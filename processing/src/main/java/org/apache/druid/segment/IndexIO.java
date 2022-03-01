@@ -456,7 +456,7 @@ public class IndexIO
                 new StringBitmapIndexColumnPartSupplier(
                     new ConciseBitmapFactory(),
                     index.getBitmapIndexes().get(dimension),
-                    index.getDimValueLookup(dimension)
+                    columnConfig.<String>dictionaryWrapStrategy().wrap(index.getDimValueLookup(dimension))
                 )
             );
         if (index.getSpatialIndexes().get(dimension) != null) {

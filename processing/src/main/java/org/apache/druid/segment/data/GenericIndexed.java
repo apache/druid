@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 
 /**
@@ -140,6 +141,8 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 
   public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
   {
+    final Comparator<String> comparator = Comparators.naturalNullsFirst();
+
     @Override
     public Class<String> getClazz()
     {
@@ -162,7 +165,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     @Override
     public int compare(String o1, String o2)
     {
-      return Comparators.<String>naturalNullsFirst().compare(o1, o2);
+      return comparator.compare(o1, o2);
     }
   };
 
@@ -323,6 +326,11 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return strategy.getClazz();
   }
 
+  public ObjectStrategy<T> getStrategy()
+  {
+    return strategy;
+  }
+
   @Override
   public int size()
   {
@@ -350,12 +358,25 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     return indexOf(this, value);
   }
 
+  public int indexOf(@Nullable T value, int minIndex, int maxIndex)
+  {
+    return indexOf(this, value, minIndex, maxIndex);
+  }
+
   private int indexOf(Indexed<T> indexed, @Nullable T value)
   {
     if (!allowReverseLookup) {
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
     return Indexed.indexOf(indexed::get, size, strategy, value);
+  }
+
+  private int indexOf(Indexed<T> indexed, @Nullable T value, int minIndex, int maxIndex)
+  {
+    if (!allowReverseLookup) {
+      throw new UnsupportedOperationException("Reverse lookup not allowed.");
+    }
+    return Indexed.indexOf(indexed::get, strategy, value, minIndex, maxIndex);
   }
 
   @Override

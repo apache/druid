@@ -19,14 +19,19 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.data.DictionaryDummyWrapStrategy;
+import org.apache.druid.segment.data.DictionarySparseIndexWrapStrategy;
+import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 
-public interface ColumnConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DictionaryDummyWrapStrategy.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "default", value = DictionaryDummyWrapStrategy.class),
+    @JsonSubTypes.Type(name = "sparseIndex", value = DictionarySparseIndexWrapStrategy.class),
+})
+public interface DictionaryWrapStrategy<T>
 {
-  int columnCacheSizeBytes();
-
-  default <T> DictionaryWrapStrategy<T> dictionaryWrapStrategy()
-  {
-    return new DictionaryDummyWrapStrategy<>();
-  }
+  Indexed<T> wrap(GenericIndexed<T> indexed);
 }
