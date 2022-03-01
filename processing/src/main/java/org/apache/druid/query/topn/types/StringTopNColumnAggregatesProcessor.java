@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn.types;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
 import org.apache.druid.query.topn.TopNParams;
@@ -117,7 +118,8 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   )
   {
     final boolean notUnknown = selector.getValueCardinality() != DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-    final boolean unique = capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
+    final boolean hasDictionary = capabilities.isDictionaryEncoded().isTrue();
+    final boolean unique = capabilities.areDictionaryValuesUnique().isTrue();
     // we must know cardinality to use array based aggregation
     // we check for uniquely dictionary encoded values because non-unique (meaning dictionary ids do not have a 1:1
     // relation with values) negates many of the benefits of array aggregation:
@@ -127,8 +129,10 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     // - in cases where the same dictionary ids map to different values (1:* or *:*), results can be entirely
     //   incorrect since an aggregator for a different value might be chosen from the array based on the re-used
     //   dictionary id
-    if (notUnknown && unique) {
-      return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
+    if (notUnknown && hasDictionary && unique) {
+      return scanAndAggregateWithUniqueDictionary(query, cursor, selector, rowSelector);
+    } else if (hasDictionary) {
+      return scanAndAggregateWithDictionary(query, cursor, selector);
     } else {
       return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
     }
@@ -140,7 +144,11 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     this.aggregatesStore = new HashMap<>();
   }
 
-  private long scanAndAggregateWithCardinalityKnown(
+  /**
+   * this method uses array aggregation since dictionaryIds are unique and value cardinality is known up front, so
+   * values are aggregated into an array position specified by the dictionaryid
+   */
+  private long scanAndAggregateWithUniqueDictionary(
       TopNQuery query,
       Cursor cursor,
       DimensionSelector selector,
@@ -172,6 +180,54 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     return processedRows;
   }
 
+  /**
+   * this method uses hash table to store aggregate values ({@link #aggregatesStore}) and is geared towards selectors
+   * which have a dictionary, but those dictionary ids do not necessarily uniquely map to the value of
+   * {@link DimensionSelector#lookupName(int)}. This method keeps a cache of dictionary id to aggregators, which it uses
+   * to skip name lookup if that id has already been encountered, avoiding decoding utf8 bytes, or worse, recomputing
+   * an expression virtual column or some lookup value.
+   *
+   */
+  private long scanAndAggregateWithDictionary(
+      TopNQuery query,
+      Cursor cursor,
+      DimensionSelector selector
+  )
+  {
+    Int2ObjectOpenHashMap<Aggregator[]> aggsCache = new Int2ObjectOpenHashMap<>();
+
+    long processedRows = 0;
+    while (!cursor.isDone()) {
+      final IndexedInts dimValues = selector.getRow();
+      for (int i = 0, size = dimValues.size(); i < size; ++i) {
+        final int dimIndex = dimValues.get(i);
+        Aggregator[] aggs = aggsCache.get(dimIndex);
+        if (aggs == null) {
+          final Comparable<?> key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+          aggs = aggregatesStore.computeIfAbsent(
+              key,
+              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+          );
+          aggsCache.put(dimIndex, aggs);
+        }
+        for (Aggregator aggregator : aggs) {
+          aggregator.aggregate();
+        }
+      }
+      cursor.advance();
+      processedRows++;
+    }
+    return processedRows;
+  }
+
+  /**
+   * this method is to allow scan and aggregate when values are not dictionary encoded
+   * (e.g. {@link DimensionSelector#nameLookupPossibleInAdvance()} is false and/or when
+   * {@link ColumnCapabilities#isDictionaryEncoded()} is false). This mode also uses hash table aggregation, storing
+   * results in {@link #aggregatesStore}, and must call {@link DimensionSelector#lookupName(int)} for every row which
+   * is processed and cannot cache lookups, or use the dictionary id in any way other than to lookup the current row
+   * value.
+   */
   private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
