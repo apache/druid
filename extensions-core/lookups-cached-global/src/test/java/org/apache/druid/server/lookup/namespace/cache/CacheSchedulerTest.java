@@ -54,7 +54,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -181,9 +180,7 @@ public class CacheSchedulerTest
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     waitFor(entry);
-    Map<String, String> cache = entry.getCache();
-    Assert.assertNull(cache.put("key", "val"));
-    Assert.assertEquals("val", cache.get("key"));
+    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
   }
 
   @Test(timeout = 60_000L)
