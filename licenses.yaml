@@ -3687,7 +3687,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 libraries:
   - com.sun.jersey: jersey-json
 
@@ -4206,7 +4206,7 @@ name: Jersey
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4412,7 +4412,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4796,7 +4796,7 @@ libraries:
 
 name: com.sun.jersey jersey-bundle
 license_category: binary
-version: 1.19.3
+version: 1.19.4
 module: druid-ranger-security
 license_name: CDDL 1.1
 libraries:
