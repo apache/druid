@@ -19,8 +19,13 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -119,5 +124,27 @@ public class ZkWorkerTest
     ChildData input = prepare("{'%s': {'nested': 'obj'}'");
     String actual = extract.apply(input);
     Assert.assertNull(actual);
+  }
+
+  @Test
+  public void testCanReadIdFromAJacksonSerializedTaskAnnouncement() throws JsonProcessingException
+  {
+    final String expectedTaskId = "task01234";
+
+    Task task0 = NoopTask.create(expectedTaskId, 0);
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(
+            task0,
+            TaskStatus.running(task0.getId()),
+            TaskLocation.unknown()
+    );
+
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    byte[] serialized = objectMapper.writeValueAsBytes(taskAnnouncement);
+
+    ChildData zkNode = new ChildData("/a/b/c", new Stat(), serialized);
+
+    String actualExtractedTaskId = extract.apply(zkNode);
+    Assert.assertEquals(expectedTaskId, actualExtractedTaskId);
   }
 }
