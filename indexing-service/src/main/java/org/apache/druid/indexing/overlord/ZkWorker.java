@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Holds information about a worker and a listener for task status changes associated with the worker.
@@ -52,6 +55,7 @@ public class ZkWorker implements Closeable
 {
   private final PathChildrenCache statusCache;
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
+  private final java.util.function.Function<ChildData, String> taskIdExtractor;
 
   private AtomicReference<Worker> worker;
   private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
@@ -64,6 +68,33 @@ public class ZkWorker implements Closeable
     this.statusCache = statusCache;
     this.cacheConverter = (ChildData input) ->
         JacksonUtils.readValue(jsonMapper, input.getData(), TaskAnnouncement.class);
+    this.taskIdExtractor = createTaskIdExtractor(jsonMapper);
+  }
+
+  static java.util.function.Function<ChildData, String> createTaskIdExtractor(final ObjectMapper jsonMapper)
+  {
+    return (ChildData input) -> {
+      try (JsonParser parser = jsonMapper.getFactory().createParser(input.getData())) {
+        while (parser.nextToken() != JsonToken.END_OBJECT) {
+          String currentName = parser.getCurrentName();
+          if (currentName == null) {
+            continue;
+          }
+
+          switch (currentName) {
+            case TaskAnnouncement.TASK_ID_KEY:
+              parser.nextToken();
+              return parser.getValueAsString();
+            default:
+              parser.skipChildren();
+          }
+        }
+        return null;
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    };
   }
 
   public void start() throws Exception
@@ -85,7 +116,10 @@ public class ZkWorker implements Closeable
   @JsonProperty("runningTasks")
   public Collection<String> getRunningTaskIds()
   {
-    return getRunningTasks().keySet();
+    return statusCache.getCurrentData()
+        .stream()
+        .map(taskIdExtractor)
+        .collect(Collectors.toSet());
   }
 
   public Map<String, TaskAnnouncement> getRunningTasks()
@@ -104,8 +138,13 @@ public class ZkWorker implements Closeable
   @JsonProperty("currCapacityUsed")
   public int getCurrCapacityUsed()
   {
+    return getCurrCapacityUsed(getRunningTasks());
+  }
+
+  private static int getCurrCapacityUsed(Map<String, TaskAnnouncement> tasks)
+  {
     int currCapacity = 0;
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+    for (TaskAnnouncement taskAnnouncement : tasks.values()) {
       currCapacity += taskAnnouncement.getTaskResource().getRequiredCapacity();
     }
     return currCapacity;
@@ -114,8 +153,13 @@ public class ZkWorker implements Closeable
   @JsonProperty("currParallelIndexCapacityUsed")
   public int getCurrParallelIndexCapacityUsed()
   {
+    return getCurrParallelIndexCapacityUsed(getRunningTasks());
+  }
+
+  private int getCurrParallelIndexCapacityUsed(Map<String, TaskAnnouncement> tasks)
+  {
     int currParallelIndexCapacityUsed = 0;
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+    for (TaskAnnouncement taskAnnouncement : tasks.values()) {
       if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
         currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
       }
@@ -126,8 +170,13 @@ public class ZkWorker implements Closeable
   @JsonProperty("availabilityGroups")
   public Set<String> getAvailabilityGroups()
   {
+    return getAvailabilityGroups(getRunningTasks());
+  }
+
+  private static Set<String> getAvailabilityGroups(Map<String, TaskAnnouncement> tasks)
+  {
     Set<String> retVal = new HashSet<>();
-    for (TaskAnnouncement taskAnnouncement : getRunningTasks().values()) {
+    for (TaskAnnouncement taskAnnouncement : tasks.values()) {
       retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
     }
     return retVal;
@@ -147,7 +196,10 @@ public class ZkWorker implements Closeable
 
   public boolean isRunningTask(String taskId)
   {
-    return getRunningTasks().containsKey(taskId);
+    return statusCache.getCurrentData()
+        .stream()
+        .map(taskIdExtractor)
+        .anyMatch((String s) -> taskId.equals(s));
   }
 
   @UsedInGeneratedCode // See JavaScriptWorkerSelectStrategyTest
@@ -177,13 +229,14 @@ public class ZkWorker implements Closeable
 
   public ImmutableWorkerInfo toImmutable()
   {
+    Map<String, TaskAnnouncement> tasks = getRunningTasks();
 
     return new ImmutableWorkerInfo(
         worker.get(),
-        getCurrCapacityUsed(),
-        getCurrParallelIndexCapacityUsed(),
-        getAvailabilityGroups(),
-        getRunningTaskIds(),
+        getCurrCapacityUsed(tasks),
+        getCurrParallelIndexCapacityUsed(tasks),
+        getAvailabilityGroups(tasks),
+        tasks.keySet(),
         lastCompletedTaskTime.get(),
         blacklistedUntil.get()
     );
