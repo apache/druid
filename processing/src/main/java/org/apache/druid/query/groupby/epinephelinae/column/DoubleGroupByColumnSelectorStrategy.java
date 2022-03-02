@@ -50,21 +50,23 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
     values[columnIndex] = selector.getDouble();
-  }
-
-  @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
-  {
-    return selector.getDouble();
+    return 0;
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
     keyBuffer.putDouble(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) obj));
+  }
+
+  @Override
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putDouble(keyBufferPosition, selector.getDouble());
+    return 0;
   }
 
   @Override
@@ -101,5 +103,11 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
         true,
         stringComparator
     );
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

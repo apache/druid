@@ -76,26 +76,29 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     DimensionSelector dimSelector = (DimensionSelector) selector;
     IndexedInts row = dimSelector.getRow();
     valuess[columnIndex] = row;
-  }
-
-  @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
-  {
-    final DimensionSelector dimSelector = (DimensionSelector) selector;
-    final IndexedInts row = dimSelector.getRow();
-    Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
-    return row.size() == 1 ? row.get(0) : GROUP_BY_MISSING_VALUE;
+    return 0;
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
   {
     keyBuffer.putInt(keyBufferPosition, (int) obj);
+  }
+
+  @Override
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
+  {
+    final DimensionSelector dimSelector = (DimensionSelector) selector;
+    final IndexedInts row = dimSelector.getRow();
+    Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
+    final int dictId = row.size() == 1 ? row.get(0) : GROUP_BY_MISSING_VALUE;
+    keyBuffer.putInt(keyBufferPosition, dictId);
+    return 0;
   }
 
   @Override
@@ -171,5 +174,11 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
         return comparator.compare(lhsStr, rhsStr);
       };
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

@@ -40,7 +40,7 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
   }
 
   @Override
-  public void writeKeys(
+  public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
@@ -57,6 +57,8 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
         keySpace.putDouble(j, vector[i]);
       }
     }
+
+    return 0;
   }
 
   @Override
@@ -68,5 +70,11 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
   )
   {
     resultRow.set(resultRowPosition, keyMemory.getDouble(keyOffset));
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

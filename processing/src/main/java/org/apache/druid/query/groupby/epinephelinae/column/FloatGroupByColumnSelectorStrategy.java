@@ -51,21 +51,23 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     valuess[columnIndex] = selector.getFloat();
-  }
-
-  @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
-  {
-    return selector.getFloat();
+    return 0;
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
     keyBuffer.putFloat(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) obj));
+  }
+
+  @Override
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putFloat(keyBufferPosition, selector.getFloat());
+    return 0;
   }
 
   @Override
@@ -105,5 +107,11 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
     // rows from a float column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

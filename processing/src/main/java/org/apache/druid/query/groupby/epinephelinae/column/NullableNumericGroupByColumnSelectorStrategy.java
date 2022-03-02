@@ -66,23 +66,14 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
     if (selector.isNull()) {
       values[columnIndex] = null;
+      return 0;
     } else {
-      delegate.initColumnValues(selector, columnIndex, values);
+      return delegate.initColumnValues(selector, columnIndex, values);
     }
-  }
-
-  @Override
-  @Nullable
-  public Object getOnlyValue(ColumnValueSelector selector)
-  {
-    if (selector.isNull()) {
-      return null;
-    }
-    return delegate.getOnlyValue(selector);
   }
 
   @Override
@@ -94,6 +85,17 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
       keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
     }
     delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
+  }
+
+  @Override
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
+  {
+    if (selector.isNull()) {
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NULL_BYTE);
+    } else {
+      keyBuffer.putLong(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+    }
+    return delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, selector, keyBuffer);
   }
 
   @Override
@@ -132,5 +134,11 @@ public class NullableNumericGroupByColumnSelectorStrategy implements GroupByColu
     // rows from a nullable column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public void reset()
+  {
+    delegate.reset();
   }
 }
