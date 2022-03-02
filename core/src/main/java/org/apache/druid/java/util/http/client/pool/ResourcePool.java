@@ -40,7 +40,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A resource pool based on {@link LoadingCache}. When a resource is first requested for a new key,
- * all {@link ResourcePoolConfig#getMaxPerKey()} resources are initialized and cached in the {@link #pool}.
+ * If the flag: eagerInitialization is true:
+ *    {@link ResourcePoolConfig#getMaxPerKey()} resources are initialized and cached in the {@link #pool}.
+ * Else:
+ *    Initialize a single resource
  * The individual resource in {@link ImmediateCreationResourceHolder} is valid while (current time - last access time)
  * <= {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()}.
  *
@@ -56,7 +59,8 @@ public class ResourcePool<K, V> implements Closeable
   private final LoadingCache<K, ImmediateCreationResourceHolder<K, V>> pool;
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config)
+  public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
+                      final boolean eagerInitialization)
   {
     this.pool = CacheBuilder.newBuilder().build(
         new CacheLoader<K, ImmediateCreationResourceHolder<K, V>>()
@@ -67,6 +71,7 @@ public class ResourcePool<K, V> implements Closeable
             return new ImmediateCreationResourceHolder<>(
                 config.getMaxPerKey(),
                 config.getUnusedConnectionTimeoutMillis(),
+                eagerInitialization,
                 input,
                 factory
             );
@@ -167,6 +172,7 @@ public class ResourcePool<K, V> implements Closeable
     private ImmediateCreationResourceHolder(
         int maxSize,
         long unusedResourceTimeoutMillis,
+        boolean eagerInitialization,
         K key,
         ResourceFactory<K, V> factory
     )
@@ -177,7 +183,8 @@ public class ResourcePool<K, V> implements Closeable
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
       this.resourceHolderList = new ArrayDeque<>();
 
-      for (int i = 0; i < maxSize; ++i) {
+      final int initializationSize = eagerInitialization ? maxSize : 1;
+      for (int i = 0; i < initializationSize; ++i) {
         resourceHolderList.add(
             new ResourceHolder<>(
                 System.currentTimeMillis(),

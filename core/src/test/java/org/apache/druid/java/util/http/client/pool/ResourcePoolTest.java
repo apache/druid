@@ -44,7 +44,8 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
     pool = new ResourcePool<String, String>(
         resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4))
+        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
+        true
     );
 
     EasyMock.verify(resourceFactory);
@@ -243,7 +244,8 @@ public class ResourcePoolTest
 
     pool = new ResourcePool<String, String>(
         resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10))
+        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10)),
+        true
     );
 
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
