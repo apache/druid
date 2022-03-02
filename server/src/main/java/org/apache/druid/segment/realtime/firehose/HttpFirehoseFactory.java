@@ -110,7 +110,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    return HttpEntity.openInputStream(object, httpAuthenticationUsername, httpAuthenticationPasswordProvider, start);
+    return HttpEntity.openInputStream(object.toURL(), httpAuthenticationUsername, httpAuthenticationPasswordProvider, start);
   }
 
   @Override

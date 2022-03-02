@@ -33,27 +33,23 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLStreamHandler;
 
 public class HttpEntityTest
 {
-  private URI uri;
   private URL url;
   private URLConnection urlConnection;
   private InputStream inputStreamMock;
 
   @Before
-  public void setup() throws IOException
+  public void setup() throws URISyntaxException, IOException
   {
-    uri = Mockito.mock(URI.class);
-    url = Mockito.mock(URL.class);
     urlConnection = Mockito.mock(URLConnection.class);
     inputStreamMock = Mockito.mock(InputStream.class);
-    Mockito.when(uri.toURL()).thenReturn(url);
-    Mockito.when(url.openConnection()).thenReturn(urlConnection);
+    url = new URL("test", "some.host.com", 100, "", new TestUrlStreamHandler(urlConnection));
     Mockito.when(urlConnection.getInputStream()).thenReturn(inputStreamMock);
     Mockito.when(inputStreamMock.skip(ArgumentMatchers.anyLong())).then(AdditionalAnswers.returnsFirstArg());
   }
@@ -64,7 +60,7 @@ public class HttpEntityTest
   @Test
   public void testOpenInputStream() throws IOException, URISyntaxException
   {
-    URI url = new URI("https://druid.apache.org/data/wikipedia.json.gz");
+    URL url = new URL("https://druid.apache.org/data/wikipedia.json.gz");
     final InputStream inputStream = HttpEntity.openInputStream(url, "", null, 0);
     final InputStream inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
     inputStream.skip(5);
@@ -77,7 +73,7 @@ public class HttpEntityTest
     long offset = 15;
     String contentRange = StringUtils.format("bytes %d-%d/%d", offset, 1000, 1000);
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(contentRange);
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(url, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(0)).skip(offset);
   }
 
@@ -86,7 +82,7 @@ public class HttpEntityTest
   {
     long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(null);
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(url, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
   }
 
@@ -95,7 +91,25 @@ public class HttpEntityTest
   {
     long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn("token 2-12/12");
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(url, "", null, offset);
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
   }
+
+  private static class TestUrlStreamHandler extends URLStreamHandler
+  {
+    private final URLConnection urlConnection;
+
+    private TestUrlStreamHandler(URLConnection urlConnection)
+    {
+      this.urlConnection = urlConnection;
+    }
+
+    @Override
+    protected URLConnection openConnection(URL url)
+    {
+      return urlConnection;
+    }
+
+  }
+
 }

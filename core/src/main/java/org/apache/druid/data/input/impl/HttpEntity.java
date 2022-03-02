@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
 import java.net.URLConnection;
 import java.util.Base64;
 
@@ -65,7 +66,7 @@ public class HttpEntity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+    return openInputStream(uri.toURL(), httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
   }
 
   @Override
@@ -80,10 +81,10 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
+  public static InputStream openInputStream(URL object, String userName, PasswordProvider passwordProvider, long offset)
       throws IOException
   {
-    final URLConnection urlConnection = object.toURL().openConnection();
+    final URLConnection urlConnection = object.openConnection();
     if (!Strings.isNullOrEmpty(userName) && passwordProvider != null) {
       String userPass = userName + ":" + passwordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
