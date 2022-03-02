@@ -54,7 +54,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   {
     // only report the underlying selector cardinality if the column the selector is for is dictionary encoded, and
     // the dictionary values are unique, that is they have a 1:1 mapping between dictionaryId and column value
-    if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+    if (capabilities.isDictionaryEncoded().isTrue()) {
       return selector.getValueCardinality();
     }
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
