@@ -26,10 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -43,36 +41,29 @@ import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
-import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
-import org.easymock.EasyMock;
-import org.easymock.IExpectationSetters;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({
-    NamespaceExtractionCacheManager.class,
-    CacheScheduler.class,
-    CacheScheduler.VersionedCache.class,
-    CacheScheduler.Entry.class
-})
-// defer classloading of the following classes to the system classloader
-// since they need to be loaded in the right Java module in JDK9 and above
-@PowerMockIgnore({"javax.net.ssl.*", "javax.xml.*", "com.sun.xml.*"})
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMostOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 public class NamespaceLookupExtractorFactoryTest
 {
   static {
@@ -82,13 +73,12 @@ public class NamespaceLookupExtractorFactoryTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
-  private final CacheScheduler scheduler = PowerMock.createStrictMock(CacheScheduler.class);
-  private final CacheScheduler.Entry entry = PowerMock.createStrictMock(CacheScheduler.Entry.class);
+  private final CacheScheduler scheduler = mock(CacheScheduler.class);
+  private final CacheScheduler.Entry entry = mock(CacheScheduler.Entry.class);
   private final CacheScheduler.VersionedCache versionedCache =
-      PowerMock.createStrictMock(CacheScheduler.VersionedCache.class);
+      mock(CacheScheduler.VersionedCache.class);
+
 
   @Before
   public void setUp()
@@ -123,7 +113,6 @@ public class NamespaceLookupExtractorFactoryTest
         temporaryFolder.newFolder().toURI(),
         null, null,
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
-
         Period.millis(0),
         null,
         null
@@ -144,24 +133,17 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testMissingSpec()
   {
-    expectedException.expectMessage("extractionNamespace should be specified");
-    new NamespaceLookupExtractorFactory(null, null);
+    Assert.assertThrows(
+        "extractionNamespace should be specified", NullPointerException.class,
+        () -> new NamespaceLookupExtractorFactory(null, null)
+    );
   }
 
   @Test
-  public void testSimpleStartStop()
+  public void testSimpleStartStop() throws Exception
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
+    final ExtractionNamespace extractionNamespace = () -> 0;
     expectScheduleAndWaitOnce(extractionNamespace);
-    expectEntryCloseOnce();
-    mockReplay();
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -169,23 +151,17 @@ public class NamespaceLookupExtractorFactoryTest
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    mockVerify();
+
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry).close();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   @Test
   public void testStartReturnsImmediately()
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
-    EasyMock.expect(scheduler.schedule(EasyMock.eq(extractionNamespace))).andReturn(entry).once();
-    expectEntryCloseOnce();
-    mockReplay();
+    final ExtractionNamespace extractionNamespace = () -> 0;
+    when(scheduler.schedule(extractionNamespace)).thenReturn(entry);
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -195,29 +171,18 @@ public class NamespaceLookupExtractorFactoryTest
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    mockVerify();
-  }
 
-  private void expectEntryCloseOnce()
-  {
-    entry.close();
-    EasyMock.expectLastCall().once();
+    verify(scheduler).schedule(any());
+    verify(entry).close();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   @Test
   public void testStartReturnsImmediatelyAndFails() throws InterruptedException
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
-    EasyMock.expect(scheduler.scheduleAndWait(EasyMock.eq(extractionNamespace), EasyMock.eq(1L)))
-            .andReturn(null).once();
-    mockReplay();
+    final ExtractionNamespace extractionNamespace = () -> 0;
+    when(scheduler.scheduleAndWait(extractionNamespace, 1L))
+            .thenReturn(null);
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -226,23 +191,16 @@ public class NamespaceLookupExtractorFactoryTest
         scheduler
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.start());
-    mockVerify();
+
+    verify(scheduler).scheduleAndWait(extractionNamespace, 1L);
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   @Test
-  public void testSimpleStartStopStop()
+  public void testSimpleStartStopStop() throws Exception
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
+    final ExtractionNamespace extractionNamespace = () -> 0;
     expectScheduleAndWaitOnce(extractionNamespace);
-    expectEntryCloseOnce();
-    mockReplay();
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -251,22 +209,17 @@ public class NamespaceLookupExtractorFactoryTest
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    mockVerify();
+
+    verify(entry).close();
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   @Test
-  public void testSimpleStartStart()
+  public void testSimpleStartStart() throws Exception
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
+    final ExtractionNamespace extractionNamespace = () -> 0;
     expectScheduleAndWaitOnce(extractionNamespace);
-    mockReplay();
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -274,27 +227,21 @@ public class NamespaceLookupExtractorFactoryTest
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    mockVerify();
+
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
 
   @Test
-  public void testSimpleStartGetStop()
+  public void testSimpleStartGetStop() throws Exception
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
+    final ExtractionNamespace extractionNamespace = () -> 0;
     expectScheduleAndWaitOnce(extractionNamespace);
-    expectEntryGetCacheStateOnce(versionedCache);
-    expectEmptyCache();
-    expectVersionOnce("0");
-    expectEntryCloseOnce();
-    mockReplay();
+    when(entry.getCacheState()).thenReturn(versionedCache);
+    when(entry.getCache()).thenReturn(new HashMap<String, String>());
+    when(versionedCache.getCache()).thenReturn(new HashMap<>());
+    when(versionedCache.getVersion()).thenReturn("0");
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -304,18 +251,18 @@ public class NamespaceLookupExtractorFactoryTest
     final LookupExtractor extractor = namespaceLookupExtractorFactory.get();
     Assert.assertNull(extractor.apply("foo"));
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    mockVerify();
-  }
 
-  private void expectEmptyCache()
-  {
-    EasyMock.expect(entry.getCache()).andReturn(new HashMap<String, String>()).anyTimes();
-    EasyMock.expect(versionedCache.getCache()).andReturn(new HashMap<String, String>()).anyTimes();
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry).getCacheState();
+    verify(entry).close();
+    verify(versionedCache).getVersion();
+    verify(versionedCache, atLeastOnce()).getCache();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
 
   @Test
-  public void testSimpleStartRacyGetDuringDelete()
+  public void testSimpleStartRacyGetDuringDelete() throws Exception
   {
     final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
     {
@@ -326,48 +273,27 @@ public class NamespaceLookupExtractorFactoryTest
       }
     };
     expectScheduleAndWaitOnce(extractionNamespace);
-    expectEntryGetCacheStateOnce(CacheScheduler.NoCache.ENTRY_CLOSED);
-
-    mockReplay();
+    when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.ENTRY_CLOSED);
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
         scheduler
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    try {
-      namespaceLookupExtractorFactory.get();
-      Assert.fail("Should have thrown ISE");
-    }
-    catch (ISE ise) {
-      // NOOP
-    }
+    Assert.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
 
-    mockVerify();
-  }
-
-  private void expectEntryGetCacheStateOnce(final CacheScheduler.CacheState versionedCache)
-  {
-    EasyMock.expect(entry.getCacheState()).andReturn(versionedCache).once();
-  }
-
-  private IExpectationSetters<String> expectVersionOnce(String version)
-  {
-    return EasyMock.expect(versionedCache.getVersion()).andReturn(version).once();
-  }
-
-  private void expectFooBarCache()
-  {
-    EasyMock.expect(versionedCache.getCache()).andReturn(new HashMap<>(ImmutableMap.of("foo", "bar"))).once();
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry).getCacheState();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   private void expectScheduleAndWaitOnce(ExtractionNamespace extractionNamespace)
   {
     try {
-      EasyMock.expect(scheduler.scheduleAndWait(
-          EasyMock.eq(extractionNamespace),
-          EasyMock.eq(60000L)
-      )).andReturn(entry).once();
+      when(scheduler.scheduleAndWait(
+          extractionNamespace,
+          60000L
+      )).thenReturn(entry);
     }
     catch (InterruptedException e) {
       throw new AssertionError(e);
@@ -376,7 +302,7 @@ public class NamespaceLookupExtractorFactoryTest
 
 
   @Test
-  public void testStartFailsToSchedule()
+  public void testStartFailsToSchedule() throws Exception
   {
     final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
     {
@@ -387,15 +313,14 @@ public class NamespaceLookupExtractorFactoryTest
       }
     };
     try {
-      EasyMock.expect(scheduler.scheduleAndWait(
-          EasyMock.eq(extractionNamespace),
-          EasyMock.eq(60000L)
-      )).andReturn(null).once();
+      when(scheduler.scheduleAndWait(
+          extractionNamespace,
+          60000L
+      )).thenReturn(null);
     }
     catch (InterruptedException e) {
       throw new AssertionError(e);
     }
-    mockReplay();
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -404,15 +329,21 @@ public class NamespaceLookupExtractorFactoryTest
     Assert.assertFalse(namespaceLookupExtractorFactory.start());
     // true because it never fully started
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    mockVerify();
+
+    verify(scheduler).scheduleAndWait(
+        extractionNamespace,
+        60000L
+    );
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   @Test
   public void testReplaces()
   {
-    final ExtractionNamespace en1 = PowerMock.createStrictMock(ExtractionNamespace.class), en2 = PowerMock.createStrictMock(
-        ExtractionNamespace.class);
-    PowerMock.replay(en1, en2);
+    final ExtractionNamespace
+        en1 = mock(ExtractionNamespace.class),
+        en2 = mock(ExtractionNamespace.class);
+
     final NamespaceLookupExtractorFactory f1 = new NamespaceLookupExtractorFactory(
         en1,
         scheduler
@@ -427,21 +358,15 @@ public class NamespaceLookupExtractorFactoryTest
     Assert.assertFalse(f1.replaces(f1b));
     Assert.assertFalse(f1b.replaces(f1));
     Assert.assertFalse(f1.replaces(f1));
-    Assert.assertTrue(f1.replaces(EasyMock.createNiceMock(LookupExtractorFactory.class)));
-    PowerMock.verify(en1, en2);
+    Assert.assertTrue(f1.replaces(mock(LookupExtractorFactory.class)));
+
+    verifyNoInteractions(en1, en2);
   }
 
   @Test(expected = ISE.class)
   public void testMustBeStarted()
   {
-    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
-    {
-      @Override
-      public long getPollMs()
-      {
-        return 0;
-      }
-    };
+    final ExtractionNamespace extractionNamespace = () -> 0;
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
@@ -521,7 +446,8 @@ public class NamespaceLookupExtractorFactoryTest
     final String str2 = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
     final NamespaceLookupExtractorFactory factory2 =
         (NamespaceLookupExtractorFactory) mapper.readValue(str2, LookupExtractorFactory.class);
-    Assert.assertTrue(factory1.getCacheScheduler() == factory2.getCacheScheduler());
+
+    Assert.assertSame(factory1.getCacheScheduler(), factory2.getCacheScheduler());
   }
 
   private Injector makeInjector()
@@ -529,18 +455,11 @@ public class NamespaceLookupExtractorFactoryTest
     return Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder,
-                    Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test-inject", null, false, null, null, true, false)
-                );
-              }
-            }
+            binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
+            )
         )
     );
   }
@@ -548,11 +467,9 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testExceptionalIntrospectionHandler() throws Exception
   {
-    final ExtractionNamespace extractionNamespace = PowerMock.createStrictMock(ExtractionNamespace.class);
-    EasyMock.expect(scheduler.scheduleAndWait(EasyMock.eq(extractionNamespace), EasyMock.anyLong()))
-            .andReturn(entry)
-            .once();
-    mockReplay();
+    final ExtractionNamespace extractionNamespace = mock(ExtractionNamespace.class);
+    when(scheduler.scheduleAndWait(eq(extractionNamespace), anyLong())).thenReturn(entry);
+
     final LookupExtractorFactory lookupExtractorFactory = new NamespaceLookupExtractorFactory(
         extractionNamespace,
         scheduler
@@ -563,33 +480,21 @@ public class NamespaceLookupExtractorFactoryTest
     Assert.assertNotNull(handler);
     final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
 
-    mockVerify();
-    mockReset();
-    EasyMock.expect(entry.getCacheState()).andReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED).once();
-    mockReplay();
+    verify(scheduler).scheduleAndWait(eq(extractionNamespace), anyLong());
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
+
+    reset(scheduler, entry, versionedCache);
+
+    when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED);
 
     final Response response = (Response) clazz.getMethod("getVersion").invoke(handler);
     Assert.assertEquals(404, response.getStatus());
 
+    verify(entry).getCacheState();
     validateNotFound("getKeys", handler, clazz);
     validateNotFound("getValues", handler, clazz);
     validateNotFound("getMap", handler, clazz);
-    mockVerify();
-  }
-
-  private void mockReplay()
-  {
-    PowerMock.replay(scheduler, entry, versionedCache);
-  }
-
-  private void mockReset()
-  {
-    PowerMock.reset(scheduler, entry, versionedCache);
-  }
-
-  private void mockVerify()
-  {
-    PowerMock.verify(scheduler, entry, versionedCache);
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
   private void validateNotFound(
@@ -598,13 +503,21 @@ public class NamespaceLookupExtractorFactoryTest
       Class<? extends LookupIntrospectHandler> clazz
   ) throws Exception
   {
-    mockVerify();
-    mockReset();
-    expectEntryGetCacheStateOnce(versionedCache);
-    expectEmptyCache();
-    EasyMock.expect(versionedCache.getVersion()).andThrow(new ISE("some exception")).once();
-    mockReplay();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
+    reset(scheduler, entry, versionedCache);
+
+    when(entry.getCacheState()).thenReturn(versionedCache);
+    when(entry.getCache()).thenReturn(new HashMap<String, String>());
+    when(versionedCache.getCache()).thenReturn(new HashMap<>());
+    when(versionedCache.getVersion()).thenThrow(new ISE("some exception"));
+
     final Response response = (Response) clazz.getMethod(method).invoke(handler);
     Assert.assertEquals(404, response.getStatus());
+
+    verify(entry).getCacheState();
+    verify(entry, atMostOnce()).getCache();
+    verify(versionedCache, atMostOnce()).getCache();
+    verify(versionedCache).getVersion();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 }

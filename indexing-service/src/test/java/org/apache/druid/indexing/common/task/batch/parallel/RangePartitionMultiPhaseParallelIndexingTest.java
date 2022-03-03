@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -225,20 +226,37 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   public void createsCorrectRangePartitions() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = runTestTask(
+    final Set<DataSegment> publishedSegments = runTask(runTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
             Collections.singletonList(DIM1),
             false
         ),
-        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
         false
-    );
+    ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
     }
+  }
+
+  @Test
+  public void testRowStats()
+  {
+    if (useMultivalueDim) {
+      return;
+    }
+    final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    ParallelIndexSupervisorTask task = runTestTask(
+        new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
+        false);
+    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+        task.getId(),
+        ImmutableList.of(),
+        new RowIngestionMetersTotals(600, 0, 0, 0));
+    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    compareTaskReports(expectedReports, actualReports);
   }
 
   @Test
@@ -250,32 +268,29 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = new HashSet<>();
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new SingleDimensionPartitionsSpec(
                 targetRowsPerSegment,
                 null,
                 DIM1,
                 false
             ),
-            TaskState.SUCCESS,
             false
-        )
+        ), TaskState.SUCCESS)
     );
     // Append
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new DynamicPartitionsSpec(5, null),
-            TaskState.SUCCESS,
             true
-        )
+        ), TaskState.SUCCESS)
     );
     // And append again
     publishedSegments.addAll(
-        runTestTask(
+        runTask(runTestTask(
             new DynamicPartitionsSpec(10, null),
-            TaskState.SUCCESS,
             true
-        )
+        ), TaskState.SUCCESS)
     );
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
@@ -306,14 +321,13 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     }
   }
 
-  private Set<DataSegment> runTestTask(
+  private ParallelIndexSupervisorTask runTestTask(
       PartitionsSpec partitionsSpec,
-      TaskState expectedTaskState,
       boolean appendToExisting
   )
   {
     if (isUseInputFormatApi()) {
-      return runTestTask(
+      return createTask(
           TIMESTAMP_SPEC,
           DIMENSIONS_SPEC,
           INPUT_FORMAT,
@@ -323,11 +337,10 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
           appendToExisting
       );
     } else {
-      return runTestTask(
+      return createTask(
           null,
           null,
           null,
@@ -337,7 +350,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           TEST_FILE_NAME_PREFIX + "*",
           partitionsSpec,
           maxNumConcurrentSubTasks,
-          expectedTaskState,
           appendToExisting
       );
     }

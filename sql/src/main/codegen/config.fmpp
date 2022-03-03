@@ -383,6 +383,7 @@ data: {
     # Example: SqlShowDatabases(), SqlShowTables().
     statementParserMethods: [
       "DruidSqlInsert()"
+      "DruidSqlExplain()"
     ]
 
     # List of methods for parsing custom literals.
@@ -433,6 +434,7 @@ data: {
     # "dataTypeParserMethods".
     implementationFiles: [
       "insert.ftl"
+      "explain.ftl"
     ]
 
     includePosixOperators: false

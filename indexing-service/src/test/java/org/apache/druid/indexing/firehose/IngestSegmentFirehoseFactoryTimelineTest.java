@@ -91,9 +91,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           new JSONParseSpec(
               new TimestampSpec(TIME_COLUMN, "auto", null),
               new DimensionsSpec(
-                  DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
-                  null,
-                  null
+                  DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS))
               ),
               null,
               null,

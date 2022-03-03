@@ -101,9 +101,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                                                  .add(new DoubleDimensionSchema("d1"))
                                                  .add(new FloatDimensionSchema("f1"))
                                                  .add(new LongDimensionSchema("l1"))
-                                                 .build(),
-                                    null,
-                                    null
+                                                 .build()
                                 )
                             )
                             .withMetrics(

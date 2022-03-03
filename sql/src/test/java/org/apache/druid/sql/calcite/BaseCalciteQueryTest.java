@@ -201,6 +201,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   };
 
+  public static final int MAX_NUM_IN_FILTERS = 100;
+  public static final PlannerConfig PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER = new PlannerConfig()
+  {
+    @Override
+    public int getMaxNumericInFilters()
+    {
+      return MAX_NUM_IN_FILTERS;
+    }
+  };
+
   public static final String DUMMY_SQL_ID = "dummy";
   public static final String LOS_ANGELES = "America/Los_Angeles";
 
