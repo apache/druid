@@ -40,41 +40,49 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A resource pool based on {@link LoadingCache}. When a resource is first requested for a new key,
- * If the flag: lazyConnections is false:
+ * If the flag: eagerInitialization is true: use {@link EagerCreationResourceHolder}
  *    {@link ResourcePoolConfig#getMaxPerKey()} resources are initialized and cached in the {@link #pool}.
  * Else:
- *    Initialize a single resource
- * The individual resource in {@link ImmediateCreationResourceHolder} is valid while (current time - last access time)
+ *    Initialize a single resource and further lazily using {@link LazyCreationResourceHolder}
+ * The individual resource in {@link ResourceHolderPerKey} is valid while (current time - last access time)
  * <= {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()}.
  *
  * A resource is closed and reinitialized if {@link ResourceFactory#isGood} returns false or it's expired based on
  * {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()}.
  *
  * {@link ResourcePoolConfig#getMaxPerKey() is a hard limit for the max number of resources per cache entry. The total
- * number of resources in {@link ImmediateCreationResourceHolder} cannot be larger than the limit in any case.
+ * number of resources in {@link ResourceHolderPerKey} cannot be larger than the limit in any case.
  */
 public class ResourcePool<K, V> implements Closeable
 {
   private static final Logger log = new Logger(ResourcePool.class);
-  private final LoadingCache<K, ImmediateCreationResourceHolder<K, V>> pool;
+  private final LoadingCache<K, ResourceHolderPerKey<K, V>> pool;
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
-                      final boolean lazyConnections)
+                      final boolean eagerInitialization)
   {
     this.pool = CacheBuilder.newBuilder().build(
-        new CacheLoader<K, ImmediateCreationResourceHolder<K, V>>()
+        new CacheLoader<K, ResourceHolderPerKey<K, V>>()
         {
           @Override
-          public ImmediateCreationResourceHolder<K, V> load(K input)
+          public ResourceHolderPerKey<K, V> load(K input)
           {
-            return new ImmediateCreationResourceHolder<>(
-                config.getMaxPerKey(),
-                config.getUnusedConnectionTimeoutMillis(),
-                lazyConnections,
-                input,
-                factory
-            );
+            if (eagerInitialization) {
+              return new EagerCreationResourceHolder<>(
+                  config.getMaxPerKey(),
+                  config.getUnusedConnectionTimeoutMillis(),
+                  input,
+                  factory
+              );
+            } else {
+              return new LazyCreationResourceHolder<>(
+                  config.getMaxPerKey(),
+                  config.getUnusedConnectionTimeoutMillis(),
+                  input,
+                  factory
+              );
+            }
           }
         }
     );
@@ -91,7 +99,7 @@ public class ResourcePool<K, V> implements Closeable
       return null;
     }
 
-    final ImmediateCreationResourceHolder<K, V> holder;
+    final ResourceHolderPerKey<K, V> holder;
     try {
       holder = pool.get(key);
     }
@@ -143,11 +151,11 @@ public class ResourcePool<K, V> implements Closeable
   public void close()
   {
     closed.set(true);
-    final ConcurrentMap<K, ImmediateCreationResourceHolder<K, V>> mapView = pool.asMap();
+    final ConcurrentMap<K, ResourceHolderPerKey<K, V>> mapView = pool.asMap();
     Closer closer = Closer.create();
-    for (Iterator<Map.Entry<K, ImmediateCreationResourceHolder<K, V>>> iterator =
+    for (Iterator<Map.Entry<K, ResourceHolderPerKey<K, V>>> iterator =
          mapView.entrySet().iterator(); iterator.hasNext(); ) {
-      Map.Entry<K, ImmediateCreationResourceHolder<K, V>> e = iterator.next();
+      Map.Entry<K, ResourceHolderPerKey<K, V>> e = iterator.next();
       iterator.remove();
       closer.register(e.getValue());
     }
@@ -159,32 +167,18 @@ public class ResourcePool<K, V> implements Closeable
     }
   }
 
-  private static class ImmediateCreationResourceHolder<K, V> implements Closeable
+  private static class LazyCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
   {
-    private final int maxSize;
-    private final K key;
-    private final ResourceFactory<K, V> factory;
-    private final ArrayDeque<ResourceHolder<V>> resourceHolderList;
-    private int deficit = 0;
-    private boolean closed = false;
-    private final long unusedResourceTimeoutMillis;
-
-    private ImmediateCreationResourceHolder(
+    private LazyCreationResourceHolder(
         int maxSize,
         long unusedResourceTimeoutMillis,
-        boolean lazyConnections,
         K key,
         ResourceFactory<K, V> factory
     )
     {
-      this.maxSize = maxSize;
-      this.key = key;
-      this.factory = factory;
-      this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
-      this.resourceHolderList = new ArrayDeque<>();
+      super(maxSize, unusedResourceTimeoutMillis, key, factory);
 
-      final int initializationSize = lazyConnections ? 1 : maxSize;
-      for (int i = 0; i < initializationSize; ++i) {
+      for (int i = 0; i < maxSize; i++) {
         resourceHolderList.add(
             new ResourceHolder<>(
                 System.currentTimeMillis(),
@@ -195,6 +189,54 @@ public class ResourcePool<K, V> implements Closeable
             )
         );
       }
+    }
+  }
+
+  private static class EagerCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
+  {
+    private EagerCreationResourceHolder(
+        int maxSize,
+        long unusedResourceTimeoutMillis,
+        K key,
+        ResourceFactory<K, V> factory
+    )
+    {
+      super(maxSize, unusedResourceTimeoutMillis, key, factory);
+
+      resourceHolderList.add(
+          new ResourceHolder<>(
+              System.currentTimeMillis(),
+              Preconditions.checkNotNull(
+                  factory.generate(key),
+                  "factory.generate(key)"
+              )
+          )
+      );
+    }
+  }
+
+  private static class ResourceHolderPerKey<K, V> implements Closeable
+  {
+    private final int maxSize;
+    private final K key;
+    private final ResourceFactory<K, V> factory;
+    protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
+    private int deficit = 0;
+    private boolean closed = false;
+    private final long unusedResourceTimeoutMillis;
+
+    protected ResourceHolderPerKey(
+        int maxSize,
+        long unusedResourceTimeoutMillis,
+        K key,
+        ResourceFactory<K, V> factory
+    )
+    {
+      this.maxSize = maxSize;
+      this.key = key;
+      this.factory = factory;
+      this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
+      this.resourceHolderList = new ArrayDeque<>();
     }
 
     /**

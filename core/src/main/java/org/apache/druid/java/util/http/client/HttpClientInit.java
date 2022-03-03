@@ -92,7 +92,7 @@ public class HttpClientInit
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis()
                   ),
-                  config.isLazyConnections()
+                  config.isEagerInitialization()
               ),
               config.getReadTimeout(),
               config.getCompressionCodec(),
