@@ -13,4 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-org.apache.druid.data.input.opentelemetry.protobuf.OpenTelemetryMetricsProtobufInputFormat
+org.apache.druid.data.input.opentelemetry.protobuf.OpenTelemetryProtobufExtensionsModule
+
