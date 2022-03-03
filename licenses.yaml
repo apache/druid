@@ -5029,7 +5029,7 @@ libraries:
 
 name: oak
 license_category: binary
-version: 0.2.4
+version: 0.2.5
 module: extensions/oak-incremental-index
 license_name: Apache License version 2.0
 libraries:
