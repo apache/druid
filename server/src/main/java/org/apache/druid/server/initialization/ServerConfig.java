@@ -159,7 +159,7 @@ public class ServerConfig
   private boolean showDetailedJettyErrors = true;
 
   @JsonProperty
-  private boolean returnJettyErrorsInJson = true;
+  private boolean returnJettyErrorsInJson = false;
 
   public int getNumThreads()
   {
