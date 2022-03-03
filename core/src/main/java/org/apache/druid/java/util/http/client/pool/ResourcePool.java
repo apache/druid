@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A resource pool based on {@link LoadingCache}. When a resource is first requested for a new key,
- * If the flag: eagerInitialization is true:
+ * If the flag: lazyConnections is false:
  *    {@link ResourcePoolConfig#getMaxPerKey()} resources are initialized and cached in the {@link #pool}.
  * Else:
  *    Initialize a single resource
@@ -60,7 +60,7 @@ public class ResourcePool<K, V> implements Closeable
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
-                      final boolean eagerInitialization)
+                      final boolean lazyConnections)
   {
     this.pool = CacheBuilder.newBuilder().build(
         new CacheLoader<K, ImmediateCreationResourceHolder<K, V>>()
@@ -71,7 +71,7 @@ public class ResourcePool<K, V> implements Closeable
             return new ImmediateCreationResourceHolder<>(
                 config.getMaxPerKey(),
                 config.getUnusedConnectionTimeoutMillis(),
-                eagerInitialization,
+                lazyConnections,
                 input,
                 factory
             );
@@ -172,7 +172,7 @@ public class ResourcePool<K, V> implements Closeable
     private ImmediateCreationResourceHolder(
         int maxSize,
         long unusedResourceTimeoutMillis,
-        boolean eagerInitialization,
+        boolean lazyConnections,
         K key,
         ResourceFactory<K, V> factory
     )
@@ -183,7 +183,7 @@ public class ResourcePool<K, V> implements Closeable
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
       this.resourceHolderList = new ArrayDeque<>();
 
-      final int initializationSize = eagerInitialization ? maxSize : 1;
+      final int initializationSize = lazyConnections ? 1 : maxSize;
       for (int i = 0; i < initializationSize; ++i) {
         resourceHolderList.add(
             new ResourceHolder<>(

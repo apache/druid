@@ -105,7 +105,7 @@ public class HttpClientModule implements Module
       final HttpClientConfig.Builder builder = HttpClientConfig
           .builder()
           .withNumConnections(config.getNumConnections())
-          .withEagerInitialization(config.isEagerInitialization())
+          .withLazyConnections(config.isLazyConnections())
           .withReadTimeout(config.getReadTimeout())
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(

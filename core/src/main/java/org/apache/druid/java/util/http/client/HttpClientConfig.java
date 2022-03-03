@@ -81,7 +81,7 @@ public class HttpClientConfig
   }
 
   private final int numConnections;
-  private final boolean eagerInitialization;
+  private final boolean lazyConnections;
   private final SSLContext sslContext;
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
@@ -93,7 +93,7 @@ public class HttpClientConfig
 
   private HttpClientConfig(
       int numConnections,
-      boolean eagerInitialization,
+      boolean lazyConnections,
       SSLContext sslContext,
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
@@ -105,7 +105,7 @@ public class HttpClientConfig
   )
   {
     this.numConnections = numConnections;
-    this.eagerInitialization = eagerInitialization;
+    this.lazyConnections = lazyConnections;
     this.sslContext = sslContext;
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
@@ -121,9 +121,9 @@ public class HttpClientConfig
     return numConnections;
   }
 
-  public boolean isEagerInitialization()
+  public boolean isLazyConnections()
   {
-    return eagerInitialization;
+    return lazyConnections;
   }
 
   public SSLContext getSslContext()
@@ -169,7 +169,7 @@ public class HttpClientConfig
   public static class Builder
   {
     private int numConnections = 1;
-    private boolean eagerInitialization = true;
+    private boolean lazyConnections = false;
     private SSLContext sslContext = null;
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
@@ -189,9 +189,9 @@ public class HttpClientConfig
       return this;
     }
 
-    public Builder withEagerInitialization(boolean eagerInitialization)
+    public Builder withLazyConnections(boolean lazyConnections)
     {
-      this.eagerInitialization = eagerInitialization;
+      this.lazyConnections = lazyConnections;
       return this;
     }
 
@@ -241,7 +241,7 @@ public class HttpClientConfig
     {
       return new HttpClientConfig(
           numConnections,
-          eagerInitialization,
+          lazyConnections,
           sslContext,
           proxyConfig,
           readTimeout,
