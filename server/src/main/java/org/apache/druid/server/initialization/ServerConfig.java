@@ -158,6 +158,9 @@ public class ServerConfig
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
 
+  @JsonProperty
+  private boolean returnJettyErrorsInJson = true;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -233,6 +236,11 @@ public class ServerConfig
     return showDetailedJettyErrors;
   }
 
+  public boolean isDefaultJettyErrorResponseInJson()
+  {
+    return returnJettyErrorsInJson;
+  }
+
   public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
   {
     return errorResponseTransformStrategy;
@@ -265,6 +273,7 @@ public class ServerConfig
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            showDetailedJettyErrors == that.showDetailedJettyErrors &&
+           returnJettyErrorsInJson == that.returnJettyErrorsInJson &&
            maxIdleTime.equals(that.maxIdleTime) &&
            maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
@@ -293,7 +302,8 @@ public class ServerConfig
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         errorResponseTransformStrategy,
-        showDetailedJettyErrors
+        showDetailedJettyErrors,
+        returnJettyErrorsInJson
     );
   }
 
@@ -318,6 +328,7 @@ public class ServerConfig
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
+           ", defaultJettyAcceptHeaderSetStatus=" + returnJettyErrorsInJson +
            '}';
   }
 

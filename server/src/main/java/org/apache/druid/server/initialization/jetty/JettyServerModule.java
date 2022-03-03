@@ -63,6 +63,7 @@ import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
+import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
@@ -110,6 +111,8 @@ public class JettyServerModule extends JerseyServletModule
   private static final AtomicInteger ACTIVE_CONNECTIONS = new AtomicInteger();
   private static final String HTTP_1_1_STRING = "HTTP/1.1";
   private static QueuedThreadPool jettyServerThreadPool = null;
+
+
 
   @Override
   protected void configureServlets()
@@ -475,12 +478,53 @@ public class JettyServerModule extends JerseyServletModule
         Lifecycle.Stage.SERVER
     );
 
+    if (config.isDefaultJettyErrorResponseInJson()) {
+      server.setErrorHandler(new ErrorHandler()
+      {
+        @Override
+        public void generateAcceptableResponse(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            int code,
+            String message,
+            String contentType
+        ) throws IOException
+        {
+          super.generateAcceptableResponse(baseRequest, request, response, code, message, MimeTypes.Type.APPLICATION_JSON.asString());
+        }
+      });
+    }
+
+
     if (!config.isShowDetailedJettyErrors()) {
       server.setErrorHandler(new ErrorHandler() {
         @Override
         public boolean isShowServlet()
         {
           return false;
+        }
+
+
+        @Override
+        public void generateAcceptableResponse(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            int code,
+            String message,
+            String contentType
+        ) throws IOException
+        {
+          if (config.isDefaultJettyErrorResponseInJson()) {
+            super.generateAcceptableResponse(baseRequest, request, response, code, message,
+                                             MimeTypes.Type.APPLICATION_JSON.asString()
+            );
+          } else {
+            super.generateAcceptableResponse(baseRequest, request, response, code, message,
+                                             MimeTypes.Type.TEXT_HTML.asString()
+            );
+          }
         }
 
         @Override
@@ -499,6 +543,7 @@ public class JettyServerModule extends JerseyServletModule
 
     return server;
   }
+
 
   private static int getMaxJettyAcceptorsSelectorsNum(DruidNode druidNode)
   {

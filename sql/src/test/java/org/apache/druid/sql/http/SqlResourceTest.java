@@ -1381,6 +1381,12 @@ public class SqlResourceTest extends CalciteTestBase
           }
 
           @Override
+          public boolean isDefaultJettyErrorResponseInJson()
+          {
+            return false;
+          }
+
+          @Override
           public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
           {
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());

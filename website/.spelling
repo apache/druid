@@ -1338,6 +1338,7 @@ cpuName
 cpuTime
 druid.server.http.numThreads
 druid.server.http.queueSize
+druid.server.http.returnJettyErrorsInJson
 fsDevName
 fsDirName
 fsOptions
