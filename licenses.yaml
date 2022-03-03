@@ -4796,7 +4796,7 @@ libraries:
 
 name: com.sun.jersey jersey-bundle
 license_category: binary
-version: 1.19.4
+version: 1.19.3
 module: druid-ranger-security
 license_name: CDDL 1.1
 libraries:
