@@ -62,7 +62,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
@@ -334,6 +333,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
                     .put("DAY", Granularities.DAY)
                     .put("MONTH", Granularities.MONTH)
                     .put("YEAR", Granularities.YEAR)
+                    .put("ALL", Granularities.ALL)
                     .put("ALL TIME", Granularities.ALL)
                     .put("FLOOR(__time TO QUARTER)", Granularities.QUARTER)
                     .put("TIME_FLOOR(__time, 'PT1H')", Granularities.HOUR)
@@ -542,27 +542,22 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     }
   }
 
-  // Currently EXPLAIN PLAN FOR doesn't work with the modified syntax
-  @Ignore
   @Test
-  public void testExplainInsertWithPartitionedByAndClusteredBy()
+  public void testInsertWithoutPartitionedBy()
   {
-    Assert.assertThrows(
+    SqlPlanningException e = Assert.assertThrows(
         SqlPlanningException.class,
         () ->
             testQuery(
-                StringUtils.format(
-                    "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY DAY CLUSTERED BY 1",
-                    externSql(externalDataSource)
-                ),
+                StringUtils.format("INSERT INTO dst SELECT * FROM %s", externSql(externalDataSource)),
                 ImmutableList.of(),
                 ImmutableList.of()
             )
     );
+    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explictly", e.getMessage());
     didTest = true;
   }
 
-  @Ignore
   @Test
   public void testExplainInsertFromExternal() throws Exception
   {
@@ -575,7 +570,7 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
         .columns("x", "y", "z")
         .context(
             queryJsonMapper.readValue(
-                "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
+                "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
                 JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         )
@@ -607,7 +602,6 @@ public class CalciteInsertDmlTest extends BaseCalciteQueryTest
     didTest = true;
   }
 
-  @Ignore
   @Test
   public void testExplainInsertFromExternalUnauthorized()
   {

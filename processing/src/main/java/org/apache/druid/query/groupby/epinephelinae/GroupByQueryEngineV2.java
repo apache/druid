@@ -459,6 +459,8 @@ public class GroupByQueryEngineV2
     @Nullable
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
+    protected final boolean allowMultiValueGrouping;
+
 
     public GroupByEngineIterator(
         final GroupByQuery query,
@@ -480,6 +482,10 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
+      this.allowMultiValueGrouping = query.getContextBoolean(
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          true
+      );
     }
 
     private CloseableGrouperIterator<KeyType, ResultRow> initNewDelegate()
@@ -591,6 +597,19 @@ public class GroupByQueryEngineV2
     {
       Preconditions.checkArgument(indexedInts.size() < 2, "should be single value");
       return indexedInts.size() == 1 ? indexedInts.get(0) : GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE;
+    }
+
+    protected void checkIfMultiValueGroupingIsAllowed(String dimName)
+    {
+      if (!allowMultiValueGrouping) {
+        throw new ISE(
+            "Encountered multi-value dimension %s that cannot be processed with %s set to false."
+            + " Consider setting %s to true.",
+            dimName,
+            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY,
+            GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY
+        );
+      }
     }
 
   }
@@ -764,6 +783,9 @@ public class GroupByQueryEngineV2
             );
 
             if (doAggregate) {
+              // this check is done during the row aggregation as a dimension can become multi-value col if column
+              // capabilities is unknown.
+              checkIfMultiValueGroupingIsAllowed(dims[stackPointer].getName());
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
                 dims[i].getColumnSelectorStrategy().initGroupingKeyColumnValue(
@@ -889,12 +911,17 @@ public class GroupByQueryEngineV2
       }
 
       while (!cursor.isDone()) {
-        int multiValuesSize = multiValues.size();
+        final int multiValuesSize = multiValues.size();
         if (multiValuesSize == 0) {
           if (!grouper.aggregate(GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE).isOk()) {
             return;
           }
         } else {
+          if (multiValuesSize > 1) {
+            // this check is done during the row aggregation as a dimension can become multi-value col if column
+            // capabilities is unknown.
+            checkIfMultiValueGroupingIsAllowed(dim.getName());
+          }
           for (; nextValIndex < multiValuesSize; nextValIndex++) {
             if (!grouper.aggregate(multiValues.get(nextValIndex)).isOk()) {
               return;

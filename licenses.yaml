@@ -732,14 +732,18 @@ name: Airline
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7
+version: 2.8.4
 libraries:
-  - io.airlift: airline
+  - com.github.rvesse: airline
+  - com.github.rvesse: airline-io
 notices:
   - airline: |
       Copyright Notices
       =================
 
+      Copyright 2013-18 Rob Vesse <rvesse@dotnetrdf.org>
+      Copyright 2013 Fernando Hernandez <fernando@clarkparsia.com>
+      Copyright 2013 Michael Grove <mike@clarkparsia.com>
       Copyright 2011 Dain Sundstrom <dain@iq80.com>
       Copyright 2010 Cedric Beust <cedric@beust.com>
 
@@ -819,18 +823,9 @@ name: net.bytebuddy byte-buddy
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.9.10
+version: 1.12.7
 libraries:
   - net.bytebuddy: byte-buddy
-
----
-
-name: net.bytebuddy byte-buddy-agent
-license_category: binary
-module: extensions/druid-pac4j
-license_name: Apache License version 2.0
-version: 1.9.10
-libraries:
   - net.bytebuddy: byte-buddy-agent
 
 ---
@@ -839,7 +834,7 @@ name: org.mockito mockito-core
 license_category: binary
 module: extensions/druid-pac4j
 license_name: MIT License
-version: 2.28.2
+version: 4.3.1
 libraries:
   - org.mockito: mockito-core
 
@@ -1498,6 +1493,16 @@ libraries:
   - it.unimi.dsi: fastutil
   - it.unimi.dsi: fastutil-core
   - it.unimi.dsi: fastutil-extra
+
+---
+
+name: Jakarta Dependency Injection
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.3
+libraries:
+  - jakarta.inject: jakarta.inject-api
 
 ---
 
@@ -3726,7 +3731,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.1.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3766,7 +3771,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.0.0
+version: 3.1.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4543,7 +4548,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.7.2
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4676,7 +4681,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.1.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:

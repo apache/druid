@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -28,7 +29,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
-import io.airlift.airline.Command;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;

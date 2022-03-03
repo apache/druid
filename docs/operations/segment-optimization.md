@@ -59,7 +59,7 @@ You may need to consider the followings to optimize your segments.
 > you may need to find the optimal settings for your workload.
 
 There might be several ways to check if the compaction is necessary. One way
-is using the [System Schema](../querying/sql.md#system-schema). The
+is using the [System Schema](../querying/sql-metadata-tables.md#system-schema). The
 system schema provides several tables about the current system status including the `segments` table.
 By running the below query, you can get the average number of rows and average size for published segments.
 

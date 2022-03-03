@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -56,7 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class CompactSegments implements CoordinatorDuty
+public class CompactSegments implements CoordinatorCustomDuty
 {
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String AVAILABLE_COMPACTION_TASK_SLOT = "availableCompactionTaskSlot";
@@ -90,10 +92,11 @@ public class CompactSegments implements CoordinatorDuty
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
+  @JsonCreator
   public CompactSegments(
-      DruidCoordinatorConfig config,
-      ObjectMapper objectMapper,
-      IndexingServiceClient indexingServiceClient
+      @JacksonInject DruidCoordinatorConfig config,
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject IndexingServiceClient indexingServiceClient
   )
   {
     this.policy = new NewestSegmentFirstPolicy(objectMapper);
@@ -102,6 +105,18 @@ public class CompactSegments implements CoordinatorDuty
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());
 
     LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
+  }
+
+  @VisibleForTesting
+  public boolean isSkipLockedIntervals()
+  {
+    return skipLockedIntervals;
+  }
+
+  @VisibleForTesting
+  IndexingServiceClient getIndexingServiceClient()
+  {
+    return indexingServiceClient;
   }
 
   @Override

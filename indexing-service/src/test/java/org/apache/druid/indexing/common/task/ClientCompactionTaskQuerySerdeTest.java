@@ -291,7 +291,12 @@ public class ClientCompactionTaskQuerySerdeTest
             )
         )
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
-        .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")), ImmutableList.of("__time", "val"), null))
+        .dimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")))
+                          .setDimensionExclusions(ImmutableList.of("__time", "val"))
+                          .build()
+        )
         .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
         .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();

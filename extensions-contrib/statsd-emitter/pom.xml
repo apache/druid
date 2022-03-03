@@ -89,11 +89,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>pl.pragmatists</groupId>
-      <artifactId>JUnitParams</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
