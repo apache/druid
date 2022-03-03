@@ -119,7 +119,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final DruidExpression.ExpressionBuilder expressionBuilder
+      final DruidExpression.ExpressionGenerator expressionGenerator
   )
   {
     return convertCall(
@@ -128,7 +128,7 @@ public class OperatorConversions
         rexNode,
         (operands) -> DruidExpression.ofExpression(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-            expressionBuilder,
+            expressionGenerator,
             operands
         )
     );
@@ -139,7 +139,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final DruidExpression.DruidExpressionBuilder expressionFunction
+      final DruidExpression.DruidExpressionCreator expressionFunction
   )
   {
     final RexCall call = (RexCall) rexNode;
@@ -154,7 +154,7 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.buildExpression(druidExpressions);
+    return expressionFunction.create(druidExpressions);
   }
 
   @Deprecated
@@ -211,7 +211,7 @@ public class OperatorConversions
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final RexNode rexNode,
-      final DruidExpression.DruidExpressionBuilder expressionFunction,
+      final DruidExpression.DruidExpressionCreator expressionFunction,
       final PostAggregatorVisitor postAggregatorVisitor
   )
   {
@@ -228,7 +228,7 @@ public class OperatorConversions
       return null;
     }
 
-    return expressionFunction.buildExpression(druidExpressions);
+    return expressionFunction.create(druidExpressions);
   }
 
   /**

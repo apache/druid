@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
@@ -50,7 +51,7 @@ import java.util.function.Function;
  * {@link #toVirtualColumn(String, ColumnType, ExprMacroTable)}
  *
  * Approximate expression structure is retained in the {@link #arguments}, which when fed into the
- * {@link ExpressionBuilder} that all {@link DruidExpression} must be created with will produce the final String
+ * {@link ExpressionGenerator} that all {@link DruidExpression} must be created with will produce the final String
  * expression (which will be later parsed into {@link Expr} during native processing).
  *
  * This allows using the {@link DruidExpressionShuttle} to examine this expression "tree" and potentially rewrite some
@@ -83,7 +84,7 @@ public class DruidExpression
 
   // Must be sorted
   private static final char[] SAFE_CHARS = " ,._-;:(){}[]<>!@#$%^&*`~?/".toCharArray();
-  private static final VirtualColumnBuilder DEFAULT_VIRTUAL_COLUMN_BUILDER = new ExpressionVirtualColumnBuilder();
+  private static final VirtualColumnCreator DEFAULT_VIRTUAL_COLUMN_BUILDER = new ExpressionVirtualColumnCreator();
 
   static {
     Arrays.sort(SAFE_CHARS);
@@ -118,7 +119,7 @@ public class DruidExpression
     return "null";
   }
 
-  public static ExpressionBuilder functionCall(final String functionName)
+  public static ExpressionGenerator functionCall(final String functionName)
   {
     Preconditions.checkNotNull(functionName, "functionName");
 
@@ -148,7 +149,7 @@ public class DruidExpression
   @Deprecated
   public static String functionCall(final String functionName, final List<DruidExpression> args)
   {
-    return functionCall(functionName).buildExpression(args);
+    return functionCall(functionName).compile(args);
   }
 
   /**
@@ -157,7 +158,7 @@ public class DruidExpression
   @Deprecated
   public static String functionCall(final String functionName, final DruidExpression... args)
   {
-    return functionCall(functionName).buildExpression(Arrays.asList(args));
+    return functionCall(functionName).compile(Arrays.asList(args));
   }
 
   public static DruidExpression ofLiteral(
@@ -169,7 +170,7 @@ public class DruidExpression
         NodeType.LITERAL,
         columnType,
         null,
-        new LiteralExpressionBuilder(literal),
+        new LiteralExpressionGenerator(literal),
         Collections.emptyList(),
         null
     );
@@ -190,7 +191,7 @@ public class DruidExpression
         NodeType.IDENTIFIER,
         columnType,
         simpleExtraction,
-        new IdentifierExpressionBuilder(column),
+        new IdentifierExpressionGenerator(column),
         Collections.emptyList(),
         null
     );
@@ -212,35 +213,35 @@ public class DruidExpression
 
   public static DruidExpression ofVirtualColumn(
       final ColumnType type,
-      final ExpressionBuilder expressionBuilder,
+      final ExpressionGenerator expressionGenerator,
       final List<DruidExpression> arguments,
-      final VirtualColumnBuilder virtualColumnBuilder
+      final VirtualColumnCreator virtualColumnCreator
   )
   {
-    return new DruidExpression(NodeType.SPECIALIZED, type, null, expressionBuilder, arguments, virtualColumnBuilder);
+    return new DruidExpression(NodeType.SPECIALIZED, type, null, expressionGenerator, arguments, virtualColumnCreator);
   }
 
   public static DruidExpression ofExpression(
       @Nullable final ColumnType columnType,
-      final ExpressionBuilder expressionBuilder,
+      final ExpressionGenerator expressionGenerator,
       final List<DruidExpression> arguments
   )
   {
-    return new DruidExpression(NodeType.EXPRESSION, columnType, null, expressionBuilder, arguments, null);
+    return new DruidExpression(NodeType.EXPRESSION, columnType, null, expressionGenerator, arguments, null);
   }
 
   public static DruidExpression ofExpression(
       @Nullable final ColumnType columnType,
       final SimpleExtraction simpleExtraction,
-      final ExpressionBuilder expressionBuilder,
+      final ExpressionGenerator expressionGenerator,
       final List<DruidExpression> arguments
   )
   {
-    return new DruidExpression(NodeType.EXPRESSION, columnType, simpleExtraction, expressionBuilder, arguments, null);
+    return new DruidExpression(NodeType.EXPRESSION, columnType, simpleExtraction, expressionGenerator, arguments, null);
   }
 
   /**
-   * @deprecated use {@link #ofExpression(ColumnType, SimpleExtraction, ExpressionBuilder, List)} instead to participate
+   * @deprecated use {@link #ofExpression(ColumnType, SimpleExtraction, ExpressionGenerator, List)} instead to participate
    * in virtual column and expression optimization
    */
   @Deprecated
@@ -250,7 +251,7 @@ public class DruidExpression
         NodeType.EXPRESSION,
         null,
         simpleExtraction,
-        new LiteralExpressionBuilder(expression),
+        new LiteralExpressionGenerator(expression),
         Collections.emptyList(),
         null
     );
@@ -267,14 +268,14 @@ public class DruidExpression
         NodeType.EXPRESSION,
         null,
         SimpleExtraction.of(column, null),
-        new IdentifierExpressionBuilder(column),
+        new IdentifierExpressionGenerator(column),
         Collections.emptyList(),
         null
     );
   }
 
   /**
-   * @deprecated use {@link #ofExpression(ColumnType, ExpressionBuilder, List)} instead to participate in virtual
+   * @deprecated use {@link #ofExpression(ColumnType, ExpressionGenerator, List)} instead to participate in virtual
    * column and expression optimization
    */
   @Deprecated
@@ -284,7 +285,7 @@ public class DruidExpression
         NodeType.EXPRESSION,
         null,
         null,
-        new LiteralExpressionBuilder(expression),
+        new LiteralExpressionGenerator(expression),
         Collections.emptyList(),
         null
     );
@@ -301,7 +302,7 @@ public class DruidExpression
         NodeType.EXPRESSION,
         null,
         null,
-        new LiteralExpressionBuilder(functionCall(functionName, args)),
+        new LiteralExpressionGenerator(functionCall(functionName, args)),
         Collections.emptyList(),
         null
     );
@@ -313,8 +314,8 @@ public class DruidExpression
   private final List<DruidExpression> arguments;
   @Nullable
   private final SimpleExtraction simpleExtraction;
-  private final ExpressionBuilder expressionBuilder;
-  private final VirtualColumnBuilder virtualColumnBuilder;
+  private final ExpressionGenerator expressionGenerator;
+  private final VirtualColumnCreator virtualColumnCreator;
 
   private final Supplier<String> expression;
 
@@ -322,18 +323,18 @@ public class DruidExpression
       final NodeType nodeType,
       @Nullable final ColumnType druidType,
       @Nullable final SimpleExtraction simpleExtraction,
-      final ExpressionBuilder expressionBuilder,
+      final ExpressionGenerator expressionGenerator,
       final List<DruidExpression> arguments,
-      @Nullable final VirtualColumnBuilder virtualColumnBuilder
+      @Nullable final VirtualColumnCreator virtualColumnCreator
   )
   {
     this.nodeType = nodeType;
     this.druidType = druidType;
     this.simpleExtraction = simpleExtraction;
-    this.expressionBuilder = Preconditions.checkNotNull(expressionBuilder);
+    this.expressionGenerator = Preconditions.checkNotNull(expressionGenerator);
     this.arguments = arguments;
-    this.virtualColumnBuilder = virtualColumnBuilder != null ? virtualColumnBuilder : DEFAULT_VIRTUAL_COLUMN_BUILDER;
-    this.expression = Suppliers.memoize(() -> this.expressionBuilder.buildExpression(this.arguments));
+    this.virtualColumnCreator = virtualColumnCreator != null ? virtualColumnCreator : DEFAULT_VIRTUAL_COLUMN_BUILDER;
+    this.expression = Suppliers.memoize(() -> this.expressionGenerator.compile(this.arguments));
   }
 
   public String getExpression()
@@ -361,11 +362,17 @@ public class DruidExpression
     return Preconditions.checkNotNull(simpleExtraction);
   }
 
+  /**
+   * Get sub {@link DruidExpression} arguments of this expression
+   */
   public List<DruidExpression> getArguments()
   {
     return arguments;
   }
 
+  /**
+   * Compile the {@link DruidExpression} into a string and parse it into a native Druid {@link Expr}
+   */
   public Expr parse(final ExprMacroTable macroTable)
   {
     return Parser.parse(expression.get(), macroTable);
@@ -377,7 +384,7 @@ public class DruidExpression
       final ExprMacroTable macroTable
   )
   {
-    return virtualColumnBuilder.build(name, outputType, expression.get(), macroTable);
+    return virtualColumnCreator.create(name, outputType, expression.get(), macroTable);
   }
 
   public NodeType getType()
@@ -385,6 +392,17 @@ public class DruidExpression
     return nodeType;
   }
 
+  /**
+   * The {@link ColumnType} of this expression as inferred when this expression was created. This is likely the result
+   * of converting the output of {@link org.apache.calcite.rex.RexNode#getType()} using
+   * {@link org.apache.druid.sql.calcite.planner.Calcites#getColumnTypeForRelDataType(RelDataType)}, but may also be
+   * supplied by other means.
+   *
+   * This value is not currently used other than for tracking the types of the {@link DruidExpression} tree. The
+   * value passed to {@link #toVirtualColumn(String, ColumnType, ExprMacroTable)} will instead be whatever type "hint"
+   * was specified when the expression was added to the {@link org.apache.druid.sql.calcite.rel.VirtualColumnRegistry}.
+   */
+  @Nullable
   public ColumnType getDruidType()
   {
     return druidType;
@@ -399,9 +417,9 @@ public class DruidExpression
         nodeType,
         druidType,
         simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
-        (args) -> expressionMap.apply(expressionBuilder.buildExpression(args)),
+        (args) -> expressionMap.apply(expressionGenerator.compile(args)),
         arguments,
-        virtualColumnBuilder
+        virtualColumnCreator
     );
   }
 
@@ -411,21 +429,26 @@ public class DruidExpression
         nodeType,
         druidType,
         simpleExtraction,
-        expressionBuilder,
+        expressionGenerator,
         newArgs,
-        virtualColumnBuilder
+        virtualColumnCreator
     );
   }
 
+  /**
+   * Visit all sub {@link DruidExpression} (the {@link #arguments} of this expression), allowing the
+   * {@link DruidExpressionShuttle} to potentially rewrite these arguments with new {@link DruidExpression}, finally
+   * building a new version of this {@link DruidExpression} with updated {@link #arguments}.
+   */
   public DruidExpression visit(DruidExpressionShuttle shuttle)
   {
     return new DruidExpression(
         nodeType,
         druidType,
         simpleExtraction,
-        expressionBuilder,
+        expressionGenerator,
         shuttle.visitAll(arguments),
-        virtualColumnBuilder
+        virtualColumnCreator
     );
   }
 
@@ -478,38 +501,39 @@ public class DruidExpression
     }
   }
 
+  /**
+   * Create a {@link DruidExpression} given some set of input argument sub-expressions
+   */
   @FunctionalInterface
-  public interface DruidExpressionBuilder
+  public interface DruidExpressionCreator
   {
-    DruidExpression buildExpression(List<DruidExpression> arguments);
+    DruidExpression create(List<DruidExpression> arguments);
   }
 
+  /**
+   * Used by {@link DruidExpression} to compile a string which can be parsed into an {@link Expr} from given the
+   * sub-expression arguments
+   */
   @FunctionalInterface
-  public interface ExpressionBuilder
+  public interface ExpressionGenerator
   {
-    String buildExpression(List<DruidExpression> arguments);
-  }
-
-  @FunctionalInterface
-  public interface VirtualColumnBuilder
-  {
-    VirtualColumn build(String name, ColumnType outputType, String expression, ExprMacroTable macroTable);
+    String compile(List<DruidExpression> arguments);
   }
 
   /**
    * Direct reference to a physical or virtual column
    */
-  public static class IdentifierExpressionBuilder implements ExpressionBuilder
+  public static class IdentifierExpressionGenerator implements ExpressionGenerator
   {
     private final String identifier;
 
-    public IdentifierExpressionBuilder(String identifier)
+    public IdentifierExpressionGenerator(String identifier)
     {
       this.identifier = escape(identifier);
     }
 
     @Override
-    public String buildExpression(List<DruidExpression> arguments)
+    public String compile(List<DruidExpression> arguments)
     {
       // identifier expression has no arguments
       return "\"" + identifier + "\"";
@@ -519,27 +543,37 @@ public class DruidExpression
   /**
    * Builds expressions for a static constant value
    */
-  public static class LiteralExpressionBuilder implements ExpressionBuilder
+  public static class LiteralExpressionGenerator implements ExpressionGenerator
   {
     private final String literal;
 
-    public LiteralExpressionBuilder(String literal)
+    public LiteralExpressionGenerator(String literal)
     {
       this.literal = literal;
     }
 
     @Override
-    public String buildExpression(List<DruidExpression> arguments)
+    public String compile(List<DruidExpression> arguments)
     {
       // literal expression has no arguments
       return literal;
     }
   }
 
-  public static class ExpressionVirtualColumnBuilder implements VirtualColumnBuilder
+  /**
+   * Used by a {@link DruidExpression} to translate itself into a {@link VirtualColumn} to add to a native query when
+   * referenced by a projection, filter, aggregator, etc.
+   */
+  @FunctionalInterface
+  public interface VirtualColumnCreator
+  {
+    VirtualColumn create(String name, ColumnType outputType, String expression, ExprMacroTable macroTable);
+  }
+
+  public static class ExpressionVirtualColumnCreator implements VirtualColumnCreator
   {
     @Override
-    public VirtualColumn build(String name, ColumnType outputType, String expression, ExprMacroTable macroTable)
+    public VirtualColumn create(String name, ColumnType outputType, String expression, ExprMacroTable macroTable)
     {
       return new ExpressionVirtualColumn(name, expression, outputType, macroTable);
     }
