@@ -167,9 +167,9 @@ public class ResourcePool<K, V> implements Closeable
     }
   }
 
-  private static class LazyCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
+  private static class EagerCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
   {
-    private LazyCreationResourceHolder(
+    private EagerCreationResourceHolder(
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
@@ -192,9 +192,9 @@ public class ResourcePool<K, V> implements Closeable
     }
   }
 
-  private static class EagerCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
+  private static class LazyCreationResourceHolder<K, V> extends ResourceHolderPerKey<K, V>
   {
-    private EagerCreationResourceHolder(
+    private LazyCreationResourceHolder(
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
