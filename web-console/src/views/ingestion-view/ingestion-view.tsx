@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Alert, Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import ReactTable, { Filter } from 'react-table';
@@ -145,6 +146,8 @@ export interface IngestionViewState {
   supervisorTableActionDialogActions: BasicAction[];
   hiddenTaskColumns: LocalStorageBackedVisibility;
   hiddenSupervisorColumns: LocalStorageBackedVisibility;
+
+  preferOverlord: boolean;
 }
 
 function statusToColor(status: string): string {
@@ -244,6 +247,8 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       hiddenSupervisorColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION,
       ),
+
+      preferOverlord: true,
     };
 
     this.supervisorQueryManager = new QueryManager({
@@ -281,15 +286,18 @@ ORDER BY "rank" DESC, "created_time" DESC`;
 
     this.taskQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        if (capabilities.hasSql()) {
-          return await queryDruidSql({
-            query: IngestionView.TASK_SQL,
-          });
-        } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
-          return IngestionView.parseTasks(resp.data);
+        const { preferOverlord } = this.state;
+        const hasOverlordAccess = capabilities.hasOverlordAccess();
+        const hasSql = capabilities.hasSql();
+
+        if (!hasOverlordAccess && !hasSql) {
+          throw new Error(`must have overlord or SQL access`);
+        }
+
+        if (preferOverlord) {
+          return hasOverlordAccess ? IngestionView.tasksViaOverlord() : IngestionView.tasksViaSql();
         } else {
-          throw new Error(`must have SQL or overlord access`);
+          return hasSql ? IngestionView.tasksViaSql() : IngestionView.tasksViaOverlord();
         }
       },
       onStateChange: tasksState => {
@@ -299,6 +307,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
       },
     });
   }
+
+  static tasksViaSql = async () => {
+    return await queryDruidSql({
+      query: IngestionView.TASK_SQL,
+    });
+  };
+
+  static tasksViaOverlord = async () => {
+    const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
+    return IngestionView.parseTasks(resp.data);
+  };
 
   static parseTasks = (data: any[]): TaskQueryResultRow[] => {
     return data.map((d: any) => {
@@ -334,6 +353,13 @@ ORDER BY "rank" DESC, "created_time" DESC`;
     this.supervisorQueryManager.terminate();
     this.taskQueryManager.terminate();
   }
+
+  private readonly handlePreferOverlordSwitchChange = () => {
+    this.setState(state => ({
+      ...state,
+      preferOverlord: !state.preferOverlord,
+    }));
+  };
 
   private readonly closeSpecDialogs = () => {
     this.setState({
@@ -1143,6 +1169,17 @@ ORDER BY "rank" DESC, "created_time" DESC`;
                 localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
                 onRefresh={auto => this.taskQueryManager.rerunLastQuery(auto)}
               />
+              {/* Toggle switch to prefer overload over SQL since SQL can affect metadata store performance with large number of tasks */}
+              <Tooltip2
+                content="Turning on the toggle will prefer overlord followed by sql for task listing. Turning off will reverse the order."
+                hoverOpenDelay={800}
+              >
+                <Switch
+                  label="Prefer Overlord"
+                  checked={this.state.preferOverlord}
+                  onChange={this.handlePreferOverlordSwitchChange}
+                />
+              </Tooltip2>
               {this.renderBulkTasksActions()}
               <TableColumnSelector
                 columns={taskTableColumns}

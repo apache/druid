@@ -315,6 +315,19 @@ exports[`IngestionView matches snapshot 1`] = `
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
         />
+        <Blueprint3.Tooltip2
+          content="Turning on the toggle will prefer overlord followed by sql for task listing. Turning off will reverse the order."
+          hoverCloseDelay={0}
+          hoverOpenDelay={800}
+          minimal={false}
+          transitionDuration={100}
+        >
+          <Blueprint3.Switch
+            checked={true}
+            label="Prefer Overlord"
+            onChange={[Function]}
+          />
+        </Blueprint3.Tooltip2>
         <Memo(MoreButton)>
           <Blueprint3.MenuItem
             disabled={false}
