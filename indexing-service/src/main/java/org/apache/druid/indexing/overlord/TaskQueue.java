@@ -330,7 +330,7 @@ public class TaskQueue
       // concatenating the list of known task ids can be compupationally expensive.
       final boolean logKnownTaskIds = log.isDebugEnabled();
       final String reason = logKnownTaskIds
-              ? String.format("Task is not in knownTaskIds[%s]", knownTaskIds)
+              ? StringUtils.format("Task is not in knownTaskIds[%s]", knownTaskIds)
               : "Task is not in knownTaskIds";
 
       for (final String taskId : tasksToKill) {
