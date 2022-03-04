@@ -38,6 +38,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -79,6 +80,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
     if (!taskOptional.isPresent()) {
       throw new WebApplicationException(
           Response.status(Response.Status.NOT_FOUND)
+                  .type(MediaType.TEXT_PLAIN)
                   .entity(StringUtils.format("Cannot find any task with id: [%s]", taskId))
                   .build()
       );

@@ -639,6 +639,7 @@ public class OverlordResource
     if (state != null) {
       if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
         return Response.status(Status.BAD_REQUEST)
+                       .type(MediaType.TEXT_PLAIN)
                        .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
                        .build();
       }
@@ -658,6 +659,7 @@ public class OverlordResource
       if (!authResult.isAllowed()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
+                    .type(MediaType.TEXT_PLAIN)
                     .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
                     .build()
         );
