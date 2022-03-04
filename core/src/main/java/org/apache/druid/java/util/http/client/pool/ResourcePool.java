@@ -177,7 +177,8 @@ public class ResourcePool<K, V> implements Closeable
     )
     {
       super(maxSize, unusedResourceTimeoutMillis, key, factory);
-
+      eagerInstantiation = true;
+      // Eagerly Instantiate
       for (int i = 0; i < maxSize; i++) {
         resourceHolderList.add(
             new ResourceHolder<>(
@@ -202,28 +203,20 @@ public class ResourcePool<K, V> implements Closeable
     )
     {
       super(maxSize, unusedResourceTimeoutMillis, key, factory);
-
-      resourceHolderList.add(
-          new ResourceHolder<>(
-              System.currentTimeMillis(),
-              Preconditions.checkNotNull(
-                  factory.generate(key),
-                  "factory.generate(key)"
-              )
-          )
-      );
     }
   }
 
   private static class ResourceHolderPerKey<K, V> implements Closeable
   {
-    private final int maxSize;
+    protected final int maxSize;
     private final K key;
     private final ResourceFactory<K, V> factory;
+    private final long unusedResourceTimeoutMillis;
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
     private int deficit = 0;
     private boolean closed = false;
-    private final long unusedResourceTimeoutMillis;
+    protected boolean eagerInstantiation = false;
+    private int numLentResources = 0;
 
     protected ResourceHolderPerKey(
         int maxSize,
@@ -248,7 +241,7 @@ public class ResourcePool<K, V> implements Closeable
       // resourceHolderList can't have nulls, so we'll use a null to signal that we need to create a new resource.
       final V poolVal;
       synchronized (this) {
-        while (!closed && resourceHolderList.size() == 0 && deficit == 0) {
+        while (!closed && (numLentResources == maxSize)) {
           try {
             this.wait();
           }
@@ -261,13 +254,20 @@ public class ResourcePool<K, V> implements Closeable
         if (closed) {
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
-        } else if (!resourceHolderList.isEmpty()) {
-          ResourceHolder<V> holder = resourceHolderList.removeFirst();
-          if (System.currentTimeMillis() - holder.getLastAccessedTime() > unusedResourceTimeoutMillis) {
-            factory.close(holder.getResource());
+        } else if (numLentResources + deficit < maxSize) {
+          if (resourceHolderList.isEmpty()) {
+            if (eagerInstantiation) {
+              throw new IllegalStateException("Unexpected state: No objects left, but not all have been lent");
+            }
             poolVal = factory.generate(key);
           } else {
-            poolVal = holder.getResource();
+            ResourceHolder<V> holder = resourceHolderList.removeFirst();
+            if (System.currentTimeMillis() - holder.getLastAccessedTime() > unusedResourceTimeoutMillis) {
+              factory.close(holder.getResource());
+              poolVal = factory.generate(key);
+            } else {
+              poolVal = holder.getResource();
+            }
           }
         } else if (deficit > 0) {
           deficit--;
@@ -288,6 +288,7 @@ public class ResourcePool<K, V> implements Closeable
           }
           retVal = factory.generate(key);
         }
+        numLentResources++;
       }
       catch (Throwable e) {
         synchronized (this) {
@@ -337,6 +338,7 @@ public class ResourcePool<K, V> implements Closeable
         }
 
         resourceHolderList.addLast(new ResourceHolder<>(System.currentTimeMillis(), object));
+        numLentResources--;
         this.notifyAll();
       }
     }

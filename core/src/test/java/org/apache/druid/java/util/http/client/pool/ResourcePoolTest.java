@@ -59,6 +59,16 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
   }
 
+  @Test
+  public void test_lazyInstantiation()
+  {
+    pool = new ResourcePool<String, String>(
+        resourceFactory,
+        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
+        false
+    );
+  }
+
   private void primePool()
   {
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
