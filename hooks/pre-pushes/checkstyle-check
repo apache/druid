@@ -15,4 +15,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.git/hooks/run-all-in-dir.py .git/hooks/pre-commits
+# set thread count to 2 times of cores to speed up checking
+mvn checkstyle:checkstyle -T 2C --fail-at-end
