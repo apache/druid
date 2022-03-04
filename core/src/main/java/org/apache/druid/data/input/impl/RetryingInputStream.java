@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.prefetch.Fetcher;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -110,7 +111,7 @@ public class RetryingInputStream<T> extends InputStream
     if (nextTry < maxTries && retryCondition.apply(t)) {
       try {
         // Pause for some time and then re-open the input stream.
-        final String message = String.format("Stream interrupted at position [%d]", startOffset);
+        final String message = StringUtils.format("Stream interrupted at position [%d]", startOffset);
 
         if (doWait) {
           RetryUtils.awaitNextRetry(t, message, nextTry, maxTries, false);
