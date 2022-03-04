@@ -155,7 +155,22 @@ public class RetryingInputStream<T> extends InputStream
   @Override
   public int read(byte[] b) throws IOException
   {
-    return read(b, 0, b.length);
+    // Full implementation, rather than calling to read(b, 0, b.len), just to ensure we use the
+    // corresponding method of our delegate.
+
+    openIfNeeded();
+
+    for (int nTry = 0; nTry < maxTries; nTry++) {
+      try {
+        return delegate.read(b);
+      }
+      catch (Throwable t) {
+        waitOrThrow(t, nTry);
+      }
+    }
+
+    // Can't happen, because the final waitOrThrow would have thrown.
+    throw new IllegalStateException();
   }
 
   @Override
