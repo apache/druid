@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
@@ -273,9 +272,9 @@ public class QueryResource implements QueryCountStatsProvider
                       }
                     }
                   }
-                },
-                ioReaderWriter.getResponseWriter().getResponseType()
+                }
             )
+            .type(ioReaderWriter.getResponseWriter().getResponseType())
             .header("X-Druid-Query-Id", queryId);
 
         transferEntityTag(responseContext, responseBuilder);
@@ -423,7 +422,7 @@ public class QueryResource implements QueryCountStatsProvider
 
     return new ResourceIOReaderWriter(
         isRequestSmile ? smileMapper : jsonMapper,
-        new ResourceIOWriter(isResponseSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON,
+        new ResourceIOWriter(isResponseSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE_TYPE : MediaType.APPLICATION_JSON_TYPE,
                              isResponseSmile ? smileMapper : jsonMapper,
                              isResponseSmile ? serializeDateTimeAsLongSmileMapper : serializeDateTimeAsLongJsonMapper,
                              pretty
@@ -454,13 +453,13 @@ public class QueryResource implements QueryCountStatsProvider
 
   protected static class ResourceIOWriter
   {
-    private final String responseType;
+    private final MediaType responseType;
     private final ObjectMapper inputMapper;
     private final ObjectMapper serializeDateTimeAsLongInputMapper;
     private final boolean isPretty;
 
     ResourceIOWriter(
-        String responseType,
+        MediaType responseType,
         ObjectMapper inputMapper,
         ObjectMapper serializeDateTimeAsLongInputMapper,
         boolean isPretty
@@ -472,7 +471,7 @@ public class QueryResource implements QueryCountStatsProvider
       this.isPretty = isPretty;
     }
 
-    String getResponseType()
+    MediaType getResponseType()
     {
       return responseType;
     }
@@ -526,13 +525,11 @@ public class QueryResource implements QueryCountStatsProvider
       return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
     }
 
-    @SuppressForbidden(reason = "Response#status")
     Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
     {
-      return Response.status(status)
-                     .type(responseType)
-                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
-                     .build();
+      return HttpResponses.builder(status, responseType)
+                          .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
+                          .build();
     }
   }
 

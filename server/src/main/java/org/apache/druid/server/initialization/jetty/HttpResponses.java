@@ -129,4 +129,11 @@ public enum HttpResponses
     return Response.status(statusCode)
                    .build();
   }
+
+  @SuppressForbidden(reason = "Response#status")
+  public static Response.ResponseBuilder builder(int statusCode, MediaType mediaType)
+  {
+    return Response.status(statusCode)
+                   .type(mediaType);
+  }
 }

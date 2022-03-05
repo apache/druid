@@ -20,7 +20,6 @@
 package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableMap;
-import io.netty.util.SuppressForbidden;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -40,12 +39,10 @@ public class ResponseStatusException extends RuntimeException
     return statusCode;
   }
 
-  @SuppressForbidden(reason = "Response#status")
   public static Response toResponse(Response.Status status, String message)
   {
-    return Response.status(status)
-                   .type(MediaType.APPLICATION_JSON)
-                   .entity(ImmutableMap.of("error", message))
-                   .build();
+    return HttpResponses.builder(status.getStatusCode(), MediaType.APPLICATION_JSON_TYPE)
+                        .entity(ImmutableMap.of("error", message))
+                        .build();
   }
 }
